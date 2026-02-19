@@ -54,19 +54,19 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   };
 
   return (
-    <div className="mb-4 bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-all duration-300 hover:shadow-md">
+    <div className="mb-4 bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden transition-all duration-300 hover:shadow-md">
       {/* Header */}
       <div
         className={`flex items-center justify-between p-4 cursor-pointer transition-colors ${note.isOpen
-          ? 'bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800'
-          : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800'
+          ? 'bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-100 dark:border-zinc-800'
+          : 'bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800'
           }`}
         onClick={() => !isEditingTitle && onToggle(note.id)}
       >
         <div className="flex items-center gap-3 flex-1 overflow-hidden">
           <div className={`p-2 rounded-lg ${note.isOpen
             ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100'
-            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
             }`}>
             <StickyNote size={20} />
           </div>
@@ -82,10 +82,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               onClick={(e) => e.stopPropagation()}
               placeholder="Título de la nota..."
               autoFocus
-              className="flex-1 text-lg font-semibold text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800 border border-zinc-300 dark:border-zinc-600 rounded px-2 py-1 outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-800 placeholder-slate-400"
+              className="flex-1 text-lg font-semibold text-zinc-800 dark:text-zinc-100 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded px-2 py-1 outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-800 placeholder-zinc-400"
             />
           ) : (
-            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 truncate select-none flex-1">
+            <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 truncate select-none flex-1">
               {note.title}
             </h3>
           )}
@@ -98,7 +98,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           }}
           className={`p-2 rounded-lg transition-all ${note.is_pinned
             ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20'
-            : 'text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+            : 'text-zinc-400 hover:text-amber-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
             }`}
           title={note.is_pinned ? "Desfijar Nota" : "Fijar Nota"}
         >
@@ -110,7 +110,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             e.stopPropagation();
             setIsEditingTitle(!isEditingTitle);
           }}
-          className="p-2 text-slate-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+          className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
           title="Editar Título"
         >
           <Edit2 size={18} />
@@ -123,23 +123,23 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               onDelete(note.id);
             }
           }}
-          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+          className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
           title="Eliminar Nota"
         >
           <Trash2 size={18} />
         </button>
 
-        <div className={`transform transition-transform duration-300 ${note.isOpen ? 'rotate-180' : ''} text-slate-400`}>
+        <div className={`transform transition-transform duration-300 ${note.isOpen ? 'rotate-180' : ''} text-zinc-400`}>
           <ChevronDown size={20} />
         </div>
       </div>
 
       {/* Content Body */}
       {note.isOpen && (
-        <div className="p-0 bg-white dark:bg-slate-900 animate-fadeIn">
+        <div className="p-0 bg-white dark:bg-zinc-900 animate-fadeIn">
           {/* Toolbar */}
-          <div className="flex justify-end px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 gap-2">
-            <span className="text-xs text-slate-400 self-center mr-auto px-2">
+          <div className="flex justify-end px-4 py-2 bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-100 dark:border-zinc-800 gap-2">
+            <span className="text-xs text-zinc-400 self-center mr-auto px-2">
               {isEditingContent ? 'Modo Edición' : 'Modo Lectura - Enlaces activos'}
             </span>
             {isEditingContent ? (
@@ -156,7 +156,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                   setTempContent(note.content);
                   setIsEditingContent(true);
                 }}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-zinc-900 dark:hover:text-zinc-100 rounded-md transition-colors shadow-sm"
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-zinc-100 rounded-md transition-colors shadow-sm"
               >
                 <Edit2 size={14} />
                 Editar Contenido

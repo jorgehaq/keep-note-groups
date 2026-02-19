@@ -296,6 +296,9 @@ function App() {
         return g;
       }));
 
+      // AUTO-OPEN ACCORDION TO PREVENT "LOST IN LIST"
+      toggleNote(activeGroupId, newNote.id);
+
     } catch (error: any) {
       alert('Error al crear nota: ' + error.message);
     }
@@ -362,7 +365,7 @@ function App() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-50 dark:bg-slate-950 text-slate-500">
+      <div className="flex items-center justify-center h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-500">
         <Loader2 className="animate-spin mr-2" /> Cargando...
       </div>
     )
@@ -391,7 +394,7 @@ function App() {
     : [];
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden transition-colors duration-300">
+    <div className="flex h-screen bg-zinc-50 dark:bg-zinc-950 overflow-hidden transition-colors duration-300">
 
       {/* Sidebar */}
       <Sidebar
@@ -407,7 +410,7 @@ function App() {
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
 
         {/* Header */}
-        <div className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm shrink-0">
+        <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
           <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3 flex-1">
               {/* Group Title */}
@@ -419,7 +422,7 @@ function App() {
                         type="text"
                         value={tempGroupName}
                         onChange={(e) => setTempGroupName(e.target.value)}
-                        className="flex-1 text-xl font-bold text-slate-800 dark:text-white bg-white dark:bg-slate-800 border-2 border-zinc-500 dark:border-zinc-400 rounded-lg px-3 py-1 focus:outline-none"
+                        className="flex-1 text-xl font-bold text-zinc-800 dark:text-white bg-white dark:bg-zinc-800 border-2 border-zinc-500 dark:border-zinc-400 rounded-lg px-3 py-1 focus:outline-none"
                         autoFocus
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') handleSaveGroup();
@@ -429,16 +432,16 @@ function App() {
                     </div>
                   ) : (
                     <div>
-                      <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <h1 className="text-xl font-bold text-zinc-800 dark:text-white flex items-center gap-2">
                         {activeGroup.title}
                       </h1>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
                         {activeGroup.notes.length || 0} Notas
                       </p>
                     </div>
                   )
                 ) : (
-                  <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  <h1 className="text-xl font-bold text-zinc-800 dark:text-white flex items-center gap-2">
                     Selecciona un Grupo
                   </h1>
                 )}
@@ -448,7 +451,7 @@ function App() {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleLogout}
-                className="p-2 text-slate-400 hover:text-zinc-900 dark:hover:text-white text-xs mr-2 font-medium"
+                className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-xs mr-2 font-medium"
                 title="Cerrar Sessión"
               >
                 Salir
@@ -467,7 +470,7 @@ function App() {
                       </button>
                       <button
                         onClick={handleCancelEdit}
-                        className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                        className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
                         title="Cancelar"
                       >
                         <X size={20} />
@@ -477,14 +480,14 @@ function App() {
                     <div className="flex items-center gap-1 mr-2">
                       <button
                         onClick={handleStartEdit}
-                        className="p-2 text-slate-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
+                        className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
                         title="Renombrar Grupo"
                       >
                         <Edit2 size={18} />
                       </button>
                       <button
                         onClick={() => deleteGroup(activeGroup.id)}
-                        className="p-2 text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+                        className="p-2 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
                         title="Eliminar Grupo"
                       >
                         <Loader2 size={18} className="hidden" /> {/* Hidden loader just to use the import if needed, or remove import */}
@@ -529,14 +532,14 @@ function App() {
                 {/* Search Bar */}
                 <div className="mb-8 relative group">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search size={18} className="text-slate-400 group-focus-within:text-zinc-500 dark:group-focus-within:text-zinc-400 transition-colors" />
+                    <Search size={18} className="text-zinc-400 group-focus-within:text-zinc-500 dark:group-focus-within:text-zinc-400 transition-colors" />
                   </div>
                   <input
                     type="text"
                     placeholder={`Buscar en ${activeGroup.title}...`}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-3 border border-slate-200 dark:border-slate-700 rounded-xl leading-5 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-zinc-400/20 focus:border-zinc-400 transition-all shadow-sm"
+                    className="block w-full pl-10 pr-3 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl leading-5 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-400/20 focus:border-zinc-400 transition-all shadow-sm"
                   />
                 </div>
 
@@ -544,10 +547,10 @@ function App() {
                 <div className="space-y-4">
                   {filteredNotes.length === 0 ? (
                     <div className="text-center py-20 opacity-60">
-                      <div className="inline-block p-4 rounded-full bg-slate-200 dark:bg-slate-800 mb-4">
-                        <Search size={32} className="text-slate-500 dark:text-slate-400" />
+                      <div className="inline-block p-4 rounded-full bg-zinc-200 dark:bg-zinc-800 mb-4">
+                        <Search size={32} className="text-zinc-500 dark:text-zinc-400" />
                       </div>
-                      <p className="text-lg text-slate-600 dark:text-slate-400">No se encontraron notas.</p>
+                      <p className="text-lg text-zinc-600 dark:text-zinc-400">No se encontraron notas.</p>
                     </div>
                   ) : (
                     filteredNotes.map(note => {
@@ -566,7 +569,7 @@ function App() {
                 </div>
               </>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-slate-400">
+              <div className="h-full flex flex-col items-center justify-center text-zinc-400">
                 {groups.length === 0 ? (
                   <div className="text-center">
                     <p className="mb-4">No tienes grupos aún.</p>

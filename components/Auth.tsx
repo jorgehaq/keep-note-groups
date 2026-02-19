@@ -46,10 +46,10 @@ export function Auth() {
     }
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950 p-4">
-            <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-8 border border-slate-200 dark:border-slate-800">
-                <h1 className="text-3xl font-bold text-center mb-2 text-slate-800 dark:text-white">Bienvenido</h1>
-                <p className="text-center text-slate-500 dark:text-slate-400 mb-8">Inicia sesión para guardar tus notas</p>
+        <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4">
+            <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl shadow-xl p-8 border border-zinc-200 dark:border-zinc-800">
+                <h1 className="text-3xl font-bold text-center mb-2 text-zinc-800 dark:text-white">Bienvenido</h1>
+                <p className="text-center text-zinc-500 dark:text-zinc-400 mb-8">Inicia sesión para guardar tus notas</p>
 
                 {message && (
                     <div className={`mb-4 p-3 rounded-lg text-sm ${message.type === 'success' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
@@ -59,12 +59,12 @@ export function Auth() {
 
                 <form onSubmit={handleLogin} className="space-y-4">
                     <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        <label htmlFor="email" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                             Correo Electrónico
                         </label>
                         <input
                             id="email"
-                            className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-zinc-500 focus:border-zinc-500 transition-all"
+                            className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-zinc-500 focus:border-zinc-500 transition-all"
                             type="email"
                             placeholder="tu@email.com"
                             value={email}

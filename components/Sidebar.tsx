@@ -35,7 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      <div className="w-16 md:w-20 bg-slate-200 dark:bg-slate-900 border-r border-slate-300 dark:border-slate-800 flex flex-col items-center py-4 gap-4 h-full shrink-0 z-40 overflow-hidden">
+      <div className="w-16 md:w-20 bg-zinc-200 dark:bg-zinc-900 border-r border-zinc-300 dark:border-zinc-800 flex flex-col items-center py-4 gap-4 h-full shrink-0 z-40 overflow-hidden">
 
         {/* Launcher Button (Top) */}
         <button
@@ -46,7 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Grid size={24} />
         </button>
 
-        <div className="w-10 h-0.5 bg-slate-300 dark:bg-slate-700 rounded-full mb-1 shrink-0"></div>
+        <div className="w-10 h-0.5 bg-zinc-300 dark:bg-zinc-700 rounded-full mb-1 shrink-0"></div>
 
         {/* Docked Groups List */}
         <div className="flex flex-col gap-3 w-full items-center flex-1 overflow-y-auto hidden-scrollbar py-2">
@@ -60,7 +60,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           {/* Separator if we have groups */}
-          {sortedDockedGroups.length > 0 && <div className="w-6 h-px bg-slate-300 dark:bg-slate-800 shrink-0"></div>}
+          {sortedDockedGroups.length > 0 && <div className="w-6 h-px bg-zinc-300 dark:bg-zinc-800 shrink-0"></div>}
 
           {sortedDockedGroups.map((group) => (
             <div key={group.id} className="relative group w-12 md:w-14 shrink-0">
@@ -70,7 +70,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   e.stopPropagation();
                   closeGroup(group.id);
                 }}
-                className="absolute -top-1 -right-1 z-20 w-5 h-5 bg-slate-500 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md text-xs"
+                className="absolute -top-1 -right-1 z-20 w-5 h-5 bg-zinc-500 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md text-xs"
                 title="Cerrar del Dock"
               >
                 <X size={12} />
@@ -82,7 +82,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     relative flex items-center justify-center w-full transition-all duration-300 overflow-hidden
                     ${activeGroupId === group.id
                     ? 'h-32 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-md ring-2 ring-zinc-300 dark:ring-zinc-500'
-                    : 'h-14 bg-slate-200 dark:bg-zinc-900 text-slate-500 dark:text-zinc-500 hover:bg-slate-300 dark:hover:bg-zinc-800'}
+                    : 'h-14 bg-zinc-200 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-500 hover:bg-zinc-300 dark:hover:bg-zinc-800'}
                     rounded-lg
                     `}
                 title={group.title}
@@ -114,10 +114,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Bottom Area: Settings */}
         <div className="mt-auto pt-4 shrink-0 flex flex-col items-center gap-2">
-          <div className="w-10 h-0.5 bg-slate-300 dark:bg-slate-700 rounded-full"></div>
+          <div className="w-10 h-0.5 bg-zinc-300 dark:bg-zinc-700 rounded-full"></div>
           <button
             onClick={onOpenSettings}
-            className="w-12 h-12 flex items-center justify-center rounded-xl text-slate-500 hover:bg-slate-300 dark:hover:bg-slate-800 transition-colors"
+            className="w-12 h-12 flex items-center justify-center rounded-xl text-zinc-500 hover:bg-zinc-300 dark:hover:bg-zinc-800 transition-colors"
             title="Configuración"
           >
             <Settings size={22} />
