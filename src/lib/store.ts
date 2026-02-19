@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 interface UIStore {
     activeGroupId: string | null;
@@ -28,6 +28,7 @@ export const useUIStore = create<UIStore>()(
         }),
         {
             name: 'keep-note-groups-ui-storage', // name of the item in the storage (must be unique)
+            storage: createJSONStorage(() => localStorage),
         }
     )
 );

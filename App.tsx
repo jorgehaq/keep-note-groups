@@ -85,10 +85,17 @@ function App() {
       setGroups(mergedGroups);
 
       // Restore active group if possible, else select first
-      if (mergedGroups.length > 0 && !activeGroupId) {
-        setActiveGroup(mergedGroups[0].id);
-      } else if (activeGroupId && !mergedGroups.find(g => g.id === activeGroupId)) {
-        setActiveGroup(mergedGroups[0]?.id || null);
+      if (mergedGroups.length > 0) {
+        if (!activeGroupId) {
+          // Nothing selected, select first
+          setActiveGroup(mergedGroups[0].id);
+        } else {
+          // Verify if the selected group still exists
+          if (!mergedGroups.find(g => g.id === activeGroupId)) {
+            setActiveGroup(mergedGroups[0].id);
+          }
+          // If it exists, do nothing (keep persistence)
+        }
       }
 
     } catch (error: any) {

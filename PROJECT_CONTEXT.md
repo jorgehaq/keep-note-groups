@@ -18,12 +18,13 @@ La aplicación sigue una estructura jerárquica simple centrada en `App.tsx`.
 El estado es **local y centralizado en `App.tsx`** usando React Hooks estándar (`useState`).
 
 *   **`groups`**: Array de objetos `Group` que contiene toda la información (grupos y sus notas).
-*   **`activeGroupId`**: ID del grupo actualmente seleccionado.
+*   **`activeGroupId`**: ID del grupo actualmente seleccionado (gestionado por `zustand`).
+*   **`openNotesByGroup`**: Notas abiertas por grupo (gestionado por `zustand`).
 *   **`searchQuery`**: Texto para el filtrado de notas.
 *   **`theme`**: Preferencia de tema ('light', 'dark', 'system').
 *   **`isSettingsOpen`**: Visibilidad del modal de configuración.
 
-**No se utilizan librerías externas** como Redux, Zustand o Context API. Todo el flujo de datos es unidireccional (Parent -> Child).
+**Se utiliza `zustand`** para el estado de la UI (`activeGroupId`, `openNotesByGroup`) y persistencia local de esa configuración UI. El resto del estado de datos (grupos, notas) se maneja localmente en `App.tsx` sincronizado con Supabase.
 
 ## 3. Persistencia de Datos
 La persistencia se maneja manualmente con `localStorage` en `App.tsx`.
@@ -45,4 +46,5 @@ La aplicación utiliza **Tailwind CSS** cargado vía CDN.
 *   **Build Tool:** Vite (`vite`, `@vitejs/plugin-react`).
 *   **Lenguaje:** TypeScript (`typescript`).
 *   **Iconos:** `lucide-react`.
+*   **Estado UI:** `zustand`.
 *   *Nota:* Tailwind NO está en `package.json`, se depende puramente del CDN.
