@@ -109,12 +109,12 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               />
             ) : (
               <h3
-                className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 truncate select-none hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-                onClick={(e) => {
+                className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 truncate select-none hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors inline-block cursor-pointer hover:underline decoration-zinc-400 decoration-dashed underline-offset-4"
+                onDoubleClick={(e) => {
                   e.stopPropagation();
                   setIsEditingTitle(true);
                 }}
-                title="Clic para editar título"
+                title="Doble clic para editar título"
               >
                 {note.title}
               </h3>
@@ -141,8 +141,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               }
             }}
             className={`transition-all duration-200 flex items-center justify-center ${isEditingContent
-                ? 'px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md shadow-sm gap-1.5 text-sm font-medium ml-2'
-                : 'p-2 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              ? 'px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md shadow-sm gap-1.5 text-sm font-medium ml-2'
+              : 'p-2 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
               }`}
             title={isEditingContent ? "Guardar cambios" : "Editar Contenido"}
           >
