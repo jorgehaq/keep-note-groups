@@ -8,6 +8,7 @@ export interface Note {
   created_at?: string;
   group_id?: string;
   position?: number;
+  is_pinned?: boolean;
 }
 
 export interface Group {

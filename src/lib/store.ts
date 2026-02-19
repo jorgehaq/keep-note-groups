@@ -3,11 +3,11 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 interface UIStore {
     activeGroupId: string | null;
-    // Map group ID to open note ID
-    openNotesByGroup: Record<string, string | null>;
+    // Map group ID to open note IDs (array)
+    openNotesByGroup: Record<string, string[]>;
 
     setActiveGroup: (id: string | null) => void;
-    setOpenNote: (groupId: string, noteId: string | null) => void;
+    toggleNote: (groupId: string, noteId: string) => void;
 }
 
 export const useUIStore = create<UIStore>()(
@@ -18,16 +18,26 @@ export const useUIStore = create<UIStore>()(
 
             setActiveGroup: (id) => set({ activeGroupId: id }),
 
-            setOpenNote: (groupId, noteId) =>
-                set((state) => ({
-                    openNotesByGroup: {
-                        ...state.openNotesByGroup,
-                        [groupId]: noteId
-                    }
-                })),
+            toggleNote: (groupId, noteId) =>
+                set((state) => {
+                    const currentOpen = state.openNotesByGroup[groupId] || [];
+                    const isOpen = currentOpen.includes(noteId);
+
+                    // If open, remove it. If closed, add it.
+                    const newOpen = isOpen
+                        ? currentOpen.filter(id => id !== noteId)
+                        : [...currentOpen, noteId];
+
+                    return {
+                        openNotesByGroup: {
+                            ...state.openNotesByGroup,
+                            [groupId]: newOpen
+                        }
+                    };
+                }),
         }),
         {
-            name: 'keep-note-groups-ui-storage', // name of the item in the storage (must be unique)
+            name: 'keep-note-groups-ui-storage-v2', // Changed name to force fresh state and avoid migration crashes
             storage: createJSONStorage(() => localStorage),
         }
     )

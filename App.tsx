@@ -17,7 +17,7 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   // ZUSTAND STORE
-  const { activeGroupId, setActiveGroup, openNotesByGroup, setOpenNote } = useUIStore();
+  const { activeGroupId, setActiveGroup, openNotesByGroup } = useUIStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [theme, setTheme] = useState<Theme>('dark');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -64,23 +64,36 @@ function App() {
       const { data: notesData, error: notesError } = await supabase
         .from('notes')
         .select('*')
-        .order('position', { ascending: true });
+        .order('position', { ascending: true }); // We'll refine sort client-side for pins
 
       if (notesError) throw notesError;
 
       // Transform and merge
       // Map DB 'name' to UI 'title' for groups
-      const mergedGroups: Group[] = (groupsData || []).map(g => ({
-        id: g.id,
-        title: g.name, // Map DB column 'name' to UI property 'title'
-        user_id: g.user_id,
-        notes: (notesData || [])
+      const mergedGroups: Group[] = (groupsData || []).map(g => {
+        const groupNotes: Note[] = (notesData || [])
           .filter(n => n.group_id === g.id)
           .map(n => ({
             ...n,
             isOpen: false // Default state for UI
-          }))
-      }));
+          }));
+
+        // Sort: Pinned first, then by Title (A-Z) - as requested
+        // Or Title? Request said: "1. Pinned, 2. Alphabetical".
+        // Original fetch was by 'position'. I will respect the request.
+        groupNotes.sort((a, b) => {
+          if (a.is_pinned && !b.is_pinned) return -1;
+          if (!a.is_pinned && b.is_pinned) return 1;
+          return a.title.localeCompare(b.title);
+        });
+
+        return {
+          id: g.id,
+          title: g.name, // Map DB column 'name' to UI property 'title'
+          user_id: g.user_id,
+          notes: groupNotes
+        };
+      });
 
       setGroups(mergedGroups);
 
@@ -281,6 +294,13 @@ function App() {
     setGroups(currentGroups => currentGroups.map(g => ({
       ...g,
       notes: g.notes.map(n => n.id === noteId ? { ...n, ...updates } : n)
+        // Re-sort immediately for optimistic UI feedback
+        .sort((a, b) => {
+          if (a.is_pinned !== b.is_pinned) {
+            return a.is_pinned ? -1 : 1;
+          }
+          return a.title.localeCompare(b.title);
+        })
     })));
 
     // Debounce or immediate? For simplicity, immediate, but catch errors.
@@ -288,10 +308,7 @@ function App() {
     const dbUpdates: any = {};
     if (updates.title !== undefined) dbUpdates.title = updates.title;
     if (updates.content !== undefined) dbUpdates.content = updates.content;
-    // isOpen is local-only usually, unless we add is_open column.
-    // User schema usually didn't have is_open in the simplified version provided in chat?
-    // Chat schema: id, user_id, group_id, title, content, position, created_at.
-    // NO is_open in DB. So we do NOT persist isOpen.
+    if (updates.is_pinned !== undefined) dbUpdates.is_pinned = updates.is_pinned;
 
     if (Object.keys(dbUpdates).length === 0) return;
 
@@ -301,19 +318,13 @@ function App() {
     } catch (error: any) {
       console.error('Error updating note:', error.message);
       // Revert? (Too complex for now, assume success)
+      alert('Error saving changes: ' + error.message);
     }
   };
 
   // Store-based toggle
-  const toggleNote = (noteId: string) => {
-    if (!activeGroupId) return;
-
-    // Check if currently open
-    const currentOpenNoteId = openNotesByGroup[activeGroupId];
-    const newOpenNoteId = currentOpenNoteId === noteId ? null : noteId;
-
-    setOpenNote(activeGroupId, newOpenNoteId);
-  };
+  // const toggleNote = (noteId: string) => ... // Now using store напрямую
+  const { toggleNote } = useUIStore();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -338,10 +349,19 @@ function App() {
   const activeGroup = groups.find(g => g.id === activeGroupId);
 
   const filteredNotes = activeGroup
-    ? activeGroup.notes.filter(n =>
-      n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      n.content.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    ? activeGroup.notes
+      .filter(n =>
+        n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        n.content.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+      .sort((a, b) => {
+        // Prioridad 1: Pinned arriba
+        if (a.is_pinned !== b.is_pinned) {
+          return a.is_pinned ? -1 : 1;
+        }
+        // Prioridad 2: Alfabético (A-Z) para empates
+        return a.title.localeCompare(b.title);
+      })
     : [];
 
   return (
@@ -504,12 +524,12 @@ function App() {
                     </div>
                   ) : (
                     filteredNotes.map(note => {
-                      const isOpen = openNotesByGroup[activeGroup.id] === note.id;
+                      const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
                       return (
                         <AccordionItem
                           key={note.id}
                           note={{ ...note, isOpen }}
-                          onToggle={() => toggleNote(note.id)}
+                          onToggle={() => toggleNote(activeGroup.id, note.id)}
                           onUpdate={(id, updates) => updateNote(id, updates)}
                           onDelete={deleteNote}
                         />
