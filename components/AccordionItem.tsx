@@ -65,7 +65,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       day: 'numeric',
       month: 'short',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      second: '2-digit'
     }).format(date);
   };
 
@@ -134,20 +135,25 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               if (isEditingContent) {
                 handleSaveContent();
               } else {
-                // Open if closed
                 if (!note.isOpen) onToggle(note.id);
-                // Start editing
                 setTempContent(note.content);
                 setIsEditingContent(true);
               }
             }}
-            className={`p-2 rounded-lg transition-colors ${isEditingContent
-              ? 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
-              : 'text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
+            className={`transition-all duration-200 flex items-center justify-center ${isEditingContent
+                ? 'px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md shadow-sm gap-1.5 text-sm font-medium ml-2'
+                : 'p-2 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
               }`}
-            title={isEditingContent ? "Guardar Contenido" : "Editar Contenido"}
+            title={isEditingContent ? "Guardar cambios" : "Editar Contenido"}
           >
-            {isEditingContent ? <Check size={18} /> : <Edit2 size={18} />}
+            {isEditingContent ? (
+              <>
+                <Check size={16} strokeWidth={3} />
+                <span>Guardar</span>
+              </>
+            ) : (
+              <Edit2 size={18} />
+            )}
           </button>
 
           <button

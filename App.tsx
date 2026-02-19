@@ -417,7 +417,7 @@ function App() {
         // Priority 2: Sort Mode
         switch (noteSortMode) {
           case 'date-desc':
-            // Use updated_at if available, else created_at. Fallback to 0.
+            // Strict millisecond sort
             return new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime();
           case 'date-asc':
             return new Date(a.updated_at || a.created_at || 0).getTime() - new Date(b.updated_at || b.created_at || 0).getTime();
