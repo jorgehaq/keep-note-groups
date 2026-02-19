@@ -90,16 +90,13 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             e.stopPropagation();
             onUpdate(note.id, { is_pinned: !note.is_pinned });
           }}
-          className={`p-2 rounded-full transition-colors ${note.is_pinned
-            ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30'
-            : 'text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+          className={`p-2 rounded-lg transition-all ${note.is_pinned
+            ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20'
+            : 'text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           title={note.is_pinned ? "Desfijar Nota" : "Fijar Nota"}
         >
-          {/* Using StickyNote for Pin icon as requested? User asked for "Chincheta/Pin". 
-                 StickyNote is already used for icon. Let's use 'Pin' from lucide-react. 
-                 Need to import Pin. */}
-          <Pin size={16} className={note.is_pinned ? "fill-current" : ""} />
+          <Pin size={18} className={note.is_pinned ? "fill-current" : ""} />
         </button>
 
         <button
@@ -107,10 +104,23 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             e.stopPropagation();
             setIsEditingTitle(!isEditingTitle);
           }}
-          className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-full transition-colors"
+          className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
           title="Editar Título"
         >
-          <Edit2 size={16} />
+          <Edit2 size={18} />
+        </button>
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (confirm('¿Estás seguro de eliminar esta nota?')) {
+              onDelete(note.id);
+            }
+          }}
+          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+          title="Eliminar Nota"
+        >
+          <Trash2 size={18} />
         </button>
 
 
