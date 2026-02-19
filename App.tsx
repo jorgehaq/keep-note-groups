@@ -17,7 +17,7 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   // ZUSTAND STORE
-  const { activeGroupId, setActiveGroup, openNotesByGroup } = useUIStore();
+  const { activeGroupId, setActiveGroup, openNotesByGroup, openGroup, dockedGroupIds } = useUIStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [theme, setTheme] = useState<Theme>('dark');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -91,25 +91,23 @@ function App() {
           id: g.id,
           title: g.name, // Map DB column 'name' to UI property 'title'
           user_id: g.user_id,
+          is_pinned: g.is_pinned,
+          last_accessed_at: g.last_accessed_at,
           notes: groupNotes
         };
       });
 
       setGroups(mergedGroups);
 
-      // Restore active group if possible, else select first
-      if (mergedGroups.length > 0) {
-        if (!activeGroupId) {
-          // Nothing selected, select first
-          setActiveGroup(mergedGroups[0].id);
-        } else {
-          // Verify if the selected group still exists
-          if (!mergedGroups.find(g => g.id === activeGroupId)) {
-            setActiveGroup(mergedGroups[0].id);
-          }
-          // If it exists, do nothing (keep persistence)
-        }
+      // We rely on store 'activeGroupId' and 'dockedGroupIds' for persistence.
+      // If store is empty (first run or cleared), maybe auto-dock pinned groups?
+      // For now, respect what's in store. If activeGroupId is set but not in loaded groups, clear it.
+      if (activeGroupId && !mergedGroups.find(g => g.id === activeGroupId)) {
+        setActiveGroup(null);
       }
+
+      // If docked groups don't exist anymore, we might want to clean them up from store, 
+      // but store persists IDs. UI will just filter them out naturally if we code Sidebar right.
 
     } catch (error: any) {
       console.error('Error fetching data:', error.message);
@@ -155,11 +153,13 @@ function App() {
         id: data.id,
         title: data.name,
         notes: [],
-        user_id: data.user_id
+        user_id: data.user_id,
+        is_pinned: false,
+        last_accessed_at: new Date().toISOString()
       };
 
       setGroups([...groups, newGroup]);
-      setActiveGroup(newGroup.id);
+      openGroup(newGroup.id); // Add to dock and activate
 
     } catch (error: any) {
       alert('Error al crear grupo: ' + error.message);
@@ -207,6 +207,32 @@ function App() {
       }
     }
   }
+
+  const toggleGroupPin = async (groupId: string, currentPinStatus: boolean) => {
+    const newStatus = !currentPinStatus;
+
+    // Optimistic Update
+    setGroups(groups.map(g =>
+      g.id === groupId ? { ...g, is_pinned: newStatus } : g
+    ));
+
+    try {
+      const { error } = await supabase
+        .from('groups')
+        .update({ is_pinned: newStatus })
+        .eq('id', groupId);
+
+      if (error) throw error;
+
+    } catch (error: any) {
+      console.error('Error updating pin status:', error.message);
+      // Revert optimization on error
+      setGroups(groups.map(g =>
+        g.id === groupId ? { ...g, is_pinned: currentPinStatus } : g
+      ));
+      alert('Error al actualizar pin: ' + error.message);
+    }
+  };
 
   const handleStartEdit = () => {
     if (activeGroup) {
@@ -374,6 +400,7 @@ function App() {
         onSelectGroup={setActiveGroup}
         onAddGroup={addGroup}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onTogglePin={toggleGroupPin}
       />
 
       {/* Main Content Area */}

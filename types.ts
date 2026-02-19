@@ -17,6 +17,8 @@ export interface Group {
   notes: Note[];
   color?: string; // Optional aesthetic color for the "window"
   user_id?: string;
+  is_pinned?: boolean;
+  last_accessed_at?: string;
 }
 
 export type Theme = 'light' | 'dark' | 'system';
