@@ -2,20 +2,25 @@ export interface Note {
   id: string;
   title: string;
   content: string;
-  isOpen: boolean;
-  createdAt: number;
+  isOpen: boolean; // UI state, not necessarily in DB (or mapped from is_open if we added it, but schema didn't have it, I'll keep it local or map it)
+  // Schema has: id, user_id, group_id, title, content, position, created_at
+  // We need to map DB -> UI
+  created_at?: string;
+  group_id?: string;
+  position?: number;
 }
 
 export interface Group {
   id: string;
-  title: string;
+  title: string; // UI uses title, we map DB 'name' -> 'title' in App.tsx
   notes: Note[];
   color?: string; // Optional aesthetic color for the "window"
+  user_id?: string;
 }
 
 export type Theme = 'light' | 'dark' | 'system';
 
-export type NoteAction = 
+export type NoteAction =
   | { type: 'ADD_NOTE'; groupId: string }
   | { type: 'DELETE_NOTE'; groupId: string; noteId: string }
   | { type: 'UPDATE_NOTE'; groupId: string; noteId: string; payload: { content?: string; title?: string } }
