@@ -16,6 +16,9 @@ function App() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Track if we've loaded data at least once — prevents redundant fetches from auth events
+  const hasLoadedOnce = React.useRef(false);
+
   // ZUSTAND STORE
   const { activeGroupId, setActiveGroup, openNotesByGroup, openGroup, dockedGroupIds, noteSortMode, setNoteSortMode } = useUIStore();
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,11 +42,15 @@ function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) fetchData();
-      else {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // Only handle SIGNED_OUT here.
+      // getSession() above already handles session restoration on mount.
+      // TOKEN_REFRESHED and SIGNED_IN fire on tab focus / session recovery,
+      // which would cause unwanted full re-renders.
+      if (event === 'SIGNED_OUT') {
+        setSession(null);
         setGroups([]);
+        hasLoadedOnce.current = false;
         setLoading(false);
       }
     });
@@ -53,7 +60,11 @@ function App() {
 
   // --- DATA FETCHING ---
   const fetchData = async () => {
-    setLoading(true);
+    // Only show the full-page spinner on the very first load.
+    // Subsequent fetches (e.g. from stale auth events) update silently.
+    if (!hasLoadedOnce.current) {
+      setLoading(true);
+    }
     try {
       // Fetch groups
       const { data: groupsData, error: groupsError } = await supabase
@@ -101,6 +112,7 @@ function App() {
       });
 
       setGroups(mergedGroups);
+      hasLoadedOnce.current = true;
 
       // We rely on store 'activeGroupId' and 'dockedGroupIds' for persistence.
       // If store is empty (first run or cleared), maybe auto-dock pinned groups?
@@ -391,10 +403,15 @@ function App() {
 
   const filteredNotes = activeGroup
     ? activeGroup.notes
-      .filter(n =>
-        n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        n.content.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+      .filter(n => {
+        // Bypass: always show new/editing notes regardless of search
+        const isNewOrEditing = n.title.trim() === '' || n.id === editingNoteId;
+        if (isNewOrEditing) return true;
+
+        const matchesSearch = n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          n.content.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesSearch;
+      })
       .sort((a, b) => {
         // FREEZE LOGIC: If a note is being edited (or just created), keep it at the top (below pins) 
         // or just prioritize it? 
