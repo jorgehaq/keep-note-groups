@@ -40,7 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Launcher Button (Top) */}
         <button
           onClick={() => setIsLauncherOpen(true)}
-          className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 hover:scale-105 transition-all mb-2 shrink-0"
+          className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center rounded-xl bg-[#1F3760] text-white shadow-lg shadow-[#1F3760]/30 hover:bg-[#152643] hover:scale-105 transition-all mb-2 shrink-0"
           title="Abrir Launcher de Grupos"
         >
           <Grid size={24} />
@@ -53,7 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* New Group Button (Quick Add) */}
           <button
             onClick={onAddGroup}
-            className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-lg border-2 border-dashed border-slate-400 dark:border-slate-700 text-slate-400 dark:text-slate-600 hover:border-indigo-500 hover:text-indigo-500 transition-colors shrink-0"
+            className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-lg bg-[#1F3760] text-white shadow-md hover:bg-[#152643] transition-all shrink-0 focus:outline-none focus:ring-2 focus:ring-[#1F3760]/50"
             title="Crear Nuevo Grupo"
           >
             <Plus size={20} />
@@ -81,8 +81,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className={`
                     relative flex items-center justify-center w-full transition-all duration-300 overflow-hidden
                     ${activeGroupId === group.id
-                    ? 'h-32 bg-white dark:bg-slate-800 text-indigo-600 shadow-md ring-2 ring-indigo-500/50'
-                    : 'h-14 bg-slate-300 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-400 dark:hover:bg-slate-700'}
+                    ? 'h-32 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-md ring-2 ring-zinc-300 dark:ring-zinc-500'
+                    : 'h-14 bg-slate-200 dark:bg-zinc-900 text-slate-500 dark:text-zinc-500 hover:bg-slate-300 dark:hover:bg-zinc-800'}
                     rounded-lg
                     `}
                 title={group.title}
@@ -90,7 +90,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {/* Active State Details */}
                 {activeGroupId === group.id ? (
                   <>
-                    <div className="absolute top-2 w-8 h-1 rounded-full bg-indigo-200 dark:bg-indigo-900/50"></div>
+                    <div className="absolute top-2 w-8 h-1 rounded-full bg-zinc-200 dark:bg-zinc-600"></div>
                     <span className="writing-vertical-rl rotate-180 text-sm font-bold tracking-wide uppercase truncate max-h-[80%] py-2">
                       {group.title}
                     </span>
@@ -101,10 +101,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </span>
                 )}
 
-                {/* Active Indicator Dot */}
-                {activeGroupId === group.id && (
-                  <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-indigo-500 rounded-l-full"></div>
-                )}
+                {/* Active Indicator Dot - Removed for cleaner look or kept as neutral? 
+                   Let's keep it but neutral or remove. The ring is enough. 
+                   Let's remove the dot as per "monochromatic and clean" preference.
+                   Or make it black/white? 
+                   Let's remove it for now to match "Gemini/Notion" cleanliness.
+                */}
               </button>
             </div>
           ))}

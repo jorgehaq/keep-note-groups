@@ -64,7 +64,7 @@ export function Auth() {
                         </label>
                         <input
                             id="email"
-                            className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                            className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-zinc-500 focus:border-zinc-500 transition-all"
                             type="email"
                             placeholder="tu@email.com"
                             value={email}
@@ -73,7 +73,7 @@ export function Auth() {
                         />
                     </div>
                     <button
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg active:scale-95"
+                        className="w-full bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-medium py-3 rounded-lg transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg active:scale-95"
                         disabled={loading}
                     >
                         {loading ? <Loader2 className="animate-spin" /> : <span>Enviar Magic Link</span>}

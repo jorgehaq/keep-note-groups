@@ -264,7 +264,7 @@ function App() {
       const { data, error } = await supabase
         .from('notes')
         .insert([{
-          title: 'Nueva Nota',
+          title: '', // Empty title to trigger auto-edit
           content: '',
           group_id: activeGroupId,
           user_id: session.user.id,
@@ -419,7 +419,7 @@ function App() {
                         type="text"
                         value={tempGroupName}
                         onChange={(e) => setTempGroupName(e.target.value)}
-                        className="flex-1 text-xl font-bold text-slate-800 dark:text-white bg-white dark:bg-slate-800 border-2 border-indigo-500 rounded-lg px-3 py-1 focus:outline-none"
+                        className="flex-1 text-xl font-bold text-slate-800 dark:text-white bg-white dark:bg-slate-800 border-2 border-zinc-500 dark:border-zinc-400 rounded-lg px-3 py-1 focus:outline-none"
                         autoFocus
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') handleSaveGroup();
@@ -448,7 +448,7 @@ function App() {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleLogout}
-                className="p-2 text-slate-400 hover:text-indigo-500 text-xs mr-2 font-medium"
+                className="p-2 text-slate-400 hover:text-zinc-900 dark:hover:text-white text-xs mr-2 font-medium"
                 title="Cerrar Sessión"
               >
                 Salir
@@ -477,7 +477,7 @@ function App() {
                     <div className="flex items-center gap-1 mr-2">
                       <button
                         onClick={handleStartEdit}
-                        className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-colors"
+                        className="p-2 text-slate-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
                         title="Renombrar Grupo"
                       >
                         <Edit2 size={18} />
@@ -512,7 +512,7 @@ function App() {
               <button
                 onClick={addNote}
                 disabled={!activeGroup}
-                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 bg-[#1F3760] hover:bg-[#152643] text-white px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-[#1F3760]/50"
               >
                 <Plus size={18} />
                 <span className="hidden sm:inline">Agregar Nota</span>
@@ -529,14 +529,14 @@ function App() {
                 {/* Search Bar */}
                 <div className="mb-8 relative group">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search size={18} className="text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                    <Search size={18} className="text-slate-400 group-focus-within:text-zinc-500 dark:group-focus-within:text-zinc-400 transition-colors" />
                   </div>
                   <input
                     type="text"
                     placeholder={`Buscar en ${activeGroup.title}...`}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-3 border border-slate-200 dark:border-slate-700 rounded-xl leading-5 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm"
+                    className="block w-full pl-10 pr-3 py-3 border border-slate-200 dark:border-slate-700 rounded-xl leading-5 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-zinc-400/20 focus:border-zinc-400 transition-all shadow-sm"
                   />
                 </div>
 
@@ -570,7 +570,7 @@ function App() {
                 {groups.length === 0 ? (
                   <div className="text-center">
                     <p className="mb-4">No tienes grupos aún.</p>
-                    <button onClick={addGroup} className="text-indigo-500 hover:underline">Crear el primer grupo</button>
+                    <button onClick={addGroup} className="text-zinc-600 dark:text-zinc-400 hover:underline hover:text-zinc-900 dark:hover:text-white">Crear el primer grupo</button>
                   </div>
                 ) : (
                   <p>Selecciona un grupo desde la barra lateral.</p>
