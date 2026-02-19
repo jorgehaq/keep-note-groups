@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Trash2, Edit2, Check, StickyNote, Pin } from 'lucide-react';
 import { Note } from '../types';
 import { LinkifiedText } from './LinkifiedText';
+import { SmartEditor } from './SmartEditor';
 
 interface AccordionItemProps {
   note: Note;
@@ -164,12 +165,11 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             {/* Editor / Viewer */}
             <div className="p-6">
               {isEditingContent ? (
-                <textarea
-                  ref={contentRef}
+                <SmartEditor
                   value={tempContent}
-                  onChange={(e) => setTempContent(e.target.value)}
+                  onChange={setTempContent}
                   placeholder="Escribe tus notas aquí... (Los enlaces serán clickeables en modo lectura)"
-                  className="w-full min-h-[300px] p-4 text-sm font-mono text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-y leading-relaxed"
+                  autoFocus={true}
                 />
               ) : (
                 <div
