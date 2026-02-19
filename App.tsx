@@ -8,6 +8,7 @@ import { SettingsWindow } from './components/SettingsWindow';
 import { supabase } from './src/lib/supabaseClient';
 import { Auth } from './components/Auth';
 import { Session } from '@supabase/supabase-js';
+import { useUIStore } from './src/lib/store';
 
 function App() {
   // --- STATE ---
@@ -15,7 +16,8 @@ function App() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  // ZUSTAND STORE
+  const { activeGroupId, setActiveGroup, openNotesByGroup, setOpenNote } = useUIStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [theme, setTheme] = useState<Theme>('dark');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -84,9 +86,9 @@ function App() {
 
       // Restore active group if possible, else select first
       if (mergedGroups.length > 0 && !activeGroupId) {
-        setActiveGroupId(mergedGroups[0].id);
+        setActiveGroup(mergedGroups[0].id);
       } else if (activeGroupId && !mergedGroups.find(g => g.id === activeGroupId)) {
-        setActiveGroupId(mergedGroups[0]?.id || null);
+        setActiveGroup(mergedGroups[0]?.id || null);
       }
 
     } catch (error: any) {
@@ -137,7 +139,7 @@ function App() {
       };
 
       setGroups([...groups, newGroup]);
-      setActiveGroupId(newGroup.id);
+      setActiveGroup(newGroup.id);
 
     } catch (error: any) {
       alert('Error al crear grupo: ' + error.message);
@@ -177,7 +179,7 @@ function App() {
         const remaining = groups.filter(g => g.id !== groupId);
         setGroups(remaining);
         if (activeGroupId === groupId) {
-          setActiveGroupId(remaining[0]?.id || null);
+          setActiveGroup(remaining[0]?.id || null);
         }
 
       } catch (error: any) {
@@ -295,12 +297,15 @@ function App() {
     }
   };
 
-  // Local-only toggle (not persisted)
+  // Store-based toggle
   const toggleNote = (noteId: string) => {
-    setGroups(currentGroups => currentGroups.map(g => ({
-      ...g,
-      notes: g.notes.map(n => n.id === noteId ? { ...n, isOpen: !n.isOpen } : n)
-    })));
+    if (!activeGroupId) return;
+
+    // Check if currently open
+    const currentOpenNoteId = openNotesByGroup[activeGroupId];
+    const newOpenNoteId = currentOpenNoteId === noteId ? null : noteId;
+
+    setOpenNote(activeGroupId, newOpenNoteId);
   };
 
   const handleLogout = async () => {
@@ -339,7 +344,7 @@ function App() {
       <Sidebar
         groups={groups}
         activeGroupId={activeGroupId}
-        onSelectGroup={setActiveGroupId}
+        onSelectGroup={setActiveGroup}
         onAddGroup={addGroup}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
@@ -491,15 +496,18 @@ function App() {
                       <p className="text-lg text-slate-600 dark:text-slate-400">No se encontraron notas.</p>
                     </div>
                   ) : (
-                    filteredNotes.map(note => (
-                      <AccordionItem
-                        key={note.id}
-                        note={note}
-                        onToggle={() => toggleNote(note.id)}
-                        onUpdate={(id, updates) => updateNote(id, updates)}
-                        onDelete={deleteNote}
-                      />
-                    ))
+                    filteredNotes.map(note => {
+                      const isOpen = openNotesByGroup[activeGroup.id] === note.id;
+                      return (
+                        <AccordionItem
+                          key={note.id}
+                          note={{ ...note, isOpen }}
+                          onToggle={() => toggleNote(note.id)}
+                          onUpdate={(id, updates) => updateNote(id, updates)}
+                          onDelete={deleteNote}
+                        />
+                      );
+                    })
                   )}
                 </div>
               </>
