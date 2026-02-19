@@ -11,6 +11,7 @@ interface UIStore {
     // Dock / Launcher State
     dockedGroupIds: string[]; // Groups visible in the sidebar
     lastLauncherTab: LauncherTab;
+    noteSortMode: 'date-desc' | 'date-asc' | 'alpha-asc' | 'alpha-desc';
 
     setActiveGroup: (id: string | null) => void;
     toggleNote: (groupId: string, noteId: string) => void;
@@ -19,6 +20,7 @@ interface UIStore {
     openGroup: (id: string) => void; // Adds to dock and sets active
     closeGroup: (id: string) => void; // Removes from dock
     setLauncherTab: (tab: LauncherTab) => void;
+    setNoteSortMode: (mode: 'date-desc' | 'date-asc' | 'alpha-asc' | 'alpha-desc') => void;
 }
 
 export const useUIStore = create<UIStore>()(
@@ -28,6 +30,7 @@ export const useUIStore = create<UIStore>()(
             openNotesByGroup: {},
             dockedGroupIds: [],
             lastLauncherTab: 'recent', // Default to recent
+            noteSortMode: 'date-desc',
 
             setActiveGroup: (id) => set({ activeGroupId: id }),
 
@@ -71,6 +74,7 @@ export const useUIStore = create<UIStore>()(
             }),
 
             setLauncherTab: (tab) => set({ lastLauncherTab: tab }),
+            setNoteSortMode: (mode) => set({ noteSortMode: mode }),
         }),
         {
             name: 'keep-note-groups-ui-storage-v3', // Bump version for new state shape

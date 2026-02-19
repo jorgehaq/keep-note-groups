@@ -27,7 +27,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   const [tempTitle, setTempTitle] = useState(note.title);
   const [tempContent, setTempContent] = useState(note.content);
 
-  const contentRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
     setIsEditingContent(false);
   };
 
-  const handleSaveTitle = () => {
+  const handleSaveTitle = (shouldFocusEditor = false) => {
     if (tempTitle.trim()) {
       onUpdate(note.id, { title: tempTitle });
     } else {
@@ -51,6 +51,22 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       onUpdate(note.id, { title: fallback });
     }
     setIsEditingTitle(false);
+    if (shouldFocusEditor) {
+      // If title was saved via Enter, focus the content editor
+      setIsEditingContent(true);
+      setTempContent(note.content); // Ensure tempContent is up-to-date before editing
+    }
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('es-ES', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
   };
 
   return (
@@ -61,7 +77,12 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           ? 'bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-100 dark:border-zinc-800'
           : 'bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800'
           }`}
-        onClick={() => !isEditingTitle && onToggle(note.id)}
+        onClick={() => {
+          // Only toggle if not editing title. 
+          // If editing content, maybe we should allow toggling? 
+          // Current req: "Move Edit Content button... Al hacer clic: Abre el acordeón (si estaba cerrado)..."
+          if (!isEditingTitle) onToggle(note.id);
+        }}
       >
         <div className="flex items-center gap-3 flex-1 overflow-hidden">
           <div className={`p-2 rounded-lg ${note.isOpen
@@ -71,113 +92,119 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             <StickyNote size={20} />
           </div>
 
-          {isEditingTitle ? (
-            <input
-              ref={titleInputRef}
-              type="text"
-              value={tempTitle}
-              onChange={(e) => setTempTitle(e.target.value)}
-              onBlur={handleSaveTitle}
-              onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
-              onClick={(e) => e.stopPropagation()}
-              placeholder="Título de la nota..."
-              autoFocus
-              className="flex-1 text-lg font-semibold text-zinc-800 dark:text-zinc-100 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded px-2 py-1 outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-800 placeholder-zinc-400"
-            />
-          ) : (
-            <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 truncate select-none flex-1">
-              {note.title}
-            </h3>
-          )}
+          <div className="flex flex-col flex-1 overflow-hidden">
+            {isEditingTitle ? (
+              <input
+                ref={titleInputRef}
+                type="text"
+                value={tempTitle}
+                onChange={(e) => setTempTitle(e.target.value)}
+                onBlur={() => handleSaveTitle(false)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle(true)}
+                onClick={(e) => e.stopPropagation()}
+                placeholder="Título de la nota..."
+                autoFocus
+                className="w-full text-lg font-semibold text-zinc-800 dark:text-zinc-100 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded px-2 py-0.5 outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-800 placeholder-zinc-400"
+              />
+            ) : (
+              <h3
+                className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 truncate select-none hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsEditingTitle(true);
+                }}
+                title="Clic para editar título"
+              >
+                {note.title}
+              </h3>
+            )}
+            {note.updated_at && (
+              <span className="text-xs text-zinc-400 font-mono mt-0.5">
+                Modificado: {formatDate(note.updated_at)}
+              </span>
+            )}
+          </div>
         </div>
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onUpdate(note.id, { is_pinned: !note.is_pinned });
-          }}
-          className={`p-2 rounded-lg transition-all ${note.is_pinned
-            ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20'
-            : 'text-zinc-400 hover:text-amber-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-            }`}
-          title={note.is_pinned ? "Desfijar Nota" : "Fijar Nota"}
-        >
-          <Pin size={18} className={note.is_pinned ? "fill-current" : ""} />
-        </button>
+        <div className="flex items-center gap-1">
+          {/* Edit Content Button (Moved to Header) */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isEditingContent) {
+                handleSaveContent();
+              } else {
+                // Open if closed
+                if (!note.isOpen) onToggle(note.id);
+                // Start editing
+                setTempContent(note.content);
+                setIsEditingContent(true);
+              }
+            }}
+            className={`p-2 rounded-lg transition-colors ${isEditingContent
+              ? 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
+              : 'text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              }`}
+            title={isEditingContent ? "Guardar Contenido" : "Editar Contenido"}
+          >
+            {isEditingContent ? <Check size={18} /> : <Edit2 size={18} />}
+          </button>
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsEditingTitle(!isEditingTitle);
-          }}
-          className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-          title="Editar Título"
-        >
-          <Edit2 size={18} />
-        </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpdate(note.id, { is_pinned: !note.is_pinned });
+            }}
+            className={`p-2 rounded-lg transition-all ${note.is_pinned
+              ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20'
+              : 'text-zinc-400 hover:text-amber-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              }`}
+            title={note.is_pinned ? "Desfijar Nota" : "Fijar Nota"}
+          >
+            <Pin size={18} className={note.is_pinned ? "fill-current" : ""} />
+          </button>
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (confirm('¿Estás seguro de eliminar esta nota?')) {
-              onDelete(note.id);
-            }
-          }}
-          className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-          title="Eliminar Nota"
-        >
-          <Trash2 size={18} />
-        </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (confirm('¿Estás seguro de eliminar esta nota?')) {
+                onDelete(note.id);
+              }
+            }}
+            className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+            title="Eliminar Nota"
+          >
+            <Trash2 size={18} />
+          </button>
 
-        <div className={`transform transition-transform duration-300 ${note.isOpen ? 'rotate-180' : ''} text-zinc-400`}>
-          <ChevronDown size={20} />
+          <div className={`p-2 transform transition-transform duration-300 ${note.isOpen ? 'rotate-180' : ''} text-zinc-400`}>
+            <ChevronDown size={20} />
+          </div>
         </div>
       </div>
 
       {/* Content Body */}
       {note.isOpen && (
         <div className="p-0 bg-white dark:bg-zinc-900 animate-fadeIn">
-          {/* Toolbar */}
-          <div className="flex justify-end px-4 py-2 bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-100 dark:border-zinc-800 gap-2">
-            <span className="text-xs text-zinc-400 self-center mr-auto px-2">
-              {isEditingContent ? 'Modo Edición' : 'Modo Lectura - Enlaces activos'}
-            </span>
-            {isEditingContent ? (
-              <button
-                onClick={handleSaveContent}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors shadow-sm"
-              >
-                <Check size={14} />
-                Listo
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  setTempContent(note.content);
-                  setIsEditingContent(true);
-                }}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-zinc-100 rounded-md transition-colors shadow-sm"
-              >
-                <Edit2 size={14} />
-                Editar Contenido
-              </button>
-            )}
-          </div>
+          {/* No more Toolbar */}
 
           {/* Editor / Viewer */}
-          <div className="p-6">
+          <div className="p-6 pt-2">
+            {/* Reduced top padding since toolbar is gone */}
             {isEditingContent ? (
               <SmartEditor
+                ref={editorRef}
                 value={tempContent}
                 onChange={setTempContent}
-                placeholder="Escribe tus notas aquí... (Los enlaces serán clickeables en modo lectura)"
+                placeholder="Escribe tus notas aquí..."
                 autoFocus={true}
               />
             ) : (
               <div
-                className="w-full min-h-[100px] p-2"
-                onClick={() => {
-                  // Optional: Double click to edit convenience
+                className="w-full min-h-[50px]"
+                onDoubleClick={() => {
+                  setTempContent(note.content);
+                  setIsEditingContent(true);
                 }}
               >
                 <LinkifiedText content={note.content} />

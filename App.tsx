@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Menu, Loader2, Edit2, Check, X } from 'lucide-react';
+import { Plus, Search, Menu, Loader2, Edit2, Check, X, Calendar, ArrowUp, ArrowDown, Type } from 'lucide-react';
 import { Note, Group, Theme } from './types';
 import { AccordionItem } from './components/AccordionItem';
 import { Sidebar } from './components/Sidebar';
@@ -17,7 +17,7 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   // ZUSTAND STORE
-  const { activeGroupId, setActiveGroup, openNotesByGroup, openGroup, dockedGroupIds } = useUIStore();
+  const { activeGroupId, setActiveGroup, openNotesByGroup, openGroup, dockedGroupIds, noteSortMode, setNoteSortMode } = useUIStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [theme, setTheme] = useState<Theme>('dark');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -25,6 +25,9 @@ function App() {
   // --- EDIT GROUP STATE ---
   const [isEditingGroup, setIsEditingGroup] = useState(false);
   const [tempGroupName, setTempGroupName] = useState('');
+
+  // Track the note currently being edited to "freeze" it in the list (prevent jumping)
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
 
   // --- AUTH & INITIAL LOAD ---
   useEffect(() => {
@@ -287,17 +290,16 @@ function App() {
 
       setGroups(groups.map(g => {
         if (g.id === activeGroupId) {
-          return { ...g, notes: [newNote, ...g.notes] }; // Prepend locally for visibility, or append based on sort?
-          // The fetch sorts by position ascending. If we append locally, we match "creation order".
-          // Logic in original app was prepend: [newNote, ...g.notes]. 
-          // Let's stick to prepend for UI feedback, but position might need handling if we want strict order.
-          // For now, simple insert is fine.
+          return { ...g, notes: [newNote, ...g.notes] };
         }
         return g;
       }));
 
       // AUTO-OPEN ACCORDION TO PREVENT "LOST IN LIST"
       toggleNote(activeGroupId, newNote.id);
+
+      // FREEZE: Set as editing so it doesn't jump immediately if sorted by date/alpha
+      setEditingNoteId(newNote.id);
 
     } catch (error: any) {
       alert('Error al crear nota: ' + error.message);
@@ -338,6 +340,16 @@ function App() {
     if (updates.title !== undefined) dbUpdates.title = updates.title;
     if (updates.content !== undefined) dbUpdates.content = updates.content;
     if (updates.is_pinned !== undefined) dbUpdates.is_pinned = updates.is_pinned;
+
+    // Always update updated_at if we are changing content or title
+    if (updates.title !== undefined || updates.content !== undefined) {
+      dbUpdates.updated_at = new Date().toISOString();
+      // Update local state too
+      setGroups(currentGroups => currentGroups.map(g => ({
+        ...g,
+        notes: g.notes.map(n => n.id === noteId ? { ...n, updated_at: dbUpdates.updated_at } : n)
+      })));
+    }
 
     if (Object.keys(dbUpdates).length === 0) return;
 
@@ -384,14 +396,50 @@ function App() {
         n.content.toLowerCase().includes(searchQuery.toLowerCase())
       )
       .sort((a, b) => {
-        // Prioridad 1: Pinned arriba
+        // FREEZE LOGIC: If a note is being edited (or just created), keep it at the top (below pins) 
+        // or just prioritize it? 
+        // User said: "exclúyela temporalmente del ordenamiento estricto o fuérzala a estar visible".
+        // Let's force it to be second only to pins (or even above pins if we want strict visibility).
+        // Let's stick to: Pins -> Edited Note -> Rest (Rest sorted by mode).
+
+        const isAEditing = a.id === editingNoteId;
+        const isBEditing = b.id === editingNoteId;
+
+        // Priority 0: Edited Note (Freeze it high up)
+        if (isAEditing && !isBEditing) return -1;
+        if (!isAEditing && isBEditing) return 1;
+
+        // Priority 1: Pinned
         if (a.is_pinned !== b.is_pinned) {
           return a.is_pinned ? -1 : 1;
         }
-        // Prioridad 2: Alfabético (A-Z) para empates
-        return a.title.localeCompare(b.title);
+
+        // Priority 2: Sort Mode
+        switch (noteSortMode) {
+          case 'date-desc':
+            // Use updated_at if available, else created_at. Fallback to 0.
+            return new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime();
+          case 'date-asc':
+            return new Date(a.updated_at || a.created_at || 0).getTime() - new Date(b.updated_at || b.created_at || 0).getTime();
+          case 'alpha-asc':
+            return a.title.localeCompare(b.title);
+          case 'alpha-desc':
+            return b.title.localeCompare(a.title);
+          default:
+            return 0;
+        }
       })
     : [];
+
+  const handleUpdateNoteWrapper = (noteId: string, updates: Partial<Note>) => {
+    // If we are saving content (which implies exiting edit mode mostly), we might clear editingNoteId?
+    // Actually, user said: "exclúyela... HASTA que el usuario presione el botón verde de "Guardar Contenido"."
+    // So checking if 'content' is being updated is a good signal.
+    if (updates.content !== undefined) {
+      setEditingNoteId(null);
+    }
+    updateNote(noteId, updates);
+  };
 
   return (
     <div className="flex h-screen bg-zinc-50 dark:bg-zinc-950 overflow-hidden transition-colors duration-300">
@@ -543,6 +591,37 @@ function App() {
                   />
                 </div>
 
+                {/* Sorting Toolbar */}
+                <div className="flex items-center justify-end gap-2 mb-4 animate-fadeIn">
+                  <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider mr-2">Ordenar por:</span>
+
+                  <button
+                    onClick={() => setNoteSortMode(noteSortMode === 'date-desc' ? 'date-asc' : 'date-desc')}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${noteSortMode.includes('date')
+                      ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100'
+                      : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                      }`}
+                  >
+                    <Calendar size={14} />
+                    Fecha
+                    {noteSortMode === 'date-desc' && <ArrowDown size={12} />}
+                    {noteSortMode === 'date-asc' && <ArrowUp size={12} />}
+                  </button>
+
+                  <button
+                    onClick={() => setNoteSortMode(noteSortMode === 'alpha-asc' ? 'alpha-desc' : 'alpha-asc')}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${noteSortMode.includes('alpha')
+                      ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100'
+                      : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                      }`}
+                  >
+                    <Type size={14} />
+                    Nombre
+                    {noteSortMode === 'alpha-asc' && <ArrowDown size={12} />}
+                    {noteSortMode === 'alpha-desc' && <ArrowUp size={12} />}
+                  </button>
+                </div>
+
                 {/* Notes */}
                 <div className="space-y-4">
                   {filteredNotes.length === 0 ? (
@@ -560,7 +639,7 @@ function App() {
                           key={note.id}
                           note={{ ...note, isOpen }}
                           onToggle={() => toggleNote(activeGroup.id, note.id)}
-                          onUpdate={(id, updates) => updateNote(id, updates)}
+                          onUpdate={(id, updates) => handleUpdateNoteWrapper(id, updates)}
                           onDelete={deleteNote}
                         />
                       );

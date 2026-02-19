@@ -9,6 +9,7 @@ export interface Note {
   group_id?: string;
   position?: number;
   is_pinned?: boolean;
+  updated_at?: string;
 }
 
 export interface Group {
