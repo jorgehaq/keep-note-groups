@@ -486,6 +486,7 @@ function App() {
         onAddGroup={addGroup}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onTogglePin={toggleGroupPin}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area */}
@@ -531,13 +532,6 @@ function App() {
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleLogout}
-                className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-xs mr-2 font-medium"
-                title="Cerrar Sessión"
-              >
-                Salir
-              </button>
 
               {activeGroup && (
                 <>

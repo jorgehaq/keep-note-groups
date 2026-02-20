@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Settings, Grid, X } from 'lucide-react';
+import { Plus, Settings, Grid, X, LogOut } from 'lucide-react';
 import { Group } from '../types';
 import { GroupLauncher } from './GroupLauncher';
 import { useUIStore } from '../src/lib/store';
@@ -11,6 +11,7 @@ interface SidebarProps {
   onAddGroup: () => void;
   onOpenSettings: () => void;
   onTogglePin: (groupId: string, currentStatus: boolean) => void;
+  onLogout: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -20,6 +21,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onAddGroup,
   onOpenSettings,
   onTogglePin,
+  onLogout,
 }) => {
   const { dockedGroupIds, closeGroup } = useUIStore();
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
@@ -35,35 +37,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      <div className="w-16 md:w-20 bg-zinc-200 dark:bg-zinc-900 border-r border-zinc-300 dark:border-zinc-800 flex flex-col items-center py-4 gap-4 h-full shrink-0 z-40 overflow-hidden">
+      <div className="w-12 md:w-16 bg-zinc-200 dark:bg-zinc-900 border-r border-zinc-300 dark:border-zinc-800 flex flex-col items-center py-3 gap-3 h-full shrink-0 z-40 overflow-hidden">
 
         {/* Launcher Button (Top) */}
         <button
           onClick={() => setIsLauncherOpen(true)}
-          className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center rounded-xl bg-[#1F3760] text-white shadow-lg shadow-[#1F3760]/30 hover:bg-[#152643] hover:scale-105 transition-all mb-2 shrink-0"
+          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-[#1F3760] text-white shadow-lg shadow-[#1F3760]/30 hover:bg-[#152643] hover:scale-105 transition-all mb-1 shrink-0"
           title="Abrir Launcher de Grupos"
         >
-          <Grid size={24} />
+          <Grid size={20} />
         </button>
 
-        <div className="w-10 h-0.5 bg-zinc-300 dark:bg-zinc-700 rounded-full mb-1 shrink-0"></div>
+        <div className="w-8 h-0.5 bg-zinc-300 dark:bg-zinc-700 rounded-full mb-1 shrink-0"></div>
 
         {/* Docked Groups List */}
         <div className="flex flex-col gap-3 w-full items-center flex-1 overflow-y-auto hidden-scrollbar py-2">
           {/* New Group Button (Quick Add) */}
           <button
             onClick={onAddGroup}
-            className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-lg bg-[#1F3760] text-white shadow-md hover:bg-[#152643] transition-all shrink-0 focus:outline-none focus:ring-2 focus:ring-[#1F3760]/50"
+            className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-lg bg-[#1F3760] text-white shadow-md hover:bg-[#152643] transition-all shrink-0 focus:outline-none focus:ring-2 focus:ring-[#1F3760]/50"
             title="Crear Nuevo Grupo"
           >
-            <Plus size={20} />
+            <Plus size={18} />
           </button>
 
           {/* Separator if we have groups */}
           {sortedDockedGroups.length > 0 && <div className="w-6 h-px bg-zinc-300 dark:bg-zinc-800 shrink-0"></div>}
 
           {sortedDockedGroups.map((group) => (
-            <div key={group.id} className="relative group w-12 md:w-14 shrink-0">
+            <div key={group.id} className="relative group w-10 md:w-12 shrink-0">
               {/* Close Button (Hover) */}
               <button
                 onClick={(e) => {
@@ -81,8 +83,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className={`
                     relative flex items-center justify-center w-full transition-all duration-300 overflow-hidden
                     ${activeGroupId === group.id
-                    ? 'h-32 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-md ring-2 ring-zinc-300 dark:ring-zinc-500'
-                    : 'h-14 bg-zinc-200 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-500 hover:bg-zinc-300 dark:hover:bg-zinc-800'}
+                    ? 'h-28 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-md ring-2 ring-zinc-300 dark:ring-zinc-500'
+                    : 'h-12 bg-zinc-200 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-500 hover:bg-zinc-300 dark:hover:bg-zinc-800'}
                     rounded-lg
                     `}
                 title={group.title}
@@ -90,13 +92,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {/* Active State Details */}
                 {activeGroupId === group.id ? (
                   <>
-                    <div className="absolute top-2 w-8 h-1 rounded-full bg-zinc-200 dark:bg-zinc-600"></div>
-                    <span className="writing-vertical-rl rotate-180 text-sm font-bold tracking-wide uppercase truncate max-h-[80%] py-2">
+                    <div className="absolute top-1.5 w-6 h-0.5 rounded-full bg-zinc-200 dark:bg-zinc-600"></div>
+                    <span className="writing-vertical-rl rotate-180 text-xs font-bold tracking-wide uppercase truncate max-h-[80%] py-1">
                       {group.title}
                     </span>
                   </>
                 ) : (
-                  <span className="text-lg font-bold uppercase">
+                  <span className="text-sm font-bold uppercase">
                     {group.title.substring(0, 2)}
                   </span>
                 )}
@@ -113,14 +115,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Bottom Area: Settings */}
-        <div className="mt-auto pt-4 shrink-0 flex flex-col items-center gap-2">
-          <div className="w-10 h-0.5 bg-zinc-300 dark:bg-zinc-700 rounded-full"></div>
+        <div className="mt-auto pt-3 shrink-0 flex flex-col items-center gap-1.5">
+          <div className="w-8 h-0.5 bg-zinc-300 dark:bg-zinc-700 rounded-full"></div>
           <button
             onClick={onOpenSettings}
-            className="w-12 h-12 flex items-center justify-center rounded-xl text-zinc-500 hover:bg-zinc-300 dark:hover:bg-zinc-800 transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-xl text-zinc-500 hover:bg-zinc-300 dark:hover:bg-zinc-800 transition-colors"
             title="Configuración"
           >
-            <Settings size={22} />
+            <Settings size={18} />
+          </button>
+          <button
+            onClick={onLogout}
+            className="w-10 h-10 flex items-center justify-center rounded-xl text-zinc-500 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors"
+            title="Cerrar Sesión"
+          >
+            <LogOut size={18} />
           </button>
         </div>
 
