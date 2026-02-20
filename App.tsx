@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Menu, Loader2, Edit2, Check, X, Calendar, ArrowUp, ArrowDown, Type } from 'lucide-react';
+import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2 } from 'lucide-react';
 import { Note, Group, Theme } from './types';
 import { AccordionItem } from './components/AccordionItem';
 import { Sidebar } from './components/Sidebar';
@@ -494,109 +494,125 @@ function App() {
 
         {/* Header */}
         <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
-          <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1">
-              {/* Group Title */}
-              <div className="flex-1 flex items-center">
-                {activeGroup ? (
-                  isEditingGroup ? (
-                    <div className="flex items-center gap-2 w-full max-w-md animate-fadeIn">
-                      <input
-                        type="text"
-                        value={tempGroupName}
-                        onChange={(e) => setTempGroupName(e.target.value)}
-                        className="flex-1 text-xl font-bold text-zinc-800 dark:text-white bg-white dark:bg-zinc-800 border-2 border-zinc-500 dark:border-zinc-400 rounded-lg px-3 py-1 focus:outline-none"
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleSaveGroup();
-                          if (e.key === 'Escape') handleCancelEdit();
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <div>
-                      <h1 className="text-xl font-bold text-zinc-800 dark:text-white flex items-center gap-2">
-                        {activeGroup.title}
-                      </h1>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
-                        {activeGroup.notes.length || 0} Notas
-                      </p>
-                    </div>
-                  )
+          <div className="max-w-4xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-2">
+
+            {/* Left: Group Title */}
+            <div className="flex items-center gap-2 min-w-0 flex-shrink">
+              {activeGroup ? (
+                isEditingGroup ? (
+                  <div className="flex items-center gap-1.5 animate-fadeIn">
+                    <input
+                      type="text"
+                      value={tempGroupName}
+                      onChange={(e) => setTempGroupName(e.target.value)}
+                      className="text-lg font-bold text-zinc-800 dark:text-white bg-white dark:bg-zinc-800 border-2 border-zinc-500 dark:border-zinc-400 rounded-lg px-2 py-0.5 focus:outline-none w-40 md:w-56"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveGroup();
+                        if (e.key === 'Escape') handleCancelEdit();
+                      }}
+                      onBlur={handleSaveGroup}
+                    />
+                    <button
+                      onClick={handleCancelEdit}
+                      className="p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
+                      title="Cancelar"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
                 ) : (
-                  <h1 className="text-xl font-bold text-zinc-800 dark:text-white flex items-center gap-2">
-                    Selecciona un Grupo
-                  </h1>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-
-              {activeGroup && (
-                <>
-                  {isEditingGroup ? (
-                    <div className="flex items-center gap-1 mr-2 animate-fadeIn">
-                      <button
-                        onClick={handleSaveGroup}
-                        className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-full transition-colors"
-                        title="Guardar Nombre"
-                      >
-                        <Check size={20} />
-                      </button>
-                      <button
-                        onClick={handleCancelEdit}
-                        className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
-                        title="Cancelar"
-                      >
-                        <X size={20} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1 mr-2">
-                      <button
-                        onClick={handleStartEdit}
-                        className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
-                        title="Renombrar Grupo"
-                      >
-                        <Edit2 size={18} />
-                      </button>
-                      <button
-                        onClick={() => deleteGroup(activeGroup.id)}
-                        className="p-2 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
-                        title="Eliminar Grupo"
-                      >
-                        <Loader2 size={18} className="hidden" /> {/* Hidden loader just to use the import if needed, or remove import */}
-                        {/* Actually we just use trash icon usually, but code had "Eliminar Grupo" text button before. Let's switch to Icon for cleaner UI next to Edit? 
-                              User req: "Agrega un botón de Editar... al lado del botón de eliminar".
-                              Original was text button. I will make them both icons or both text? 
-                              Plan said: "Replace Edit/Delete buttons with Save/Cancel".
-                              Let's keep the Delete button as it was (Text) or make it an Icon for consistency? 
-                              The user asked for a "pencil icon". Usually icons go with icons. 
-                              Let's make Delete an Icon too for better UI, or keep it text. 
-                              Original: <button ...>Eliminar Grupo</button>
-                              New Plan: Icon for Edit.
-                              Refining: I will make a Trash icon for Delete to match the Pencil.
-                              Correction: User said "Agrega un botón... al lado del botón de eliminar". I should respect existing if possible, but Icon is better.
-                              I'll use Trash2 (need import detailed). Or just keep text?
-                              Let's stick to the prompt: input text and Save/Cancel buttons.
-                              Ill use icons for Edit/Delete in view mode for a cleaner header.
-                          */}
-                        <span className="text-xs font-semibold">Eliminar</span>
-                      </button>
-                    </div>
-                  )}
-                </>
+                  <div className="min-w-0">
+                    <h1
+                      className="text-lg font-bold text-zinc-800 dark:text-white truncate cursor-pointer hover:underline decoration-zinc-400 decoration-dashed underline-offset-4 transition-colors"
+                      onDoubleClick={handleStartEdit}
+                      title="Doble clic para editar"
+                    >
+                      {activeGroup.title}
+                    </h1>
+                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
+                      {activeGroup.notes.length || 0} Notas
+                    </p>
+                  </div>
+                )
+              ) : (
+                <h1 className="text-lg font-bold text-zinc-800 dark:text-white">
+                  Selecciona un Grupo
+                </h1>
               )}
-              <button
-                onClick={addNote}
-                disabled={!activeGroup}
-                className="flex items-center gap-2 bg-[#1F3760] hover:bg-[#152643] text-white px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-[#1F3760]/50"
-              >
-                <Plus size={18} />
-                <span className="hidden sm:inline">Agregar Nota</span>
-              </button>
             </div>
+
+            {/* Right: Search + Sort + Actions */}
+            {activeGroup && (
+              <div className="flex items-center gap-1">
+
+                {/* Compact Search */}
+                <div className="relative flex items-center">
+                  <Search size={15} className="absolute left-2 text-zinc-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Buscar..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-28 md:w-40 pl-7 pr-2 py-1.5 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400/30 transition-all"
+                  />
+                </div>
+
+                {/* Divider */}
+                <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
+
+                {/* Sort: Date */}
+                <button
+                  onClick={() => setNoteSortMode(noteSortMode === 'date-desc' ? 'date-asc' : 'date-desc')}
+                  className={`p-1.5 rounded-lg transition-all flex items-center gap-0.5 ${noteSortMode.includes('date')
+                    ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
+                    : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                    }`}
+                  title={`Ordenar por fecha ${noteSortMode === 'date-desc' ? '(más reciente)' : '(más antiguo)'}`}
+                >
+                  <Calendar size={14} />
+                  {noteSortMode === 'date-desc' && <ArrowDown size={10} />}
+                  {noteSortMode === 'date-asc' && <ArrowUp size={10} />}
+                </button>
+
+                {/* Sort: Alpha */}
+                <button
+                  onClick={() => setNoteSortMode(noteSortMode === 'alpha-asc' ? 'alpha-desc' : 'alpha-asc')}
+                  className={`p-1.5 rounded-lg transition-all flex items-center gap-0.5 ${noteSortMode.includes('alpha')
+                    ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
+                    : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                    }`}
+                  title={`Ordenar por nombre ${noteSortMode === 'alpha-asc' ? '(A-Z)' : '(Z-A)'}`}
+                >
+                  <Type size={14} />
+                  {noteSortMode === 'alpha-asc' && <ArrowDown size={10} />}
+                  {noteSortMode === 'alpha-desc' && <ArrowUp size={10} />}
+                </button>
+
+                {/* Divider */}
+                <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
+
+                {/* Delete Group */}
+                {!isEditingGroup && (
+                  <button
+                    onClick={() => deleteGroup(activeGroup.id)}
+                    className="p-1.5 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    title="Eliminar Grupo"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                )}
+
+                {/* Add Note */}
+                <button
+                  onClick={addNote}
+                  className="w-8 h-8 flex items-center justify-center bg-[#1F3760] hover:bg-[#152643] text-white rounded-lg transition-all shadow-md hover:shadow-lg active:scale-95 focus:ring-2 focus:ring-[#1F3760]/50"
+                  title="Agregar Nota"
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -605,50 +621,7 @@ function App() {
           <div className="max-w-4xl mx-auto pb-20">
             {activeGroup ? (
               <>
-                {/* Search Bar */}
-                <div className="mb-8 relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search size={18} className="text-zinc-400 group-focus-within:text-zinc-500 dark:group-focus-within:text-zinc-400 transition-colors" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder={`Buscar en ${activeGroup.title}...`}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl leading-5 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-400/20 focus:border-zinc-400 transition-all shadow-sm"
-                  />
-                </div>
 
-                {/* Sorting Toolbar */}
-                <div className="flex items-center justify-end gap-2 mb-4 animate-fadeIn">
-                  <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider mr-2">Ordenar por:</span>
-
-                  <button
-                    onClick={() => setNoteSortMode(noteSortMode === 'date-desc' ? 'date-asc' : 'date-desc')}
-                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${noteSortMode.includes('date')
-                      ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100'
-                      : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                      }`}
-                  >
-                    <Calendar size={14} />
-                    Fecha
-                    {noteSortMode === 'date-desc' && <ArrowDown size={12} />}
-                    {noteSortMode === 'date-asc' && <ArrowUp size={12} />}
-                  </button>
-
-                  <button
-                    onClick={() => setNoteSortMode(noteSortMode === 'alpha-asc' ? 'alpha-desc' : 'alpha-asc')}
-                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${noteSortMode.includes('alpha')
-                      ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100'
-                      : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                      }`}
-                  >
-                    <Type size={14} />
-                    Nombre
-                    {noteSortMode === 'alpha-asc' && <ArrowDown size={12} />}
-                    {noteSortMode === 'alpha-desc' && <ArrowUp size={12} />}
-                  </button>
-                </div>
 
                 {/* Notes */}
                 <div className="space-y-4">
