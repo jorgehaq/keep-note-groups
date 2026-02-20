@@ -61,6 +61,17 @@
     .writing-vertical-lr {
       writing-mode: vertical-lr;
     }
+
+    /* Ocultar scrollbar en Chrome, Safari y Opera */
+    .hidden-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Ocultar scrollbar en Firefox, IE y Edge */
+    .hidden-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
   </style>
   <script type="importmap">
 {

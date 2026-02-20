@@ -69,7 +69,7 @@ export const SmartEditor = forwardRef<HTMLTextAreaElement, SmartEditorProps>(({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             minRows={5}
-            className={`w-full resize-none bg-transparent outline-none text-zinc-700 dark:text-zinc-300 placeholder-zinc-400 font-mono text-sm leading-relaxed ${className || ''}`}
+            className={`w-full max-w-full resize-none bg-transparent outline-none text-zinc-700 dark:text-zinc-300 placeholder-zinc-400 font-mono text-sm leading-relaxed overflow-x-hidden break-words ${className || ''}`}
         />
     );
 });

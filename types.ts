@@ -30,3 +30,42 @@ export type NoteAction =
   | { type: 'DELETE_NOTE'; groupId: string; noteId: string }
   | { type: 'UPDATE_NOTE'; groupId: string; noteId: string; payload: { content?: string; title?: string } }
   | { type: 'TOGGLE_NOTE'; groupId: string; noteId: string };
+
+export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'done' | 'archived';
+
+export interface Task {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  position: number;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type GlobalAppView = 'notes' | 'kanban' | 'timers' | 'reminders';
+
+export type TimerType = 'stopwatch' | 'countdown';
+export type TimerStatus = 'running' | 'paused';
+
+export interface Timer {
+  id: string;
+  title: string;
+  type: TimerType;
+  status: TimerStatus;
+  accumulated_seconds: number;
+  target_seconds: number;
+  last_started_at: string | null;
+  user_id: string;
+  updated_at: string;
+}
+
+export interface Reminder {
+  id: string;
+  title: string;
+  note?: string;
+  due_at: string;
+  is_completed: boolean;
+  user_id: string;
+  created_at: string;
+}

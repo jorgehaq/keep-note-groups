@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2 } from 'lucide-react';
-import { Note, Group, Theme } from './types';
+import { Note, Group, Theme, Reminder } from './types';
 import { AccordionItem } from './components/AccordionItem';
 import { Sidebar } from './components/Sidebar';
 import { SettingsWindow } from './components/SettingsWindow';
+import { KanbanApp } from './components/KanbanApp';
+import { TimeTrackerApp } from './components/TimeTrackerApp';
+import { RemindersApp } from './components/RemindersApp';
 // import { generateId } from './utils'; // No longer needed for IDs, Supabase handles it
 import { supabase } from './src/lib/supabaseClient';
 import { Auth } from './components/Auth';
@@ -20,7 +23,7 @@ function App() {
   const hasLoadedOnce = React.useRef(false);
 
   // ZUSTAND STORE
-  const { activeGroupId, setActiveGroup, openNotesByGroup, openGroup, dockedGroupIds, noteSortMode, setNoteSortMode } = useUIStore();
+  const { activeGroupId, setActiveGroup, openNotesByGroup, openGroup, dockedGroupIds, noteSortMode, setNoteSortMode, toggleNote, globalView, setGlobalView } = useUIStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [theme, setTheme] = useState<Theme>('dark');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -37,6 +40,9 @@ function App() {
 
   // Focused Note Mode — when a docked note is clicked, isolate it
   const [focusedNoteId, setFocusedNoteId] = useState<string | null>(null);
+
+  // Global Reminders — overdue list for persistent banner
+  const [overdueRemindersList, setOverdueRemindersList] = useState<{ id: string; title: string }[]>([]);
 
   // Clear ghost focus when switching to a group that doesn't own the focused note
   useEffect(() => {
@@ -74,6 +80,38 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // --- GLOBAL REMINDERS POLLING (runs in any view) ---
+  const { setOverdueRemindersCount, setImminentRemindersCount } = useUIStore();
+  useEffect(() => {
+    if (!session) return;
+
+    const checkReminders = async () => {
+      const { data } = await supabase
+        .from('reminders')
+        .select('id, title, due_at')
+        .eq('is_completed', false);
+
+      if (!data) return;
+
+      const now = new Date();
+      const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+      const overdue = data.filter(r => new Date(r.due_at) <= now);
+      const imminent = data.filter(r => {
+        const d = new Date(r.due_at);
+        return d > now && d <= in24h;
+      });
+
+      setOverdueRemindersCount(overdue.length);
+      setImminentRemindersCount(imminent.length);
+      setOverdueRemindersList(overdue.map(r => ({ id: r.id, title: r.title })));
+    };
+
+    checkReminders();
+    const interval = setInterval(checkReminders, 30000);
+    return () => clearInterval(interval);
+  }, [session, setOverdueRemindersCount, setImminentRemindersCount]);
 
   // --- DATA FETCHING ---
   const fetchData = async () => {
@@ -406,9 +444,7 @@ function App() {
     }
   };
 
-  // Store-based toggle
-  // const toggleNote = (noteId: string) => ... // Now using store напрямую
-  const { toggleNote } = useUIStore();
+  // Store-based toggle — toggleNote is destructured from useUIStore above
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -522,179 +558,216 @@ function App() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+        {globalView === 'kanban' ? (
+          <KanbanApp />
+        ) : globalView === 'timers' ? (
+          <TimeTrackerApp session={session!} />
+        ) : globalView === 'reminders' ? (
+          <RemindersApp session={session!} />
+        ) : (
+          <>
 
-        {/* Header */}
-        <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
-          <div className="max-w-4xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-2">
+            {/* Header */}
+            <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
+              <div className="max-w-4xl mx-auto px-4 md:px-6 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
 
-            {/* Left: Group Title */}
-            <div className="flex items-center gap-2 min-w-0 flex-shrink">
-              {activeGroup ? (
-                isEditingGroup ? (
-                  <div className="flex items-center gap-1.5 animate-fadeIn">
-                    <input
-                      type="text"
-                      value={tempGroupName}
-                      onChange={(e) => setTempGroupName(e.target.value)}
-                      className="text-lg font-bold text-zinc-800 dark:text-white bg-white dark:bg-zinc-800 border-2 border-zinc-500 dark:border-zinc-400 rounded-lg px-2 py-0.5 focus:outline-none w-40 md:w-56"
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleSaveGroup();
-                        if (e.key === 'Escape') handleCancelEdit();
-                      }}
-                      onBlur={handleSaveGroup}
-                    />
-                    <button
-                      onClick={handleCancelEdit}
-                      className="p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
-                      title="Cancelar"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="min-w-0">
-                    <h1
-                      className="text-lg font-bold text-zinc-800 dark:text-white truncate cursor-pointer hover:underline decoration-zinc-400 decoration-dashed underline-offset-4 transition-colors"
-                      onDoubleClick={handleStartEdit}
-                      title="Doble clic para editar"
-                    >
-                      {activeGroup.title}
-                    </h1>
-                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
-                      {activeGroup.notes.length || 0} Notas
-                    </p>
-                  </div>
-                )
-              ) : (
-                <h1 className="text-lg font-bold text-zinc-800 dark:text-white">
-                  Selecciona un Grupo
-                </h1>
-              )}
-            </div>
-
-            {/* Right: Search + Sort + Actions */}
-            {activeGroup && (
-              <div className="flex items-center gap-1">
-
-                {/* Compact Search */}
-                <div className="relative flex items-center">
-                  <Search size={15} className="absolute left-2 text-zinc-400 pointer-events-none" />
-                  <input
-                    type="text"
-                    placeholder="Buscar..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-28 md:w-40 pl-7 pr-2 py-1.5 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400/30 transition-all"
-                  />
-                </div>
-
-                {/* Divider */}
-                <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
-
-                {/* Sort: Date */}
-                <button
-                  onClick={() => setNoteSortMode(noteSortMode === 'date-desc' ? 'date-asc' : 'date-desc')}
-                  className={`p-1.5 rounded-lg transition-all flex items-center gap-0.5 ${noteSortMode.includes('date')
-                    ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-                    : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                    }`}
-                  title={`Ordenar por fecha ${noteSortMode === 'date-desc' ? '(más reciente)' : '(más antiguo)'}`}
-                >
-                  <Calendar size={14} />
-                  {noteSortMode === 'date-desc' && <ArrowDown size={10} />}
-                  {noteSortMode === 'date-asc' && <ArrowUp size={10} />}
-                </button>
-
-                {/* Sort: Alpha */}
-                <button
-                  onClick={() => setNoteSortMode(noteSortMode === 'alpha-asc' ? 'alpha-desc' : 'alpha-asc')}
-                  className={`p-1.5 rounded-lg transition-all flex items-center gap-0.5 ${noteSortMode.includes('alpha')
-                    ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-                    : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                    }`}
-                  title={`Ordenar por nombre ${noteSortMode === 'alpha-asc' ? '(A-Z)' : '(Z-A)'}`}
-                >
-                  <Type size={14} />
-                  {noteSortMode === 'alpha-asc' && <ArrowDown size={10} />}
-                  {noteSortMode === 'alpha-desc' && <ArrowUp size={10} />}
-                </button>
-
-                {/* Divider */}
-                <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
-
-                {/* Delete Group */}
-                {!isEditingGroup && (
-                  <button
-                    onClick={() => deleteGroup(activeGroup.id)}
-                    className="p-1.5 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                    title="Eliminar Grupo"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                )}
-
-                {/* Add Note */}
-                <button
-                  onClick={addNote}
-                  className="w-8 h-8 flex items-center justify-center bg-[#1F3760] hover:bg-[#152643] text-white rounded-lg transition-all shadow-md hover:shadow-lg active:scale-95 focus:ring-2 focus:ring-[#1F3760]/50"
-                  title="Agregar Nota"
-                >
-                  <Plus size={18} />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Scrollable Note Content */}
-        <main ref={mainRef} className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="max-w-4xl mx-auto pb-20">
-            {activeGroup ? (
-              <>
-
-
-                {/* Notes */}
-                <div className="space-y-4">
-                  {filteredNotes.length === 0 ? (
-                    <div className="text-center py-20 opacity-60">
-                      <div className="inline-block p-4 rounded-full bg-zinc-200 dark:bg-zinc-800 mb-4">
-                        <Search size={32} className="text-zinc-500 dark:text-zinc-400" />
+                {/* Left: Group Title */}
+                <div className="flex items-center gap-2 min-w-0 flex-shrink">
+                  {activeGroup ? (
+                    isEditingGroup ? (
+                      <div className="flex items-center gap-1.5 animate-fadeIn">
+                        <input
+                          type="text"
+                          value={tempGroupName}
+                          onChange={(e) => setTempGroupName(e.target.value)}
+                          className="text-lg font-bold text-zinc-800 dark:text-white bg-white dark:bg-zinc-800 border-2 border-zinc-500 dark:border-zinc-400 rounded-lg px-2 py-0.5 focus:outline-none w-40 md:w-56"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveGroup();
+                            if (e.key === 'Escape') handleCancelEdit();
+                          }}
+                          onBlur={handleSaveGroup}
+                        />
+                        <button
+                          onClick={handleCancelEdit}
+                          className="p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
+                          title="Cancelar"
+                        >
+                          <X size={16} />
+                        </button>
                       </div>
-                      <p className="text-lg text-zinc-600 dark:text-zinc-400">No se encontraron notas.</p>
-                    </div>
+                    ) : (
+                      <div className="min-w-0">
+                        <h1
+                          className="text-lg font-bold text-zinc-800 dark:text-white truncate cursor-pointer hover:underline decoration-zinc-400 decoration-dashed underline-offset-4 transition-colors"
+                          onDoubleClick={handleStartEdit}
+                          title="Doble clic para editar"
+                        >
+                          {activeGroup.title}
+                        </h1>
+                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
+                          {activeGroup.notes.length || 0} Notas
+                        </p>
+                      </div>
+                    )
                   ) : (
-                    filteredNotes.map(note => {
-                      const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
-                      return (
-                        <div key={note.id} id={`note-${note.id}`}>
-                          <AccordionItem
-                            note={{ ...note, isOpen }}
-                            onToggle={() => toggleNote(activeGroup.id, note.id)}
-                            onUpdate={(id, updates) => handleUpdateNoteWrapper(id, updates)}
-                            onDelete={deleteNote}
-                          />
-                        </div>
-                      );
-                    })
+                    <h1 className="text-lg font-bold text-zinc-800 dark:text-white">
+                      Selecciona un Grupo
+                    </h1>
                   )}
                 </div>
-              </>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-zinc-400">
-                {groups.length === 0 ? (
-                  <div className="text-center">
-                    <p className="mb-4">No tienes grupos aún.</p>
-                    <button onClick={addGroup} className="text-zinc-600 dark:text-zinc-400 hover:underline hover:text-zinc-900 dark:hover:text-white">Crear el primer grupo</button>
+
+                {/* Right: Search + Sort + Actions */}
+                {activeGroup && (
+                  <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
+
+                    {/* Compact Search */}
+                    <div className="relative flex items-center">
+                      <Search size={15} className="absolute left-2 text-zinc-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="Buscar..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full sm:w-40 pl-7 pr-2 py-1.5 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400/30 transition-all"
+                      />
+                    </div>
+
+                    {/* Divider */}
+                    <div className="hidden sm:block w-px h-5 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
+
+                    {/* Sort: Date */}
+                    <button
+                      onClick={() => setNoteSortMode(noteSortMode === 'date-desc' ? 'date-asc' : 'date-desc')}
+                      className={`p-1.5 rounded-lg transition-all flex items-center gap-0.5 ${noteSortMode.includes('date')
+                        ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
+                        : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                        }`}
+                      title={`Ordenar por fecha ${noteSortMode === 'date-desc' ? '(más reciente)' : '(más antiguo)'}`}
+                    >
+                      <Calendar size={14} />
+                      {noteSortMode === 'date-desc' && <ArrowDown size={10} />}
+                      {noteSortMode === 'date-asc' && <ArrowUp size={10} />}
+                    </button>
+
+                    {/* Sort: Alpha */}
+                    <button
+                      onClick={() => setNoteSortMode(noteSortMode === 'alpha-asc' ? 'alpha-desc' : 'alpha-asc')}
+                      className={`p-1.5 rounded-lg transition-all flex items-center gap-0.5 ${noteSortMode.includes('alpha')
+                        ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
+                        : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                        }`}
+                      title={`Ordenar por nombre ${noteSortMode === 'alpha-asc' ? '(A-Z)' : '(Z-A)'}`}
+                    >
+                      <Type size={14} />
+                      {noteSortMode === 'alpha-asc' && <ArrowDown size={10} />}
+                      {noteSortMode === 'alpha-desc' && <ArrowUp size={10} />}
+                    </button>
+
+                    {/* Divider */}
+                    <div className="hidden sm:block w-px h-5 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
+
+                    {/* Delete Group */}
+                    {!isEditingGroup && (
+                      <button
+                        onClick={() => deleteGroup(activeGroup.id)}
+                        className="p-1.5 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        title="Eliminar Grupo"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+
+                    {/* Add Note */}
+                    <button
+                      onClick={addNote}
+                      className="w-8 h-8 flex items-center justify-center bg-[#1F3760] hover:bg-[#152643] text-white rounded-lg transition-all shadow-md hover:shadow-lg active:scale-95 focus:ring-2 focus:ring-[#1F3760]/50"
+                      title="Agregar Nota"
+                    >
+                      <Plus size={18} />
+                    </button>
                   </div>
-                ) : (
-                  <p>Selecciona un grupo desde la barra lateral.</p>
                 )}
               </div>
-            )}
-          </div>
-        </main>
+            </div>
+
+            {/* Scrollable Note Content */}
+            <main ref={mainRef} className="flex-1 overflow-y-auto hidden-scrollbar p-4 md:p-8">
+              <div className="max-w-4xl mx-auto pb-20">
+                {activeGroup ? (
+                  <>
+
+
+                    {/* Notes */}
+                    <div className="space-y-4">
+                      {filteredNotes.length === 0 ? (
+                        <div className="text-center py-20 opacity-60">
+                          <div className="inline-block p-4 rounded-full bg-zinc-200 dark:bg-zinc-800 mb-4">
+                            <Search size={32} className="text-zinc-500 dark:text-zinc-400" />
+                          </div>
+                          <p className="text-lg text-zinc-600 dark:text-zinc-400">No se encontraron notas.</p>
+                        </div>
+                      ) : (
+                        filteredNotes.map(note => {
+                          const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
+                          return (
+                            <div key={note.id} id={`note-${note.id}`}>
+                              <AccordionItem
+                                note={{ ...note, isOpen }}
+                                onToggle={() => toggleNote(activeGroup.id, note.id)}
+                                onUpdate={(id, updates) => handleUpdateNoteWrapper(id, updates)}
+                                onDelete={deleteNote}
+                                searchQuery={searchQuery}
+                              />
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-zinc-400">
+                    {groups.length === 0 ? (
+                      <div className="text-center">
+                        <p className="mb-4">No tienes grupos aún.</p>
+                        <button onClick={addGroup} className="text-zinc-600 dark:text-zinc-400 hover:underline hover:text-zinc-900 dark:hover:text-white">Crear el primer grupo</button>
+                      </div>
+                    ) : (
+                      <p>Selecciona un grupo desde la barra lateral.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </main>
+          </>
+        )}
       </div>
+
+      {/* Persistent Overdue Reminders Banner */}
+      {overdueRemindersList.length > 0 && (
+        <div className="fixed top-0 left-0 w-full z-[9999] bg-red-600 text-white shadow-lg shadow-red-900/30">
+          <div className="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-2">
+            {overdueRemindersList.map(r => (
+              <div key={r.id} className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
+                  <span className="text-sm font-medium truncate">⚠️ Recordatorio pendiente: {r.title}</span>
+                </div>
+                <button
+                  onClick={async () => {
+                    setOverdueRemindersList(prev => prev.filter(x => x.id !== r.id));
+                    setOverdueRemindersCount(Math.max(0, overdueRemindersList.length - 1));
+                    await supabase.from('reminders').update({ is_completed: true }).eq('id', r.id);
+                  }}
+                  className="shrink-0 px-3 py-1 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold rounded-lg transition-colors"
+                >
+                  Marcar como Listo
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Settings Modal */}
       <SettingsWindow

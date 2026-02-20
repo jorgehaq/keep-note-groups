@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Trash2, Edit2, Check, StickyNote, Pin, PanelLeft } from 'lucide-react';
+import { ChevronDown, Trash2, Edit2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, Eye, MoreVertical, Clock } from 'lucide-react';
 import { Note } from '../types';
 import { LinkifiedText } from './LinkifiedText';
 import { SmartEditor } from './SmartEditor';
@@ -9,13 +9,30 @@ interface AccordionItemProps {
   onToggle: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Note>) => void;
   onDelete: (id: string) => void;
+  searchQuery?: string;
 }
+
+const highlightText = (text: string, highlight?: string): React.ReactNode => {
+  if (!highlight || !highlight.trim()) return text;
+  const escaped = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+  return parts.map((part, index) =>
+    part.toLowerCase() === highlight.toLowerCase() ? (
+      <mark key={index} className="bg-yellow-200 dark:bg-yellow-500/40 text-yellow-900 dark:text-yellow-100 rounded-sm px-0.5 font-medium">
+        {part}
+      </mark>
+    ) : (
+      part
+    )
+  );
+};
 
 export const AccordionItem: React.FC<AccordionItemProps> = ({
   note,
   onToggle,
   onUpdate,
   onDelete,
+  searchQuery,
 }) => {
   const [isEditingContent, setIsEditingContent] = useState(false);
 
@@ -30,15 +47,52 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
+  // Mobile kebab menu
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isMobileMenuOpen]);
+
   useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
       titleInputRef.current.focus();
     }
   }, [isEditingTitle]);
 
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
   const handleSaveContent = () => {
     onUpdate(note.id, { content: tempContent });
-    setIsEditingContent(false);
+  };
+
+  // Autosave debounce: save 1s after user stops typing
+  useEffect(() => {
+    if (!isEditingContent) return;
+    const isDirty = tempContent !== note.content;
+    if (!isDirty) return;
+
+    setSyncStatus('saving');
+    const timer = setTimeout(() => {
+      onUpdate(note.id, { content: tempContent });
+      setSyncStatus('saved');
+      setTimeout(() => setSyncStatus('idle'), 2000);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [tempContent, isEditingContent]);
+
+  const handleCancelTitle = () => {
+    setTempTitle(note.title);
+    setIsEditingTitle(false);
   };
 
   const handleSaveTitle = (shouldFocusEditor = false) => {
@@ -85,122 +139,215 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           if (!isEditingTitle) onToggle(note.id);
         }}
       >
-        <div className="flex items-center gap-2 flex-1 overflow-hidden">
-          <div className={`p-1.5 rounded-md ${note.isOpen
-            ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100'
-            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
-            }`}>
-            <StickyNote size={16} />
-          </div>
-
-          <div className="flex-1 overflow-hidden">
-            <div className="flex items-center gap-2">
-              {isEditingTitle ? (
+        <div className="flex items-center gap-2 flex-1 overflow-hidden pl-1">
+          <div className="flex flex-col flex-1 min-w-0 justify-center">
+            {isEditingTitle ? (
+              <div className="flex items-center gap-1.5 flex-1 animate-fadeIn">
                 <input
                   ref={titleInputRef}
                   type="text"
                   value={tempTitle}
                   onChange={(e) => setTempTitle(e.target.value)}
                   onBlur={() => handleSaveTitle(false)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveTitle(true);
+                    if (e.key === 'Escape') {
+                      e.stopPropagation();
+                      handleCancelTitle();
+                    }
+                  }}
                   onClick={(e) => e.stopPropagation()}
                   placeholder="Título de la nota..."
                   autoFocus
-                  className="flex-1 text-sm font-medium text-zinc-800 dark:text-zinc-100 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded px-2 py-0.5 outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-800 placeholder-zinc-400"
+                  className="flex-1 min-w-0 text-sm font-medium text-zinc-800 dark:text-zinc-100 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded px-2 py-0.5 outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-800 placeholder-zinc-400"
                 />
-              ) : (
-                <h3
-                  className="text-sm font-medium text-zinc-800 dark:text-zinc-100 truncate select-none hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors cursor-pointer hover:underline decoration-zinc-400 decoration-dashed underline-offset-4"
-                  onDoubleClick={(e) => {
+                <button
+                  onMouseDown={(e) => {
+                    e.preventDefault();
                     e.stopPropagation();
-                    setIsEditingTitle(true);
+                    handleCancelTitle();
                   }}
-                  title="Doble clic para editar título"
+                  className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md transition-colors shrink-0"
+                  title="Cancelar (Esc)"
                 >
-                  {note.title}
-                </h3>
-              )}
-              {note.updated_at && !isEditingTitle && (
-                <span className="text-[10px] text-zinc-400 font-mono whitespace-nowrap flex-shrink-0">
-                  {formatDate(note.updated_at)}
-                </span>
-              )}
-            </div>
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <h3
+                className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate select-none hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors cursor-pointer hover:underline decoration-zinc-400 decoration-dashed underline-offset-4"
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  setIsEditingTitle(true);
+                }}
+                title={note.title || 'Nota sin título'}
+              >
+                {note.title ? highlightText(note.title, searchQuery) : <span className="text-zinc-400 italic">Sin título</span>}
+              </h3>
+            )}
+            {!isEditingTitle && (
+              <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-zinc-400 dark:text-zinc-500 truncate">
+                {note.updated_at && (
+                  <>
+                    <Clock size={10} className="shrink-0" />
+                    <span className="font-mono">{formatDate(note.updated_at)}</span>
+                  </>
+                )}
+                {syncStatus === 'saving' && (
+                  <span className="flex items-center gap-0.5 text-amber-500 font-mono whitespace-nowrap animate-pulse">
+                    <Loader2 size={10} className="animate-spin" />
+                    Guardando...
+                  </span>
+                )}
+                {syncStatus === 'saved' && (
+                  <span className="flex items-center gap-0.5 text-emerald-500 font-mono whitespace-nowrap">
+                    <CloudCheck size={10} />
+                    Sincronizado
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
-          {/* Edit Content Button (Moved to Header) */}
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Edit/Read Mode Toggle — always visible */}
           <button
-            onClick={(e) => {
+            onMouseDown={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               if (isEditingContent) {
-                handleSaveContent();
+                const isDirty = tempContent !== note.content;
+                if (isDirty) {
+                  onUpdate(note.id, { content: tempContent });
+                }
+                setIsEditingContent(false);
+                setSyncStatus('idle');
               } else {
                 if (!note.isOpen) onToggle(note.id);
                 setTempContent(note.content);
                 setIsEditingContent(true);
               }
             }}
-            className={`transition-all duration-200 flex items-center justify-center ${isEditingContent
-              ? 'px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md shadow-sm gap-1 text-xs font-medium ml-1'
-              : 'p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
+            className={`p-1.5 rounded-lg transition-all flex items-center justify-center ${isEditingContent
+              ? 'text-zinc-900 bg-zinc-200 dark:text-white dark:bg-zinc-700 shadow-inner'
+              : 'text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
               }`}
-            title={isEditingContent ? "Guardar cambios" : "Editar Contenido"}
+            title={isEditingContent ? "Cambiar a Modo Lectura" : "Cambiar a Modo Edición"}
           >
-            {isEditingContent ? (
-              <>
-                <Check size={14} strokeWidth={3} />
-                <span>Guardar</span>
-              </>
-            ) : (
-              <Edit2 size={15} />
+            {isEditingContent ? <Eye size={15} /> : <Edit2 size={15} />}
+          </button>
+
+          {/* Desktop-only: Pin, Dock, Delete */}
+          <div className="hidden md:flex items-center gap-1">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.currentTarget.blur();
+                onUpdate(note.id, { is_pinned: !note.is_pinned });
+              }}
+              className={`p-1.5 rounded-lg transition-all ${note.is_pinned
+                ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20'
+                : 'text-zinc-400 hover:text-amber-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                }`}
+              title={note.is_pinned ? "Desfijar Nota" : "Fijar Nota"}
+            >
+              <Pin size={15} className={note.is_pinned ? "fill-current" : ""} />
+            </button>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.currentTarget.blur();
+                onUpdate(note.id, { is_docked: !note.is_docked });
+              }}
+              className={`p-1.5 rounded-lg transition-all ${note.is_docked
+                ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                : 'text-zinc-400 hover:text-indigo-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                }`}
+              title={note.is_docked ? "Quitar del Sidebar" : "Anclar al Sidebar"}
+            >
+              <PanelLeft size={15} />
+            </button>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.currentTarget.blur();
+                if (confirm('¿Estás seguro de eliminar esta nota?')) {
+                  onDelete(note.id);
+                }
+              }}
+              className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+              title="Eliminar Nota"
+            >
+              <Trash2 size={15} />
+            </button>
+          </div>
+
+          {/* Mobile-only: Kebab menu */}
+          <div className="relative flex md:hidden" ref={mobileMenuRef}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsMobileMenuOpen(!isMobileMenuOpen);
+              }}
+              className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+              title="Más opciones"
+            >
+              <MoreVertical size={16} />
+            </button>
+
+            {isMobileMenuOpen && (
+              <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-800 shadow-xl rounded-lg border border-zinc-200 dark:border-zinc-700 p-1 flex flex-col gap-0.5 min-w-[160px] animate-fadeIn">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onUpdate(note.id, { is_pinned: !note.is_pinned });
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_pinned
+                    ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20'
+                    : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                    }`}
+                >
+                  <Pin size={14} className={note.is_pinned ? "fill-current" : ""} />
+                  {note.is_pinned ? 'Desfijar' : 'Fijar Nota'}
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onUpdate(note.id, { is_docked: !note.is_docked });
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_docked
+                    ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
+                    : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                    }`}
+                >
+                  <PanelLeft size={14} />
+                  {note.is_docked ? 'Quitar del Sidebar' : 'Anclar al Sidebar'}
+                </button>
+
+                <div className="border-t border-zinc-100 dark:border-zinc-700 my-0.5" />
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsMobileMenuOpen(false);
+                    if (confirm('¿Estás seguro de eliminar esta nota?')) {
+                      onDelete(note.id);
+                    }
+                  }}
+                  className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                >
+                  <Trash2 size={14} />
+                  Eliminar Nota
+                </button>
+              </div>
             )}
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              e.currentTarget.blur();
-              onUpdate(note.id, { is_pinned: !note.is_pinned });
-            }}
-            className={`p-1.5 rounded-lg transition-all ${note.is_pinned
-              ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20'
-              : 'text-zinc-400 hover:text-amber-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-              }`}
-            title={note.is_pinned ? "Desfijar Nota" : "Fijar Nota"}
-          >
-            <Pin size={15} className={note.is_pinned ? "fill-current" : ""} />
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              e.currentTarget.blur();
-              onUpdate(note.id, { is_docked: !note.is_docked });
-            }}
-            className={`p-1.5 rounded-lg transition-all ${note.is_docked
-              ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-              : 'text-zinc-400 hover:text-indigo-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-              }`}
-            title={note.is_docked ? "Quitar del Sidebar" : "Anclar al Sidebar"}
-          >
-            <PanelLeft size={15} />
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              e.currentTarget.blur();
-              if (confirm('¿Estás seguro de eliminar esta nota?')) {
-                onDelete(note.id);
-              }
-            }}
-            className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-            title="Eliminar Nota"
-          >
-            <Trash2 size={15} />
-          </button>
+          </div>
 
           <div className={`p-1 transform transition-transform duration-300 ${note.isOpen ? 'rotate-180' : ''} text-zinc-400`}>
             <ChevronDown size={16} />
@@ -214,7 +361,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           {/* No more Toolbar */}
 
           {/* Editor / Viewer */}
-          <div className="p-6 pt-2">
+          <div className="px-3 md:px-6 py-2 w-full overflow-hidden">
             {/* Reduced top padding since toolbar is gone */}
             {isEditingContent ? (
               <SmartEditor
@@ -226,13 +373,13 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               />
             ) : (
               <div
-                className="w-full min-h-[50px]"
+                className="w-full max-w-full min-h-[50px] break-words overflow-hidden"
                 onDoubleClick={() => {
                   setTempContent(note.content);
                   setIsEditingContent(true);
                 }}
               >
-                <LinkifiedText content={note.content} />
+                <LinkifiedText content={note.content} searchQuery={searchQuery} />
               </div>
             )}
           </div>

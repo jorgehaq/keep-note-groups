@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Settings, Grid, X, LogOut, StickyNote } from 'lucide-react';
+import { Plus, Settings, Grid, X, LogOut, StickyNote, KanbanSquare, Clock, Bell } from 'lucide-react';
 import { Group } from '../types';
 import { GroupLauncher } from './GroupLauncher';
 import { useUIStore } from '../src/lib/store';
@@ -27,7 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectDockedNote,
   focusedNoteId,
 }) => {
-  const { dockedGroupIds, closeGroup } = useUIStore();
+  const { dockedGroupIds, closeGroup, globalView, setGlobalView, activeTimersCount, overdueRemindersCount, imminentRemindersCount } = useUIStore();
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
 
   // Filter groups to only show docked ones
@@ -43,10 +43,60 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <>
       <div className="w-12 md:w-16 bg-zinc-200 dark:bg-zinc-900 border-r border-zinc-300 dark:border-zinc-800 flex flex-col items-center py-3 gap-3 h-full shrink-0 z-40 overflow-hidden">
 
-        {/* Launcher Button (Top) */}
+        {/* Global Apps */}
+        <button
+          onClick={() => setGlobalView('kanban')}
+          className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all mb-1 shrink-0 ${globalView === 'kanban'
+            ? 'bg-[#1F3760] text-white shadow-lg shadow-[#1F3760]/30 ring-2 ring-white/30'
+            : 'bg-zinc-300 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-400 dark:hover:bg-zinc-700'
+            }`}
+          title="Tablero Kanban"
+        >
+          <KanbanSquare size={20} />
+        </button>
+
+        {/* Timer Button with Badge */}
+        <button
+          onClick={() => setGlobalView('timers')}
+          className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all mb-1 shrink-0 ${globalView === 'timers'
+            ? 'bg-[#1F3760] text-white shadow-lg shadow-[#1F3760]/30 ring-2 ring-white/30'
+            : 'bg-zinc-300 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-400 dark:hover:bg-zinc-700'
+            }`}
+          title="Cronómetros"
+        >
+          <Clock size={20} />
+          {activeTimersCount > 0 && (
+            <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full shadow-sm">
+              {activeTimersCount}
+            </div>
+          )}
+        </button>
+
+        {/* Reminders Button */}
+        <button
+          onClick={() => setGlobalView('reminders')}
+          className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all mb-1 shrink-0 ${globalView === 'reminders'
+            ? 'bg-[#1F3760] text-white shadow-lg shadow-[#1F3760]/30 ring-2 ring-white/30'
+            : 'bg-zinc-300 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-400 dark:hover:bg-zinc-700'
+            }`}
+          title="Recordatorios"
+        >
+          <Bell size={20} />
+          {overdueRemindersCount > 0 ? (
+            <div className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full shadow-sm animate-pulse">
+              {overdueRemindersCount}
+            </div>
+          ) : imminentRemindersCount > 0 ? (
+            <div className="absolute -top-1 -right-1 bg-amber-500 text-amber-950 text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full shadow-sm">
+              {imminentRemindersCount}
+            </div>
+          ) : null}
+        </button>
+
+        {/* Launcher Button */}
         <button
           onClick={() => setIsLauncherOpen(true)}
-          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-[#1F3760] text-white shadow-lg shadow-[#1F3760]/30 hover:bg-[#152643] hover:scale-105 transition-all mb-1 shrink-0"
+          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-300 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-400 dark:hover:bg-zinc-700 transition-all mb-1 shrink-0"
           title="Abrir Launcher de Grupos"
         >
           <Grid size={20} />
@@ -84,12 +134,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </button>
 
                 <button
-                  onClick={() => onSelectGroup(group.id)}
+                  onClick={() => {
+                    onSelectGroup(group.id);
+                    setGlobalView('notes');
+                  }}
                   className={`
                     relative flex items-center justify-center w-full transition-all duration-300 overflow-hidden rounded-lg
-                    ${activeGroupId === group.id
+                    ${activeGroupId === group.id && !focusedNoteId && globalView === 'notes'
                       ? 'h-32 bg-[#1F3760] text-white shadow-lg ring-2 ring-white/50 scale-[1.02]'
-                      : 'h-24 bg-zinc-200/50 dark:bg-zinc-800/50 text-zinc-400 dark:text-zinc-500 hover:bg-zinc-300 dark:hover:bg-zinc-700'}
+                      : activeGroupId === group.id && (focusedNoteId || globalView !== 'notes')
+                        ? 'h-32 bg-zinc-300 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 shadow-inner'
+                        : 'h-24 bg-zinc-200/50 dark:bg-zinc-800/50 text-zinc-400 dark:text-zinc-500 hover:bg-zinc-300 dark:hover:bg-zinc-700'}
                     `}
                   title={group.title}
                 >

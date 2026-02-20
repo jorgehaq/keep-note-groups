@@ -16,7 +16,8 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
         lastLauncherTab,
         setLauncherTab,
         dockedGroupIds,
-        closeGroup
+        closeGroup,
+        setGlobalView
     } = useUIStore();
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -157,7 +158,7 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
                 )}
 
                 {/* List */}
-                <div className="max-h-[60vh] overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-700">
+                <div className="max-h-[60vh] overflow-y-auto hidden-scrollbar p-2 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-700">
                     {filteredGroups.length === 0 ? (
                         <div className="text-center py-10 text-zinc-400">
                             <p>No se encontraron grupos.</p>
@@ -176,6 +177,7 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
                                             className="flex-1 flex items-center gap-3 cursor-pointer min-w-0"
                                             onClick={() => {
                                                 openGroup(group.id);
+                                                setGlobalView('notes');
                                                 onClose();
                                             }}
                                         >

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { GlobalAppView } from '../../types';
 
 type LauncherTab = 'alpha' | 'recent' | 'pinned';
 
@@ -12,6 +13,10 @@ interface UIStore {
     dockedGroupIds: string[]; // Groups visible in the sidebar
     lastLauncherTab: LauncherTab;
     noteSortMode: 'date-desc' | 'date-asc' | 'alpha-asc' | 'alpha-desc';
+    globalView: GlobalAppView;
+    activeTimersCount: number;
+    overdueRemindersCount: number;
+    imminentRemindersCount: number;
 
     setActiveGroup: (id: string | null) => void;
     toggleNote: (groupId: string, noteId: string) => void;
@@ -21,6 +26,10 @@ interface UIStore {
     closeGroup: (id: string) => void; // Removes from dock
     setLauncherTab: (tab: LauncherTab) => void;
     setNoteSortMode: (mode: 'date-desc' | 'date-asc' | 'alpha-asc' | 'alpha-desc') => void;
+    setGlobalView: (view: GlobalAppView) => void;
+    setActiveTimersCount: (count: number) => void;
+    setOverdueRemindersCount: (count: number) => void;
+    setImminentRemindersCount: (count: number) => void;
 }
 
 export const useUIStore = create<UIStore>()(
@@ -31,6 +40,10 @@ export const useUIStore = create<UIStore>()(
             dockedGroupIds: [],
             lastLauncherTab: 'recent', // Default to recent
             noteSortMode: 'date-desc',
+            globalView: 'notes',
+            activeTimersCount: 0,
+            overdueRemindersCount: 0,
+            imminentRemindersCount: 0,
 
             setActiveGroup: (id) => set({ activeGroupId: id }),
 
@@ -75,6 +88,10 @@ export const useUIStore = create<UIStore>()(
 
             setLauncherTab: (tab) => set({ lastLauncherTab: tab }),
             setNoteSortMode: (mode) => set({ noteSortMode: mode }),
+            setGlobalView: (view) => set({ globalView: view }),
+            setActiveTimersCount: (count) => set({ activeTimersCount: count }),
+            setOverdueRemindersCount: (count) => set({ overdueRemindersCount: count }),
+            setImminentRemindersCount: (count) => set({ imminentRemindersCount: count }),
         }),
         {
             name: 'keep-note-groups-ui-storage-v3', // Bump version for new state shape
