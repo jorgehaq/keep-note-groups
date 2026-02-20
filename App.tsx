@@ -38,6 +38,16 @@ function App() {
   // Focused Note Mode — when a docked note is clicked, isolate it
   const [focusedNoteId, setFocusedNoteId] = useState<string | null>(null);
 
+  // Clear ghost focus when switching to a group that doesn't own the focused note
+  useEffect(() => {
+    if (activeGroupId && focusedNoteId) {
+      const ag = groups.find(g => g.id === activeGroupId);
+      if (!ag?.notes.find(n => n.id === focusedNoteId)) {
+        setFocusedNoteId(null);
+      }
+    }
+  }, [activeGroupId, focusedNoteId, groups]);
+
   // --- AUTH & INITIAL LOAD ---
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -372,6 +382,7 @@ function App() {
     if (updates.title !== undefined) dbUpdates.title = updates.title;
     if (updates.content !== undefined) dbUpdates.content = updates.content;
     if (updates.is_pinned !== undefined) dbUpdates.is_pinned = updates.is_pinned;
+    if (updates.is_docked !== undefined) dbUpdates.is_docked = updates.is_docked;
 
     // Always update updated_at if we are changing content or title
     if (updates.title !== undefined || updates.content !== undefined) {
