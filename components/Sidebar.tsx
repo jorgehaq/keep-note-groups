@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Settings, Grid, X, LogOut } from 'lucide-react';
+import { Plus, Settings, Grid, X, LogOut, StickyNote } from 'lucide-react';
 import { Group } from '../types';
 import { GroupLauncher } from './GroupLauncher';
 import { useUIStore } from '../src/lib/store';
@@ -12,6 +12,7 @@ interface SidebarProps {
   onOpenSettings: () => void;
   onTogglePin: (groupId: string, currentStatus: boolean) => void;
   onLogout: () => void;
+  onSelectDockedNote: (groupId: string, noteId: string) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -22,6 +23,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenSettings,
   onTogglePin,
   onLogout,
+  onSelectDockedNote,
 }) => {
   const { dockedGroupIds, closeGroup } = useUIStore();
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
@@ -65,51 +67,70 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {sortedDockedGroups.length > 0 && <div className="w-6 h-px bg-zinc-300 dark:bg-zinc-800 shrink-0"></div>}
 
           {sortedDockedGroups.map((group) => (
-            <div key={group.id} className="relative group w-10 md:w-12 shrink-0">
-              {/* Close Button (Hover) */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeGroup(group.id);
-                }}
-                className="absolute -top-1 -right-1 z-20 w-5 h-5 bg-zinc-500 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md text-xs"
-                title="Cerrar del Dock"
-              >
-                <X size={12} />
-              </button>
+            <div key={group.id} className="flex flex-col items-center shrink-0">
+              <div className="relative group w-10 md:w-12">
+                {/* Close Button (Hover) */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeGroup(group.id);
+                  }}
+                  className="absolute -top-1 -right-1 z-20 w-5 h-5 bg-zinc-500 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md text-xs"
+                  title="Cerrar del Dock"
+                >
+                  <X size={12} />
+                </button>
 
-              <button
-                onClick={() => onSelectGroup(group.id)}
-                className={`
+                <button
+                  onClick={() => onSelectGroup(group.id)}
+                  className={`
                     relative flex items-center justify-center w-full transition-all duration-300 overflow-hidden
                     ${activeGroupId === group.id
-                    ? 'h-28 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-md ring-2 ring-zinc-300 dark:ring-zinc-500'
-                    : 'h-12 bg-zinc-200 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-500 hover:bg-zinc-300 dark:hover:bg-zinc-800'}
+                      ? 'h-28 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-md ring-2 ring-zinc-300 dark:ring-zinc-500'
+                      : 'h-12 bg-zinc-200 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-500 hover:bg-zinc-300 dark:hover:bg-zinc-800'}
                     rounded-lg
                     `}
-                title={group.title}
-              >
-                {/* Active State Details */}
-                {activeGroupId === group.id ? (
-                  <>
-                    <div className="absolute top-1.5 w-6 h-0.5 rounded-full bg-zinc-200 dark:bg-zinc-600"></div>
-                    <span className="writing-vertical-rl rotate-180 text-xs font-bold tracking-wide uppercase truncate max-h-[80%] py-1">
-                      {group.title}
+                  title={group.title}
+                >
+                  {/* Active State Details */}
+                  {activeGroupId === group.id ? (
+                    <>
+                      <div className="absolute top-1.5 w-6 h-0.5 rounded-full bg-zinc-200 dark:bg-zinc-600"></div>
+                      <span className="writing-vertical-rl rotate-180 text-xs font-bold tracking-wide uppercase truncate max-h-[80%] py-1">
+                        {group.title}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-sm font-bold uppercase">
+                      {group.title.substring(0, 2)}
                     </span>
-                  </>
-                ) : (
-                  <span className="text-sm font-bold uppercase">
-                    {group.title.substring(0, 2)}
-                  </span>
-                )}
+                  )}
+                </button>
+              </div>
 
-                {/* Active Indicator Dot - Removed for cleaner look or kept as neutral? 
-                   Let's keep it but neutral or remove. The ring is enough. 
-                   Let's remove the dot as per "monochromatic and clean" preference.
-                   Or make it black/white? 
-                   Let's remove it for now to match "Gemini/Notion" cleanliness.
-                */}
-              </button>
+              {/* Docked Notes for this Group */}
+              {(() => {
+                const dockedNotes = group.notes?.filter(n => n.is_docked) || [];
+                if (dockedNotes.length === 0) return null;
+                return (
+                  <div className="flex flex-col items-center gap-1.5 mt-1.5 mb-1">
+                    {dockedNotes.map(note => (
+                      <button
+                        key={note.id}
+                        onClick={() => onSelectDockedNote(group.id, note.id)}
+                        className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] font-semibold uppercase transition-all
+                          ${activeGroupId === group.id
+                            ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-600 ring-1 ring-zinc-300 dark:ring-zinc-600'
+                            : 'bg-zinc-300 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-400 dark:hover:bg-zinc-700'
+                          }`}
+                        title={note.title || 'Sin título'}
+                      >
+                        {note.title ? note.title.substring(0, 2) : <StickyNote size={12} />}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           ))}
         </div>

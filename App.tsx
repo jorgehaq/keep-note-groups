@@ -487,6 +487,14 @@ function App() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onTogglePin={toggleGroupPin}
         onLogout={handleLogout}
+        onSelectDockedNote={(groupId, noteId) => {
+          setActiveGroup(groupId);
+          // Open the note's accordion
+          setGroups(prev => prev.map(g => g.id === groupId ? {
+            ...g,
+            notes: g.notes.map(n => n.id === noteId ? { ...n, isOpen: true } : n)
+          } : g));
+        }}
       />
 
       {/* Main Content Area */}
