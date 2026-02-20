@@ -46,11 +46,12 @@ function App() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      // Only handle SIGNED_OUT here.
-      // getSession() above already handles session restoration on mount.
-      // TOKEN_REFRESHED and SIGNED_IN fire on tab focus / session recovery,
-      // which would cause unwanted full re-renders.
-      if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_IN' && !hasLoadedOnce.current) {
+        // Fresh login — load data. Ignored on tab-switch token restores
+        // because hasLoadedOnce is already true.
+        setSession(session);
+        fetchData();
+      } else if (event === 'SIGNED_OUT') {
         setSession(null);
         setGroups([]);
         hasLoadedOnce.current = false;
