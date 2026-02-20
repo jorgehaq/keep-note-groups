@@ -506,6 +506,7 @@ function App() {
           // Enter Focused Mode
           setFocusedNoteId(noteId);
         }}
+        focusedNoteId={focusedNoteId}
       />
 
       {/* Main Content Area */}

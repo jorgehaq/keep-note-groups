@@ -13,6 +13,7 @@ interface SidebarProps {
   onTogglePin: (groupId: string, currentStatus: boolean) => void;
   onLogout: () => void;
   onSelectDockedNote: (groupId: string, noteId: string) => void;
+  focusedNoteId: string | null;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -24,6 +25,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onTogglePin,
   onLogout,
   onSelectDockedNote,
+  focusedNoteId,
 }) => {
   const { dockedGroupIds, closeGroup } = useUIStore();
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
@@ -118,10 +120,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <button
                         key={note.id}
                         onClick={() => onSelectDockedNote(group.id, note.id)}
-                        className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] font-semibold uppercase transition-all
-                          ${activeGroupId === group.id
-                            ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-600 ring-1 ring-zinc-300 dark:ring-zinc-600'
-                            : 'bg-zinc-300 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-400 dark:hover:bg-zinc-700'
+                        className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] font-semibold uppercase transition-all duration-200
+                          ${note.id === focusedNoteId
+                            ? 'bg-[#1F3760] text-white ring-2 ring-white/50 shadow-lg scale-110'
+                            : activeGroupId === group.id
+                              ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-600 ring-1 ring-zinc-300 dark:ring-zinc-600'
+                              : 'bg-zinc-300 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-400 dark:hover:bg-zinc-700'
                           }`}
                         title={note.title || 'Sin título'}
                       >
