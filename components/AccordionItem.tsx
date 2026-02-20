@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Trash2, Edit2, Check, StickyNote, Pin } from 'lucide-react';
+import { ChevronDown, Trash2, Edit2, Check, StickyNote, Pin, PanelLeft } from 'lucide-react';
 import { Note } from '../types';
 import { LinkifiedText } from './LinkifiedText';
 import { SmartEditor } from './SmartEditor';
@@ -171,6 +171,21 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             title={note.is_pinned ? "Desfijar Nota" : "Fijar Nota"}
           >
             <Pin size={15} className={note.is_pinned ? "fill-current" : ""} />
+          </button>
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              e.currentTarget.blur();
+              onUpdate(note.id, { is_docked: !note.is_docked });
+            }}
+            className={`p-1.5 rounded-lg transition-all ${note.is_docked
+              ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+              : 'text-zinc-400 hover:text-indigo-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              }`}
+            title={note.is_docked ? "Quitar del Sidebar" : "Anclar al Sidebar"}
+          >
+            <PanelLeft size={15} />
           </button>
 
           <button
