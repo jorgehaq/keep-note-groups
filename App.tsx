@@ -35,6 +35,23 @@ function App() {
   // Ref for the scrollable main container — used to preserve scroll on pin/unpin
   const mainRef = useRef<HTMLElement>(null);
 
+  // Pending scroll target — set when clicking a docked note in the sidebar
+  const [pendingScrollNoteId, setPendingScrollNoteId] = useState<string | null>(null);
+
+  // Auto-scroll to a docked note after render
+  useEffect(() => {
+    if (!pendingScrollNoteId) return;
+    // Small delay to ensure DOM is settled after group switch + note open
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`note-${pendingScrollNoteId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      setPendingScrollNoteId(null);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [pendingScrollNoteId, activeGroupId]);
+
   // --- AUTH & INITIAL LOAD ---
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -488,12 +505,15 @@ function App() {
         onTogglePin={toggleGroupPin}
         onLogout={handleLogout}
         onSelectDockedNote={(groupId, noteId) => {
+          // 1. Switch to the group
           setActiveGroup(groupId);
-          // Open the note's accordion
-          setGroups(prev => prev.map(g => g.id === groupId ? {
-            ...g,
-            notes: g.notes.map(n => n.id === noteId ? { ...n, isOpen: true } : n)
-          } : g));
+          // 2. Ensure the note is open (add to openNotesByGroup if not already there)
+          const currentOpen = openNotesByGroup[groupId] || [];
+          if (!currentOpen.includes(noteId)) {
+            toggleNote(groupId, noteId); // Will add it since it's not in the list
+          }
+          // 3. Schedule smooth scroll after render
+          setPendingScrollNoteId(noteId);
         }}
       />
 
@@ -644,13 +664,14 @@ function App() {
                     filteredNotes.map(note => {
                       const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
                       return (
-                        <AccordionItem
-                          key={note.id}
-                          note={{ ...note, isOpen }}
-                          onToggle={() => toggleNote(activeGroup.id, note.id)}
-                          onUpdate={(id, updates) => handleUpdateNoteWrapper(id, updates)}
-                          onDelete={deleteNote}
-                        />
+                        <div key={note.id} id={`note-${note.id}`}>
+                          <AccordionItem
+                            note={{ ...note, isOpen }}
+                            onToggle={() => toggleNote(activeGroup.id, note.id)}
+                            onUpdate={(id, updates) => handleUpdateNoteWrapper(id, updates)}
+                            onDelete={deleteNote}
+                          />
+                        </div>
                       );
                     })
                   )}
