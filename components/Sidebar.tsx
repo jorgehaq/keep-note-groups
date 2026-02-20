@@ -86,27 +86,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   onClick={() => onSelectGroup(group.id)}
                   className={`
-                    relative flex items-center justify-center w-full transition-all duration-300 overflow-hidden
+                    relative flex items-center justify-center w-full transition-all duration-300 overflow-hidden rounded-lg
                     ${activeGroupId === group.id
-                      ? 'h-28 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-md ring-2 ring-zinc-300 dark:ring-zinc-500'
-                      : 'h-12 bg-zinc-200 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-500 hover:bg-zinc-300 dark:hover:bg-zinc-800'}
-                    rounded-lg
+                      ? 'h-32 bg-[#1F3760] text-white shadow-lg ring-2 ring-white/50 scale-[1.02]'
+                      : 'h-24 bg-zinc-200/50 dark:bg-zinc-800/50 text-zinc-400 dark:text-zinc-500 hover:bg-zinc-300 dark:hover:bg-zinc-700'}
                     `}
                   title={group.title}
                 >
-                  {/* Active State Details */}
-                  {activeGroupId === group.id ? (
-                    <>
-                      <div className="absolute top-1.5 w-6 h-0.5 rounded-full bg-zinc-200 dark:bg-zinc-600"></div>
-                      <span className="writing-vertical-rl rotate-180 text-xs font-bold tracking-wide uppercase truncate max-h-[80%] py-1">
-                        {group.title}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-sm font-bold uppercase">
-                      {group.title.substring(0, 2)}
-                    </span>
-                  )}
+                  <div className="absolute top-1.5 w-6 h-0.5 rounded-full bg-current opacity-30"></div>
+                  <span className="writing-vertical-rl rotate-180 text-xs font-bold tracking-wide uppercase truncate max-h-[85%] py-1">
+                    {group.title}
+                  </span>
                 </button>
               </div>
 
