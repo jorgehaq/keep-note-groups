@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Search, Menu, Loader2, Edit2, Check, X, Calendar, ArrowUp, ArrowDown, Type } from 'lucide-react';
 import { Note, Group, Theme } from './types';
 import { AccordionItem } from './components/AccordionItem';
@@ -31,6 +31,9 @@ function App() {
 
   // Track the note currently being edited to "freeze" it in the list (prevent jumping)
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+
+  // Ref for the scrollable main container — used to preserve scroll on pin/unpin
+  const mainRef = useRef<HTMLElement>(null);
 
   // --- AUTH & INITIAL LOAD ---
   useEffect(() => {
@@ -333,6 +336,10 @@ function App() {
   };
 
   const updateNote = async (noteId: string, updates: Partial<Note>) => {
+    // Preserve scroll position when pinning/unpinning to prevent scroll jump
+    const shouldPreserveScroll = updates.is_pinned !== undefined;
+    const savedScrollTop = shouldPreserveScroll ? mainRef.current?.scrollTop : undefined;
+
     // Optimistic update
     setGroups(currentGroups => currentGroups.map(g => ({
       ...g,
@@ -345,6 +352,15 @@ function App() {
           return a.title.localeCompare(b.title);
         })
     })));
+
+    // Restore scroll position after React re-renders the reordered list
+    if (shouldPreserveScroll && savedScrollTop !== undefined) {
+      requestAnimationFrame(() => {
+        if (mainRef.current) {
+          mainRef.current.scrollTop = savedScrollTop;
+        }
+      });
+    }
 
     // Debounce or immediate? For simplicity, immediate, but catch errors.
     // We only send specific fields to DB
@@ -590,7 +606,7 @@ function App() {
         </div>
 
         {/* Scrollable Note Content */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+        <main ref={mainRef} className="flex-1 overflow-y-auto p-4 md:p-8">
           <div className="max-w-4xl mx-auto pb-20">
             {activeGroup ? (
               <>

@@ -159,6 +159,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           <button
             onClick={(e) => {
               e.stopPropagation();
+              e.currentTarget.blur();
               onUpdate(note.id, { is_pinned: !note.is_pinned });
             }}
             className={`p-2 rounded-lg transition-all ${note.is_pinned
@@ -173,6 +174,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           <button
             onClick={(e) => {
               e.stopPropagation();
+              e.currentTarget.blur();
               if (confirm('¿Estás seguro de eliminar esta nota?')) {
                 onDelete(note.id);
               }
