@@ -71,10 +71,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   };
 
   return (
-    <div className="mb-4 bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden transition-all duration-300 hover:shadow-md">
+    <div className="mb-2 bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden transition-all duration-300 hover:shadow-md">
       {/* Header */}
       <div
-        className={`flex items-center justify-between p-4 cursor-pointer transition-colors ${note.isOpen
+        className={`flex items-center justify-between px-3 py-2 cursor-pointer transition-colors ${note.isOpen
           ? 'bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-100 dark:border-zinc-800'
           : 'bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800'
           }`}
@@ -85,45 +85,47 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           if (!isEditingTitle) onToggle(note.id);
         }}
       >
-        <div className="flex items-center gap-3 flex-1 overflow-hidden">
-          <div className={`p-2 rounded-lg ${note.isOpen
+        <div className="flex items-center gap-2 flex-1 overflow-hidden">
+          <div className={`p-1.5 rounded-md ${note.isOpen
             ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100'
             : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
             }`}>
-            <StickyNote size={20} />
+            <StickyNote size={16} />
           </div>
 
-          <div className="flex flex-col flex-1 overflow-hidden">
-            {isEditingTitle ? (
-              <input
-                ref={titleInputRef}
-                type="text"
-                value={tempTitle}
-                onChange={(e) => setTempTitle(e.target.value)}
-                onBlur={() => handleSaveTitle(false)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle(true)}
-                onClick={(e) => e.stopPropagation()}
-                placeholder="Título de la nota..."
-                autoFocus
-                className="w-full text-lg font-semibold text-zinc-800 dark:text-zinc-100 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded px-2 py-0.5 outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-800 placeholder-zinc-400"
-              />
-            ) : (
-              <h3
-                className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 truncate select-none hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors inline-block cursor-pointer hover:underline decoration-zinc-400 decoration-dashed underline-offset-4"
-                onDoubleClick={(e) => {
-                  e.stopPropagation();
-                  setIsEditingTitle(true);
-                }}
-                title="Doble clic para editar título"
-              >
-                {note.title}
-              </h3>
-            )}
-            {note.updated_at && (
-              <span className="text-xs text-zinc-400 font-mono mt-0.5">
-                Modificado: {formatDate(note.updated_at)}
-              </span>
-            )}
+          <div className="flex-1 overflow-hidden">
+            <div className="flex items-center gap-2">
+              {isEditingTitle ? (
+                <input
+                  ref={titleInputRef}
+                  type="text"
+                  value={tempTitle}
+                  onChange={(e) => setTempTitle(e.target.value)}
+                  onBlur={() => handleSaveTitle(false)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle(true)}
+                  onClick={(e) => e.stopPropagation()}
+                  placeholder="Título de la nota..."
+                  autoFocus
+                  className="flex-1 text-sm font-medium text-zinc-800 dark:text-zinc-100 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded px-2 py-0.5 outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-800 placeholder-zinc-400"
+                />
+              ) : (
+                <h3
+                  className="text-sm font-medium text-zinc-800 dark:text-zinc-100 truncate select-none hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors cursor-pointer hover:underline decoration-zinc-400 decoration-dashed underline-offset-4"
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    setIsEditingTitle(true);
+                  }}
+                  title="Doble clic para editar título"
+                >
+                  {note.title}
+                </h3>
+              )}
+              {note.updated_at && !isEditingTitle && (
+                <span className="text-[10px] text-zinc-400 font-mono whitespace-nowrap flex-shrink-0">
+                  {formatDate(note.updated_at)}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -141,18 +143,18 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               }
             }}
             className={`transition-all duration-200 flex items-center justify-center ${isEditingContent
-              ? 'px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md shadow-sm gap-1.5 text-sm font-medium ml-2'
-              : 'p-2 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              ? 'px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md shadow-sm gap-1 text-xs font-medium ml-1'
+              : 'p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
               }`}
             title={isEditingContent ? "Guardar cambios" : "Editar Contenido"}
           >
             {isEditingContent ? (
               <>
-                <Check size={16} strokeWidth={3} />
+                <Check size={14} strokeWidth={3} />
                 <span>Guardar</span>
               </>
             ) : (
-              <Edit2 size={18} />
+              <Edit2 size={15} />
             )}
           </button>
 
@@ -162,13 +164,13 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               e.currentTarget.blur();
               onUpdate(note.id, { is_pinned: !note.is_pinned });
             }}
-            className={`p-2 rounded-lg transition-all ${note.is_pinned
+            className={`p-1.5 rounded-lg transition-all ${note.is_pinned
               ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20'
               : 'text-zinc-400 hover:text-amber-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
               }`}
             title={note.is_pinned ? "Desfijar Nota" : "Fijar Nota"}
           >
-            <Pin size={18} className={note.is_pinned ? "fill-current" : ""} />
+            <Pin size={15} className={note.is_pinned ? "fill-current" : ""} />
           </button>
 
           <button
@@ -179,14 +181,14 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 onDelete(note.id);
               }
             }}
-            className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+            className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
             title="Eliminar Nota"
           >
-            <Trash2 size={18} />
+            <Trash2 size={15} />
           </button>
 
-          <div className={`p-2 transform transition-transform duration-300 ${note.isOpen ? 'rotate-180' : ''} text-zinc-400`}>
-            <ChevronDown size={20} />
+          <div className={`p-1 transform transition-transform duration-300 ${note.isOpen ? 'rotate-180' : ''} text-zinc-400`}>
+            <ChevronDown size={16} />
           </div>
         </div>
       </div>
