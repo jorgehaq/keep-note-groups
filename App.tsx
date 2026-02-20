@@ -35,22 +35,8 @@ function App() {
   // Ref for the scrollable main container — used to preserve scroll on pin/unpin
   const mainRef = useRef<HTMLElement>(null);
 
-  // Pending scroll target — set when clicking a docked note in the sidebar
-  const [pendingScrollNoteId, setPendingScrollNoteId] = useState<string | null>(null);
-
-  // Auto-scroll to a docked note after render
-  useEffect(() => {
-    if (!pendingScrollNoteId) return;
-    // Small delay to ensure DOM is settled after group switch + note open
-    const timer = setTimeout(() => {
-      const el = document.getElementById(`note-${pendingScrollNoteId}`);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-      setPendingScrollNoteId(null);
-    }, 150);
-    return () => clearTimeout(timer);
-  }, [pendingScrollNoteId, activeGroupId]);
+  // Focused Note Mode — when a docked note is clicked, isolate it
+  const [focusedNoteId, setFocusedNoteId] = useState<string | null>(null);
 
   // --- AUTH & INITIAL LOAD ---
   useEffect(() => {
@@ -436,50 +422,53 @@ function App() {
   const activeGroup = groups.find(g => g.id === activeGroupId);
 
   const filteredNotes = activeGroup
-    ? activeGroup.notes
-      .filter(n => {
-        // Bypass: always show new/editing notes regardless of search
-        const isNewOrEditing = n.title.trim() === '' || n.id === editingNoteId;
-        if (isNewOrEditing) return true;
+    ? focusedNoteId
+      // Focused Mode: show only that note, bypass search/sort
+      ? activeGroup.notes.filter(n => n.id === focusedNoteId)
+      : activeGroup.notes
+        .filter(n => {
+          // Bypass: always show new/editing notes regardless of search
+          const isNewOrEditing = n.title.trim() === '' || n.id === editingNoteId;
+          if (isNewOrEditing) return true;
 
-        const matchesSearch = n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          n.content.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesSearch;
-      })
-      .sort((a, b) => {
-        // FREEZE LOGIC: If a note is being edited (or just created), keep it at the top (below pins) 
-        // or just prioritize it? 
-        // User said: "exclúyela temporalmente del ordenamiento estricto o fuérzala a estar visible".
-        // Let's force it to be second only to pins (or even above pins if we want strict visibility).
-        // Let's stick to: Pins -> Edited Note -> Rest (Rest sorted by mode).
+          const matchesSearch = n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            n.content.toLowerCase().includes(searchQuery.toLowerCase());
+          return matchesSearch;
+        })
+        .sort((a, b) => {
+          // FREEZE LOGIC: If a note is being edited (or just created), keep it at the top (below pins) 
+          // or just prioritize it? 
+          // User said: "exclúyela temporalmente del ordenamiento estricto o fuérzala a estar visible".
+          // Let's force it to be second only to pins (or even above pins if we want strict visibility).
+          // Let's stick to: Pins -> Edited Note -> Rest (Rest sorted by mode).
 
-        const isAEditing = a.id === editingNoteId;
-        const isBEditing = b.id === editingNoteId;
+          const isAEditing = a.id === editingNoteId;
+          const isBEditing = b.id === editingNoteId;
 
-        // Priority 0: Edited Note (Freeze it high up)
-        if (isAEditing && !isBEditing) return -1;
-        if (!isAEditing && isBEditing) return 1;
+          // Priority 0: Edited Note (Freeze it high up)
+          if (isAEditing && !isBEditing) return -1;
+          if (!isAEditing && isBEditing) return 1;
 
-        // Priority 1: Pinned
-        if (a.is_pinned !== b.is_pinned) {
-          return a.is_pinned ? -1 : 1;
-        }
+          // Priority 1: Pinned
+          if (a.is_pinned !== b.is_pinned) {
+            return a.is_pinned ? -1 : 1;
+          }
 
-        // Priority 2: Sort Mode
-        switch (noteSortMode) {
-          case 'date-desc':
-            // Strict millisecond sort
-            return new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime();
-          case 'date-asc':
-            return new Date(a.updated_at || a.created_at || 0).getTime() - new Date(b.updated_at || b.created_at || 0).getTime();
-          case 'alpha-asc':
-            return a.title.localeCompare(b.title);
-          case 'alpha-desc':
-            return b.title.localeCompare(a.title);
-          default:
-            return 0;
-        }
-      })
+          // Priority 2: Sort Mode
+          switch (noteSortMode) {
+            case 'date-desc':
+              // Strict millisecond sort
+              return new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime();
+            case 'date-asc':
+              return new Date(a.updated_at || a.created_at || 0).getTime() - new Date(b.updated_at || b.created_at || 0).getTime();
+            case 'alpha-asc':
+              return a.title.localeCompare(b.title);
+            case 'alpha-desc':
+              return b.title.localeCompare(a.title);
+            default:
+              return 0;
+          }
+        })
     : [];
 
   const handleUpdateNoteWrapper = (noteId: string, updates: Partial<Note>) => {
@@ -499,21 +488,23 @@ function App() {
       <Sidebar
         groups={groups}
         activeGroupId={activeGroupId}
-        onSelectGroup={setActiveGroup}
+        onSelectGroup={(id) => {
+          setActiveGroup(id);
+          setFocusedNoteId(null); // Exit focused mode when clicking group icon
+        }}
         onAddGroup={addGroup}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onTogglePin={toggleGroupPin}
         onLogout={handleLogout}
         onSelectDockedNote={(groupId, noteId) => {
-          // 1. Switch to the group
           setActiveGroup(groupId);
-          // 2. Ensure the note is open (add to openNotesByGroup if not already there)
+          // Ensure the note is open
           const currentOpen = openNotesByGroup[groupId] || [];
           if (!currentOpen.includes(noteId)) {
-            toggleNote(groupId, noteId); // Will add it since it's not in the list
+            toggleNote(groupId, noteId);
           }
-          // 3. Schedule smooth scroll after render
-          setPendingScrollNoteId(noteId);
+          // Enter Focused Mode
+          setFocusedNoteId(noteId);
         }}
       />
 
