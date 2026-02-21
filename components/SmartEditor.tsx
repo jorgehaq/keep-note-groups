@@ -5,8 +5,9 @@ interface SmartEditorProps {
     value: string;
     onChange: (value: string) => void;
     placeholder?: string;
-    className?: string; // Allow overriding/merging styles
+    className?: string;
     autoFocus?: boolean;
+    onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
 }
 
 export const SmartEditor = forwardRef<HTMLTextAreaElement, SmartEditorProps>(({
@@ -14,7 +15,8 @@ export const SmartEditor = forwardRef<HTMLTextAreaElement, SmartEditorProps>(({
     onChange,
     placeholder,
     className,
-    autoFocus
+    autoFocus,
+    onKeyDown: externalKeyDown
 }, ref) => {
     const internalRef = useRef<HTMLTextAreaElement>(null);
     const cursorRef = useRef<number | null>(null);
@@ -29,6 +31,12 @@ export const SmartEditor = forwardRef<HTMLTextAreaElement, SmartEditorProps>(({
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        // Let parent handle first (e.g. checklist Enter)
+        if (externalKeyDown) {
+            externalKeyDown(e);
+            if (e.defaultPrevented) return;
+        }
+
         if (e.key === 'Tab') {
             e.preventDefault();
 

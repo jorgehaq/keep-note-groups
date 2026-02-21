@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Trash2, Edit2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, Eye, MoreVertical, Clock } from 'lucide-react';
+import { ChevronDown, Trash2, Edit2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, Eye, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical } from 'lucide-react';
 import { Note } from '../types';
 import { LinkifiedText } from './LinkifiedText';
 import { SmartEditor } from './SmartEditor';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 interface AccordionItemProps {
   note: Note;
@@ -50,6 +51,36 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   // Mobile kebab menu
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+
+  const toggleChecklistItem = (index: number) => {
+    const lines = note.content.split('\n');
+    const line = lines[index];
+    if (line.startsWith('[x] ')) {
+      lines[index] = '[ ] ' + line.slice(4);
+    } else if (line.startsWith('[ ] ')) {
+      lines[index] = '[x] ' + line.slice(4);
+    } else {
+      lines[index] = '[x] ' + line;
+    }
+
+    const pendingLines = lines.filter(l => l.trim() && !l.trim().startsWith('[x] '));
+    const completedLines = lines.filter(l => l.trim() && l.trim().startsWith('[x] '));
+    const emptyLines = lines.filter(l => !l.trim());
+
+    onUpdate(note.id, { content: [...pendingLines, ...completedLines, ...emptyLines].join('\n') });
+  };
+
+  const handleDragEndChecklist = (result: any) => {
+    if (!result.destination) return;
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
+    if (sourceIndex === destinationIndex) return;
+
+    const lines = note.content.split('\n');
+    const [reorderedItem] = lines.splice(sourceIndex, 1);
+    lines.splice(destinationIndex, 0, reorderedItem);
+    onUpdate(note.id, { content: lines.join('\n') });
+  };
 
   useEffect(() => {
     if (!isMobileMenuOpen) return;
@@ -238,8 +269,21 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             {isEditingContent ? <Eye size={15} /> : <Edit2 size={15} />}
           </button>
 
-          {/* Desktop-only: Pin, Dock, Delete */}
+          {/* Desktop-only: Checklist, Pin, Dock, Delete */}
           <div className="hidden md:flex items-center gap-1">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onUpdate(note.id, { is_checklist: !note.is_checklist });
+              }}
+              className={`p-1.5 rounded-lg transition-all ${note.is_checklist
+                ? 'text-[#1F3760] bg-blue-50 dark:bg-[#1F3760]/20'
+                : 'text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                }`}
+              title={note.is_checklist ? 'Desactivar Checklist' : 'Convertir en Checklist'}
+            >
+              <ListTodo size={15} />
+            </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -330,6 +374,21 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                   {note.is_docked ? 'Quitar del Sidebar' : 'Anclar al Sidebar'}
                 </button>
 
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onUpdate(note.id, { is_checklist: !note.is_checklist });
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_checklist
+                    ? 'text-[#1F3760] dark:text-blue-400 bg-blue-50 dark:bg-[#1F3760]/20'
+                    : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                    }`}
+                >
+                  <ListTodo size={14} />
+                  {note.is_checklist ? 'Quitar Checklist' : 'Hacer Checklist'}
+                </button>
+
                 <div className="border-t border-zinc-100 dark:border-zinc-700 my-0.5" />
 
                 <button
@@ -370,6 +429,20 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 onChange={setTempContent}
                 placeholder="Escribe tus notas aquí..."
                 autoFocus={true}
+                onKeyDown={(e) => {
+                  if (note.is_checklist && e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    const target = e.target as HTMLTextAreaElement;
+                    const start = target.selectionStart;
+                    const end = target.selectionEnd;
+                    const insertion = '\n[ ] ';
+                    const newText = tempContent.substring(0, start) + insertion + tempContent.substring(end);
+                    setTempContent(newText);
+                    setTimeout(() => {
+                      target.selectionStart = target.selectionEnd = start + insertion.length;
+                    }, 0);
+                  }
+                }}
               />
             ) : (
               <div
@@ -379,7 +452,48 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                   setIsEditingContent(true);
                 }}
               >
-                <LinkifiedText content={note.content} searchQuery={searchQuery} />
+                {note.is_checklist ? (
+                  <DragDropContext onDragEnd={handleDragEndChecklist}>
+                    <Droppable droppableId={`checklist-${note.id}`}>
+                      {(provided) => (
+                        <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-col gap-1 mt-1">
+                          {note.content.split('\n').map((line, index) => {
+                            if (!line.trim()) return null;
+                            const isChecked = line.startsWith('[x] ');
+                            const cleanText = line.replace(/^\[[x ]\] /, '');
+                            return (
+                              <Draggable draggableId={`checklist-${note.id}-${index}`} index={index} key={`checklist-${note.id}-${index}`}>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    className={`flex items-start gap-1.5 group rounded-md px-1 py-0.5 transition-colors ${snapshot.isDragging ? 'bg-zinc-100 dark:bg-zinc-800 shadow-md ring-1 ring-zinc-200 dark:ring-zinc-700' : ''}`}
+                                  >
+                                    <div {...provided.dragHandleProps} className="mt-0.5 text-zinc-300 hover:text-zinc-500 dark:text-zinc-600 dark:hover:text-zinc-400 cursor-grab active:cursor-grabbing shrink-0">
+                                      <GripVertical size={14} />
+                                    </div>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); toggleChecklistItem(index); }}
+                                      className={`mt-0.5 shrink-0 rounded transition-colors ${isChecked ? 'text-emerald-500' : 'text-zinc-400 hover:text-[#1F3760]'}`}
+                                    >
+                                      {isChecked ? <CheckSquare size={16} /> : <Square size={16} />}
+                                    </button>
+                                    <span className={`flex-1 text-sm font-mono leading-relaxed ${isChecked ? 'line-through text-zinc-400 dark:text-zinc-500' : 'text-zinc-700 dark:text-zinc-300'}`}>
+                                      {highlightText(cleanText, searchQuery)}
+                                    </span>
+                                  </div>
+                                )}
+                              </Draggable>
+                            );
+                          })}
+                          {provided.placeholder}
+                        </div>
+                      )}
+                    </Droppable>
+                  </DragDropContext>
+                ) : (
+                  <LinkifiedText content={note.content} searchQuery={searchQuery} />
+                )}
               </div>
             )}
           </div>

@@ -11,6 +11,7 @@ export interface Note {
   is_pinned?: boolean;
   is_docked?: boolean;
   updated_at?: string;
+  is_checklist?: boolean;
 }
 
 export interface Group {

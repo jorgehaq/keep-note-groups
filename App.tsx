@@ -113,6 +113,25 @@ function App() {
     return () => clearInterval(interval);
   }, [session, setOverdueRemindersCount, setImminentRemindersCount]);
 
+  // --- GLOBAL ACTIVE TIMERS POLLING (runs in any view) ---
+  const { setActiveTimersCount } = useUIStore();
+  useEffect(() => {
+    if (!session) return;
+
+    const checkTimers = async () => {
+      const { count } = await supabase
+        .from('timers')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'running');
+
+      setActiveTimersCount(count ?? 0);
+    };
+
+    checkTimers();
+    const interval = setInterval(checkTimers, 30000);
+    return () => clearInterval(interval);
+  }, [session, setActiveTimersCount]);
+
   // --- DATA FETCHING ---
   const fetchData = async () => {
     // Only show the full-page spinner on the very first load.
@@ -421,6 +440,7 @@ function App() {
     if (updates.content !== undefined) dbUpdates.content = updates.content;
     if (updates.is_pinned !== undefined) dbUpdates.is_pinned = updates.is_pinned;
     if (updates.is_docked !== undefined) dbUpdates.is_docked = updates.is_docked;
+    if (updates.is_checklist !== undefined) dbUpdates.is_checklist = updates.is_checklist;
 
     // Always update updated_at if we are changing content or title
     if (updates.title !== undefined || updates.content !== undefined) {
