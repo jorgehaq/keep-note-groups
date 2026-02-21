@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2 } from 'lucide-react';
-import { Note, Group, Theme, Reminder } from './types';
+import { Note, Group, Theme, NoteFont, Reminder } from './types';
 import { AccordionItem } from './components/AccordionItem';
 import { Sidebar } from './components/Sidebar';
 import { SettingsWindow } from './components/SettingsWindow';
@@ -25,7 +25,9 @@ function App() {
   // ZUSTAND STORE
   const { activeGroupId, setActiveGroup, openNotesByGroup, openGroup, dockedGroupIds, noteSortMode, setNoteSortMode, toggleNote, globalView, setGlobalView } = useUIStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [theme, setTheme] = useState<Theme>('dark');
+  const [searchExemptNoteIds, setSearchExemptNoteIds] = useState<Set<string>>(new Set());
+  const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('app-theme-preference') as Theme) || 'dark');
+  const [noteFont, setNoteFont] = useState<NoteFont>(() => (localStorage.getItem('app-note-font') as NoteFont) || 'sans');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // --- EDIT GROUP STATE ---
@@ -387,6 +389,11 @@ function App() {
       // FREEZE: Set as editing so it doesn't jump immediately if sorted by date/alpha
       setEditingNoteId(newNote.id);
 
+      // EXEMPT from search: if created while a filter is active, keep it visible
+      if (searchQuery.trim()) {
+        setSearchExemptNoteIds(prev => new Set(prev).add(newNote.id));
+      }
+
     } catch (error: any) {
       alert('Error al crear nota: ' + error.message);
     }
@@ -495,7 +502,7 @@ function App() {
       : activeGroup.notes
         .filter(n => {
           // Bypass: always show new/editing notes regardless of search
-          const isNewOrEditing = n.title.trim() === '' || n.id === editingNoteId;
+          const isNewOrEditing = n.title.trim() === '' || n.id === editingNoteId || searchExemptNoteIds.has(n.id);
           if (isNewOrEditing) return true;
 
           const matchesSearch = n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -648,7 +655,7 @@ function App() {
                         type="text"
                         placeholder="Buscar..."
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => { setSearchQuery(e.target.value); setSearchExemptNoteIds(new Set()); }}
                         className="w-full sm:w-40 pl-7 pr-2 py-1.5 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400/30 transition-all"
                       />
                     </div>
@@ -738,6 +745,7 @@ function App() {
                                 onUpdate={(id, updates) => handleUpdateNoteWrapper(id, updates)}
                                 onDelete={deleteNote}
                                 searchQuery={searchQuery}
+                                noteFont={noteFont}
                               />
                             </div>
                           );
@@ -794,7 +802,9 @@ function App() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         theme={theme}
-        onThemeChange={setTheme}
+        onThemeChange={(t: Theme) => { setTheme(t); localStorage.setItem('app-theme-preference', t); }}
+        noteFont={noteFont}
+        onNoteFontChange={(f: NoteFont) => { setNoteFont(f); localStorage.setItem('app-note-font', f); }}
       />
     </div>
   );

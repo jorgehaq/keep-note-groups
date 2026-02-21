@@ -1,12 +1,14 @@
 import React from 'react';
-import { X, Moon, Sun, Monitor } from 'lucide-react';
-import { Theme } from '../types';
+import { X, Moon, Sun, Monitor, Type, BookOpen, Terminal } from 'lucide-react';
+import { Theme, NoteFont } from '../types';
 
 interface SettingsWindowProps {
   isOpen: boolean;
   onClose: () => void;
   theme: Theme;
   onThemeChange: (theme: Theme) => void;
+  noteFont: NoteFont;
+  onNoteFontChange: (font: NoteFont) => void;
 }
 
 export const SettingsWindow: React.FC<SettingsWindowProps> = ({
@@ -14,6 +16,8 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
   onClose,
   theme,
   onThemeChange,
+  noteFont,
+  onNoteFontChange,
 }) => {
   if (!isOpen) return null;
 
@@ -71,6 +75,45 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
             </div>
           </div>
 
+          {/* Font Section */}
+          <div>
+            <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-3 uppercase tracking-wider">Tipografía de Notas</h3>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                onClick={() => onNoteFontChange('sans')}
+                className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all ${noteFont === 'sans'
+                  ? 'bg-zinc-100 dark:bg-zinc-900 border-zinc-500 text-zinc-900 dark:text-zinc-100'
+                  : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400'
+                  }`}
+              >
+                <Type size={20} />
+                <span className="text-xs font-medium">Moderno</span>
+              </button>
+
+              <button
+                onClick={() => onNoteFontChange('serif')}
+                className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all ${noteFont === 'serif'
+                  ? 'bg-zinc-100 dark:bg-zinc-900 border-zinc-500 text-zinc-900 dark:text-zinc-100'
+                  : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400'
+                  }`}
+              >
+                <BookOpen size={20} />
+                <span className="text-xs font-medium">Clásico</span>
+              </button>
+
+              <button
+                onClick={() => onNoteFontChange('mono')}
+                className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all ${noteFont === 'mono'
+                  ? 'bg-zinc-100 dark:bg-zinc-900 border-zinc-500 text-zinc-900 dark:text-zinc-100'
+                  : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400'
+                  }`}
+              >
+                <Terminal size={20} />
+                <span className="text-xs font-medium">Código</span>
+              </button>
+            </div>
+          </div>
+
           <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
             <p className="text-xs text-center text-zinc-400">
               Más configuraciones pronto...
@@ -81,3 +124,5 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
     </div>
   );
 };
+
+

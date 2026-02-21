@@ -14,6 +14,8 @@ export interface Note {
   is_checklist?: boolean;
 }
 
+export type NoteFont = 'sans' | 'serif' | 'mono';
+
 export interface Group {
   id: string;
   title: string; // UI uses title, we map DB 'name' -> 'title' in App.tsx

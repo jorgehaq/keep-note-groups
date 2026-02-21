@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Trash2, Edit2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, Eye, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical } from 'lucide-react';
-import { Note } from '../types';
+import { Note, NoteFont } from '../types';
 import { LinkifiedText } from './LinkifiedText';
 import { SmartEditor } from './SmartEditor';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -11,6 +11,7 @@ interface AccordionItemProps {
   onUpdate: (id: string, updates: Partial<Note>) => void;
   onDelete: (id: string) => void;
   searchQuery?: string;
+  noteFont?: NoteFont;
 }
 
 const highlightText = (text: string, highlight?: string): React.ReactNode => {
@@ -34,7 +35,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   onUpdate,
   onDelete,
   searchQuery,
+  noteFont = 'sans',
 }) => {
+  const fontClass = noteFont === 'serif' ? 'font-serif' : noteFont === 'mono' ? 'font-mono text-xs' : 'font-sans';
   const [isEditingContent, setIsEditingContent] = useState(false);
 
   /* 
@@ -80,6 +83,31 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
     const [reorderedItem] = lines.splice(sourceIndex, 1);
     lines.splice(destinationIndex, 0, reorderedItem);
     onUpdate(note.id, { content: lines.join('\n') });
+  };
+
+  const cleanMarkdownToNaturalText = (text: string) => {
+    let cleaned = text;
+    cleaned = cleaned.replace(/^#+\s+/gm, '');
+    cleaned = cleaned.replace(/^>\s+/gm, '');
+    cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, '"$1"');
+    cleaned = cleaned.replace(/\b_([^_]+)_\b/g, '"$1"');
+    cleaned = cleaned.replace(/`([^`]+)`/g, '"$1"');
+    cleaned = cleaned.replace(/\[([^\]]+)\]\([^)]+\)/g, '"$1"');
+    return cleaned;
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    const clipboardData = e.clipboardData.getData('text/plain');
+    const cleanText = cleanMarkdownToNaturalText(clipboardData);
+    const target = e.target as HTMLTextAreaElement;
+    const start = target.selectionStart;
+    const end = target.selectionEnd;
+    const newValue = tempContent.substring(0, start) + cleanText + tempContent.substring(end);
+    setTempContent(newValue);
+    setTimeout(() => {
+      target.selectionStart = target.selectionEnd = start + cleanText.length;
+    }, 0);
   };
 
   useEffect(() => {
@@ -429,6 +457,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 onChange={setTempContent}
                 placeholder="Escribe tus notas aquí..."
                 autoFocus={true}
+                className={fontClass}
                 onKeyDown={(e) => {
                   if (note.is_checklist && e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -443,10 +472,11 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                     }, 0);
                   }
                 }}
+                onPaste={handlePaste}
               />
             ) : (
               <div
-                className="w-full max-w-full min-h-[50px] break-words overflow-hidden"
+                className={`w-full max-w-full min-h-[50px] break-words overflow-hidden ${fontClass}`}
                 onDoubleClick={() => {
                   setTempContent(note.content);
                   setIsEditingContent(true);

@@ -8,6 +8,7 @@ interface SmartEditorProps {
     className?: string;
     autoFocus?: boolean;
     onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+    onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
 }
 
 export const SmartEditor = forwardRef<HTMLTextAreaElement, SmartEditorProps>(({
@@ -16,7 +17,8 @@ export const SmartEditor = forwardRef<HTMLTextAreaElement, SmartEditorProps>(({
     placeholder,
     className,
     autoFocus,
-    onKeyDown: externalKeyDown
+    onKeyDown: externalKeyDown,
+    onPaste
 }, ref) => {
     const internalRef = useRef<HTMLTextAreaElement>(null);
     const cursorRef = useRef<number | null>(null);
@@ -75,9 +77,10 @@ export const SmartEditor = forwardRef<HTMLTextAreaElement, SmartEditorProps>(({
             value={value}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
+            onPaste={onPaste}
             placeholder={placeholder}
             minRows={5}
-            className={`w-full max-w-full resize-none bg-transparent outline-none text-zinc-700 dark:text-zinc-300 placeholder-zinc-400 font-mono text-sm leading-relaxed overflow-x-hidden break-words ${className || ''}`}
+            className={`w-full max-w-full resize-none bg-transparent outline-none text-zinc-700 dark:text-zinc-300 placeholder-zinc-400 leading-relaxed overflow-x-hidden break-words ${className || ''}`}
         />
     );
 });
