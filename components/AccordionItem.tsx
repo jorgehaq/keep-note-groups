@@ -276,9 +276,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         <div className="flex items-center gap-1 shrink-0">
           {/* Edit/Read Mode Toggle — always visible */}
           <button
-            onMouseDown={(e) => {
-              e.preventDefault();
+            onClick={(e) => {
               e.stopPropagation();
+              e.currentTarget.blur();
               if (isEditingContent) {
                 const isDirty = tempContent !== note.content;
                 if (isDirty) {

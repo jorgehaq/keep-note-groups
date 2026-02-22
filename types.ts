@@ -46,7 +46,7 @@ export interface Task {
   updated_at: string;
 }
 
-export type GlobalAppView = 'notes' | 'kanban' | 'timers' | 'reminders';
+export type GlobalAppView = 'notes' | 'kanban' | 'timers' | 'reminders' | 'braindump';
 
 export type TimerType = 'stopwatch' | 'countdown';
 export type TimerStatus = 'running' | 'paused';

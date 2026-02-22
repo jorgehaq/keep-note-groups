@@ -7,6 +7,7 @@ import { SettingsWindow } from './components/SettingsWindow';
 import { KanbanApp } from './components/KanbanApp';
 import { TimeTrackerApp } from './components/TimeTrackerApp';
 import { RemindersApp } from './components/RemindersApp';
+import { BrainDumpApp } from './components/BrainDumpApp';
 // import { generateId } from './utils'; // No longer needed for IDs, Supabase handles it
 import { supabase } from './src/lib/supabaseClient';
 import { Auth } from './components/Auth';
@@ -591,6 +592,8 @@ function App() {
           <TimeTrackerApp session={session!} />
         ) : globalView === 'reminders' ? (
           <RemindersApp session={session!} />
+        ) : globalView === 'braindump' ? (
+          <BrainDumpApp session={session!} />
         ) : (
           <>
 
@@ -655,7 +658,11 @@ function App() {
                         type="text"
                         placeholder="Buscar..."
                         value={searchQuery}
-                        onChange={(e) => { setSearchQuery(e.target.value); setSearchExemptNoteIds(new Set()); }}
+                        onChange={(e) => {
+                          setSearchQuery(e.target.value);
+                          setSearchExemptNoteIds(new Set());
+                          if (focusedNoteId) setFocusedNoteId(null);
+                        }}
                         className="w-full sm:w-40 pl-7 pr-2 py-1.5 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400/30 transition-all"
                       />
                     </div>

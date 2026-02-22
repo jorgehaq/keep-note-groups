@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Settings, Grid, X, LogOut, StickyNote, KanbanSquare, Clock, Bell } from 'lucide-react';
+import { Plus, Settings, Grid, X, LogOut, StickyNote, KanbanSquare, Clock, Bell, Zap } from 'lucide-react';
 import { Group } from '../types';
 import { GroupLauncher } from './GroupLauncher';
 import { useUIStore } from '../src/lib/store';
@@ -91,6 +91,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {imminentRemindersCount}
             </div>
           ) : null}
+        </button>
+
+        {/* BrainDump Button (El Rayo) */}
+        <button
+          onClick={() => setGlobalView('braindump')}
+          className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all mb-1 shrink-0 ${globalView === 'braindump'
+            ? 'bg-[#1F3760] text-white shadow-lg shadow-[#1F3760]/30 ring-2 ring-white/30'
+            : 'bg-zinc-300 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-400 dark:hover:bg-zinc-700'
+            }`}
+          title="Patio de Recreo mental (Rayo)"
+        >
+          <Zap size={20} />
         </button>
 
         {/* Launcher Button */}
