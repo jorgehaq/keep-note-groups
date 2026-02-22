@@ -4,6 +4,7 @@ import { Note, NoteFont } from '../types';
 import { LinkifiedText } from './LinkifiedText';
 import { SmartEditor } from './SmartEditor';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { useUIStore } from '../src/lib/store';
 
 interface AccordionItemProps {
   note: Note;
@@ -38,7 +39,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   noteFont = 'sans',
 }) => {
   const fontClass = noteFont === 'serif' ? 'font-serif' : noteFont === 'mono' ? 'font-mono text-xs' : 'font-sans';
-  const [isEditingContent, setIsEditingContent] = useState(false);
+
+  const { editingNotes, setEditingNote } = useUIStore();
+  const isEditingContent = editingNotes[note.id] || false;
+  const setIsEditingContent = (val: boolean) => setEditingNote(note.id, val);
 
   /* 
     Create-to-Edit Flow:

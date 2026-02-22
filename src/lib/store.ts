@@ -17,9 +17,11 @@ interface UIStore {
     activeTimersCount: number;
     overdueRemindersCount: number;
     imminentRemindersCount: number;
+    editingNotes: Record<string, boolean>;
 
     setActiveGroup: (id: string | null) => void;
     toggleNote: (groupId: string, noteId: string) => void;
+    setEditingNote: (noteId: string, isEditing: boolean) => void;
 
     // Dock Actions
     openGroup: (id: string) => void; // Adds to dock and sets active
@@ -44,6 +46,7 @@ export const useUIStore = create<UIStore>()(
             activeTimersCount: 0,
             overdueRemindersCount: 0,
             imminentRemindersCount: 0,
+            editingNotes: {},
 
             setActiveGroup: (id) => set({ activeGroupId: id }),
 
@@ -92,9 +95,10 @@ export const useUIStore = create<UIStore>()(
             setActiveTimersCount: (count) => set({ activeTimersCount: count }),
             setOverdueRemindersCount: (count) => set({ overdueRemindersCount: count }),
             setImminentRemindersCount: (count) => set({ imminentRemindersCount: count }),
+            setEditingNote: (noteId, isEditing) => set((state) => ({ editingNotes: { ...state.editingNotes, [noteId]: isEditing } })),
         }),
         {
-            name: 'keep-note-groups-ui-storage-v3', // Bump version for new state shape
+            name: 'keep-note-groups-ui-storage-v4', // Bump version for editingNotes state
             storage: createJSONStorage(() => localStorage),
         }
     )
