@@ -249,7 +249,7 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
         }
     };
 
-    const reviveFromHistory = async (historyId: string) => {
+    const reviveToMain = async (id: string) => {
         const main = dumps.find(d => d.status === 'main');
 
         try {
@@ -272,12 +272,12 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
             const { error } = await supabase
                 .from('brain_dumps')
                 .update({ status: 'main', updated_at: new Date().toISOString() })
-                .eq('id', historyId);
+                .eq('id', id);
 
             if (error) throw error;
             await fetchDumps();
         } catch (err: any) {
-            console.error('Error in reviveFromHistory:', err.message);
+            console.error('Error in reviveToMain:', err.message);
             alert('Error al revivir sesión: ' + err.message);
         }
     };
@@ -448,6 +448,14 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
                                                     <Trash2 size={12} />
                                                 </button>
                                                 <button
+                                                    onClick={() => reviveToMain(stash.id)}
+                                                    className="flex items-center gap-1.5 bg-[#1F3760]/10 text-[#1F3760] dark:bg-[#5c7eb1]/20 dark:text-[#5c7eb1] px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase hover:bg-[#1F3760] hover:text-white dark:hover:bg-[#5c7eb1] dark:hover:text-zinc-900 transition-colors"
+                                                    title="Mover a la pizarra principal"
+                                                >
+                                                    <Zap size={10} />
+                                                    Revivir
+                                                </button>
+                                                <button
                                                     onClick={() => commitToHistory(stash.id)}
                                                     className="flex items-center gap-1.5 text-[#1F3760] dark:text-[#5c7eb1] font-bold text-[10px] uppercase hover:underline"
                                                 >
@@ -490,7 +498,7 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
                                             {renderTimestamps(h.created_at, h.updated_at)}
                                             <div className="flex items-center gap-3">
                                                 <button
-                                                    onClick={() => reviveFromHistory(h.id)}
+                                                    onClick={() => reviveToMain(h.id)}
                                                     className="flex items-center gap-1.5 bg-[#1F3760]/10 text-[#1F3760] dark:bg-[#5c7eb1]/20 dark:text-[#5c7eb1] px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase hover:bg-[#1F3760] hover:text-white dark:hover:bg-[#5c7eb1] dark:hover:text-zinc-900 transition-colors"
                                                 >
                                                     <Zap size={10} />
