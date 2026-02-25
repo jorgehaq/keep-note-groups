@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Trash2, Edit2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, Eye, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Edit2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, Eye, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical } from 'lucide-react';
 import { Note, NoteFont } from '../types';
 import { LinkifiedText } from './LinkifiedText';
 import { SmartEditor } from './SmartEditor';
@@ -530,6 +530,20 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 )}
               </div>
             )}
+          </div>
+
+          {/* Footer para cerrar nota larga */}
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle(note.id);
+            }}
+            className="flex items-center justify-center gap-2 py-2 mt-2 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 border-t border-zinc-100 dark:border-zinc-800/80 cursor-pointer transition-colors text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+          >
+            <ChevronUp size={16} />
+            <span className="text-xs font-medium uppercase tracking-wider">
+              Cerrar: {note.title ? note.title.substring(0, 30) : 'Sin título'}
+            </span>
           </div>
         </div>
       )}

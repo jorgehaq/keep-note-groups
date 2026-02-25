@@ -55,6 +55,35 @@ export const SmartEditor = forwardRef<HTMLTextAreaElement, SmartEditorProps>(({
             // Set cursor expectation
             cursorRef.current = start + 2;
         }
+
+        if (e.key === 'Enter') {
+            const target = e.target as HTMLTextAreaElement;
+            const start = target.selectionStart;
+            const end = target.selectionEnd;
+            const valueUpToCursor = value.substring(0, start);
+            const lines = valueUpToCursor.split('\n');
+            const currentLine = lines[lines.length - 1];
+
+            // Regex: Detecta espacios iniciales y opcionalmente un guion o asterisco seguido de espacio
+            const match = currentLine.match(/^(\s*(?:[-*]\s)?)/);
+
+            if (match && match[1]) {
+                e.preventDefault();
+
+                // Si la línea actual SOLO contiene el marcador (ej. un guion vacío), al dar Enter borramos el marcador para salir de la lista
+                if (currentLine === match[1]) {
+                    const newValue = value.substring(0, start - match[1].length) + '\n' + value.substring(end);
+                    onChange(newValue);
+                    cursorRef.current = start - match[1].length + 1;
+                } else {
+                    // De lo contrario, heredamos el formato a la nueva línea
+                    const insertText = '\n' + match[1];
+                    const newValue = value.substring(0, start) + insertText + value.substring(end);
+                    onChange(newValue);
+                    cursorRef.current = start + insertText.length;
+                }
+            }
+        }
     };
 
     // 2. Restore cursor position after render
