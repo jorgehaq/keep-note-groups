@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2 } from 'lucide-react';
+import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download } from 'lucide-react';
 import { Note, Group, Theme, NoteFont, Reminder } from './types';
 import { AccordionItem } from './components/AccordionItem';
 import { Sidebar } from './components/Sidebar';
@@ -556,6 +556,51 @@ function App() {
     updateNote(noteId, updates);
   };
 
+  const downloadGroupAsMarkdown = () => {
+    if (!activeGroup) return;
+
+    // 1. Ordenar notas alfabéticamente
+    const sortedNotes = [...activeGroup.notes].sort((a, b) => {
+      const titleA = a.title || 'Sin título';
+      const titleB = b.title || 'Sin título';
+      return titleA.localeCompare(titleB);
+    });
+
+    // Helper para formatear fechas
+    const formatNoteDate = (dateString?: string) => {
+      if (!dateString) return 'Desconocida';
+      return new Date(dateString).toLocaleString('es-ES', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    };
+
+    // 2. Construir el string Markdown con el formato estricto
+    const mdContent = sortedNotes.map(note => {
+      const title = note.title || 'Sin título';
+      const created = formatNoteDate(note.created_at);
+      const updated = formatNoteDate(note.updated_at || note.created_at);
+      const content = note.content || '';
+
+      return `titulo: ${title}\nfecha creacion: ${created}\nfecha ultima edicion: ${updated}\ncontenido de la nota:\n${content}`;
+    }).join('\n\n---\n\n');
+
+    // 3. Descargar el archivo
+    const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+
+    // Sanitizar el nombre del grupo para el nombre del archivo
+    const fileName = `${activeGroup.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
+    link.setAttribute('download', fileName);
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex h-screen bg-zinc-50 dark:bg-zinc-950 overflow-hidden transition-colors duration-300">
 
@@ -700,6 +745,17 @@ function App() {
 
                     {/* Divider */}
                     <div className="hidden sm:block w-px h-5 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
+
+                    {/* Descargar Grupo a MD */}
+                    {!isEditingGroup && (
+                      <button
+                        onClick={downloadGroupAsMarkdown}
+                        className="p-1.5 text-zinc-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
+                        title="Exportar notas a Markdown"
+                      >
+                        <Download size={15} />
+                      </button>
+                    )}
 
                     {/* Delete Group */}
                     {!isEditingGroup && (
