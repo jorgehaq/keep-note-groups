@@ -44,6 +44,7 @@ export interface Task {
   user_id: string;
   created_at: string;
   updated_at: string;
+  source_id?: string;
 }
 
 export type GlobalAppView = 'notes' | 'kanban' | 'timers' | 'reminders' | 'braindump' | 'translator';

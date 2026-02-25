@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Square, Send, Zap, Trash2, Clock, Inbox, Archive, History, Sparkles } from 'lucide-react';
+import { Play, Square, Send, Zap, Trash2, Inbox, Archive, History, Sparkles } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
+import { KanbanSemaphore } from './KanbanSemaphore';
+// IMPORTAMOS EL NUEVO EDITOR INTELIGENTE
+import { SmartNotesEditor } from '../src/components/editor/SmartNotesEditor';
 
 type DumpStatus = 'main' | 'stash' | 'history';
 
@@ -16,24 +19,24 @@ interface BrainDump {
 
 interface BrainDumpAppProps {
     session: Session;
+    noteFont?: string;
+    noteFontSize?: string;
 }
 
-export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
+export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session, noteFont = 'sans', noteFontSize = 'medium' }) => {
     const [dumps, setDumps] = useState<BrainDump[]>([]);
     const [loading, setLoading] = useState(true);
     const [timeLeft, setTimeLeft] = useState(300);
     const [isTimerRunning, setIsTimerRunning] = useState(false);
     const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
-    // For debounced autosave
+    // Ref para el debounce de la base de datos
     const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
-    // For Tab key cursor restoration
-    const cursorRef = useRef<{ id: string, position: number } | null>(null);
-
-    const autoExpand = (el: HTMLTextAreaElement) => {
-        el.style.height = 'auto';
-        el.style.height = el.scrollHeight + 'px';
-    };
+    
+    // MAGIA ANTI-LAG: Ref para mantener siempre la última versión del estado 
+    // sin necesidad de leer el DOM con document.getElementById
+    const dumpsRef = useRef(dumps);
+    useEffect(() => { dumpsRef.current = dumps; }, [dumps]);
 
     const renderTimestamps = (created: string, updated?: string) => {
         const formatOpts: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' };
@@ -62,7 +65,7 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
 
             let currentDumps = data as BrainDump[];
 
-            // Rule of Gold: Maintain exactly one 'main' dump
+            // Regla de Oro: Siempre debe existir al menos un volcado 'main'
             const mainExists = currentDumps.some(d => d.status === 'main');
             if (!mainExists) {
                 const { data: newMain, error: createError } = await supabase
@@ -92,25 +95,6 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
         fetchDumps();
     }, [fetchDumps]);
 
-    // Restore cursor position after Tab key insertion
-    useEffect(() => {
-        if (cursorRef.current) {
-            const { id, position } = cursorRef.current;
-            const el = document.getElementById(`textarea-${id}`) as HTMLTextAreaElement;
-            if (el) {
-                el.setSelectionRange(position, position);
-                el.focus();
-            }
-            cursorRef.current = null;
-        }
-    }, [dumps]);
-
-    useEffect(() => {
-        // Initial expansion for all visible textareas
-        const textareas = document.querySelectorAll('textarea');
-        textareas.forEach(ta => autoExpand(ta as HTMLTextAreaElement));
-    }, [dumps, loading]);
-
     useEffect(() => {
         let timer: NodeJS.Timeout;
         if (isTimerRunning && timeLeft > 0) {
@@ -124,30 +108,13 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
         return () => clearInterval(timer);
     }, [isTimerRunning, timeLeft, dumps]);
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>, id: string) => {
-        if (e.key === 'Tab') {
-            e.preventDefault();
-            const target = e.target as HTMLTextAreaElement;
-            const start = target.selectionStart;
-            const end = target.selectionEnd;
-
-            const dump = dumps.find(d => d.id === id);
-            if (!dump) return;
-
-            const newValue = dump.content.substring(0, start) + "\t" + dump.content.substring(end);
-
-            cursorRef.current = { id, position: start + 1 };
-            autoSave(id, { content: newValue });
-        }
-    };
-
     const autoSave = (id: string, updates: { content?: string; title?: string }) => {
         const now = new Date().toISOString();
-        // 1. Update local state immediately for UI responsiveness
+        // 1. Actualizamos el estado local de React
         setDumps(prev => prev.map(d => d.id === id ? { ...d, ...updates, updated_at: now } : d));
         setSyncStatus('saving');
 
-        // 2. Debounce the DB update
+        // 2. Debounce a la Base de Datos (400ms)
         if (saveTimeoutRef.current[id]) {
             clearTimeout(saveTimeoutRef.current[id]);
         }
@@ -162,142 +129,124 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
                 setSyncStatus('saved');
                 setTimeout(() => setSyncStatus(current => current === 'saved' ? 'idle' : current), 2000);
             } catch (err: any) {
-                console.error('Error in autoSave:', err.message);
+                console.error('Error en autoSave:', err.message);
             } finally {
                 delete saveTimeoutRef.current[id];
             }
         }, 400);
     };
 
-    const stashMain = async () => {
-        const main = dumps.find(d => d.status === 'main');
-        if (!main) return;
+    const stashMain = () => {
+        // Usamos un pequeño timeout para darle tiempo al editor de hacer su 'blur' y pasar el texto actualizado a React
+        setTimeout(async () => {
+            const main = dumpsRef.current.find(d => d.status === 'main');
+            if (!main || !main.content.trim()) return;
 
-        // EMERGENCY: Read directly from DOM to avoid state race conditions
-        const textarea = document.getElementById(`textarea-${main.id}`) as HTMLTextAreaElement;
-        const currentContent = textarea ? textarea.value : main.content;
-
-        if (!currentContent.trim()) return;
-
-        // Clear any pending autosave for this ID to avoid race conditions
-        if (saveTimeoutRef.current[main.id]) {
-            clearTimeout(saveTimeoutRef.current[main.id]);
-            delete saveTimeoutRef.current[main.id];
-        }
-
-        const now = new Date().toISOString();
-
-        try {
-            // 1. Convert main to stash and ensure content is updated
-            const { error } = await supabase
-                .from('brain_dumps')
-                .update({
-                    status: 'stash',
-                    content: currentContent,
-                    updated_at: now
-                })
-                .eq('id', main.id);
-
-            if (error) throw error;
-
-            // 2. Re-trigger fetch to create new main and update list
-            await fetchDumps();
-        } catch (err: any) {
-            console.error('Error in stashMain:', err.message);
-            alert('Error al guardar borrador: ' + err.message);
-        }
-    };
-
-    const commitToHistory = async (id: string) => {
-        const dump = dumps.find(d => d.id === id);
-        if (!dump) return;
-
-        // EMERGENCY: Read directly from DOM to avoid state race conditions
-        const textarea = document.getElementById(`textarea-${id}`) as HTMLTextAreaElement;
-        const currentContent = textarea ? textarea.value : dump.content;
-
-        if (!currentContent.trim()) return;
-
-        // Clear any pending autosave for this ID
-        if (saveTimeoutRef.current[id]) {
-            clearTimeout(saveTimeoutRef.current[id]);
-            delete saveTimeoutRef.current[id];
-        }
-
-        const now = new Date().toISOString();
-
-        try {
-            const { error } = await supabase
-                .from('brain_dumps')
-                .update({
-                    status: 'history',
-                    content: currentContent,
-                    updated_at: now
-                })
-                .eq('id', id);
-
-            if (error) throw error;
-
-            if (dump.status === 'main') {
-                setIsTimerRunning(false);
-                setTimeLeft(300);
+            if (saveTimeoutRef.current[main.id]) {
+                clearTimeout(saveTimeoutRef.current[main.id]);
+                delete saveTimeoutRef.current[main.id];
             }
-            await fetchDumps();
-        } catch (err: any) {
-            console.error('Error in commitToHistory:', err.message);
-            alert('Error al archivar sesión: ' + err.message);
-        }
+
+            const now = new Date().toISOString();
+
+            try {
+                const { error } = await supabase
+                    .from('brain_dumps')
+                    .update({
+                        status: 'stash',
+                        content: main.content,
+                        updated_at: now
+                    })
+                    .eq('id', main.id);
+
+                if (error) throw error;
+                await fetchDumps();
+            } catch (err: any) {
+                console.error('Error in stashMain:', err.message);
+                alert('Error al guardar borrador: ' + err.message);
+            }
+        }, 150);
     };
 
-    const reviveToMain = async (id: string) => {
-        const main = dumps.find(d => d.status === 'main');
+    const commitToHistory = (id: string) => {
+        setTimeout(async () => {
+            const dump = dumpsRef.current.find(d => d.id === id);
+            if (!dump || !dump.content.trim()) return;
 
-        try {
-            // 1. If main has content, stash it first so we don't lose it
-            if (main) {
-                const mainTextarea = document.getElementById(`textarea-${main.id}`) as HTMLTextAreaElement;
-                const mainContent = mainTextarea ? mainTextarea.value : main.content;
+            if (saveTimeoutRef.current[id]) {
+                clearTimeout(saveTimeoutRef.current[id]);
+                delete saveTimeoutRef.current[id];
+            }
 
-                if (mainContent.trim()) {
-                    await supabase
-                        .from('brain_dumps')
-                        .update({ status: 'stash', content: mainContent, updated_at: new Date().toISOString() })
-                        .eq('id', main.id);
-                } else {
-                    await supabase.from('brain_dumps').delete().eq('id', main.id);
+            const now = new Date().toISOString();
+
+            try {
+                const { error } = await supabase
+                    .from('brain_dumps')
+                    .update({
+                        status: 'history',
+                        content: dump.content,
+                        updated_at: now
+                    })
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                if (dump.status === 'main') {
+                    setIsTimerRunning(false);
+                    setTimeLeft(300);
                 }
+                await fetchDumps();
+            } catch (err: any) {
+                console.error('Error in commitToHistory:', err.message);
+                alert('Error al archivar sesión: ' + err.message);
             }
+        }, 150);
+    };
 
-            // 2. Revive history item to main
-            const { error } = await supabase
-                .from('brain_dumps')
-                .update({ status: 'main', updated_at: new Date().toISOString() })
-                .eq('id', id);
+    const reviveToMain = (id: string) => {
+        setTimeout(async () => {
+            const currentDumps = dumpsRef.current;
+            const main = currentDumps.find(d => d.status === 'main');
 
-            if (error) throw error;
-            await fetchDumps();
-        } catch (err: any) {
-            console.error('Error in reviveToMain:', err.message);
-            alert('Error al revivir sesión: ' + err.message);
-        }
+            try {
+                // Si la pizarra principal actual tiene texto, la convertimos en stash primero para no perderla
+                if (main) {
+                    if (main.content.trim()) {
+                        await supabase
+                            .from('brain_dumps')
+                            .update({ status: 'stash', content: main.content, updated_at: new Date().toISOString() })
+                            .eq('id', main.id);
+                    } else {
+                        await supabase.from('brain_dumps').delete().eq('id', main.id);
+                    }
+                }
+
+                // Revivimos el borrador o historial a principal
+                const { error } = await supabase
+                    .from('brain_dumps')
+                    .update({ status: 'main', updated_at: new Date().toISOString() })
+                    .eq('id', id);
+
+                if (error) throw error;
+                await fetchDumps();
+            } catch (err: any) {
+                console.error('Error in reviveToMain:', err.message);
+                alert('Error al revivir sesión: ' + err.message);
+            }
+        }, 150);
     };
 
     const handleDelete = async (id: string) => {
         const originalDumps = [...dumps];
-        // Optimistic update
         setDumps(prev => prev.filter(d => d.id !== id));
 
         try {
-            const { error } = await supabase
-                .from('brain_dumps')
-                .delete()
-                .eq('id', id);
-
+            const { error } = await supabase.from('brain_dumps').delete().eq('id', id);
             if (error) throw error;
         } catch (err: any) {
             console.error('Error in handleDelete:', err.message);
             alert('Error al eliminar borrador: ' + err.message);
-            // Revert on error
             setDumps(originalDumps);
         }
     };
@@ -323,7 +272,7 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
                     </div>
                     <div>
                         <h2 className="text-xl font-bold text-zinc-800 dark:text-zinc-100 italic leading-tight">El Rayo</h2>
-                        <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Patio de Recreomental</p>
+                        <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Patio de Recreo mental</p>
                     </div>
                     <div className="ml-auto flex items-center gap-4">
                         {syncStatus === 'saving' && <span className="text-[10px] text-amber-500 font-bold animate-pulse">Guardando...</span>}
@@ -352,20 +301,19 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
                                 className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-zinc-100 placeholder-zinc-300 dark:placeholder-zinc-700 border-none outline-none mb-3 px-6"
                             />
 
-                            <textarea
-                                key={mainDump.id}
-                                id={`textarea-${mainDump.id}`}
-                                autoFocus
-                                value={mainDump.content}
-                                onChange={(e) => {
-                                    autoSave(mainDump.id, { content: e.target.value });
-                                    autoExpand(e.target);
-                                }}
-                                onKeyDown={(e) => handleKeyDown(e, mainDump.id)}
-                                placeholder="Escribe tu volcado mental aquí... se guarda solo."
-                                className="bg-white dark:bg-zinc-900 shadow-xl shadow-zinc-200/50 dark:shadow-none rounded-2xl p-6 w-full min-h-[16rem] resize-none outline-none text-lg text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 border border-transparent focus:border-[#1F3760]/30 transition-all font-sans leading-relaxed overflow-hidden"
-                                style={{ height: 'auto' }}
-                            />
+                            {/* REEMPLAZO POR EL EDITOR INTELIGENTE */}
+                            <div className="bg-white dark:bg-zinc-900 shadow-xl shadow-zinc-200/50 dark:shadow-none rounded-2xl p-6 w-full min-h-[16rem] border border-transparent focus-within:border-[#1F3760]/30 transition-all overflow-visible flex flex-col cursor-text">
+                                <SmartNotesEditor
+                                    noteId={mainDump.id}
+                                    initialContent={mainDump.content}
+                                    onChange={(newContent) => autoSave(mainDump.id, { content: newContent })}
+                                    noteFont={noteFont}
+                                    noteFontSize={noteFontSize}
+                                />
+                                {mainDump.content.trim() === '' && (
+                                    <div className="text-zinc-400 mt-2 pointer-events-none text-sm absolute">Escribe tu volcado mental aquí... se guarda solo.</div>
+                                )}
+                            </div>
 
                             <div className="flex items-center justify-between gap-3 bg-white/50 dark:bg-zinc-900/50 p-2 rounded-2xl border border-zinc-100 dark:border-zinc-800/50">
                                 <button
@@ -390,6 +338,10 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
                                 </button>
 
                                 <div className="flex items-center gap-2">
+                                    <div className="flex items-center justify-center p-2.5 bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 mr-2 hover:border-indigo-500/50 transition-colors">
+                                        <KanbanSemaphore sourceId={mainDump.id} sourceTitle={mainDump.title || 'Volcado principal'} />
+                                    </div>
+
                                     <button
                                         onClick={stashMain}
                                         disabled={!mainDump.content.trim()}
@@ -422,31 +374,42 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {stashes.map(stash => (
-                                    <div key={stash.id} className="flex flex-col gap-2 p-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 transition-all hover:shadow-md">
-                                        {stash.title && <h4 className="font-bold text-sm text-zinc-800 dark:text-zinc-200 mb-2 px-1">{stash.title}</h4>}
-                                        <textarea
-                                            key={stash.id}
-                                            id={`textarea-${stash.id}`}
-                                            value={stash.content}
-                                            onChange={(e) => {
-                                                autoSave(stash.id, { content: e.target.value });
-                                                autoExpand(e.target);
-                                            }}
-                                            onKeyDown={(e) => handleKeyDown(e, stash.id)}
-                                            className="w-full max-h-48 bg-transparent md:max-h-60 resize-none outline-none text-sm text-zinc-700 dark:text-zinc-300 placeholder-zinc-400 p-0 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent"
-                                            placeholder="Borrador vacío..."
-                                            style={{ height: 'auto' }}
-                                        />
-                                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-50 dark:border-zinc-800/50">
-                                            {renderTimestamps(stash.created_at, stash.updated_at)}
-                                            <div className="flex items-center gap-3">
+                                    <div key={stash.id} className="group bg-white dark:bg-zinc-900 p-5 rounded-2xl transition-all duration-500 ease-in-out border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5 flex flex-col">
+
+                                        {/* Header Stash */}
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-tighter bg-zinc-50 dark:bg-zinc-800 px-2 py-0.5 rounded-md">
+                                                <Inbox size={10} /> Borrador
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <KanbanSemaphore sourceId={stash.id} sourceTitle={stash.title || 'Borrador sin título'} />
                                                 <button
                                                     onClick={() => handleDelete(stash.id)}
-                                                    className="p-1 text-zinc-300 hover:text-red-500 transition-colors"
+                                                    className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                                                     title="Eliminar borrador"
                                                 >
-                                                    <Trash2 size={12} />
+                                                    <Trash2 size={16} />
                                                 </button>
+                                            </div>
+                                        </div>
+
+                                        {stash.title && <h4 className="font-bold text-sm text-zinc-800 dark:text-zinc-200 mb-2">{stash.title}</h4>}
+                                        
+                                        {/* EDITOR PARA LOS BORRADORES */}
+                                        <div className="w-full max-h-48 md:max-h-60 overflow-y-auto hidden-scrollbar cursor-text mt-2 mb-4 flex-1">
+                                            <SmartNotesEditor
+                                                noteId={stash.id}
+                                                initialContent={stash.content}
+                                                onChange={(newContent) => autoSave(stash.id, { content: newContent })}
+                                                noteFont={noteFont}
+                                                noteFontSize={noteFontSize}
+                                            />
+                                        </div>
+
+                                        {/* Footer Stash */}
+                                        <div className="flex items-center justify-between mt-auto pt-3 border-t border-zinc-100 dark:border-zinc-800/50 w-full">
+                                            {renderTimestamps(stash.created_at, stash.updated_at)}
+                                            <div className="flex items-center gap-2">
                                                 <button
                                                     onClick={() => reviveToMain(stash.id)}
                                                     className="flex items-center gap-1.5 bg-[#1F3760]/10 text-[#1F3760] dark:bg-[#5c7eb1]/20 dark:text-[#5c7eb1] px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase hover:bg-[#1F3760] hover:text-white dark:hover:bg-[#5c7eb1] dark:hover:text-zinc-900 transition-colors"
@@ -457,7 +420,8 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
                                                 </button>
                                                 <button
                                                     onClick={() => commitToHistory(stash.id)}
-                                                    className="flex items-center gap-1.5 text-[#1F3760] dark:text-[#5c7eb1] font-bold text-[10px] uppercase hover:underline"
+                                                    className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                                                    title="Archivar"
                                                 >
                                                     <Send size={10} />
                                                     Archivar
@@ -470,7 +434,7 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
                         </div>
                     )}
 
-                    {/* Level 3: HISTORIAL */}
+                    {/* Level 3: HISTORIAL (Modo Lectura Crudo, sin editor para preservar estado) */}
                     <div className="space-y-4 animate-fadeIn">
                         <div className="flex items-center gap-2 text-zinc-400">
                             <History size={14} />
@@ -482,36 +446,47 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
                                 <p className="text-[11px] font-medium uppercase tracking-tighter">Sin registros archivados</p>
                             </div>
                         ) : (
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 {history.map((h) => (
                                     <div
                                         key={h.id}
-                                        className="group relative bg-zinc-100 dark:bg-zinc-900/30 p-5 rounded-2xl border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800 hover:-translate-y-1 hover:shadow-lg hover:shadow-zinc-200/50 dark:hover:shadow-black/50 transition-all duration-300"
+                                        className="group bg-white dark:bg-zinc-900 p-5 rounded-2xl transition-all duration-500 ease-in-out border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5"
                                     >
-                                        <div className="max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent">
-                                            {h.title && <h4 className="font-bold text-sm text-zinc-800 dark:text-zinc-200 mb-2">{h.title}</h4>}
-                                            <p className="text-sm text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap leading-relaxed">
-                                                {h.content}
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center justify-between mt-4 pt-3 border-t border-zinc-200/50 dark:border-zinc-800/30 transition-opacity">
-                                            {renderTimestamps(h.created_at, h.updated_at)}
-                                            <div className="flex items-center gap-3">
+                                        {/* Header Historial */}
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-tighter bg-zinc-50 dark:bg-zinc-800 px-2 py-0.5 rounded-md">
+                                                <History size={10} /> Archivado
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <KanbanSemaphore sourceId={h.id} sourceTitle={h.title || 'Volcado archivado'} />
                                                 <button
                                                     onClick={() => reviveToMain(h.id)}
-                                                    className="flex items-center gap-1.5 bg-[#1F3760]/10 text-[#1F3760] dark:bg-[#5c7eb1]/20 dark:text-[#5c7eb1] px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase hover:bg-[#1F3760] hover:text-white dark:hover:bg-[#5c7eb1] dark:hover:text-zinc-900 transition-colors"
+                                                    className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
+                                                    title="Revivir a la pizarra"
                                                 >
-                                                    <Zap size={10} />
-                                                    Revivir
+                                                    <Zap size={16} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(h.id)}
                                                     className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                                                     title="Eliminar permanentemente"
                                                 >
-                                                    <Trash2 size={12} />
+                                                    <Trash2 size={16} />
                                                 </button>
                                             </div>
+                                        </div>
+
+                                        {/* Contenido (Solo Lectura) */}
+                                        <div className="max-h-48 overflow-y-auto hidden-scrollbar">
+                                            {h.title && <h4 className="font-bold text-sm text-zinc-800 dark:text-zinc-200 mb-2">{h.title}</h4>}
+                                            <p className="text-sm text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap leading-relaxed">
+                                                {h.content}
+                                            </p>
+                                        </div>
+
+                                        {/* Footer Historial */}
+                                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800/50 w-full transition-opacity">
+                                            {renderTimestamps(h.created_at, h.updated_at)}
                                         </div>
                                     </div>
                                 ))}
@@ -523,4 +498,3 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
         </div>
     );
 };
-

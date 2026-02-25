@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download } from 'lucide-react';
+import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown } from 'lucide-react';
 import { Note, Group, Theme, NoteFont, Reminder } from './types';
 import { AccordionItem } from './components/AccordionItem';
 import { Sidebar } from './components/Sidebar';
@@ -9,47 +9,61 @@ import { TimeTrackerApp } from './components/TimeTrackerApp';
 import { RemindersApp } from './components/RemindersApp';
 import { BrainDumpApp } from './components/BrainDumpApp';
 import { TranslatorApp } from './components/TranslatorApp';
-// import { generateId } from './utils'; // No longer needed for IDs, Supabase handles it
 import { supabase } from './src/lib/supabaseClient';
 import { Auth } from './components/Auth';
 import { Session } from '@supabase/supabase-js';
 import { useUIStore } from './src/lib/store';
 
+const sortNotesArray = (notes: Note[], mode: string) => {
+  return [...notes].sort((a, b) => {
+    if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
+    switch (mode) {
+      case 'date-desc': return new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime();
+      case 'date-asc': return new Date(a.updated_at || a.created_at || 0).getTime() - new Date(b.updated_at || b.created_at || 0).getTime();
+      case 'alpha-asc': return (a.title || '').localeCompare(b.title || '');
+      case 'alpha-desc': return (b.title || '').localeCompare(a.title || '');
+      default: return 0;
+    }
+  });
+};
+
 function App() {
-  // --- STATE ---
   const [session, setSession] = useState<Session | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Track if we've loaded data at least once — prevents redundant fetches from auth events
   const hasLoadedOnce = React.useRef(false);
+  const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({}); 
 
-  // ZUSTAND STORE
-  const { activeGroupId, setActiveGroup, openNotesByGroup, openGroup, dockedGroupIds, noteSortMode, setNoteSortMode, toggleNote, globalView, setGlobalView } = useUIStore();
+  const { activeGroupId, setActiveGroup, openNotesByGroup, openGroup, dockedGroupIds, noteSortMode, setNoteSortMode, toggleNote, globalView, setGlobalView, setKanbanCounts, setGlobalTasks } = useUIStore();
   const [searchQueries, setSearchQueries] = useState<Record<string, string>>({});
   const currentSearchQuery = activeGroupId ? (searchQueries[activeGroupId] || '') : '';
   const [searchExemptNoteIds, setSearchExemptNoteIds] = useState<Set<string>>(new Set());
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('app-theme-preference') as Theme) || 'dark');
   const [noteFont, setNoteFont] = useState<NoteFont>(() => (localStorage.getItem('app-note-font') as NoteFont) || 'sans');
+  const [noteFontSize, setNoteFontSize] = useState<string>(() => localStorage.getItem('app-note-font-size') || 'medium');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // --- EDIT GROUP STATE ---
   const [isEditingGroup, setIsEditingGroup] = useState(false);
   const [tempGroupName, setTempGroupName] = useState('');
-
-  // Track the note currently being edited to "freeze" it in the list (prevent jumping)
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-
-  // Ref for the scrollable main container — used to preserve scroll on pin/unpin
   const mainRef = useRef<HTMLElement>(null);
-
-  // Focused Note Mode — when a docked note is clicked, isolate it
   const [focusedNoteId, setFocusedNoteId] = useState<string | null>(null);
-
-  // Global Reminders — overdue list for persistent banner
   const [overdueRemindersList, setOverdueRemindersList] = useState<{ id: string; title: string }[]>([]);
 
-  // Clear ghost focus when switching to a group that doesn't own the focused note
+  const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
+        setIsSortMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   useEffect(() => {
     if (activeGroupId && focusedNoteId) {
       const ag = groups.find(g => g.id === activeGroupId);
@@ -59,7 +73,6 @@ function App() {
     }
   }, [activeGroupId, focusedNoteId, groups]);
 
-  // --- AUTH & INITIAL LOAD ---
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -67,12 +80,8 @@ function App() {
       else setLoading(false);
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && !hasLoadedOnce.current) {
-        // Fresh login — load data. Ignored on tab-switch token restores
-        // because hasLoadedOnce is already true.
         setSession(session);
         fetchData();
       } else if (event === 'SIGNED_OUT') {
@@ -86,103 +95,88 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // --- GLOBAL REMINDERS POLLING (runs in any view) ---
   const { setOverdueRemindersCount, setImminentRemindersCount } = useUIStore();
   useEffect(() => {
     if (!session) return;
-
     const checkReminders = async () => {
-      const { data } = await supabase
-        .from('reminders')
-        .select('id, title, due_at')
-        .eq('is_completed', false);
-
+      const { data } = await supabase.from('reminders').select('id, title, due_at').eq('is_completed', false);
       if (!data) return;
-
       const now = new Date();
       const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-
       const overdue = data.filter(r => new Date(r.due_at) <= now);
       const imminent = data.filter(r => {
         const d = new Date(r.due_at);
         return d > now && d <= in24h;
       });
-
       setOverdueRemindersCount(overdue.length);
       setImminentRemindersCount(imminent.length);
       setOverdueRemindersList(overdue.map(r => ({ id: r.id, title: r.title })));
     };
-
     checkReminders();
     const interval = setInterval(checkReminders, 30000);
     return () => clearInterval(interval);
   }, [session, setOverdueRemindersCount, setImminentRemindersCount]);
 
-  // --- GLOBAL ACTIVE TIMERS POLLING (runs in any view) ---
   const { setActiveTimersCount } = useUIStore();
   useEffect(() => {
     if (!session) return;
-
     const checkTimers = async () => {
-      const { count } = await supabase
-        .from('timers')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'running');
-
+      const { count } = await supabase.from('timers').select('id', { count: 'exact', head: true }).eq('status', 'running');
       setActiveTimersCount(count ?? 0);
     };
-
     checkTimers();
     const interval = setInterval(checkTimers, 30000);
     return () => clearInterval(interval);
   }, [session, setActiveTimersCount]);
 
-  // --- DATA FETCHING ---
-  const fetchData = async () => {
-    // Only show the full-page spinner on the very first load.
-    // Subsequent fetches (e.g. from stale auth events) update silently.
-    if (!hasLoadedOnce.current) {
-      setLoading(true);
-    }
-    try {
-      // Fetch groups
-      const { data: groupsData, error: groupsError } = await supabase
-        .from('groups')
-        .select('*')
-        .order('created_at', { ascending: true });
+  useEffect(() => {
+    if (!session) return;
+    const checkKanbanTasks = async () => {
+      const { data } = await supabase.from('tasks').select('status');
+      if (data) {
+        const todo = data.filter(t => t.status === 'todo').length;
+        const inProgress = data.filter(t => t.status === 'in_progress').length;
+        const done = data.filter(t => t.status === 'done').length;
+        setKanbanCounts(todo, inProgress, done);
+      }
+    };
+    checkKanbanTasks();
+    const handleKanbanUpdate = () => checkKanbanTasks();
+    window.addEventListener('kanban-updated', handleKanbanUpdate);
+    const interval = setInterval(checkKanbanTasks, 30000);
+    return () => {
+      window.removeEventListener('kanban-updated', handleKanbanUpdate);
+      clearInterval(interval);
+    };
+  }, [session, setKanbanCounts]);
 
+  useEffect(() => {
+    if (!session) return;
+    const fetchGlobalTasks = async () => {
+      const { data } = await supabase.from('tasks').select('*');
+      if (data) setGlobalTasks(data);
+    };
+    fetchGlobalTasks();
+  }, [session, setGlobalTasks]);
+
+  const fetchData = async () => {
+    if (!hasLoadedOnce.current) setLoading(true);
+    try {
+      const { data: groupsData, error: groupsError } = await supabase.from('groups').select('*').order('created_at', { ascending: true });
       if (groupsError) throw groupsError;
 
-      // Fetch notes
-      const { data: notesData, error: notesError } = await supabase
-        .from('notes')
-        .select('*')
-        .order('position', { ascending: true }); // We'll refine sort client-side for pins
-
+      const { data: notesData, error: notesError } = await supabase.from('notes').select('*').order('position', { ascending: true });
       if (notesError) throw notesError;
 
-      // Transform and merge
-      // Map DB 'name' to UI 'title' for groups
-      const mergedGroups: Group[] = (groupsData || []).map(g => {
-        const groupNotes: Note[] = (notesData || [])
-          .filter(n => n.group_id === g.id)
-          .map(n => ({
-            ...n,
-            isOpen: false // Default state for UI
-          }));
+      const currentSortPref = useUIStore.getState().noteSortMode;
 
-        // Sort: Pinned first, then by Title (A-Z) - as requested
-        // Or Title? Request said: "1. Pinned, 2. Alphabetical".
-        // Original fetch was by 'position'. I will respect the request.
-        groupNotes.sort((a, b) => {
-          if (a.is_pinned && !b.is_pinned) return -1;
-          if (!a.is_pinned && b.is_pinned) return 1;
-          return a.title.localeCompare(b.title);
-        });
+      const mergedGroups: Group[] = (groupsData || []).map(g => {
+        let groupNotes: Note[] = (notesData || []).filter(n => n.group_id === g.id).map(n => ({ ...n, isOpen: false }));
+        groupNotes = sortNotesArray(groupNotes, currentSortPref);
 
         return {
           id: g.id,
-          title: g.name, // Map DB column 'name' to UI property 'title'
+          title: g.name,
           user_id: g.user_id,
           is_pinned: g.is_pinned,
           last_accessed_at: g.last_accessed_at,
@@ -193,16 +187,9 @@ function App() {
       setGroups(mergedGroups);
       hasLoadedOnce.current = true;
 
-      // We rely on store 'activeGroupId' and 'dockedGroupIds' for persistence.
-      // If store is empty (first run or cleared), maybe auto-dock pinned groups?
-      // For now, respect what's in store. If activeGroupId is set but not in loaded groups, clear it.
       if (activeGroupId && !mergedGroups.find(g => g.id === activeGroupId)) {
         setActiveGroup(null);
       }
-
-      // If docked groups don't exist anymore, we might want to clean them up from store, 
-      // but store persists IDs. UI will just filter them out naturally if we code Sidebar right.
-
     } catch (error: any) {
       console.error('Error fetching data:', error.message);
       alert('Error cargando datos: ' + error.message);
@@ -211,12 +198,9 @@ function App() {
     }
   };
 
-  // --- EFFECTS ---
-  // Handle Theme
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
-
     if (theme === 'system') {
       const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       root.classList.add(systemTheme);
@@ -225,36 +209,29 @@ function App() {
     }
   }, [theme]);
 
-  // --- ACTIONS (SUPABASE) ---
+  const applyManualSort = (mode: 'date-desc' | 'date-asc' | 'alpha-asc' | 'alpha-desc') => {
+    setNoteSortMode(mode);
+    setIsSortMenuOpen(false);
+
+    if (!activeGroupId) return;
+
+    setGroups(prev => prev.map(g => {
+      if (g.id === activeGroupId) {
+        return { ...g, notes: sortNotesArray(g.notes, mode) };
+      }
+      return g;
+    }));
+  };
 
   const addGroup = async () => {
     const title = prompt('Nombre del nuevo grupo (ej. "Trabajo", "Ideas"):');
     if (!title || !session) return;
-
     try {
-      const { data, error } = await supabase
-        .from('groups')
-        .insert([{
-          name: title.slice(0, 15),
-          user_id: session.user.id
-        }])
-        .select()
-        .single();
-
+      const { data, error } = await supabase.from('groups').insert([{ name: title.slice(0, 15), user_id: session.user.id }]).select().single();
       if (error) throw error;
-
-      const newGroup: Group = {
-        id: data.id,
-        title: data.name,
-        notes: [],
-        user_id: data.user_id,
-        is_pinned: false,
-        last_accessed_at: new Date().toISOString()
-      };
-
+      const newGroup: Group = { id: data.id, title: data.name, notes: [], user_id: data.user_id, is_pinned: false, last_accessed_at: new Date().toISOString() };
       setGroups([...groups, newGroup]);
-      openGroup(newGroup.id); // Add to dock and activate
-
+      openGroup(newGroup.id);
     } catch (error: any) {
       alert('Error al crear grupo: ' + error.message);
     }
@@ -262,15 +239,9 @@ function App() {
 
   const updateGroupTitle = async (groupId: string, newTitle: string) => {
     try {
-      const { error } = await supabase
-        .from('groups')
-        .update({ name: newTitle })
-        .eq('id', groupId);
-
+      const { error } = await supabase.from('groups').update({ name: newTitle }).eq('id', groupId);
       if (error) throw error;
-
       setGroups(groups.map(g => g.id === groupId ? { ...g, title: newTitle } : g));
-
     } catch (error: any) {
       console.error('Error updating group:', error.message);
     }
@@ -283,19 +254,11 @@ function App() {
     }
     if (confirm("¿Estás seguro? Todas las notas de este grupo se perderán.")) {
       try {
-        const { error } = await supabase
-          .from('groups')
-          .delete()
-          .eq('id', groupId);
-
+        const { error } = await supabase.from('groups').delete().eq('id', groupId);
         if (error) throw error;
-
         const remaining = groups.filter(g => g.id !== groupId);
         setGroups(remaining);
-        if (activeGroupId === groupId) {
-          setActiveGroup(remaining[0]?.id || null);
-        }
-
+        if (activeGroupId === groupId) setActiveGroup(remaining[0]?.id || null);
       } catch (error: any) {
         alert('Error al eliminar grupo: ' + error.message);
       }
@@ -304,26 +267,12 @@ function App() {
 
   const toggleGroupPin = async (groupId: string, currentPinStatus: boolean) => {
     const newStatus = !currentPinStatus;
-
-    // Optimistic Update
-    setGroups(groups.map(g =>
-      g.id === groupId ? { ...g, is_pinned: newStatus } : g
-    ));
-
+    setGroups(groups.map(g => g.id === groupId ? { ...g, is_pinned: newStatus } : g));
     try {
-      const { error } = await supabase
-        .from('groups')
-        .update({ is_pinned: newStatus })
-        .eq('id', groupId);
-
+      const { error } = await supabase.from('groups').update({ is_pinned: newStatus }).eq('id', groupId);
       if (error) throw error;
-
     } catch (error: any) {
-      console.error('Error updating pin status:', error.message);
-      // Revert optimization on error
-      setGroups(groups.map(g =>
-        g.id === groupId ? { ...g, is_pinned: currentPinStatus } : g
-      ));
+      setGroups(groups.map(g => g.id === groupId ? { ...g, is_pinned: currentPinStatus } : g));
       alert('Error al actualizar pin: ' + error.message);
     }
   };
@@ -349,35 +298,13 @@ function App() {
 
   const addNote = async () => {
     if (!activeGroupId || !session) return;
-
     try {
-      // Find current notes count to set position (simple append)
       const currentGroup = groups.find(g => g.id === activeGroupId);
       const position = currentGroup ? currentGroup.notes.length : 0;
-
-      const { data, error } = await supabase
-        .from('notes')
-        .insert([{
-          title: '', // Empty title to trigger auto-edit
-          content: '',
-          group_id: activeGroupId,
-          user_id: session.user.id,
-          position: position
-        }])
-        .select()
-        .single();
-
+      const { data, error } = await supabase.from('notes').insert([{ title: '', content: '', group_id: activeGroupId, user_id: session.user.id, position }]).select().single();
       if (error) throw error;
 
-      const newNote: Note = {
-        id: data.id,
-        title: data.title,
-        content: data.content || '',
-        isOpen: true,
-        created_at: data.created_at,
-        group_id: data.group_id,
-        position: data.position
-      };
+      const newNote: Note = { id: data.id, title: data.title, content: data.content || '', isOpen: true, created_at: data.created_at, group_id: data.group_id, position: data.position };
 
       setGroups(groups.map(g => {
         if (g.id === activeGroupId) {
@@ -386,17 +313,12 @@ function App() {
         return g;
       }));
 
-      // AUTO-OPEN ACCORDION TO PREVENT "LOST IN LIST"
       toggleNote(activeGroupId, newNote.id);
-
-      // FREEZE: Set as editing so it doesn't jump immediately if sorted by date/alpha
       setEditingNoteId(newNote.id);
 
-      // EXEMPT from search: if created while a filter is active, keep it visible
       if (currentSearchQuery.trim()) {
         setSearchExemptNoteIds(prev => new Set(prev).add(newNote.id));
       }
-
     } catch (error: any) {
       alert('Error al crear nota: ' + error.message);
     }
@@ -406,45 +328,33 @@ function App() {
     try {
       const { error } = await supabase.from('notes').delete().eq('id', noteId);
       if (error) throw error;
-
-      setGroups(currentGroups => currentGroups.map(g => ({
-        ...g,
-        notes: g.notes.filter(n => n.id !== noteId)
-      })));
+      setGroups(currentGroups => currentGroups.map(g => ({ ...g, notes: g.notes.filter(n => n.id !== noteId) })));
     } catch (error: any) {
       console.error('Error deleting note:', error.message);
     }
   };
 
   const updateNote = async (noteId: string, updates: Partial<Note>) => {
-    // Preserve scroll position when pinning/unpinning to prevent scroll jump
     const shouldPreserveScroll = updates.is_pinned !== undefined;
     const savedScrollTop = shouldPreserveScroll ? mainRef.current?.scrollTop : undefined;
 
-    // Optimistic update
-    setGroups(currentGroups => currentGroups.map(g => ({
-      ...g,
-      notes: g.notes.map(n => n.id === noteId ? { ...n, ...updates } : n)
-        // Re-sort immediately for optimistic UI feedback
-        .sort((a, b) => {
-          if (a.is_pinned !== b.is_pinned) {
-            return a.is_pinned ? -1 : 1;
-          }
-          return a.title.localeCompare(b.title);
-        })
-    })));
+    setGroups(currentGroups => currentGroups.map(g => {
+      const updatedNotes = g.notes.map(n => n.id === noteId ? { ...n, ...updates } : n);
+      if (updates.is_pinned !== undefined) {
+        updatedNotes.sort((a, b) => {
+          if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
+          return 0; 
+        });
+      }
+      return { ...g, notes: updatedNotes };
+    }));
 
-    // Restore scroll position after React re-renders the reordered list
     if (shouldPreserveScroll && savedScrollTop !== undefined) {
       requestAnimationFrame(() => {
-        if (mainRef.current) {
-          mainRef.current.scrollTop = savedScrollTop;
-        }
+        if (mainRef.current) mainRef.current.scrollTop = savedScrollTop;
       });
     }
 
-    // Debounce or immediate? For simplicity, immediate, but catch errors.
-    // We only send specific fields to DB
     const dbUpdates: any = {};
     if (updates.title !== undefined) dbUpdates.title = updates.title;
     if (updates.content !== undefined) dbUpdates.content = updates.content;
@@ -452,10 +362,8 @@ function App() {
     if (updates.is_docked !== undefined) dbUpdates.is_docked = updates.is_docked;
     if (updates.is_checklist !== undefined) dbUpdates.is_checklist = updates.is_checklist;
 
-    // Always update updated_at if we are changing content or title
     if (updates.title !== undefined || updates.content !== undefined) {
       dbUpdates.updated_at = new Date().toISOString();
-      // Update local state too
       setGroups(currentGroups => currentGroups.map(g => ({
         ...g,
         notes: g.notes.map(n => n.id === noteId ? { ...n, updated_at: dbUpdates.updated_at } : n)
@@ -464,25 +372,30 @@ function App() {
 
     if (Object.keys(dbUpdates).length === 0) return;
 
-    try {
-      const { error } = await supabase.from('notes').update(dbUpdates).eq('id', noteId);
-      if (error) throw error;
-    } catch (error: any) {
-      console.error('Error updating note:', error.message);
-      // Revert? (Too complex for now, assume success)
-      alert('Error saving changes: ' + error.message);
-    }
-  };
+    const isTextUpdate = updates.content !== undefined || updates.title !== undefined;
+    const debounceTime = isTextUpdate ? 2000 : 0; 
 
-  // Store-based toggle — toggleNote is destructured from useUIStore above
+    if (saveTimeoutRef.current[noteId]) {
+      clearTimeout(saveTimeoutRef.current[noteId]);
+    }
+
+    saveTimeoutRef.current[noteId] = setTimeout(async () => {
+      try {
+        const { error } = await supabase.from('notes').update(dbUpdates).eq('id', noteId);
+        if (error) throw error;
+      } catch (error: any) {
+        console.error('Error updating note:', error.message);
+      } finally {
+        delete saveTimeoutRef.current[noteId];
+      }
+    }, debounceTime);
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setSession(null);
     setGroups([]);
   }
-
-  // --- RENDER ---
 
   if (loading) {
     return (
@@ -492,111 +405,49 @@ function App() {
     )
   }
 
-  if (!session) {
-    return <Auth />;
-  }
+  if (!session) return <Auth />;
 
   const activeGroup = groups.find(g => g.id === activeGroupId);
 
   const filteredNotes = activeGroup
     ? focusedNoteId
-      // Focused Mode: show only that note, bypass search/sort
       ? activeGroup.notes.filter(n => n.id === focusedNoteId)
-      : activeGroup.notes
-        .filter(n => {
-          // Bypass: always show new/editing notes regardless of search
+      : activeGroup.notes.filter(n => {
           const isNewOrEditing = n.title.trim() === '' || n.id === editingNoteId || searchExemptNoteIds.has(n.id);
           if (isNewOrEditing) return true;
-
           const matchesSearch = n.title.toLowerCase().includes(currentSearchQuery.toLowerCase()) ||
             n.content.toLowerCase().includes(currentSearchQuery.toLowerCase());
           return matchesSearch;
         })
-        .sort((a, b) => {
-          // FREEZE LOGIC: If a note is being edited (or just created), keep it at the top (below pins) 
-          // or just prioritize it? 
-          // User said: "exclúyela temporalmente del ordenamiento estricto o fuérzala a estar visible".
-          // Let's force it to be second only to pins (or even above pins if we want strict visibility).
-          // Let's stick to: Pins -> Edited Note -> Rest (Rest sorted by mode).
-
-          const isAEditing = a.id === editingNoteId;
-          const isBEditing = b.id === editingNoteId;
-
-          // Priority 0: Edited Note (Freeze it high up)
-          if (isAEditing && !isBEditing) return -1;
-          if (!isAEditing && isBEditing) return 1;
-
-          // Priority 1: Pinned
-          if (a.is_pinned !== b.is_pinned) {
-            return a.is_pinned ? -1 : 1;
-          }
-
-          // Priority 2: Sort Mode
-          switch (noteSortMode) {
-            case 'date-desc':
-              // Strict millisecond sort
-              return new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime();
-            case 'date-asc':
-              return new Date(a.updated_at || a.created_at || 0).getTime() - new Date(b.updated_at || b.created_at || 0).getTime();
-            case 'alpha-asc':
-              return a.title.localeCompare(b.title);
-            case 'alpha-desc':
-              return b.title.localeCompare(a.title);
-            default:
-              return 0;
-          }
-        })
     : [];
 
   const handleUpdateNoteWrapper = (noteId: string, updates: Partial<Note>) => {
-    // If we are saving content (which implies exiting edit mode mostly), we might clear editingNoteId?
-    // Actually, user said: "exclúyela... HASTA que el usuario presione el botón verde de "Guardar Contenido"."
-    // So checking if 'content' is being updated is a good signal.
-    if (updates.content !== undefined) {
-      setEditingNoteId(null);
-    }
+    if (updates.content !== undefined) setEditingNoteId(null);
     updateNote(noteId, updates);
   };
 
   const downloadGroupAsMarkdown = () => {
     if (!activeGroup) return;
-
-    // 1. Ordenar notas alfabéticamente
     const sortedNotes = [...activeGroup.notes].sort((a, b) => {
       const titleA = a.title || 'Sin título';
       const titleB = b.title || 'Sin título';
       return titleA.localeCompare(titleB);
     });
 
-    // Helper para formatear fechas
     const formatNoteDate = (dateString?: string) => {
       if (!dateString) return 'Desconocida';
-      return new Date(dateString).toLocaleString('es-ES', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-      });
+      return new Date(dateString).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
-    // 2. Construir el string Markdown con el formato estricto
     const mdContent = sortedNotes.map(note => {
-      const title = note.title || 'Sin título';
-      const created = formatNoteDate(note.created_at);
-      const updated = formatNoteDate(note.updated_at || note.created_at);
-      const content = note.content || '';
-
-      return `titulo: ${title}\nfecha creacion: ${created}\nfecha ultima edicion: ${updated}\ncontenido de la nota:\n${content}`;
+      return `titulo: ${note.title || 'Sin título'}\nfecha creacion: ${formatNoteDate(note.created_at)}\nfecha ultima edicion: ${formatNoteDate(note.updated_at || note.created_at)}\ncontenido de la nota:\n${note.content || ''}`;
     }).join('\n\n---\n\n');
 
-    // 3. Descargar el archivo
     const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-
-    // Sanitizar el nombre del grupo para el nombre del archivo
-    const fileName = `${activeGroup.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
-    link.setAttribute('download', fileName);
-
+    link.setAttribute('download', `${activeGroup.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -605,52 +456,59 @@ function App() {
 
   return (
     <div className="flex h-screen bg-zinc-50 dark:bg-zinc-950 overflow-hidden transition-colors duration-300">
-
-      {/* Sidebar */}
       <Sidebar
         groups={groups}
         activeGroupId={activeGroupId}
-        onSelectGroup={(id) => {
-          setActiveGroup(id);
-          setFocusedNoteId(null); // Exit focused mode when clicking group icon
-        }}
+        onSelectGroup={(id) => { setActiveGroup(id); setFocusedNoteId(null); }}
         onAddGroup={addGroup}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onTogglePin={toggleGroupPin}
         onLogout={handleLogout}
         onSelectDockedNote={(groupId, noteId) => {
           setActiveGroup(groupId);
-          // Ensure the note is open
+          setGlobalView('notes');
           const currentOpen = openNotesByGroup[groupId] || [];
-          if (!currentOpen.includes(noteId)) {
-            toggleNote(groupId, noteId);
-          }
-          // Enter Focused Mode
+          if (!currentOpen.includes(noteId)) toggleNote(groupId, noteId);
           setFocusedNoteId(noteId);
         }}
         focusedNoteId={focusedNoteId}
       />
 
-      {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {globalView === 'kanban' ? (
-          <KanbanApp />
-        ) : globalView === 'timers' ? (
-          <TimeTrackerApp session={session!} />
-        ) : globalView === 'reminders' ? (
-          <RemindersApp session={session!} />
-        ) : globalView === 'braindump' ? (
-          <BrainDumpApp session={session!} />
-        ) : globalView === 'translator' ? (
-          <TranslatorApp session={session!} />
-        ) : (
-          <>
+        {overdueRemindersList.length > 0 && (
+          <div className="relative w-full z-50 shrink-0 shadow-md bg-red-500 text-white">
+            <div className="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-2">
+              {overdueRemindersList.map(r => (
+                <div key={r.id} className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
+                    <span className="text-sm font-medium truncate">⚠️ Recordatorio pendiente: {r.title}</span>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      setOverdueRemindersList(prev => prev.filter(x => x.id !== r.id));
+                      setOverdueRemindersCount(Math.max(0, overdueRemindersList.length - 1));
+                      await supabase.from('reminders').update({ is_completed: true }).eq('id', r.id);
+                    }}
+                    className="shrink-0 px-3 py-1 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold rounded-lg transition-colors"
+                  >
+                    Marcar como Listo
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
-            {/* Header */}
+        {globalView === 'kanban' ? <KanbanApp /> :
+         globalView === 'timers' ? <TimeTrackerApp session={session!} /> :
+         globalView === 'reminders' ? <RemindersApp session={session!} /> :
+         globalView === 'braindump' ? <BrainDumpApp session={session!} noteFont={noteFont} noteFontSize={noteFontSize} /> :
+         globalView === 'translator' ? <TranslatorApp session={session!} /> : (
+          <>
             <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
               <div className="max-w-4xl mx-auto px-4 md:px-6 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
 
-                {/* Left: Group Title */}
                 <div className="flex items-center gap-2 min-w-0 flex-shrink">
                   {activeGroup ? (
                     isEditingGroup ? (
@@ -661,145 +519,95 @@ function App() {
                           onChange={(e) => setTempGroupName(e.target.value)}
                           className="text-lg font-bold text-zinc-800 dark:text-white bg-white dark:bg-zinc-800 border-2 border-zinc-500 dark:border-zinc-400 rounded-lg px-2 py-0.5 focus:outline-none w-40 md:w-56"
                           autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSaveGroup();
-                            if (e.key === 'Escape') handleCancelEdit();
-                          }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleSaveGroup(); if (e.key === 'Escape') handleCancelEdit(); }}
                           onBlur={handleSaveGroup}
                         />
-                        <button
-                          onClick={handleCancelEdit}
-                          className="p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
-                          title="Cancelar"
-                        >
-                          <X size={16} />
-                        </button>
+                        <button onClick={handleCancelEdit} className="p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors" title="Cancelar"><X size={16} /></button>
                       </div>
                     ) : (
                       <div className="min-w-0">
-                        <h1
-                          className="text-lg font-bold text-zinc-800 dark:text-white truncate cursor-pointer hover:underline decoration-zinc-400 decoration-dashed underline-offset-4 transition-colors"
-                          onDoubleClick={handleStartEdit}
-                          title="Doble clic para editar"
-                        >
+                        <h1 className="text-lg font-bold text-zinc-800 dark:text-white truncate cursor-pointer hover:underline decoration-zinc-400 decoration-dashed underline-offset-4 transition-colors" onDoubleClick={handleStartEdit} title="Doble clic para editar">
                           {activeGroup.title}
                         </h1>
-                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
-                          {activeGroup.notes.length || 0} Notas
-                        </p>
+                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">{activeGroup.notes.length || 0} Notas</p>
                       </div>
                     )
-                  ) : (
-                    <h1 className="text-lg font-bold text-zinc-800 dark:text-white">
-                      Selecciona un Grupo
-                    </h1>
-                  )}
+                  ) : <h1 className="text-lg font-bold text-zinc-800 dark:text-white">Selecciona un Grupo</h1>}
                 </div>
 
-                {/* Right: Search + Sort + Actions */}
                 {activeGroup && (
                   <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
-
-                    {/* Compact Contextual Search */}
                     <div className="relative flex items-center transition-all duration-300">
-                      <Search
-                        size={15}
-                        className={`absolute left-2 pointer-events-none transition-colors ${currentSearchQuery.trim() ? 'text-amber-600 dark:text-amber-500 font-bold' : 'text-zinc-400'}`}
-                      />
+                      <Search size={15} className={`absolute left-2 pointer-events-none transition-colors ${currentSearchQuery.trim() ? 'text-amber-600 dark:text-amber-500 font-bold' : 'text-zinc-400'}`} />
                       <input
                         type="text"
                         placeholder={activeGroup ? `Buscar en ${activeGroup.title}...` : "Buscar..."}
                         value={currentSearchQuery}
                         onChange={(e) => {
-                          if (activeGroupId) {
-                            setSearchQueries(prev => ({ ...prev, [activeGroupId]: e.target.value }));
-                          }
+                          if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: e.target.value }));
                           setSearchExemptNoteIds(new Set());
                           if (focusedNoteId) setFocusedNoteId(null);
                         }}
-                        className={`w-full sm:w-48 pl-7 pr-8 py-1.5 text-xs rounded-lg border transition-all focus:outline-none ${currentSearchQuery.trim()
-                          ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50 sm:w-56'
-                          : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'
-                          }`}
+                        className={`w-full sm:w-48 pl-7 pr-8 py-1.5 text-xs rounded-lg border transition-all focus:outline-none ${currentSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50 sm:w-56' : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'}`}
                       />
                       {currentSearchQuery.trim() && (
-                        <button
-                          onClick={() => {
-                            if (activeGroupId) {
-                              setSearchQueries(prev => ({ ...prev, [activeGroupId]: '' }));
-                            }
-                            setSearchExemptNoteIds(new Set());
-                          }}
-                          className="absolute right-2 p-0.5 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 bg-amber-200/50 dark:bg-amber-800/50 hover:bg-amber-300/50 dark:hover:bg-amber-700/50 rounded-full transition-colors"
-                          title="Limpiar búsqueda"
-                        >
+                        <button onClick={() => { if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: '' })); setSearchExemptNoteIds(new Set()); }} className="absolute right-2 p-0.5 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 bg-amber-200/50 dark:bg-amber-800/50 hover:bg-amber-300/50 dark:hover:bg-amber-700/50 rounded-full transition-colors" title="Limpiar búsqueda">
                           <X size={12} />
                         </button>
                       )}
                     </div>
 
-                    {/* Divider */}
                     <div className="hidden sm:block w-px h-5 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
 
-                    {/* Sort: Date */}
-                    <button
-                      onClick={() => setNoteSortMode(noteSortMode === 'date-desc' ? 'date-asc' : 'date-desc')}
-                      className={`p-1.5 rounded-lg transition-all flex items-center gap-0.5 ${noteSortMode.includes('date')
-                        ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-                        : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                        }`}
-                      title={`Ordenar por fecha ${noteSortMode === 'date-desc' ? '(más reciente)' : '(más antiguo)'}`}
-                    >
-                      <Calendar size={14} />
-                      {noteSortMode === 'date-desc' && <ArrowDown size={10} />}
-                      {noteSortMode === 'date-asc' && <ArrowUp size={10} />}
-                    </button>
-
-                    {/* Sort: Alpha */}
-                    <button
-                      onClick={() => setNoteSortMode(noteSortMode === 'alpha-asc' ? 'alpha-desc' : 'alpha-asc')}
-                      className={`p-1.5 rounded-lg transition-all flex items-center gap-0.5 ${noteSortMode.includes('alpha')
-                        ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-                        : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                        }`}
-                      title={`Ordenar por nombre ${noteSortMode === 'alpha-asc' ? '(A-Z)' : '(Z-A)'}`}
-                    >
-                      <Type size={14} />
-                      {noteSortMode === 'alpha-asc' && <ArrowDown size={10} />}
-                      {noteSortMode === 'alpha-desc' && <ArrowUp size={10} />}
-                    </button>
-
-                    {/* Divider */}
-                    <div className="hidden sm:block w-px h-5 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
-
-                    {/* Descargar Grupo a MD */}
-                    {!isEditingGroup && (
+                    <div className="relative" ref={sortMenuRef}>
                       <button
-                        onClick={downloadGroupAsMarkdown}
-                        className="p-1.5 text-zinc-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
-                        title="Exportar notas a Markdown"
+                        onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
+                        className={`p-1.5 rounded-lg transition-all flex items-center gap-1.5 ${isSortMenuOpen ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                        title="Ordenar Notas"
                       >
+                        <ArrowUpDown size={15} />
+                      </button>
+
+                      {isSortMenuOpen && (
+                        <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-800 shadow-xl rounded-xl border border-zinc-200 dark:border-zinc-700 p-1.5 flex flex-col gap-0.5 min-w-[200px] animate-fadeIn">
+                          <div className="px-2 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1 border-b border-zinc-100 dark:border-zinc-700">Ordenar por</div>
+                          
+                          <button onClick={() => applyManualSort('date-desc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'date-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                            <Calendar size={14} /> Fecha (Recientes)
+                            {noteSortMode === 'date-desc' && <Check size={14} className="ml-auto" />}
+                          </button>
+                          
+                          <button onClick={() => applyManualSort('date-asc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'date-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                            <Calendar size={14} /> Fecha (Antiguos)
+                            {noteSortMode === 'date-asc' && <Check size={14} className="ml-auto" />}
+                          </button>
+                          
+                          <button onClick={() => applyManualSort('alpha-asc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'alpha-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                            <Type size={14} /> Nombre (A-Z)
+                            {noteSortMode === 'alpha-asc' && <Check size={14} className="ml-auto" />}
+                          </button>
+                          
+                          <button onClick={() => applyManualSort('alpha-desc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'alpha-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                            <Type size={14} /> Nombre (Z-A)
+                            {noteSortMode === 'alpha-desc' && <Check size={14} className="ml-auto" />}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="hidden sm:block w-px h-5 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
+
+                    {!isEditingGroup && (
+                      <button onClick={downloadGroupAsMarkdown} className="p-1.5 text-zinc-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors" title="Exportar notas a Markdown">
                         <Download size={15} />
                       </button>
                     )}
-
-                    {/* Delete Group */}
                     {!isEditingGroup && (
-                      <button
-                        onClick={() => deleteGroup(activeGroup.id)}
-                        className="p-1.5 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                        title="Eliminar Grupo"
-                      >
+                      <button onClick={() => deleteGroup(activeGroup.id)} className="p-1.5 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Eliminar Grupo">
                         <Trash2 size={15} />
                       </button>
                     )}
-
-                    {/* Add Note */}
-                    <button
-                      onClick={addNote}
-                      className="w-8 h-8 flex items-center justify-center bg-[#1F3760] hover:bg-[#152643] text-white rounded-lg transition-all shadow-md hover:shadow-lg active:scale-95 focus:ring-2 focus:ring-[#1F3760]/50"
-                      title="Agregar Nota"
-                    >
+                    <button onClick={addNote} className="w-8 h-8 flex items-center justify-center bg-[#1F3760] hover:bg-[#152643] text-white rounded-lg transition-all shadow-md hover:shadow-lg active:scale-95 focus:ring-2 focus:ring-[#1F3760]/50" title="Agregar Nota">
                       <Plus size={18} />
                     </button>
                   </div>
@@ -807,41 +615,36 @@ function App() {
               </div>
             </div>
 
-            {/* Scrollable Note Content */}
             <main ref={mainRef} className="flex-1 overflow-y-auto hidden-scrollbar p-4 md:p-8">
               <div className="max-w-4xl mx-auto pb-20">
                 {activeGroup ? (
-                  <>
-
-
-                    {/* Notes */}
-                    <div className="space-y-4">
-                      {filteredNotes.length === 0 ? (
-                        <div className="text-center py-20 opacity-60">
-                          <div className="inline-block p-4 rounded-full bg-zinc-200 dark:bg-zinc-800 mb-4">
-                            <Search size={32} className="text-zinc-500 dark:text-zinc-400" />
-                          </div>
-                          <p className="text-lg text-zinc-600 dark:text-zinc-400">No se encontraron notas.</p>
+                  <div className="space-y-4">
+                    {filteredNotes.length === 0 ? (
+                      <div className="text-center py-20 opacity-60">
+                        <div className="inline-block p-4 rounded-full bg-zinc-200 dark:bg-zinc-800 mb-4">
+                          <Search size={32} className="text-zinc-500 dark:text-zinc-400" />
                         </div>
-                      ) : (
-                        filteredNotes.map(note => {
-                          const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
-                          return (
-                            <div key={note.id} id={`note-${note.id}`}>
-                              <AccordionItem
-                                note={{ ...note, isOpen }}
-                                onToggle={() => toggleNote(activeGroup.id, note.id)}
-                                onUpdate={(id, updates) => handleUpdateNoteWrapper(id, updates)}
-                                onDelete={deleteNote}
-                                searchQuery={currentSearchQuery}
-                                noteFont={noteFont}
-                              />
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </>
+                        <p className="text-lg text-zinc-600 dark:text-zinc-400">No se encontraron notas.</p>
+                      </div>
+                    ) : (
+                      filteredNotes.map(note => {
+                        const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
+                        return (
+                          <div key={note.id} id={`note-${note.id}`}>
+                            <AccordionItem
+                              note={{ ...note, isOpen }}
+                              onToggle={() => toggleNote(activeGroup.id, note.id)}
+                              onUpdate={(id, updates) => handleUpdateNoteWrapper(id, updates)}
+                              onDelete={deleteNote}
+                              searchQuery={currentSearchQuery}
+                              noteFont={noteFont}
+                              noteFontSize={noteFontSize}
+                            />
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-zinc-400">
                     {groups.length === 0 ? (
@@ -849,9 +652,7 @@ function App() {
                         <p className="mb-4">No tienes grupos aún.</p>
                         <button onClick={addGroup} className="text-zinc-600 dark:text-zinc-400 hover:underline hover:text-zinc-900 dark:hover:text-white">Crear el primer grupo</button>
                       </div>
-                    ) : (
-                      <p>Selecciona un grupo desde la barra lateral.</p>
-                    )}
+                    ) : <p>Selecciona un grupo desde la barra lateral.</p>}
                   </div>
                 )}
               </div>
@@ -860,33 +661,6 @@ function App() {
         )}
       </div>
 
-      {/* Persistent Overdue Reminders Banner */}
-      {overdueRemindersList.length > 0 && (
-        <div className="fixed top-0 left-0 w-full z-[9999] bg-red-600 text-white shadow-lg shadow-red-900/30">
-          <div className="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-2">
-            {overdueRemindersList.map(r => (
-              <div key={r.id} className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 min-w-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
-                  <span className="text-sm font-medium truncate">⚠️ Recordatorio pendiente: {r.title}</span>
-                </div>
-                <button
-                  onClick={async () => {
-                    setOverdueRemindersList(prev => prev.filter(x => x.id !== r.id));
-                    setOverdueRemindersCount(Math.max(0, overdueRemindersList.length - 1));
-                    await supabase.from('reminders').update({ is_completed: true }).eq('id', r.id);
-                  }}
-                  className="shrink-0 px-3 py-1 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold rounded-lg transition-colors"
-                >
-                  Marcar como Listo
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Settings Modal */}
       <SettingsWindow
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
@@ -894,6 +668,8 @@ function App() {
         onThemeChange={(t: Theme) => { setTheme(t); localStorage.setItem('app-theme-preference', t); }}
         noteFont={noteFont}
         onNoteFontChange={(f: NoteFont) => { setNoteFont(f); localStorage.setItem('app-note-font', f); }}
+        noteFontSize={noteFontSize}
+        onNoteFontSizeChange={(s: string) => { setNoteFontSize(s); localStorage.setItem('app-note-font-size', s); }}
       />
     </div>
   );

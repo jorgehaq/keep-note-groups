@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { GlobalAppView } from '../../types';
+import { GlobalAppView, Task } from '../../types';
 
 type LauncherTab = 'alpha' | 'recent' | 'pinned';
 
@@ -18,10 +18,18 @@ interface UIStore {
     overdueRemindersCount: number;
     imminentRemindersCount: number;
     editingNotes: Record<string, boolean>;
+    lastAppView: GlobalAppView | null;
+    lastUsedApp: string | null;
+    kanbanTodoCount: number;
+    kanbanInProgressCount: number;
+    kanbanDoneCount: number;
+    globalTasks: Task[]; // Assuming Task type is defined
 
     setActiveGroup: (id: string | null) => void;
     toggleNote: (groupId: string, noteId: string) => void;
     setEditingNote: (noteId: string, isEditing: boolean) => void;
+    setKanbanCounts: (todo: number, inProgress: number, done: number) => void;
+    setGlobalTasks: (tasks: Task[]) => void;
 
     // Dock Actions
     openGroup: (id: string) => void; // Adds to dock and sets active
@@ -47,6 +55,12 @@ export const useUIStore = create<UIStore>()(
             overdueRemindersCount: 0,
             imminentRemindersCount: 0,
             editingNotes: {},
+            lastAppView: null,
+            lastUsedApp: null,
+            kanbanTodoCount: 0,
+            kanbanInProgressCount: 0,
+            kanbanDoneCount: 0,
+            globalTasks: [],
 
             setActiveGroup: (id) => set({ activeGroupId: id }),
 
@@ -91,11 +105,34 @@ export const useUIStore = create<UIStore>()(
 
             setLauncherTab: (tab) => set({ lastLauncherTab: tab }),
             setNoteSortMode: (mode) => set({ noteSortMode: mode }),
-            setGlobalView: (view) => set({ globalView: view }),
+            setGlobalView: (view) => set((state) => {
+                // Si estábamos en una app (no en notas) y cambiamos a otra cosa, 
+                // esa app se convierte en la "última que perdió el foco".
+                const currentView = state.globalView;
+                let newLastUsedApp = state.lastUsedApp;
+
+                if (currentView && currentView !== 'notes' && currentView !== view) {
+                    newLastUsedApp = currentView;
+                }
+
+                let newLastApp = state.lastAppView;
+                // Si la vista actual es una App (no es 'notes') y estamos cambiando a otra cosa,
+                // guardamos la vista actual como la "última usada"
+                if (state.globalView !== 'notes' && state.globalView !== view) {
+                    newLastApp = state.globalView;
+                }
+                return { 
+                    globalView: view, 
+                    lastAppView: newLastApp,
+                    lastUsedApp: newLastUsedApp
+                };
+            }),
+            setKanbanCounts: (todo, inProgress, done) => set({ kanbanTodoCount: todo, kanbanInProgressCount: inProgress, kanbanDoneCount: done }),
             setActiveTimersCount: (count) => set({ activeTimersCount: count }),
             setOverdueRemindersCount: (count) => set({ overdueRemindersCount: count }),
             setImminentRemindersCount: (count) => set({ imminentRemindersCount: count }),
             setEditingNote: (noteId, isEditing) => set((state) => ({ editingNotes: { ...state.editingNotes, [noteId]: isEditing } })),
+            setGlobalTasks: (tasks) => set({ globalTasks: tasks }),
         }),
         {
             name: 'keep-note-groups-ui-storage-v4', // Bump version for editingNotes state

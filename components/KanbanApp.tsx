@@ -4,6 +4,7 @@ import { Task, TaskStatus } from '../types';
 import { supabase } from '../src/lib/supabaseClient';
 import { KanbanBoard } from './KanbanBoard';
 import { KanbanList } from './KanbanList';
+import { useUIStore } from '../src/lib/store';
 
 type KanbanTab = 'board' | 'backlog' | 'archive';
 
@@ -17,6 +18,9 @@ export const KanbanApp: React.FC = () => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<KanbanTab>('board');
+
+    // --- STORE ---
+    const { setKanbanCounts } = useUIStore();
 
     // --- FETCH ---
     useEffect(() => {
@@ -38,6 +42,16 @@ export const KanbanApp: React.FC = () => {
         fetchTasks();
     }, []);
 
+    // --- SYNC ---
+    useEffect(() => {
+        const counts = {
+            todo: tasks.filter(t => t.status === 'todo').length,
+            in_progress: tasks.filter(t => t.status === 'in_progress').length,
+            done: tasks.filter(t => t.status === 'done').length,
+        };
+        setKanbanCounts(counts.todo, counts.in_progress, counts.done);
+    }, [tasks, setKanbanCounts]);
+
     // --- CRUD ---
     const addTask = async (title: string, status: TaskStatus) => {
         const maxPos = tasks
@@ -56,6 +70,7 @@ export const KanbanApp: React.FC = () => {
         }
         if (data) {
             setTasks(prev => [...prev, data]);
+            window.dispatchEvent(new CustomEvent('kanban-updated'));
         }
     };
 
@@ -67,6 +82,8 @@ export const KanbanApp: React.FC = () => {
             .from('tasks')
             .update(updates)
             .eq('id', id);
+
+        if (!error) window.dispatchEvent(new CustomEvent('kanban-updated'));
 
         if (error) {
             console.error('Error updating task:', error);
@@ -83,6 +100,8 @@ export const KanbanApp: React.FC = () => {
             .from('tasks')
             .delete()
             .eq('id', id);
+
+        if (!error) window.dispatchEvent(new CustomEvent('kanban-updated'));
 
         if (error) {
             console.error('Error deleting task:', error);
@@ -123,8 +142,8 @@ export const KanbanApp: React.FC = () => {
                                 key={tab.key}
                                 onClick={() => setActiveTab(tab.key)}
                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeTab === tab.key
-                                        ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
-                                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
+                                    ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
+                                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
                                     }`}
                             >
                                 {tab.icon}

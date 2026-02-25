@@ -10,9 +10,9 @@ interface KanbanBoardProps {
 }
 
 const COLUMNS: { status: TaskStatus; label: string; accent: string }[] = [
-    { status: 'todo', label: 'Pendiente', accent: 'bg-blue-500' },
-    { status: 'in_progress', label: 'En Proceso', accent: 'bg-amber-500' },
-    { status: 'done', label: 'Terminado', accent: 'bg-emerald-500' },
+    { status: 'todo', label: 'Pendiente', accent: 'bg-[#3282F6]' },
+    { status: 'in_progress', label: 'En Proceso', accent: 'bg-[#F08650]' },
+    { status: 'done', label: 'Terminado', accent: 'bg-[#75FA61]' },
 ];
 
 const formatDate = (dateString?: string) => {
@@ -164,16 +164,16 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
         <div
             ref={provided.innerRef}
             {...provided.draggableProps}
-            className={`bg-white dark:bg-zinc-800 rounded-lg shadow-sm border transition-all group ${isDragging
-                ? 'shadow-xl border-zinc-300 dark:border-zinc-500 ring-2 ring-[#1F3760]/30 scale-[1.02] rotate-1'
-                : 'border-zinc-200 dark:border-zinc-700 hover:shadow-md'
+            className={`group bg-white dark:bg-zinc-900 rounded-2xl border transition-all duration-300 ease-in-out mb-3 ${isDragging
+                ? 'shadow-2xl border-indigo-500/50 ring-2 ring-indigo-500/30 scale-[1.02] rotate-1'
+                : 'border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5'
                 }`}
         >
-            <div className="flex items-start gap-1 px-3 py-2.5">
+            <div className="flex items-start gap-2 p-4">
                 {/* Drag Handle */}
                 <div
                     {...provided.dragHandleProps}
-                    className="pt-0.5 text-zinc-300 dark:text-zinc-600 hover:text-zinc-500 dark:hover:text-zinc-400 cursor-grab active:cursor-grabbing shrink-0"
+                    className="pt-0.5 text-zinc-300 dark:text-zinc-600 hover:text-indigo-500 cursor-grab active:cursor-grabbing shrink-0 transition-colors"
                 >
                     <GripVertical size={14} />
                 </div>
@@ -194,11 +194,11 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
                                 }
                             }}
                             autoFocus
-                            className="w-full text-sm text-zinc-800 dark:text-zinc-200 bg-transparent border-b border-zinc-300 dark:border-zinc-600 outline-none py-0.5 focus:border-[#1F3760]"
+                            className="w-full text-zinc-800 dark:text-zinc-100 font-medium leading-tight bg-transparent border-b border-indigo-500 outline-none pb-0.5"
                         />
                     ) : (
                         <p
-                            className="text-sm text-zinc-800 dark:text-zinc-200 leading-snug cursor-default"
+                            className="text-zinc-800 dark:text-zinc-100 font-medium leading-tight cursor-pointer hover:underline decoration-dashed"
                             onDoubleClick={() => {
                                 setTempTitle(task.title);
                                 setIsEditing(true);
@@ -208,30 +208,30 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
                             {task.title}
                         </p>
                     )}
-                    <span className="text-[10px] text-zinc-400 font-mono mt-1 block">
+                    <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter mt-2 block">
                         {formatDate(task.updated_at)}
                     </span>
                 </div>
 
                 {/* Actions (hover reveal) */}
-                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 flex-col">
                     {columnStatus === 'done' && (
                         <button
                             onClick={() => onUpdate(task.id, { status: 'archived' })}
-                            className="p-1 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded transition-colors"
+                            className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
                             title="Archivar"
                         >
-                            <Archive size={13} />
+                            <Archive size={14} />
                         </button>
                     )}
                     <button
                         onClick={() => {
                             if (confirm('¿Eliminar esta tarea?')) onDelete(task.id);
                         }}
-                        className="p-1 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                        className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                         title="Eliminar"
                     >
-                        <Trash2 size={13} />
+                        <Trash2 size={14} />
                     </button>
                 </div>
             </div>

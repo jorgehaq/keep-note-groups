@@ -2,6 +2,18 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Languages, ArrowRightLeft, Save, Trash2, Clock, Type, Zap, Loader2 } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
+import { KanbanSemaphore } from './KanbanSemaphore';
+
+// --- HELPER PARA RESALTAR TEXTO ---
+const highlightText = (text: string, highlight: string) => {
+    if (!highlight.trim()) return text;
+    const parts = text.split(new RegExp(`(${highlight.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')})`, 'gi'));
+    return parts.map((part, i) =>
+        part.toLowerCase() === highlight.toLowerCase()
+            ? <mark key={i} className="bg-amber-200 dark:bg-amber-500/40 text-amber-900 dark:text-amber-100 rounded-sm px-0.5 font-bold transition-colors">{part}</mark>
+            : part
+    );
+};
 
 interface Translation {
     id: string;
@@ -27,6 +39,9 @@ export const TranslatorApp: React.FC<TranslatorAppProps> = ({ session }) => {
     const [history, setHistory] = useState<Translation[]>([]);
     const [sortMode, setSortMode] = useState<'date-desc' | 'date-asc' | 'alpha-asc' | 'alpha-desc'>('date-desc');
 
+    // NUEVO ESTADO: Para el filtrado diferido (solo actualiza cuando pedimos traducción)
+    const [searchTerm, setSearchTerm] = useState('');
+
     // --- PERSISTENCE: LOAD HISTORY ---
     const fetchHistory = async () => {
         try {
@@ -50,24 +65,36 @@ export const TranslatorApp: React.FC<TranslatorAppProps> = ({ session }) => {
     useEffect(() => {
         if (!inputText.trim()) {
             setTranslatedText('');
+            setSearchTerm(''); // Limpiar búsqueda si borramos todo
             return;
         }
 
         const timer = setTimeout(async () => {
             setIsTranslating(true);
+            setSearchTerm(inputText); // ¡MAGIA! Solo aplicamos el filtro cuando disparamos la IA
+
             try {
                 const { data, error } = await supabase.functions.invoke('translateMyAppNotes', {
-                    body: {
-                        sourceLang,
-                        targetLang,
-                        text: inputText
-                    },
+                    body: { sourceLang, targetLang, text: inputText },
                     headers: {
                         Authorization: `Bearer ${session.access_token}`
                     }
                 });
 
-                if (error) throw error;
+                if (error) {
+                let realErrorMessage = error.message;
+                try {
+                    // Extraemos el JSON real del error 400
+                    const errorResponse = await error.context.json();
+                    if (errorResponse && errorResponse.error) {
+                        realErrorMessage = errorResponse.error;
+                    }
+                } catch (e) { /* ignorar */ }
+    
+    console.error("Detalle del Error 400:", realErrorMessage);
+    alert('Fallo al traducir: ' + realErrorMessage);
+    throw new Error(realErrorMessage);
+}
                 setTranslatedText(data.translation);
             } catch (error) {
                 console.error('Translation error:', error);
@@ -75,7 +102,7 @@ export const TranslatorApp: React.FC<TranslatorAppProps> = ({ session }) => {
             } finally {
                 setIsTranslating(false);
             }
-        }, 800);
+        }, 2000);
 
         return () => clearTimeout(timer);
     }, [inputText, sourceLang, targetLang]);
@@ -102,9 +129,9 @@ export const TranslatorApp: React.FC<TranslatorAppProps> = ({ session }) => {
 
             if (error) throw error;
 
-            // Reset inputs and reload history
             setInputText('');
             setTranslatedText('');
+            setSearchTerm('');
             fetchHistory();
         } catch (error: any) {
             alert('Error saving translation: ' + error.message);
@@ -125,17 +152,24 @@ export const TranslatorApp: React.FC<TranslatorAppProps> = ({ session }) => {
         setInputText(h.source_text);
         setSourceLang(h.source_lang as 'en' | 'es');
         setTargetLang(h.target_lang as 'en' | 'es');
-        // Note: translatedText will be updated by the useEffect
     };
 
-    // --- FILTERED & SORTED HISTORY ---
-    const filteredAndSortedHistory = useMemo(() => {
-        let list = history.filter(h =>
-            h.source_text.toLowerCase().includes(inputText.toLowerCase()) ||
-            h.translated_text.toLowerCase().includes(inputText.toLowerCase())
-        );
+    // --- SORTED HISTORY (No desaparece, solo reordena y resalta) ---
+    const sortedHistory = useMemo(() => {
+        let list = [...history];
+        const query = searchTerm.toLowerCase();
 
         list.sort((a, b) => {
+            // 1. Prioridad absoluta: Si hay búsqueda, los que coinciden van arriba
+            if (query) {
+                const aMatches = a.source_text.toLowerCase().includes(query) || a.translated_text.toLowerCase().includes(query);
+                const bMatches = b.source_text.toLowerCase().includes(query) || b.translated_text.toLowerCase().includes(query);
+
+                if (aMatches && !bMatches) return -1;
+                if (!aMatches && bMatches) return 1;
+            }
+
+            // 2. Ordenamiento secundario (por fecha o alfabético)
             switch (sortMode) {
                 case 'date-desc': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
                 case 'date-asc': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -146,7 +180,7 @@ export const TranslatorApp: React.FC<TranslatorAppProps> = ({ session }) => {
         });
 
         return list;
-    }, [history, inputText, sortMode]);
+    }, [history, searchTerm, sortMode]);
 
     return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
@@ -160,13 +194,14 @@ export const TranslatorApp: React.FC<TranslatorAppProps> = ({ session }) => {
                         <h1 className="text-xl font-bold text-zinc-800 dark:text-white">Traductor AI</h1>
                     </div>
 
+                    {/* BOTÓN SWAP MEJORADO */}
                     <button
                         onClick={handleSwapLanguages}
-                        className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all font-medium border border-zinc-200 dark:border-zinc-700 active:scale-95 shadow-sm"
+                        className="flex items-center gap-3 px-5 py-2.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-full transition-all font-bold border border-indigo-200 dark:border-indigo-800/50 active:scale-95 shadow-md hover:shadow-indigo-500/20 group"
                     >
-                        <span className="uppercase text-xs tracking-widest">{sourceLang}</span>
-                        <ArrowRightLeft size={16} className="text-zinc-400" />
-                        <span className="uppercase text-xs tracking-widest">{targetLang}</span>
+                        <span className="uppercase text-[11px] tracking-widest">{sourceLang}</span>
+                        <ArrowRightLeft size={16} className="text-indigo-500 group-hover:rotate-180 transition-transform duration-300" />
+                        <span className="uppercase text-[11px] tracking-widest">{targetLang}</span>
                     </button>
                 </div>
             </header>
@@ -188,7 +223,7 @@ export const TranslatorApp: React.FC<TranslatorAppProps> = ({ session }) => {
                             />
                             {inputText && (
                                 <button
-                                    onClick={() => setInputText('')}
+                                    onClick={() => { setInputText(''); setSearchTerm(''); }}
                                     className="absolute bottom-4 right-4 p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all opacity-0 group-hover:opacity-100"
                                 >
                                     <Trash2 size={18} />
@@ -238,7 +273,7 @@ export const TranslatorApp: React.FC<TranslatorAppProps> = ({ session }) => {
                                 </div>
                                 <h2 className="text-xl font-bold text-zinc-800 dark:text-white">Diccionario Personal</h2>
                                 <span className="text-xs bg-zinc-200 dark:bg-zinc-800 text-zinc-500 px-2 py-0.5 rounded-full font-mono">
-                                    {filteredAndSortedHistory.length}
+                                    {sortedHistory.length}
                                 </span>
                             </div>
 
@@ -264,56 +299,70 @@ export const TranslatorApp: React.FC<TranslatorAppProps> = ({ session }) => {
                             </div>
                         </div>
 
-                        {filteredAndSortedHistory.length === 0 ? (
+                        {sortedHistory.length === 0 ? (
                             <div className="py-20 flex flex-col items-center justify-center text-zinc-400 text-center animate-fadeIn">
                                 <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-900 rounded-full flex items-center justify-center mb-4">
                                     <Languages size={32} className="opacity-20" />
                                 </div>
                                 <p className="max-w-xs mx-auto">
-                                    {inputText ? 'No se encontraron resultados para tu búsqueda.' : 'Tu diccionario personal está vacío. Traduce algo y guárdalo para que aparezca aquí.'}
+                                    Tu diccionario personal está vacío. Traduce algo y guárdalo para que aparezca aquí.
                                 </p>
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {filteredAndSortedHistory.map(h => (
-                                    <div
-                                        key={h.id}
-                                        className="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5 transition-all animate-fadeIn"
-                                    >
-                                        <div className="flex justify-between items-start mb-3">
-                                            <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-tighter bg-zinc-50 dark:bg-zinc-800 px-2 py-0.5 rounded-md">
-                                                {h.source_lang} <ArrowRightLeft size={10} /> {h.target_lang}
+                                {sortedHistory.map(h => {
+                                    // Verificamos si esta tarjeta es una coincidencia de búsqueda
+                                    const isMatch = searchTerm && (h.source_text.toLowerCase().includes(searchTerm.toLowerCase()) || h.translated_text.toLowerCase().includes(searchTerm.toLowerCase()));
+
+                                    return (
+                                        <div
+                                            key={h.id}
+                                            className={`group bg-white dark:bg-zinc-900 p-5 rounded-2xl transition-all duration-500 ease-in-out
+                                                ${isMatch
+                                                    ? 'border-2 border-amber-400/50 shadow-lg shadow-amber-500/10 scale-[1.02]'
+                                                    : 'border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5'
+                                                }`}
+                                        >
+                                            <div className="flex justify-between items-start mb-3">
+                                                <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-tighter bg-zinc-50 dark:bg-zinc-800 px-2 py-0.5 rounded-md">
+                                                    {h.source_lang} <ArrowRightLeft size={10} /> {h.target_lang}
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <KanbanSemaphore sourceId={h.id} sourceTitle={h.source_text.substring(0, 50)} />
+                                                    <button
+                                                        onClick={() => handleRevive(h)}
+                                                        className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
+                                                        title="Revivir"
+                                                    >
+                                                        <Zap size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(h.id)}
+                                                        className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                                        title="Eliminar"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-1">
-                                                <button
-                                                    onClick={() => handleRevive(h)}
-                                                    className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
-                                                    title="Revivir"
-                                                >
-                                                    <Zap size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(h.id)}
-                                                    className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                                    title="Eliminar"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <p className="text-[10px] text-zinc-400 font-bold uppercase mb-1">{h.source_lang === 'en' ? 'Original (EN)' : 'Original (ES)'}</p>
+                                                    <p className="text-zinc-800 dark:text-zinc-100 font-medium leading-tight">
+                                                        {highlightText(h.source_text, searchTerm)}
+                                                    </p>
+                                                </div>
+                                                <div className="h-px bg-zinc-100 dark:bg-zinc-800 w-full"></div>
+                                                <div>
+                                                    <p className="text-[10px] text-indigo-400/80 font-bold uppercase mb-1">{h.target_lang === 'en' ? 'Traducción (EN)' : 'Traducción (ES)'}</p>
+                                                    <p className="text-indigo-600 dark:text-indigo-400 font-bold leading-tight">
+                                                        {highlightText(h.translated_text, searchTerm)}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="space-y-3">
-                                            <div>
-                                                <p className="text-[10px] text-zinc-400 font-bold uppercase mb-1">{h.source_lang === 'en' ? 'Original (EN)' : 'Original (ES)'}</p>
-                                                <p className="text-zinc-800 dark:text-zinc-100 font-medium leading-tight">{h.source_text}</p>
-                                            </div>
-                                            <div className="h-px bg-zinc-100 dark:bg-zinc-800 w-full"></div>
-                                            <div>
-                                                <p className="text-[10px] text-indigo-400/80 font-bold uppercase mb-1">{h.target_lang === 'en' ? 'Traducción (EN)' : 'Traducción (ES)'}</p>
-                                                <p className="text-indigo-600 dark:text-indigo-400 font-bold leading-tight">{h.translated_text}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>

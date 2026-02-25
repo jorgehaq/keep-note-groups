@@ -1,10 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Trash2, Edit2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, Eye, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical } from 'lucide-react';
 import { Note, NoteFont } from '../types';
-import { LinkifiedText } from './LinkifiedText';
-import { SmartEditor } from './SmartEditor';
+import { SmartNotesEditor } from '../src/components/editor/SmartNotesEditor';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { useUIStore } from '../src/lib/store';
+import { KanbanSemaphore } from './KanbanSemaphore';
 
 interface AccordionItemProps {
   note: Note;
@@ -13,6 +12,7 @@ interface AccordionItemProps {
   onDelete: (id: string) => void;
   searchQuery?: string;
   noteFont?: NoteFont;
+  noteFontSize?: string;
 }
 
 const highlightText = (text: string, highlight?: string): React.ReactNode => {
@@ -37,23 +37,15 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   onDelete,
   searchQuery,
   noteFont = 'sans',
+  noteFontSize = 'medium',
 }) => {
   const fontClass = noteFont === 'serif' ? 'font-serif' : noteFont === 'mono' ? 'font-mono text-xs' : 'font-sans';
 
-  const { editingNotes, setEditingNote } = useUIStore();
-  const isEditingContent = editingNotes[note.id] || false;
-  const setIsEditingContent = (val: boolean) => setEditingNote(note.id, val);
-
-  /* 
-    Create-to-Edit Flow:
-    If title is empty (new note), default to editing mode.
-  */
   const [isEditingTitle, setIsEditingTitle] = useState(!note.title);
   const [tempTitle, setTempTitle] = useState(note.title);
-  const [tempContent, setTempContent] = useState(note.content);
 
-  const editorRef = useRef<HTMLTextAreaElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null); // <-- NUEVO
 
   // Mobile kebab menu
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -100,20 +92,6 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
     return cleaned;
   };
 
-  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    const clipboardData = e.clipboardData.getData('text/plain');
-    const cleanText = cleanMarkdownToNaturalText(clipboardData);
-    const target = e.target as HTMLTextAreaElement;
-    const start = target.selectionStart;
-    const end = target.selectionEnd;
-    const newValue = tempContent.substring(0, start) + cleanText + tempContent.substring(end);
-    setTempContent(newValue);
-    setTimeout(() => {
-      target.selectionStart = target.selectionEnd = start + cleanText.length;
-    }, 0);
-  };
-
   useEffect(() => {
     if (!isMobileMenuOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
@@ -133,25 +111,26 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
   const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
-  const handleSaveContent = () => {
-    onUpdate(note.id, { content: tempContent });
-  };
+  // We rely directly on onChange from SmartNotesEditor to push updates up to the parent and Supabase.
+  const handleUpdateContent = (newMarkdown: string) => {
+    if (newMarkdown === note.content) return;
 
-  // Autosave debounce: save 1s after user stops typing
-  useEffect(() => {
-    if (!isEditingContent) return;
-    const isDirty = tempContent !== note.content;
-    if (!isDirty) return;
-
+    // Ponemos la UI en modo guardando
     setSyncStatus('saving');
-    const timer = setTimeout(() => {
-      onUpdate(note.id, { content: tempContent });
-      setSyncStatus('saved');
-      setTimeout(() => setSyncStatus('idle'), 2000);
-    }, 1000);
+    
+    // Le decimos a App.tsx que actualice (App.tsx ahora se encarga de esperar 2 segundos para la DB)
+    onUpdate(note.id, { content: newMarkdown });
 
-    return () => clearTimeout(timer);
-  }, [tempContent, isEditingContent]);
+    // Sincronizamos la respuesta visual con los 5 segundos de App.tsx
+    if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+    }
+    
+    syncTimeoutRef.current = setTimeout(() => {
+      setSyncStatus('saved');
+      setTimeout(() => setSyncStatus('idle'), 2000); // El mensaje de "Sincronizado" desaparece a los 2s
+    }, 5000); 
+  };
 
   const handleCancelTitle = () => {
     setTempTitle(note.title);
@@ -168,10 +147,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       onUpdate(note.id, { title: fallback });
     }
     setIsEditingTitle(false);
-    if (shouldFocusEditor) {
-      // If title was saved via Enter, focus the content editor
-      setIsEditingContent(true);
-      setTempContent(note.content); // Ensure tempContent is up-to-date before editing
+    if (shouldFocusEditor && !note.isOpen) {
+      // if title was saved via Enter and note is closed, open it to let them write
+      onToggle(note.id);
     }
   };
 
@@ -188,17 +166,17 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   };
 
   return (
-    <div className="mb-2 bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden transition-all duration-300 hover:shadow-md">
+    <div className={`mb-2 transition duration-300 overflow-hidden ${note.isOpen
+      ? 'bg-white dark:bg-zinc-900 shadow-md ring-2 ring-indigo-500/40 rounded-xl border-transparent'
+      : 'bg-white dark:bg-zinc-900 shadow-sm border border-zinc-200 dark:border-zinc-800 hover:shadow-md rounded-xl'
+      }`}>
       {/* Header */}
       <div
-        className={`flex items-center justify-between px-3 py-2 cursor-pointer transition-colors ${note.isOpen
-          ? 'bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-100 dark:border-zinc-800'
-          : 'bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+        className={`flex items-center justify-between px-3 py-2 cursor-pointer transition-colors border-b ${note.isOpen
+          ? 'bg-indigo-50/60 dark:bg-indigo-500/10 border-indigo-100 dark:border-indigo-500/20'
+          : 'border-transparent hover:bg-zinc-50 dark:hover:bg-zinc-800'
           }`}
         onClick={() => {
-          // Only toggle if not editing title. 
-          // If editing content, maybe we should allow toggling? 
-          // Current req: "Move Edit Content button... Al hacer clic: Abre el acordeón (si estaba cerrado)..."
           if (!isEditingTitle) onToggle(note.id);
         }}
       >
@@ -273,35 +251,18 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
-          {/* Edit/Read Mode Toggle — always visible */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              e.currentTarget.blur();
-              if (isEditingContent) {
-                const isDirty = tempContent !== note.content;
-                if (isDirty) {
-                  onUpdate(note.id, { content: tempContent });
-                }
-                setIsEditingContent(false);
-                setSyncStatus('idle');
-              } else {
-                if (!note.isOpen) onToggle(note.id);
-                setTempContent(note.content);
-                setIsEditingContent(true);
-              }
-            }}
-            className={`p-1.5 rounded-lg transition-all flex items-center justify-center ${isEditingContent
-              ? 'text-zinc-900 bg-zinc-200 dark:text-white dark:bg-zinc-700 shadow-inner'
-              : 'text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
-              }`}
-            title={isEditingContent ? "Cambiar a Modo Lectura" : "Cambiar a Modo Edición"}
-          >
-            {isEditingContent ? <Eye size={15} /> : <Edit2 size={15} />}
-          </button>
+        <div className="flex items-center gap-2 shrink-0">
 
-          {/* Desktop-only: Checklist, Pin, Dock, Delete */}
+          {/* 1. SEMÁFORO KANBAN: Visible siempre, abre la nota al interactuar */}
+          <KanbanSemaphore
+            sourceId={note.id}
+            sourceTitle={note.title || 'Sin título'}
+            onInteract={() => {
+              if (!note.isOpen) onToggle(note.id);
+            }}
+          />
+
+          {/* 3. BOTONES DESKTOP (Checklist, Pin, Dock, Delete) */}
           <div className="hidden md:flex items-center gap-1">
             <button
               onClick={(e) => {
@@ -366,6 +327,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                // MAGIA: Si el acordeón está cerrado, lo abre
+                if (!note.isOpen) onToggle(note.id);
+                // Abre el menú
                 setIsMobileMenuOpen(!isMobileMenuOpen);
               }}
               className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
@@ -453,81 +417,56 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
           {/* Editor / Viewer */}
           <div className="px-3 md:px-6 py-2 w-full overflow-hidden">
-            {/* Reduced top padding since toolbar is gone */}
-            {isEditingContent ? (
-              <SmartEditor
-                ref={editorRef}
-                value={tempContent}
-                onChange={setTempContent}
-                placeholder="Escribe tus notas aquí..."
-                autoFocus={true}
-                className={fontClass}
-                onKeyDown={(e) => {
-                  if (note.is_checklist && e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    const target = e.target as HTMLTextAreaElement;
-                    const start = target.selectionStart;
-                    const end = target.selectionEnd;
-                    const insertion = '\n[ ] ';
-                    const newText = tempContent.substring(0, start) + insertion + tempContent.substring(end);
-                    setTempContent(newText);
-                    setTimeout(() => {
-                      target.selectionStart = target.selectionEnd = start + insertion.length;
-                    }, 0);
-                  }
-                }}
-                onPaste={handlePaste}
-              />
+            {note.is_checklist ? (
+              // Keep the original rich checklist implementation intact since its fully custom drag-and-drop
+              <DragDropContext onDragEnd={handleDragEndChecklist}>
+                <Droppable droppableId={`checklist-${note.id}`}>
+                  {(provided) => (
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-col gap-1 mt-1 mb-4">
+                      {note.content.split('\n').map((line, index) => {
+                        if (!line.trim()) return null;
+                        const isChecked = line.startsWith('[x] ');
+                        const cleanText = line.replace(/^\[[x ]\] /, '');
+                        return (
+                          <Draggable draggableId={`checklist-${note.id}-${index}`} index={index} key={`checklist-${note.id}-${index}`}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className={`flex items-start gap-1.5 group rounded-md px-1 py-0.5 transition-colors ${snapshot.isDragging ? 'bg-zinc-100 dark:bg-zinc-800 shadow-md ring-1 ring-zinc-200 dark:ring-zinc-700' : ''}`}
+                              >
+                                <div {...provided.dragHandleProps} className="mt-0.5 text-zinc-300 hover:text-zinc-500 dark:text-zinc-600 dark:hover:text-zinc-400 cursor-grab active:cursor-grabbing shrink-0">
+                                  <GripVertical size={14} />
+                                </div>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); toggleChecklistItem(index); }}
+                                  className={`mt-0.5 shrink-0 rounded transition-colors ${isChecked ? 'text-emerald-500' : 'text-zinc-400 hover:text-[#1F3760]'}`}
+                                >
+                                  {isChecked ? <CheckSquare size={16} /> : <Square size={16} />}
+                                </button>
+                                <span className={`flex-1 text-[15px] font-sans leading-[24px] ${isChecked ? 'line-through text-zinc-400 dark:text-zinc-500' : 'text-zinc-700 dark:text-zinc-300'}`}>
+                                  {highlightText(cleanText, searchQuery)}
+                                </span>
+                              </div>
+                            )}
+                          </Draggable>
+                        );
+                      })}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
             ) : (
-              <div
-                className={`w-full max-w-full min-h-[50px] break-words overflow-hidden ${fontClass}`}
-                onDoubleClick={() => {
-                  setTempContent(note.content);
-                  setIsEditingContent(true);
-                }}
-              >
-                {note.is_checklist ? (
-                  <DragDropContext onDragEnd={handleDragEndChecklist}>
-                    <Droppable droppableId={`checklist-${note.id}`}>
-                      {(provided) => (
-                        <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-col gap-1 mt-1">
-                          {note.content.split('\n').map((line, index) => {
-                            if (!line.trim()) return null;
-                            const isChecked = line.startsWith('[x] ');
-                            const cleanText = line.replace(/^\[[x ]\] /, '');
-                            return (
-                              <Draggable draggableId={`checklist-${note.id}-${index}`} index={index} key={`checklist-${note.id}-${index}`}>
-                                {(provided, snapshot) => (
-                                  <div
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    className={`flex items-start gap-1.5 group rounded-md px-1 py-0.5 transition-colors ${snapshot.isDragging ? 'bg-zinc-100 dark:bg-zinc-800 shadow-md ring-1 ring-zinc-200 dark:ring-zinc-700' : ''}`}
-                                  >
-                                    <div {...provided.dragHandleProps} className="mt-0.5 text-zinc-300 hover:text-zinc-500 dark:text-zinc-600 dark:hover:text-zinc-400 cursor-grab active:cursor-grabbing shrink-0">
-                                      <GripVertical size={14} />
-                                    </div>
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); toggleChecklistItem(index); }}
-                                      className={`mt-0.5 shrink-0 rounded transition-colors ${isChecked ? 'text-emerald-500' : 'text-zinc-400 hover:text-[#1F3760]'}`}
-                                    >
-                                      {isChecked ? <CheckSquare size={16} /> : <Square size={16} />}
-                                    </button>
-                                    <span className={`flex-1 text-sm font-mono leading-relaxed ${isChecked ? 'line-through text-zinc-400 dark:text-zinc-500' : 'text-zinc-700 dark:text-zinc-300'}`}>
-                                      {highlightText(cleanText, searchQuery)}
-                                    </span>
-                                  </div>
-                                )}
-                              </Draggable>
-                            );
-                          })}
-                          {provided.placeholder}
-                        </div>
-                      )}
-                    </Droppable>
-                  </DragDropContext>
-                ) : (
-                  <LinkifiedText content={note.content} searchQuery={searchQuery} />
-                )}
+              <div className="pb-4 min-h-[50px]">
+                <SmartNotesEditor
+                  noteId={note.id}
+                  initialContent={note.content}
+                  searchQuery={searchQuery}
+                  onChange={handleUpdateContent}
+                  noteFont={noteFont}
+                  noteFontSize={noteFontSize}
+                />
               </div>
             )}
           </div>
@@ -538,10 +477,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               e.stopPropagation();
               onToggle(note.id);
             }}
-            className="flex items-center justify-center gap-2 py-2 mt-2 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 border-t border-zinc-100 dark:border-zinc-800/80 cursor-pointer transition-colors text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+            className="flex items-center justify-center gap-2 py-2 mt-2 bg-indigo-50/60 hover:bg-indigo-100/60 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 border-t border-indigo-100 dark:border-indigo-500/20 cursor-pointer transition-colors text-indigo-600 dark:text-indigo-400 font-bold"
           >
             <ChevronUp size={16} />
-            <span className="text-xs font-medium uppercase tracking-wider">
+            <span className="text-xs uppercase tracking-wider">
               Cerrar: {note.title ? note.title.substring(0, 30) : 'Sin título'}
             </span>
           </div>

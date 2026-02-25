@@ -1,4 +1,4 @@
-import React, { useRef, useLayoutEffect, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useRef, useLayoutEffect, forwardRef, useImperativeHandle, useEffect } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 
 interface SmartEditorProps {
@@ -23,62 +23,68 @@ export const SmartEditor = forwardRef<HTMLTextAreaElement, SmartEditorProps>(({
     const internalRef = useRef<HTMLTextAreaElement>(null);
     const cursorRef = useRef<number | null>(null);
 
-    // Expose internalRef to parent via ref
     useImperativeHandle(ref, () => internalRef.current as HTMLTextAreaElement);
 
-    // 1. Capture cursor position before any render/update
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         cursorRef.current = e.target.selectionStart;
         onChange(e.target.value);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        // Let parent handle first (e.g. checklist Enter)
         if (externalKeyDown) {
             externalKeyDown(e);
             if (e.defaultPrevented) return;
         }
 
+        // Tabulador = 2 espacios
         if (e.key === 'Tab') {
             e.preventDefault();
-
             const target = e.target as HTMLTextAreaElement;
             const start = target.selectionStart;
             const end = target.selectionEnd;
-
-            // Insert 2 spaces
             const newValue = value.substring(0, start) + "  " + value.substring(end);
-
-            // Update state immediately for responsiveness
             onChange(newValue);
-
-            // Set cursor expectation
             cursorRef.current = start + 2;
         }
 
+        // Magia del Enter: Continuar listas y números
         if (e.key === 'Enter') {
             const target = e.target as HTMLTextAreaElement;
             const start = target.selectionStart;
-            const end = target.selectionEnd;
             const valueUpToCursor = value.substring(0, start);
             const lines = valueUpToCursor.split('\n');
             const currentLine = lines[lines.length - 1];
 
-            // Regex: Detecta espacios iniciales y opcionalmente un guion o asterisco seguido de espacio
-            const match = currentLine.match(/^(\s*(?:[-*]\s)?)/);
+            // Detectar viñetas (- o *)
+            const bulletMatch = currentLine.match(/^(\s*)([-*])\s(.*)/);
+            // Detectar números (1., 2., etc)
+            const numberMatch = currentLine.match(/^(\s*)(\d+)\.\s(.*)/);
 
-            if (match && match[1]) {
+            if (bulletMatch) {
                 e.preventDefault();
-
-                // Si la línea actual SOLO contiene el marcador (ej. un guion vacío), al dar Enter borramos el marcador para salir de la lista
-                if (currentLine === match[1]) {
-                    const newValue = value.substring(0, start - match[1].length) + '\n' + value.substring(end);
+                if (!bulletMatch[3].trim()) {
+                    // Si dimos enter en una viñeta vacía, la borramos para salir de la lista
+                    const newValue = value.substring(0, start - bulletMatch[0].length) + '\n' + value.substring(target.selectionEnd);
                     onChange(newValue);
-                    cursorRef.current = start - match[1].length + 1;
+                    cursorRef.current = start - bulletMatch[0].length + 1;
                 } else {
-                    // De lo contrario, heredamos el formato a la nueva línea
-                    const insertText = '\n' + match[1];
-                    const newValue = value.substring(0, start) + insertText + value.substring(end);
+                    // Continuar viñeta
+                    const insertText = `\n${bulletMatch[1]}${bulletMatch[2]} `;
+                    const newValue = value.substring(0, start) + insertText + value.substring(target.selectionEnd);
+                    onChange(newValue);
+                    cursorRef.current = start + insertText.length;
+                }
+            } else if (numberMatch) {
+                e.preventDefault();
+                if (!numberMatch[3].trim()) {
+                    const newValue = value.substring(0, start - numberMatch[0].length) + '\n' + value.substring(target.selectionEnd);
+                    onChange(newValue);
+                    cursorRef.current = start - numberMatch[0].length + 1;
+                } else {
+                    // Incrementar número automáticamente
+                    const nextNum = parseInt(numberMatch[2], 10) + 1;
+                    const insertText = `\n${numberMatch[1]}${nextNum}. `;
+                    const newValue = value.substring(0, start) + insertText + value.substring(target.selectionEnd);
                     onChange(newValue);
                     cursorRef.current = start + insertText.length;
                 }
@@ -86,12 +92,11 @@ export const SmartEditor = forwardRef<HTMLTextAreaElement, SmartEditorProps>(({
         }
     };
 
-    // 2. Restore cursor position after render
     useLayoutEffect(() => {
         if (internalRef.current && cursorRef.current !== null) {
             internalRef.current.setSelectionRange(cursorRef.current, cursorRef.current);
         }
-    }, [value]); // Run when value changes to ensure cursor stays put
+    }, [value]);
 
     useEffect(() => {
         if (autoFocus && internalRef.current) {
@@ -109,7 +114,7 @@ export const SmartEditor = forwardRef<HTMLTextAreaElement, SmartEditorProps>(({
             onPaste={onPaste}
             placeholder={placeholder}
             minRows={5}
-            className={`w-full max-w-full resize-none bg-transparent outline-none text-zinc-700 dark:text-zinc-300 placeholder-zinc-400 leading-relaxed overflow-x-hidden break-words ${className || ''}`}
+            className={`w-full max-w-full resize-none bg-transparent outline-none overflow-x-hidden break-words ${className || ''}`}
         />
     );
 });
