@@ -8,6 +8,7 @@ import { KanbanApp } from './components/KanbanApp';
 import { TimeTrackerApp } from './components/TimeTrackerApp';
 import { RemindersApp } from './components/RemindersApp';
 import { BrainDumpApp } from './components/BrainDumpApp';
+import { TranslatorApp } from './components/TranslatorApp';
 // import { generateId } from './utils'; // No longer needed for IDs, Supabase handles it
 import { supabase } from './src/lib/supabaseClient';
 import { Auth } from './components/Auth';
@@ -25,7 +26,8 @@ function App() {
 
   // ZUSTAND STORE
   const { activeGroupId, setActiveGroup, openNotesByGroup, openGroup, dockedGroupIds, noteSortMode, setNoteSortMode, toggleNote, globalView, setGlobalView } = useUIStore();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQueries, setSearchQueries] = useState<Record<string, string>>({});
+  const currentSearchQuery = activeGroupId ? (searchQueries[activeGroupId] || '') : '';
   const [searchExemptNoteIds, setSearchExemptNoteIds] = useState<Set<string>>(new Set());
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('app-theme-preference') as Theme) || 'dark');
   const [noteFont, setNoteFont] = useState<NoteFont>(() => (localStorage.getItem('app-note-font') as NoteFont) || 'sans');
@@ -391,7 +393,7 @@ function App() {
       setEditingNoteId(newNote.id);
 
       // EXEMPT from search: if created while a filter is active, keep it visible
-      if (searchQuery.trim()) {
+      if (currentSearchQuery.trim()) {
         setSearchExemptNoteIds(prev => new Set(prev).add(newNote.id));
       }
 
@@ -506,8 +508,8 @@ function App() {
           const isNewOrEditing = n.title.trim() === '' || n.id === editingNoteId || searchExemptNoteIds.has(n.id);
           if (isNewOrEditing) return true;
 
-          const matchesSearch = n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            n.content.toLowerCase().includes(searchQuery.toLowerCase());
+          const matchesSearch = n.title.toLowerCase().includes(currentSearchQuery.toLowerCase()) ||
+            n.content.toLowerCase().includes(currentSearchQuery.toLowerCase());
           return matchesSearch;
         })
         .sort((a, b) => {
@@ -639,6 +641,8 @@ function App() {
           <RemindersApp session={session!} />
         ) : globalView === 'braindump' ? (
           <BrainDumpApp session={session!} />
+        ) : globalView === 'translator' ? (
+          <TranslatorApp session={session!} />
         ) : (
           <>
 
@@ -696,20 +700,42 @@ function App() {
                 {activeGroup && (
                   <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
 
-                    {/* Compact Search */}
-                    <div className="relative flex items-center">
-                      <Search size={15} className="absolute left-2 text-zinc-400 pointer-events-none" />
+                    {/* Compact Contextual Search */}
+                    <div className="relative flex items-center transition-all duration-300">
+                      <Search
+                        size={15}
+                        className={`absolute left-2 pointer-events-none transition-colors ${currentSearchQuery.trim() ? 'text-amber-600 dark:text-amber-500 font-bold' : 'text-zinc-400'}`}
+                      />
                       <input
                         type="text"
-                        placeholder="Buscar..."
-                        value={searchQuery}
+                        placeholder={activeGroup ? `Buscar en ${activeGroup.title}...` : "Buscar..."}
+                        value={currentSearchQuery}
                         onChange={(e) => {
-                          setSearchQuery(e.target.value);
+                          if (activeGroupId) {
+                            setSearchQueries(prev => ({ ...prev, [activeGroupId]: e.target.value }));
+                          }
                           setSearchExemptNoteIds(new Set());
                           if (focusedNoteId) setFocusedNoteId(null);
                         }}
-                        className="w-full sm:w-40 pl-7 pr-2 py-1.5 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400/30 transition-all"
+                        className={`w-full sm:w-48 pl-7 pr-8 py-1.5 text-xs rounded-lg border transition-all focus:outline-none ${currentSearchQuery.trim()
+                          ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50 sm:w-56'
+                          : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'
+                          }`}
                       />
+                      {currentSearchQuery.trim() && (
+                        <button
+                          onClick={() => {
+                            if (activeGroupId) {
+                              setSearchQueries(prev => ({ ...prev, [activeGroupId]: '' }));
+                            }
+                            setSearchExemptNoteIds(new Set());
+                          }}
+                          className="absolute right-2 p-0.5 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 bg-amber-200/50 dark:bg-amber-800/50 hover:bg-amber-300/50 dark:hover:bg-amber-700/50 rounded-full transition-colors"
+                          title="Limpiar búsqueda"
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
                     </div>
 
                     {/* Divider */}
@@ -807,7 +833,7 @@ function App() {
                                 onToggle={() => toggleNote(activeGroup.id, note.id)}
                                 onUpdate={(id, updates) => handleUpdateNoteWrapper(id, updates)}
                                 onDelete={deleteNote}
-                                searchQuery={searchQuery}
+                                searchQuery={currentSearchQuery}
                                 noteFont={noteFont}
                               />
                             </div>
