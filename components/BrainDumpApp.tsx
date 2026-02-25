@@ -7,6 +7,7 @@ type DumpStatus = 'main' | 'stash' | 'history';
 
 interface BrainDump {
     id: string;
+    title?: string;
     content: string;
     status: DumpStatus;
     created_at: string;
@@ -22,6 +23,7 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
     const [loading, setLoading] = useState(true);
     const [timeLeft, setTimeLeft] = useState(300);
     const [isTimerRunning, setIsTimerRunning] = useState(false);
+    const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
     // For debounced autosave
     const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
@@ -135,14 +137,15 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
             const newValue = dump.content.substring(0, start) + "\t" + dump.content.substring(end);
 
             cursorRef.current = { id, position: start + 1 };
-            autoSave(id, newValue);
+            autoSave(id, { content: newValue });
         }
     };
 
-    const autoSave = (id: string, newContent: string) => {
+    const autoSave = (id: string, updates: { content?: string; title?: string }) => {
         const now = new Date().toISOString();
         // 1. Update local state immediately for UI responsiveness
-        setDumps(prev => prev.map(d => d.id === id ? { ...d, content: newContent, updated_at: now } : d));
+        setDumps(prev => prev.map(d => d.id === id ? { ...d, ...updates, updated_at: now } : d));
+        setSyncStatus('saving');
 
         // 2. Debounce the DB update
         if (saveTimeoutRef.current[id]) {
@@ -153,9 +156,11 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
             try {
                 const { error } = await supabase
                     .from('brain_dumps')
-                    .update({ content: newContent, updated_at: now })
+                    .update({ ...updates, updated_at: now })
                     .eq('id', id);
                 if (error) throw error;
+                setSyncStatus('saved');
+                setTimeout(() => setSyncStatus(current => current === 'saved' ? 'idle' : current), 2000);
             } catch (err: any) {
                 console.error('Error in autoSave:', err.message);
             } finally {
@@ -321,9 +326,8 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
                         <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Patio de Recreomental</p>
                     </div>
                     <div className="ml-auto flex items-center gap-4">
-                        {Object.keys(saveTimeoutRef.current).length > 0 && (
-                            <span className="text-[10px] text-amber-500 font-bold animate-pulse">Guardando...</span>
-                        )}
+                        {syncStatus === 'saving' && <span className="text-[10px] text-amber-500 font-bold animate-pulse">Guardando...</span>}
+                        {syncStatus === 'saved' && <span className="text-[10px] text-emerald-500 font-bold">Guardado</span>}
                     </div>
                 </div>
 
@@ -340,13 +344,21 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
                                 {mainDump.content.trim() !== '' && renderTimestamps(mainDump.created_at, mainDump.updated_at)}
                             </div>
 
+                            <input
+                                type="text"
+                                value={mainDump.title || ''}
+                                onChange={(e) => autoSave(mainDump.id, { title: e.target.value })}
+                                placeholder="Título del volcado (opcional)..."
+                                className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-zinc-100 placeholder-zinc-300 dark:placeholder-zinc-700 border-none outline-none mb-3 px-6"
+                            />
+
                             <textarea
                                 key={mainDump.id}
                                 id={`textarea-${mainDump.id}`}
                                 autoFocus
                                 value={mainDump.content}
                                 onChange={(e) => {
-                                    autoSave(mainDump.id, e.target.value);
+                                    autoSave(mainDump.id, { content: e.target.value });
                                     autoExpand(e.target);
                                 }}
                                 onKeyDown={(e) => handleKeyDown(e, mainDump.id)}
@@ -411,16 +423,17 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {stashes.map(stash => (
                                     <div key={stash.id} className="flex flex-col gap-2 p-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 transition-all hover:shadow-md">
+                                        {stash.title && <h4 className="font-bold text-sm text-zinc-800 dark:text-zinc-200 mb-2 px-1">{stash.title}</h4>}
                                         <textarea
                                             key={stash.id}
                                             id={`textarea-${stash.id}`}
                                             value={stash.content}
                                             onChange={(e) => {
-                                                autoSave(stash.id, e.target.value);
+                                                autoSave(stash.id, { content: e.target.value });
                                                 autoExpand(e.target);
                                             }}
                                             onKeyDown={(e) => handleKeyDown(e, stash.id)}
-                                            className="w-full max-h-48 bg-transparent md:max-h-60 resize-none outline-none text-sm text-zinc-700 dark:text-zinc-300 placeholder-zinc-400 p-0 overflow-y-auto hidden-scrollbar"
+                                            className="w-full max-h-48 bg-transparent md:max-h-60 resize-none outline-none text-sm text-zinc-700 dark:text-zinc-300 placeholder-zinc-400 p-0 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent"
                                             placeholder="Borrador vacío..."
                                             style={{ height: 'auto' }}
                                         />
@@ -467,7 +480,8 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session }) => {
                                         key={h.id}
                                         className="group relative bg-zinc-100 dark:bg-zinc-900/30 p-5 rounded-2xl border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800 hover:-translate-y-1 hover:shadow-lg hover:shadow-zinc-200/50 dark:hover:shadow-black/50 transition-all duration-300"
                                     >
-                                        <div className="max-h-48 overflow-y-auto hidden-scrollbar">
+                                        <div className="max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+                                            {h.title && <h4 className="font-bold text-sm text-zinc-800 dark:text-zinc-200 mb-2">{h.title}</h4>}
                                             <p className="text-sm text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap leading-relaxed">
                                                 {h.content}
                                             </p>
