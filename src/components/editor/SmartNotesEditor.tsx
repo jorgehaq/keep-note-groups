@@ -76,9 +76,9 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
                         safeReplace(mFrom + 1 + match[1].length, mTo); decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, match[1]), side: 1 }).range(mTo, mTo));
                     }
                     else if (rule.type === 'tr') {
-                        const translatedText = translationsMapRef.current[match[1]];
+                        const translatedText = match[1] === 'legacy' ? 'Traduciendo...' : match[1];
                         safeReplace(mFrom, mFrom + 6 + (match[1]?.length || 0));
-                        safeMark('cm-custom-tr', mFrom + 6 + (match[1]?.length || 0), mTo - 2, { 'data-translation-text': translatedText || 'Traduciendo...' });
+                        safeMark('cm-custom-tr', mFrom + 6 + (match[1]?.length || 0), mTo - 2, { 'data-translation-text': translatedText });
                         safeReplace(mTo - 2, mTo); decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, match[2]), side: 1 }).range(mTo, mTo));
                     } 
                     else if (rule.type === 'hl') {
@@ -208,9 +208,10 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
     useEffect(() => {
         let clean = initialContent || '';
         if (clean.includes('<p>')) {
-            clean = clean.replace(/<p>/g, '').replace(/<\/p>/g, '\n').replace(/<br>/g, '\n')
+            clean = clean.replace(/<mark data-type="translation"[^>]*data-translation-text="([^"]+)"[^>]*>([\s\S]*?)<\/mark>/g, '[[tr:$1|$2]]')
+                .replace(/<p>/g, '').replace(/<\/p>/g, '\n').replace(/<br>/g, '\n')
                 .replace(/<mark data-type="highlight">([^<]+)<\/mark>/g, '==$1==')
-                .replace(/<mark data-type="translation"[^>]*>([^<]+)<\/mark>/g, '[[tr:legacy|$1]]');
+                .replace(/<mark data-type="translation"[^>]*>([\s\S]*?)<\/mark>/g, '[[tr:legacy|$1]]');
         }
         setContent(prev => prev !== clean ? clean : prev);
     }, [initialContent, noteId]);
@@ -245,6 +246,57 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
         } else replacement = `[${text}]()`;
         editorRef.current.view.dispatch({ changes: { from: menuState.from, to: menuState.to, insert: replacement }, selection: { anchor: menuState.from + replacement.length } });
         setMenuState(null);
+    };
+
+    const doTranslate = async (targetLang: 'en' | 'es') => {
+        if (!menuState || !editorRef.current?.view) return;
+        const textToTranslate = menuState.text.trim();
+        if (!textToTranslate) return;
+
+        setIsTranslating(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error("Debes iniciar sesión para traducir.");
+
+            const sourceLang = targetLang === 'en' ? 'es' : 'en';
+
+            const { data, error } = await supabase.functions.invoke('translateMyAppNotes', {
+                body: { sourceLang, targetLang, text: textToTranslate },
+                headers: { Authorization: `Bearer ${session.access_token}` }
+            });
+
+            if (error) {
+                let eMsg = error.message;
+                try {
+                    const eRes = await error.context.json();
+                    if (eRes && eRes.error) eMsg = eRes.error;
+                } catch(e) {}
+                throw new Error(eMsg);
+            }
+
+            const translatedText = data.translation;
+            const replacement = `[[tr:${translatedText}|${textToTranslate}]]`;
+            
+            // Guardar en el historial de traducciones
+            await supabase.from('translations').insert([{
+                user_id: session.user.id,
+                source_text: textToTranslate,
+                translated_text: translatedText,
+                source_lang: sourceLang,
+                target_lang: targetLang
+            }]);
+
+            editorRef.current.view.dispatch({ 
+                changes: { from: menuState.from, to: menuState.to, insert: replacement }, 
+                selection: { anchor: menuState.from + replacement.length } 
+            });
+            setMenuState(null);
+        } catch (error: any) {
+            console.error("Translation error:", error);
+            alert("Error al traducir: " + error.message);
+        } finally {
+            setIsTranslating(false);
+        }
     };
 
     const handleChange = (value: string) => {
@@ -283,8 +335,8 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
                     {isTranslating ? ( <div className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-blue-400"><Loader2 size={16} className="animate-spin" /> Traduciendo...</div> ) : (
                         <><button onClick={doHighlight} className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800 hover:bg-black rounded-lg text-xs font-bold transition-colors text-white active:scale-95"><Highlighter size={14} className="text-[#ccff00]" /> Resaltar</button>
                         <button onClick={doLink} className="p-2 text-zinc-400 hover:text-blue-400 hover:bg-zinc-800 rounded-lg transition-colors"><LinkIcon size={16} /></button><div className="w-px h-6 bg-zinc-700 mx-1"></div>
-                        <button className="flex items-center gap-1 px-3 py-2 bg-blue-500/20 hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-400 active:scale-95"> EN</button>
-                        <button className="flex items-center gap-1 px-3 py-2 bg-blue-500/20 hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-400 active:scale-95"> ES</button></>
+                        <button onClick={() => doTranslate('en')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/20 hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-400 active:scale-95"> EN</button>
+                        <button onClick={() => doTranslate('es')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/20 hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-400 active:scale-95"> ES</button></>
                     )}
                 </div>
             )}
