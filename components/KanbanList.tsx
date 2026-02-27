@@ -1,5 +1,5 @@
 import React from 'react';
-import { Task, TaskStatus } from '../types';
+import { Task, TaskStatus, Group } from '../types';
 import { Trash2, ArrowRight, Inbox, Archive } from 'lucide-react';
 
 interface KanbanListProps {
@@ -7,9 +7,11 @@ interface KanbanListProps {
     tasks: Task[];
     onUpdate: (id: string, updates: Partial<Task>) => void;
     onDelete: (id: string) => void;
+    groups?: Group[];
+    onOpenNote?: (groupId: string, noteId: string) => void;
 }
 
-export const KanbanList: React.FC<KanbanListProps> = ({ view, tasks, onUpdate, onDelete }) => {
+export const KanbanList: React.FC<KanbanListProps> = ({ view, tasks, onUpdate, onDelete, groups, onOpenNote }) => {
     const status: TaskStatus = view === 'backlog' ? 'backlog' : 'archived';
     const filtered = tasks.filter(t => t.status === status).sort((a, b) => a.position - b.position);
     const emptyLabel = view === 'backlog' ? 'No hay tareas en el backlog.' : 'No hay tareas archivadas.';

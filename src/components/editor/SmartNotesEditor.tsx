@@ -3,8 +3,8 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
-import { EditorView, ViewPlugin, Decoration, WidgetType, ViewUpdate } from '@codemirror/view';
-import { RangeSet, StateEffect } from '@codemirror/state'; 
+import { EditorView, ViewPlugin, Decoration, WidgetType, ViewUpdate, keymap } from '@codemirror/view';
+import { RangeSet, StateEffect, Prec } from '@codemirror/state'; 
 import { Highlighter, Languages, Loader2, Link as LinkIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -178,7 +178,7 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
 }) => {
     const [content, setContent] = useState('');
     const editorRef = useRef<ReactCodeMirrorRef>(null);
-    const [menuState, setMenuState] = useState<{top: number, left: number, from: number, to: number, text: string} | null>(null);
+    const [menuState, setMenuState] = useState<{top: number, left: number, from: number, to: number, text: string, isMobile?: boolean} | null>(null);
     const [tooltipState, setTooltipState] = useState<{text: string, top: number, left: number} | null>(null);
     const [isTranslating, setIsTranslating] = useState(false);
     
@@ -222,7 +222,17 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
             const { main } = update.state.selection;
             if (!main.empty) {
                 const rect = update.view.coordsAtPos(main.from);
-                if (rect) setMenuState({ top: rect.top - 55, left: rect.left, from: main.from, to: main.to, text: update.state.doc.sliceString(main.from, main.to) });
+                if (rect) {
+                    const isMobile = window.innerWidth < 768;
+                    setMenuState({ 
+                        top: isMobile ? 0 : rect.top - 55, 
+                        left: isMobile ? 0 : rect.left, 
+                        from: main.from, 
+                        to: main.to, 
+                        text: update.state.doc.sliceString(main.from, main.to),
+                        isMobile 
+                    });
+                }
             } else setMenuState(null);
         }
     });
@@ -314,10 +324,23 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
             <CodeMirror
                 ref={editorRef} value={content} onChange={handleChange} onBlur={handleBlur} theme="none" 
                 extensions={[
+                    // 🚀 MAGIA ANTI-HIJACKING: Prec.highest toma el control absoluto del evento
+                    Prec.highest(
+                        keymap.of([{ 
+                            key: 'Tab', 
+                            preventDefault: true, 
+                            run: (view) => { 
+                                // replaceSelection inyecta en el cursor y lo mueve al final de la inserción automáticamente
+                                view.dispatch(view.state.replaceSelection('    ')); 
+                                return true; 
+                            } 
+                        }])
+                    ),
+                    
                     markdown({ base: markdownLanguage, codeLanguages: languages }),
-                    dynamicTheme, // <-- APLICAMOS EL TEMA DINÁMICO AQUÍ
+                    dynamicTheme, 
                     createVisualMarkupPlugin(translationsMapRef, searchQueryRef), 
-                    clickHandlerExtension, hoverTooltipExtension, selectionListener, EditorView.lineWrapping 
+                    clickHandlerExtension, hoverTooltipExtension, selectionListener, EditorView.lineWrapping
                 ]}
                 basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false, syntaxHighlighting: false }}
                 className="text-zinc-900 dark:text-zinc-100" 
@@ -331,7 +354,17 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
                 </div>
             )}
             {menuState && (
-                <div className="fixed z-[100] bg-zinc-900 text-white p-1.5 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex items-center gap-1 border border-zinc-700 animate-fadeIn origin-bottom pointer-events-auto" style={{ top: menuState.top, left: menuState.left, transform: 'translateX(-50%)' }} onMouseDown={(e) => e.preventDefault()} >
+                <div 
+                    className={`
+                        z-[100] flex items-center gap-1 bg-zinc-900 text-white p-1.5 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-zinc-700 animate-fadeIn pointer-events-auto
+                        ${menuState.isMobile 
+                            ? 'fixed bottom-6 left-4 right-4 justify-around p-2' 
+                            : 'fixed origin-bottom'
+                        }
+                    `}
+                    style={menuState.isMobile ? undefined : { top: menuState.top, left: menuState.left, transform: 'translateX(-50%)' }} 
+                    onMouseDown={(e) => e.preventDefault()} 
+                >
                     {isTranslating ? ( <div className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-blue-400"><Loader2 size={16} className="animate-spin" /> Traduciendo...</div> ) : (
                         <><button onClick={doHighlight} className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800 hover:bg-black rounded-lg text-xs font-bold transition-colors text-white active:scale-95"><Highlighter size={14} className="text-[#ccff00]" /> Resaltar</button>
                         <button onClick={doLink} className="p-2 text-zinc-400 hover:text-blue-400 hover:bg-zinc-800 rounded-lg transition-colors"><LinkIcon size={16} /></button><div className="w-px h-6 bg-zinc-700 mx-1"></div>

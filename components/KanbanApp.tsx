@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, KanbanSquare, Archive, Inbox } from 'lucide-react';
-import { Task, TaskStatus } from '../types';
+import { Task, TaskStatus, Group } from '../types';
 import { supabase } from '../src/lib/supabaseClient';
 import { KanbanBoard } from './KanbanBoard';
 import { KanbanList } from './KanbanList';
@@ -14,7 +14,12 @@ const TABS: { key: KanbanTab; label: string; icon: React.ReactNode }[] = [
     { key: 'archive', label: 'Archivo', icon: <Archive size={14} /> },
 ];
 
-export const KanbanApp: React.FC = () => {
+interface KanbanAppProps {
+    groups?: Group[];
+    onOpenNote?: (groupId: string, noteId: string) => void;
+}
+
+export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote }) => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<KanbanTab>('board');
@@ -40,6 +45,8 @@ export const KanbanApp: React.FC = () => {
         };
 
         fetchTasks();
+        window.addEventListener('kanban-refetch', fetchTasks);
+        return () => window.removeEventListener('kanban-refetch', fetchTasks);
     }, []);
 
     // --- SYNC ---
@@ -83,7 +90,18 @@ export const KanbanApp: React.FC = () => {
             .update(updates)
             .eq('id', id);
 
-        if (!error) window.dispatchEvent(new CustomEvent('kanban-updated'));
+        if (!error) {
+            window.dispatchEvent(new CustomEvent('kanban-updated'));
+            
+            // Sincronización dual hacia Notas
+            if (updates.title !== undefined) {
+                await supabase.from('notes')
+                    .update({ title: updates.title })
+                    .eq('id', id);
+                
+                window.dispatchEvent(new CustomEvent('reload-app-data'));
+            }
+        }
 
         if (error) {
             console.error('Error updating task:', error);
@@ -166,13 +184,13 @@ export const KanbanApp: React.FC = () => {
 
             {/* Content */}
             {activeTab === 'board' && (
-                <KanbanBoard tasks={tasks} onUpdate={updateTask} onDelete={deleteTask} />
+                <KanbanBoard tasks={tasks} groups={groups} onOpenNote={onOpenNote} onUpdate={updateTask} onDelete={deleteTask} />
             )}
             {activeTab === 'backlog' && (
-                <KanbanList view="backlog" tasks={tasks} onUpdate={updateTask} onDelete={deleteTask} />
+                <KanbanList view="backlog" tasks={tasks} groups={groups} onOpenNote={onOpenNote} onUpdate={updateTask} onDelete={deleteTask} />
             )}
             {activeTab === 'archive' && (
-                <KanbanList view="archive" tasks={tasks} onUpdate={updateTask} onDelete={deleteTask} />
+                <KanbanList view="archive" tasks={tasks} groups={groups} onOpenNote={onOpenNote} onUpdate={updateTask} onDelete={deleteTask} />
             )}
         </div>
     );

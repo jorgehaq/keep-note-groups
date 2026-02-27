@@ -47,6 +47,48 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   const titleInputRef = useRef<HTMLInputElement>(null);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null); // <-- NUEVO
 
+  // --- REFERENCIAS Y ESTADOS PARA EL SUBHEADER FLOTANTE ---
+  const headerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [showStickyTitle, setShowStickyTitle] = useState(false);
+
+  useEffect(() => {
+    // Si la nota está cerrada, no hay nada que vigilar
+    if (!note.isOpen) {
+      setShowStickyTitle(false);
+      return;
+    }
+
+    const headerEl = headerRef.current;
+    const contentEl = contentRef.current;
+    if (!headerEl || !contentEl) return;
+
+    let isHeaderVisible = true;
+    let isContentVisible = true;
+
+    const checkVisibility = () => {
+      // Magia: Solo mostramos la pastilla si el contenido está en pantalla PERO el título no.
+      setShowStickyTitle(!isHeaderVisible && isContentVisible);
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.target === headerEl) isHeaderVisible = entry.isIntersecting;
+        if (entry.target === contentEl) isContentVisible = entry.isIntersecting;
+      });
+      checkVisibility();
+    }, {
+      root: null, // Vigila contra el Viewport del navegador
+      threshold: 0,
+      rootMargin: '-60px 0px 0px 0px' // Compensamos los 60px del header superior de la app
+    });
+
+    observer.observe(headerEl);
+    observer.observe(contentEl);
+
+    return () => observer.disconnect();
+  }, [note.isOpen]);
+
   // Mobile kebab menu
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -172,6 +214,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       }`}>
       {/* Header */}
       <div
+        ref={headerRef}
         className={`flex items-center justify-between px-3 py-2 cursor-pointer transition-colors border-b ${note.isOpen
           ? 'bg-indigo-50/60 dark:bg-indigo-500/10 border-indigo-100 dark:border-indigo-500/20'
           : 'border-transparent hover:bg-zinc-50 dark:hover:bg-zinc-800'
@@ -412,7 +455,27 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
       {/* Content Body */}
       {note.isOpen && (
-        <div className="p-0 bg-white dark:bg-zinc-900 animate-fadeIn">
+        <div ref={contentRef} className="p-0 bg-white dark:bg-zinc-900 animate-fadeIn relative">
+          {/* --- PASTILLA DE CONTEXTO FLOTANTE --- */}
+          {showStickyTitle && (
+            <div className="fixed top-14 md:top-16 left-0 right-0 z-[40] flex justify-center pointer-events-none animate-fadeIn px-4">
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Vuelve suavemente al inicio de la nota
+                  headerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }}
+                className="bg-zinc-800/95 dark:bg-zinc-200/95 backdrop-blur-md text-white dark:text-zinc-900 px-5 py-1.5 rounded-full shadow-lg shadow-black/10 text-xs font-bold flex items-center gap-2 pointer-events-auto cursor-pointer active:scale-95 transition-transform border border-zinc-700 dark:border-zinc-300"
+                title="Volver al inicio de la nota"
+              >
+                <span className="truncate max-w-[200px] sm:max-w-[400px]">
+                  {note.title || 'Sin título'}
+                </span>
+                <ChevronUp size={14} className="opacity-70" />
+              </div>
+            </div>
+          )}
+          {/* ------------------------------------- */}
           {/* No more Toolbar */}
 
           {/* Editor / Viewer */}

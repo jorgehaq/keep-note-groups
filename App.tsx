@@ -156,8 +156,18 @@ function App() {
       const { data } = await supabase.from('tasks').select('*');
       if (data) setGlobalTasks(data);
     };
+
     fetchGlobalTasks();
+    
+    window.addEventListener('kanban-updated', fetchGlobalTasks);
+    return () => window.removeEventListener('kanban-updated', fetchGlobalTasks);
   }, [session, setGlobalTasks]);
+
+  useEffect(() => {
+    const handleReload = () => fetchData();
+    window.addEventListener('reload-app-data', handleReload);
+    return () => window.removeEventListener('reload-app-data', handleReload);
+  }, []);
 
   const fetchData = async () => {
     if (!hasLoadedOnce.current) setLoading(true);
@@ -215,12 +225,17 @@ function App() {
 
     if (!activeGroupId) return;
 
-    setGroups(prev => prev.map(g => {
-      if (g.id === activeGroupId) {
-        return { ...g, notes: sortNotesArray(g.notes, mode) };
-      }
-      return g;
-    }));
+    // 🚀 FIX: setTimeout de 50ms rompe la condición de carrera.
+    // Garantiza que si el usuario da clic al ordenamiento mientras edita un título,
+    // el onBlur (guardado) termine de inyectar el título en el estado ANTES de ordenar.
+    setTimeout(() => {
+        setGroups(prev => prev.map(g => {
+            if (g.id === activeGroupId) {
+                return { ...g, notes: sortNotesArray(g.notes, mode) };
+            }
+            return g;
+        }));
+    }, 50);
   };
 
   const addGroup = async () => {
@@ -383,6 +398,15 @@ function App() {
       try {
         const { error } = await supabase.from('notes').update(dbUpdates).eq('id', noteId);
         if (error) throw error;
+        
+        // Sincronización dual hacia Kanban
+        if (dbUpdates.title !== undefined) {
+            await supabase.from('tasks')
+                .update({ title: dbUpdates.title })
+                .eq('id', noteId);
+            
+            window.dispatchEvent(new CustomEvent('kanban-refetch'));
+        }
       } catch (error: any) {
         console.error('Error updating note:', error.message);
       } finally {
@@ -422,7 +446,11 @@ function App() {
     : [];
 
   const handleUpdateNoteWrapper = (noteId: string, updates: Partial<Note>) => {
-    if (updates.content !== undefined) setEditingNoteId(null);
+    // 🚀 FIX: Liberar completamente el estado "amarrado" de la nota
+    // tanto si se edita el contenido COMO si se edita el título.
+    if (updates.content !== undefined || updates.title !== undefined) {
+        setEditingNoteId(null);
+    }
     updateNote(noteId, updates);
   };
 
@@ -500,7 +528,44 @@ function App() {
           </div>
         )}
 
-        {globalView === 'kanban' ? <KanbanApp /> :
+        {globalView === 'kanban' ? (
+          <KanbanApp 
+            groups={groups} 
+            onOpenNote={async (groupId, noteId) => {
+              // 1. ZUSTAND: Ancla el grupo y cambia a la vista de notas
+              openGroup(groupId);
+              setGlobalView('notes');
+              
+              // 2. UX FIX: Forzamos null para evitar el "Focus Mode". 
+              // Esto garantiza que el Grupo en el Sidebar se pinte AZUL.
+              setFocusedNoteId(null); 
+              
+              // 3. UX: Abre el acordeón de la nota si estaba cerrado
+              const currentOpen = openNotesByGroup[groupId] || [];
+              if (!currentOpen.includes(noteId)) {
+                toggleNote(groupId, noteId);
+              }
+
+              // 4. DOM: Hacemos scroll suave hasta la nota para no perderla de vista
+              setTimeout(() => {
+                const noteElement = document.getElementById(`note-${noteId}`);
+                if (noteElement) {
+                  noteElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }, 150); // Pequeño delay para permitir que el DOM renderice el cambio de vista
+
+              // 5. SUPABASE: Actualizamos el timestamp para "Recientes"
+              try {
+                await supabase
+                  .from('groups')
+                  .update({ last_accessed_at: new Date().toISOString() })
+                  .eq('id', groupId);
+              } catch (e) {
+                console.error("No se pudo actualizar el last_accessed_at", e);
+              }
+            }} 
+          />
+        ) :
          globalView === 'timers' ? <TimeTrackerApp session={session!} /> :
          globalView === 'reminders' ? <RemindersApp session={session!} /> :
          globalView === 'braindump' ? <BrainDumpApp session={session!} noteFont={noteFont} noteFontSize={noteFontSize} /> :

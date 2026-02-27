@@ -27,7 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectDockedNote,
   focusedNoteId,
 }) => {
-  const { dockedGroupIds, closeGroup, globalView, setGlobalView, activeTimersCount, overdueRemindersCount, imminentRemindersCount, lastAppView, kanbanTodoCount, kanbanInProgressCount, kanbanDoneCount, lastUsedApp } = useUIStore();
+  const { dockedGroupIds, closeGroup, globalView, setGlobalView, activeTimersCount, overdueRemindersCount, imminentRemindersCount, lastAppView, kanbanTodoCount, kanbanInProgressCount, kanbanDoneCount, lastUsedApp, globalTasks } = useUIStore();
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
 
   // Filter groups to only show docked ones
@@ -234,15 +234,38 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               ? 'bg-zinc-400 dark:bg-zinc-600 text-zinc-800 dark:text-zinc-100 shadow-inner' // Rastro sin enfocar (GRIS MEDIO)
                               : 'bg-zinc-300 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-400 dark:hover:bg-zinc-700'; // Muerta
 
+                      // NUEVO: LÓGICA DEL SEMÁFORO KANBAN
+                      const linkedTask = globalTasks?.find(t => t.id === note.id);
+                      let dotColorClass = null;
+                      
+                      if (linkedTask) {
+                          switch (linkedTask.status) {
+                              case 'backlog': dotColorClass = 'bg-white dark:bg-zinc-200 ring-1 ring-zinc-300'; break;
+                              case 'todo': dotColorClass = 'bg-blue-500'; break;
+                              case 'in_progress': dotColorClass = 'bg-amber-500'; break;
+                              case 'done': dotColorClass = 'bg-emerald-500'; break;
+                              // 'archived' ignora el color como solicitaste
+                          }
+                      }
+
                       return (
-                        <button
-                          key={note.id}
-                          onClick={() => onSelectDockedNote(group.id, note.id)}
-                          className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] font-semibold uppercase transition-all duration-200 ${bubbleClass}`}
-                          title={note.title || 'Sin título'}
-                        >
-                          {note.title ? note.title.substring(0, 2) : <StickyNote size={12} />}
-                        </button>
+                        <div key={note.id} className="relative group/bubble">
+                          <button
+                            onClick={() => onSelectDockedNote(group.id, note.id)}
+                            className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] font-semibold uppercase transition-all duration-200 ${bubbleClass}`}
+                            title={note.title || 'Sin título'}
+                          >
+                            {note.title ? note.title.substring(0, 2) : <StickyNote size={12} />}
+                          </button>
+                          
+                          {/* El punto flotante del Kanban */}
+                          {dotColorClass && (
+                              <div 
+                                className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border border-[#9F9FA8] z-10 shadow-sm transition-transform hover:scale-110 ${dotColorClass}`} 
+                                title={`Estado Kanban`}
+                              />
+                          )}
+                        </div>
                       );
                     })}
                   </div>

@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { Task, TaskStatus } from '../types';
-import { Archive, Trash2, GripVertical } from 'lucide-react';
+import { Task, TaskStatus, Group } from '../types';
+import { Archive, Trash2, GripVertical, StickyNote, Link as LinkIcon } from 'lucide-react';
+import { supabase } from '../src/lib/supabaseClient';
+import { KanbanLinkerModal } from './KanbanLinkerModal';
 
 interface KanbanBoardProps {
     tasks: Task[];
+    groups?: Group[];
+    onOpenNote?: (groupId: string, noteId: string) => void;
     onUpdate: (id: string, updates: Partial<Task>) => void;
     onDelete: (id: string) => void;
 }
@@ -26,7 +30,7 @@ const formatDate = (dateString?: string) => {
     }).format(date);
 };
 
-export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, onUpdate, onDelete }) => {
+export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], onOpenNote, onUpdate, onDelete }) => {
     const getColumnTasks = (status: TaskStatus) =>
         tasks.filter(t => t.status === status).sort((a, b) => a.position - b.position);
 
@@ -109,14 +113,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, onUpdate, onDel
                                         {colTasks.map((task, index) => (
                                             <Draggable key={task.id} draggableId={task.id} index={index}>
                                                 {(provided, snapshot) => (
-                                                    <TaskCard
-                                                        task={task}
-                                                        provided={provided}
-                                                        isDragging={snapshot.isDragging}
-                                                        columnStatus={col.status}
-                                                        onUpdate={onUpdate}
-                                                        onDelete={onDelete}
-                                                    />
+                                                        <TaskCard
+                                                            task={task}
+                                                            provided={provided}
+                                                            isDragging={snapshot.isDragging}
+                                                            columnStatus={col.status}
+                                                            onUpdate={onUpdate}
+                                                            onDelete={onDelete}
+                                                            groups={groups}
+                                                            onOpenNote={onOpenNote}
+                                                        />
                                                 )}
                                             </Draggable>
                                         ))}
@@ -145,11 +151,22 @@ interface TaskCardProps {
     columnStatus: TaskStatus;
     onUpdate: (id: string, updates: Partial<Task>) => void;
     onDelete: (id: string) => void;
+    groups?: Group[];
+    onOpenNote?: (groupId: string, noteId: string) => void;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnStatus, onUpdate, onDelete }) => {
+const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnStatus, onUpdate, onDelete, groups = [], onOpenNote }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [tempTitle, setTempTitle] = useState(task.title);
+    const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+
+    const linkedNote = React.useMemo(() => {
+        for (const g of groups) {
+            const n = g.notes.find(note => note.id === task.id);
+            if (n) return { ...n, groupId: g.id };
+        }
+        return null;
+    }, [groups, task.id]);
 
     const handleSave = () => {
         if (tempTitle.trim() && tempTitle !== task.title) {
@@ -215,6 +232,23 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
 
                 {/* Actions (hover reveal) */}
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 flex-col">
+                    {linkedNote ? (
+                        <button
+                            onClick={() => onOpenNote?.(linkedNote.groupId, linkedNote.id)}
+                            className="p-1.5 text-zinc-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                            title="Abrir Nota Asociada"
+                        >
+                            <StickyNote size={14} />
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => setIsLinkModalOpen(true)}
+                            className="p-1.5 text-zinc-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
+                            title="Convertir en Nota"
+                        >
+                            <LinkIcon size={14} />
+                        </button>
+                    )}
                     {columnStatus === 'done' && (
                         <button
                             onClick={() => onUpdate(task.id, { status: 'archived' })}
@@ -235,6 +269,18 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
                     </button>
                 </div>
             </div>
+
+            {isLinkModalOpen && (
+                <KanbanLinkerModal 
+                    task={task} 
+                    groups={groups}
+                    onClose={() => setIsLinkModalOpen(false)}
+                    onSuccess={(groupId, noteId) => {
+                        setIsLinkModalOpen(false);
+                        onOpenNote?.(groupId, noteId);
+                    }}
+                />
+            )}
         </div>
     );
 };
