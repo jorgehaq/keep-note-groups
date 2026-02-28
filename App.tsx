@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown } from 'lucide-react';
+import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid } from 'lucide-react';
 import { Note, Group, Theme, NoteFont, Reminder } from './types';
 import { AccordionItem } from './components/AccordionItem';
 import { Sidebar } from './components/Sidebar';
@@ -9,6 +9,7 @@ import { TimeTrackerApp } from './components/TimeTrackerApp';
 import { RemindersApp } from './components/RemindersApp';
 import { BrainDumpApp } from './components/BrainDumpApp';
 import { TranslatorApp } from './components/TranslatorApp';
+import { GroupLauncher } from './components/GroupLauncher';
 import { supabase } from './src/lib/supabaseClient';
 import { Auth } from './components/Auth';
 import { Session } from '@supabase/supabase-js';
@@ -42,14 +43,19 @@ function App() {
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('app-theme-preference') as Theme) || 'dark');
   const [noteFont, setNoteFont] = useState<NoteFont>(() => (localStorage.getItem('app-note-font') as NoteFont) || 'sans');
   const [noteFontSize, setNoteFontSize] = useState<string>(() => localStorage.getItem('app-note-font-size') || 'medium');
+  
+  // 🚀 NUEVO: Formatos de Fecha y Hora
+  const [dateFormat, setDateFormat] = useState<string>(() => localStorage.getItem('app-date-format') || 'dd/mm/yyyy');
+  const [timeFormat, setTimeFormat] = useState<string>(() => localStorage.getItem('app-time-format') || '12h');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isLauncherOpen, setIsLauncherOpen] = useState(false);
 
   const [isEditingGroup, setIsEditingGroup] = useState(false);
   const [tempGroupName, setTempGroupName] = useState('');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const mainRef = useRef<HTMLElement>(null);
   const [focusedNoteId, setFocusedNoteId] = useState<string | null>(null);
-  const [overdueRemindersList, setOverdueRemindersList] = useState<{ id: string; title: string }[]>([]);
+  const [overdueRemindersList, setOverdueRemindersList] = useState<{ id: string; title: string; targetId?: string }[]>([]);
 
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
@@ -99,22 +105,61 @@ function App() {
   useEffect(() => {
     if (!session) return;
     const checkReminders = async () => {
-      const { data } = await supabase.from('reminders').select('id, title, due_at').eq('is_completed', false);
+      const { data } = await supabase.from('reminders').select('id, title, targets').eq('status', 'active');
       if (!data) return;
+
       const now = new Date();
       const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      const overdue = data.filter(r => new Date(r.due_at) <= now);
-      const imminent = data.filter(r => {
-        const d = new Date(r.due_at);
-        return d > now && d <= in24h;
+      
+      let overdueGroupCount = 0;
+      let imminentGroupCount = 0;
+      let overdueList: { id: string; title: string; targetId: string }[] = [];
+
+      data.forEach(r => {
+          const targets = Array.isArray(r.targets) ? r.targets : [];
+          let groupHasOverdue = false;
+          let groupHasImminent = false;
+          
+          targets.forEach(t => {
+              if (!t.is_completed) {
+                  const d = new Date(t.due_at);
+                  if (d <= now) {
+                      groupHasOverdue = true;
+                      // Mantenemos la lista individual por si el usuario quiere saber qué sub-tarea falló en el banner superior
+                      overdueList.push({ id: r.id, title: t.title || r.title || 'Recordatorio', targetId: t.id });
+                  } else if (d > now && d <= in24h) {
+                      groupHasImminent = true;
+                  }
+              }
+          });
+
+          // 🚀 MAGIA: Solo sumamos 1 por cada grupo problemático, no importa si tiene 10 sub-tareas vencidas
+          if (groupHasOverdue) overdueGroupCount++;
+          else if (groupHasImminent) imminentGroupCount++;
       });
-      setOverdueRemindersCount(overdue.length);
-      setImminentRemindersCount(imminent.length);
-      setOverdueRemindersList(overdue.map(r => ({ id: r.id, title: r.title })));
+
+      setOverdueRemindersCount(overdueGroupCount);
+      setImminentRemindersCount(imminentGroupCount);
+      setOverdueRemindersList(overdueList);
     };
+
     checkReminders();
     const interval = setInterval(checkReminders, 30000);
-    return () => clearInterval(interval);
+
+    // 🚀 FIX: Optimistic UI Sync. Si nos avisan que un target se atendió, lo borramos de la memoria visual de inmediato
+    const handleAttended = (e: Event) => {
+        const targetId = (e as CustomEvent).detail;
+        setOverdueRemindersList(prev => prev.filter(r => r.targetId !== targetId));
+        // Tras 600ms (tiempo suficiente para que autoSave guarde en BD), forzamos recálculo de los grupos rojos en el Sidebar
+        setTimeout(checkReminders, 600); 
+    };
+
+    window.addEventListener('reminder-attended', handleAttended);
+
+    return () => {
+        clearInterval(interval);
+        window.removeEventListener('reminder-attended', handleAttended);
+    };
   }, [session, setOverdueRemindersCount, setImminentRemindersCount]);
 
   const { setActiveTimersCount } = useUIStore();
@@ -503,29 +548,47 @@ function App() {
       />
 
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+        {/* --- BANNER DE RECORDATORIOS VENCIDOS --- */}
         {overdueRemindersList.length > 0 && (
-          <div className="relative w-full z-50 shrink-0 shadow-md bg-red-500 text-white">
-            <div className="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-2">
-              {overdueRemindersList.map(r => (
-                <div key={r.id} className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
-                    <span className="text-sm font-medium truncate">⚠️ Recordatorio pendiente: {r.title}</span>
+          <>
+            {/* 🚀 Animación de Faro de Luz (Shimmer) de Izquierda a Derecha */}
+            <style>{`
+              @keyframes shimmer-sweep {
+                /* Invertimos de 200% a -200% para forzar el flujo Izquierda -> Derecha */
+                0% { background-position: 200% center; }
+                100% { background-position: -200% center; }
+              }
+              .animate-shimmer-text {
+                background: linear-gradient(90deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.4) 100%);
+                background-size: 200% auto;
+                color: transparent;
+                -webkit-background-clip: text;
+                background-clip: text;
+                animation: shimmer-sweep 2.5s linear infinite;
+              }
+            `}</style>
+            
+            <div className="relative w-full z-50 shrink-0 shadow-md bg-[#ff2800] text-white border-b border-red-900/50">
+              <div className="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-2">
+                {overdueRemindersList.map(r => (
+                  <div key={`${r.id}-${r.targetId}`} className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="shrink-0 text-white drop-shadow-md">⚠️</span>
+                      <span className="text-sm font-black tracking-wide truncate animate-shimmer-text drop-shadow-sm">
+                        Vencido: {r.title}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setGlobalView('reminders')}
+                      className="shrink-0 px-5 py-1.5 bg-white text-[#ff2800] hover:bg-zinc-100 text-xs font-black uppercase tracking-widest rounded-lg transition-transform active:scale-95 shadow-lg"
+                    >
+                      Atender
+                    </button>
                   </div>
-                  <button
-                    onClick={async () => {
-                      setOverdueRemindersList(prev => prev.filter(x => x.id !== r.id));
-                      setOverdueRemindersCount(Math.max(0, overdueRemindersList.length - 1));
-                      await supabase.from('reminders').update({ is_completed: true }).eq('id', r.id);
-                    }}
-                    className="shrink-0 px-3 py-1 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold rounded-lg transition-colors"
-                  >
-                    Marcar como Listo
-                  </button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         {globalView === 'kanban' ? (
@@ -567,124 +630,188 @@ function App() {
           />
         ) :
          globalView === 'timers' ? <TimeTrackerApp session={session!} /> :
-         globalView === 'reminders' ? <RemindersApp session={session!} /> :
+         globalView === 'reminders' ? <RemindersApp session={session!} dateFormat={dateFormat} timeFormat={timeFormat} /> :
          globalView === 'braindump' ? <BrainDumpApp session={session!} noteFont={noteFont} noteFontSize={noteFontSize} /> :
          globalView === 'translator' ? <TranslatorApp session={session!} /> : (
           <>
             <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
-              <div className="max-w-4xl mx-auto px-4 md:px-6 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-
-                <div className="flex items-center gap-2 min-w-0 flex-shrink">
-                  {activeGroup ? (
-                    isEditingGroup ? (
-                      <div className="flex items-center gap-1.5 animate-fadeIn">
-                        <input
-                          type="text"
-                          value={tempGroupName}
-                          onChange={(e) => setTempGroupName(e.target.value)}
-                          className="text-lg font-bold text-zinc-800 dark:text-white bg-white dark:bg-zinc-800 border-2 border-zinc-500 dark:border-zinc-400 rounded-lg px-2 py-0.5 focus:outline-none w-40 md:w-56"
-                          autoFocus
-                          onKeyDown={(e) => { if (e.key === 'Enter') handleSaveGroup(); if (e.key === 'Escape') handleCancelEdit(); }}
-                          onBlur={handleSaveGroup}
-                        />
-                        <button onClick={handleCancelEdit} className="p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors" title="Cancelar"><X size={16} /></button>
+               <div className="flex flex-col xl:flex-row xl:items-center justify-between px-4 md:px-6 py-3 gap-3">
+                 {activeGroup ? (
+                    <>
+                      {/* Lado Izquierdo: Icono, Título Editable y Contador */}
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <button
+                            onClick={() => setIsLauncherOpen(true)}
+                            className="p-2 bg-[#6366F1] hover:bg-indigo-600 rounded-lg text-white shadow-lg shadow-indigo-500/20 shrink-0 transition-colors"
+                            title="Menú de Grupos"
+                          >
+                              <Grid size={20} />
+                          </button>
+                          {isEditingGroup ? (
+                            <input
+                              type="text"
+                              value={tempGroupName}
+                              autoFocus
+                              onChange={(e) => setTempGroupName(e.target.value)}
+                              onBlur={() => {
+                                updateGroupTitle(activeGroup.id, tempGroupName);
+                                setIsEditingGroup(false);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  updateGroupTitle(activeGroup.id, tempGroupName);
+                                  setIsEditingGroup(false);
+                                } else if (e.key === 'Escape') {
+                                  setIsEditingGroup(false);
+                                }
+                              }}
+                              className="flex-1 bg-transparent text-xl md:text-2xl font-bold text-zinc-800 dark:text-zinc-100 outline-none px-2 w-full min-w-[150px] border-b-2 border-indigo-500"
+                              placeholder="Nombre del grupo de notas ..."
+                            />
+                          ) : (
+                            <span 
+                              onDoubleClick={() => {
+                                setTempGroupName(activeGroup.title);
+                                setIsEditingGroup(true);
+                              }}
+                              className={`flex-1 text-xl md:text-2xl font-bold px-2 w-full min-w-[150px] cursor-text truncate ${activeGroup.title ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-400 italic'}`}
+                              title="Doble clic para editar"
+                            >
+                              {activeGroup.title || "Nombre del grupo de notas ..."}
+                            </span>
+                          )}
+                          <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-full shrink-0">
+                              {activeGroup.notes.length} notas
+                          </span>
                       </div>
-                    ) : (
-                      <div className="min-w-0">
-                        <h1 className="text-lg font-bold text-zinc-800 dark:text-white truncate cursor-pointer hover:underline decoration-zinc-400 decoration-dashed underline-offset-4 transition-colors" onDoubleClick={handleStartEdit} title="Doble clic para editar">
-                          {activeGroup.title}
-                        </h1>
-                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">{activeGroup.notes.length || 0} Notas</p>
+
+                      {/* Lado Derecho: Opciones de Grupo y Botón Nueva Nota */}
+                      <div className="flex items-center gap-2 shrink-0 pb-1 md:pb-0">
+                          
+                          {/* Controles de Grupo (En una mini-cápsula gris) */}
+                          <div className="flex items-center gap-1 bg-zinc-50 dark:bg-zinc-950 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800 shrink-0">
+                              
+                              {/* Buscador */}
+                              <div className="relative flex items-center transition-all duration-300 mr-2">
+                                <Search size={15} className={`absolute left-2 pointer-events-none transition-colors ${currentSearchQuery.trim() ? 'text-amber-600 dark:text-amber-500 font-bold' : 'text-zinc-400'}`} />
+                                <input
+                                  type="text"
+                                  placeholder={`Buscar...`}
+                                  value={currentSearchQuery}
+                                  onChange={(e) => {
+                                    if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: e.target.value }));
+                                    setSearchExemptNoteIds(new Set());
+                                    if (focusedNoteId) setFocusedNoteId(null);
+                                  }}
+                                  className={`w-32 md:w-32 lg:w-48 pl-7 pr-8 py-1.5 text-xs rounded-lg border transition-all focus:outline-none ${currentSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50' : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'}`}
+                                />
+                                {currentSearchQuery.trim() && (
+                                  <button onClick={() => { if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: '' })); setSearchExemptNoteIds(new Set()); }} className="absolute right-2 p-0.5 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 bg-amber-200/50 dark:bg-amber-800/50 hover:bg-amber-300/50 dark:hover:bg-amber-700/50 rounded-full transition-colors" title="Limpiar búsqueda">
+                                    <X size={12} />
+                                  </button>
+                                )}
+                              </div>
+
+                              <div className="relative" ref={sortMenuRef}>
+                                <button 
+                                    onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} 
+                                    className="p-2 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg hover:bg-white dark:hover:bg-zinc-800 transition-colors"
+                                    title="Ordenar notas"
+                                >
+                                    <ArrowUpDown size={18} />
+                                </button>
+                                
+                                {isSortMenuOpen && (
+                                  <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-800 shadow-xl rounded-xl border border-zinc-200 dark:border-zinc-700 p-1.5 flex flex-col gap-0.5 min-w-[200px] animate-fadeIn">
+                                    <div className="px-2 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1 border-b border-zinc-100 dark:border-zinc-700">Ordenar por</div>
+                                    
+                                    <button onClick={() => applyManualSort('date-desc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'date-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                      <Calendar size={14} /> Fecha (Recientes)
+                                      {noteSortMode === 'date-desc' && <Check size={14} className="ml-auto" />}
+                                    </button>
+                                    
+                                    <button onClick={() => applyManualSort('date-asc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'date-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                      <Calendar size={14} /> Fecha (Antiguos)
+                                      {noteSortMode === 'date-asc' && <Check size={14} className="ml-auto" />}
+                                    </button>
+                                    
+                                    <button onClick={() => applyManualSort('alpha-asc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'alpha-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                      <Type size={14} /> Nombre (A-Z)
+                                      {noteSortMode === 'alpha-asc' && <Check size={14} className="ml-auto" />}
+                                    </button>
+                                    
+                                    <button onClick={() => applyManualSort('alpha-desc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'alpha-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                      <Type size={14} /> Nombre (Z-A)
+                                      {noteSortMode === 'alpha-desc' && <Check size={14} className="ml-auto" />}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+
+                              <button 
+                                  onClick={downloadGroupAsMarkdown} 
+                                  className="p-2 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg hover:bg-white dark:hover:bg-zinc-800 transition-colors"
+                                  title="Exportar Grupo"
+                              >
+                                  <Download size={18} />
+                              </button>
+                              <button 
+                                  onClick={() => deleteGroup(activeGroup.id)} 
+                                  className="p-2 text-zinc-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                  title="Eliminar Grupo"
+                              >
+                                  <Trash2 size={18} />
+                              </button>
+                          </div>
+
+                          {/* Botón Principal (Nueva Nota) */}
+                          <button 
+                              onClick={addNote} 
+                              className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
+                          >
+                              <Plus size={18} /> 
+                              <span className="text-sm font-bold hidden sm:inline pr-1">Nueva Nota</span>
+                          </button>
                       </div>
-                    )
-                  ) : <h1 className="text-lg font-bold text-zinc-800 dark:text-white">Selecciona un Grupo</h1>}
-                </div>
-
-                {activeGroup && (
-                  <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
-                    <div className="relative flex items-center transition-all duration-300">
-                      <Search size={15} className={`absolute left-2 pointer-events-none transition-colors ${currentSearchQuery.trim() ? 'text-amber-600 dark:text-amber-500 font-bold' : 'text-zinc-400'}`} />
-                      <input
-                        type="text"
-                        placeholder={activeGroup ? `Buscar en ${activeGroup.title}...` : "Buscar..."}
-                        value={currentSearchQuery}
-                        onChange={(e) => {
-                          if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: e.target.value }));
-                          setSearchExemptNoteIds(new Set());
-                          if (focusedNoteId) setFocusedNoteId(null);
-                        }}
-                        className={`w-full sm:w-48 pl-7 pr-8 py-1.5 text-xs rounded-lg border transition-all focus:outline-none ${currentSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50 sm:w-56' : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'}`}
-                      />
-                      {currentSearchQuery.trim() && (
-                        <button onClick={() => { if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: '' })); setSearchExemptNoteIds(new Set()); }} className="absolute right-2 p-0.5 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 bg-amber-200/50 dark:bg-amber-800/50 hover:bg-amber-300/50 dark:hover:bg-amber-700/50 rounded-full transition-colors" title="Limpiar búsqueda">
-                          <X size={12} />
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="hidden sm:block w-px h-5 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
-
-                    <div className="relative" ref={sortMenuRef}>
-                      <button
-                        onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
-                        className={`p-1.5 rounded-lg transition-all flex items-center gap-1.5 ${isSortMenuOpen ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
-                        title="Ordenar Notas"
-                      >
-                        <ArrowUpDown size={15} />
-                      </button>
-
-                      {isSortMenuOpen && (
-                        <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-800 shadow-xl rounded-xl border border-zinc-200 dark:border-zinc-700 p-1.5 flex flex-col gap-0.5 min-w-[200px] animate-fadeIn">
-                          <div className="px-2 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1 border-b border-zinc-100 dark:border-zinc-700">Ordenar por</div>
-                          
-                          <button onClick={() => applyManualSort('date-desc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'date-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
-                            <Calendar size={14} /> Fecha (Recientes)
-                            {noteSortMode === 'date-desc' && <Check size={14} className="ml-auto" />}
-                          </button>
-                          
-                          <button onClick={() => applyManualSort('date-asc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'date-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
-                            <Calendar size={14} /> Fecha (Antiguos)
-                            {noteSortMode === 'date-asc' && <Check size={14} className="ml-auto" />}
-                          </button>
-                          
-                          <button onClick={() => applyManualSort('alpha-asc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'alpha-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
-                            <Type size={14} /> Nombre (A-Z)
-                            {noteSortMode === 'alpha-asc' && <Check size={14} className="ml-auto" />}
-                          </button>
-                          
-                          <button onClick={() => applyManualSort('alpha-desc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'alpha-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
-                            <Type size={14} /> Nombre (Z-A)
-                            {noteSortMode === 'alpha-desc' && <Check size={14} className="ml-auto" />}
-                          </button>
+                    </>
+                 ) : (
+                    <>
+                      <h1 className="text-xl font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-3">
+                        <div className="p-2 bg-indigo-500 rounded-lg text-white shadow-lg shadow-indigo-500/20">
+                          <StickyNote size={20} />
                         </div>
-                      )}
-                    </div>
-
-                    <div className="hidden sm:block w-px h-5 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
-
-                    {!isEditingGroup && (
-                      <button onClick={downloadGroupAsMarkdown} className="p-1.5 text-zinc-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors" title="Exportar notas a Markdown">
-                        <Download size={15} />
-                      </button>
-                    )}
-                    {!isEditingGroup && (
-                      <button onClick={() => deleteGroup(activeGroup.id)} className="p-1.5 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Eliminar Grupo">
-                        <Trash2 size={15} />
-                      </button>
-                    )}
-                    <button onClick={addNote} className="w-8 h-8 flex items-center justify-center bg-[#1F3760] hover:bg-[#152643] text-white rounded-lg transition-all shadow-md hover:shadow-lg active:scale-95 focus:ring-2 focus:ring-[#1F3760]/50" title="Agregar Nota">
-                      <Plus size={18} />
-                    </button>
-                  </div>
-                )}
-              </div>
+                        Grupos de notas
+                      </h1>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={addGroup}
+                          className="bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 p-2 md:px-4 md:py-2 rounded-xl transition-all flex items-center gap-2 shrink-0 border border-zinc-200 dark:border-zinc-700 shadow-sm"
+                          title="Crear Nuevo Grupo"
+                        >
+                          <Plus size={18} />
+                          <span className="text-sm font-bold hidden sm:inline pr-1">Nuevo Grupo</span>
+                        </button>
+                        <button
+                          onClick={() => setIsLauncherOpen(true)}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 md:px-4 md:py-2 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
+                          title="Abrir Menú de Grupos"
+                        >
+                          <Grid size={18} />
+                          <span className="text-sm font-bold hidden sm:inline pr-1">Abrir Menú</span>
+                        </button>
+                      </div>
+                    </>
+                 )}
+               </div>
             </div>
 
             <main ref={mainRef} className="flex-1 overflow-y-auto hidden-scrollbar p-4 md:p-8">
               <div className="max-w-4xl mx-auto pb-20">
                 {activeGroup ? (
-                  <div className="space-y-4">
-                    {filteredNotes.length === 0 ? (
+                  <>
+
+                    <div className="space-y-4">
+                      {filteredNotes.length === 0 ? (
                       <div className="text-center py-20 opacity-60">
                         <div className="inline-block p-4 rounded-full bg-zinc-200 dark:bg-zinc-800 mb-4">
                           <Search size={32} className="text-zinc-500 dark:text-zinc-400" />
@@ -710,14 +837,10 @@ function App() {
                       })
                     )}
                   </div>
+                  </>
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-zinc-400">
-                    {groups.length === 0 ? (
-                      <div className="text-center">
-                        <p className="mb-4">No tienes grupos aún.</p>
-                        <button onClick={addGroup} className="text-zinc-600 dark:text-zinc-400 hover:underline hover:text-zinc-900 dark:hover:text-white">Crear el primer grupo</button>
-                      </div>
-                    ) : <p>Selecciona un grupo desde la barra lateral.</p>}
+                        <p className="mb-4 text-center">Selecciona un grupo desde la barra lateral.</p>
                   </div>
                 )}
               </div>
@@ -735,6 +858,19 @@ function App() {
         onNoteFontChange={(f: NoteFont) => { setNoteFont(f); localStorage.setItem('app-note-font', f); }}
         noteFontSize={noteFontSize}
         onNoteFontSizeChange={(s: string) => { setNoteFontSize(s); localStorage.setItem('app-note-font-size', s); }}
+        dateFormat={dateFormat}
+        onDateFormatChange={(f: string) => { setDateFormat(f); localStorage.setItem('app-date-format', f); }}
+        timeFormat={timeFormat}
+        onTimeFormatChange={(f: string) => { setTimeFormat(f); localStorage.setItem('app-time-format', f); }}
+      />
+      <GroupLauncher
+        groups={groups}
+        isOpen={isLauncherOpen}
+        onClose={() => setIsLauncherOpen(false)}
+        onTogglePin={(id, status) => {
+           setGroups(prev => prev.map(g => g.id === id ? { ...g, is_pinned: !status } : g));
+           supabase.from('groups').update({ is_pinned: !status }).eq('id', id).then();
+        }}
       />
     </div>
   );

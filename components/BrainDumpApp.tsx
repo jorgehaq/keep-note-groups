@@ -1,55 +1,55 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Square, Send, Zap, Trash2, Inbox, Archive, History, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
-import { KanbanSemaphore } from './KanbanSemaphore';
-// IMPORTAMOS EL NUEVO EDITOR INTELIGENTE
 import { SmartNotesEditor } from '../src/components/editor/SmartNotesEditor';
 
-type DumpStatus = 'main' | 'stash' | 'history';
+// --- TYPES ---
+type BrainDumpStatus = 'main' | 'active' | 'history';
 
 interface BrainDump {
     id: string;
     title?: string;
     content: string;
-    status: DumpStatus;
+    status: BrainDumpStatus;
+    user_id: string;
     created_at: string;
-    updated_at?: string;
+    updated_at: string;
 }
 
-interface BrainDumpAppProps {
-    session: Session;
-    noteFont?: string;
-    noteFontSize?: string;
-}
+const formatCleanDate = (isoString: string) => {
+    const d = new Date(isoString);
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const year = d.getFullYear();
+    let hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? ' PM' : ' AM';
+    hours = hours % 12 || 12;
+    return `${day}/${month}/${year}, ${hours.toString().padStart(2, '0')}:${minutes}${ampm}`;
+};
 
-export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session, noteFont = 'sans', noteFontSize = 'medium' }) => {
+// --- PARSER DE MARKDOWN PARA VISTA PREVIA (OBSIDIAN + CUSTOM) ---
+const parseMarkdownPreview = (text: string) => {
+    if (!text) return '';
+    return text
+        .replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/==([^=]+)==/g, '<mark class="bg-yellow-200/60 dark:bg-yellow-500/40 text-inherit rounded-sm px-1 font-medium">$1</mark>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>').replace(/_([^_]+)_/g, '<em>$1</em>')
+        .replace(/~~([^~]+)~~/g, '<del class="opacity-70">$1</del>')
+        .replace(/^&gt;\s+(.*)$/gm, '<span class="border-l-2 border-indigo-400 dark:border-indigo-600 pl-2 ml-1 italic opacity-90 block my-1">$1</span>')
+        .replace(/\[\[tr:([^|]+)\|([^\]]+)\]\]/g, '<span class="text-indigo-600 dark:text-indigo-400 font-bold border-b border-indigo-400/50 border-dashed cursor-help" title="$1">$2</span>')
+        .replace(/\n/g, '<span class="mx-1 opacity-30 text-[10px]">&para;</span> ');
+};
+
+export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteFontSize?: string }> = ({ session, noteFont, noteFontSize }) => {
     const [dumps, setDumps] = useState<BrainDump[]>([]);
     const [loading, setLoading] = useState(true);
-    const [timeLeft, setTimeLeft] = useState(300);
-    const [isTimerRunning, setIsTimerRunning] = useState(false);
-    const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-
-    // Ref para el debounce de la base de datos
-    const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
     
-    // MAGIA ANTI-LAG: Ref para mantener siempre la última versión del estado 
-    // sin necesidad de leer el DOM con document.getElementById
-    const dumpsRef = useRef(dumps);
-    useEffect(() => { dumpsRef.current = dumps; }, [dumps]);
-
-    const renderTimestamps = (created: string, updated?: string) => {
-        const formatOpts: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' };
-        const cDate = new Date(created).toLocaleString('es-ES', formatOpts);
-        const uDate = updated ? new Date(updated).toLocaleString('es-ES', formatOpts) : cDate;
-
-        return (
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-[9px] font-mono text-zinc-400">
-                <span>🌱 Creado: {cDate}</span>
-                {updated && updated !== created && <span>✏️ Editado: {uDate}</span>}
-            </div>
-        );
-    };
+    // Memoria para expansiones en el Archivo
+    const [expandedHistoryIds, setExpandedHistoryIds] = useState<Set<string>>(new Set());
+    const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
 
     const fetchDumps = useCallback(async () => {
         setLoading(true);
@@ -62,434 +62,179 @@ export const BrainDumpApp: React.FC<BrainDumpAppProps> = ({ session, noteFont = 
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-
-            let currentDumps = data as BrainDump[];
-
-            // Regla de Oro: Siempre debe existir al menos un volcado 'main'
-            const mainExists = currentDumps.some(d => d.status === 'main');
-            if (!mainExists) {
-                const { data: newMain, error: createError } = await supabase
-                    .from('brain_dumps')
-                    .insert([{
-                        content: '',
-                        user_id: session.user.id,
-                        status: 'main'
-                    }])
-                    .select()
-                    .single();
-
-                if (createError) throw createError;
-                if (newMain) {
-                    currentDumps = [newMain as BrainDump, ...currentDumps];
-                }
-            }
-            setDumps(currentDumps);
-        } catch (err: any) {
-            console.error('Error fetching dumps:', err.message);
+            setDumps(data as BrainDump[]);
+        } catch (error: any) {
+            console.error("Error cargando Pizarrón:", error.message);
         } finally {
             setLoading(false);
         }
     }, [session.user.id]);
 
-    useEffect(() => {
-        fetchDumps();
-    }, [fetchDumps]);
+    useEffect(() => { fetchDumps(); }, [fetchDumps]);
 
-    useEffect(() => {
-        let timer: NodeJS.Timeout;
-        if (isTimerRunning && timeLeft > 0) {
-            timer = setInterval(() => {
-                setTimeLeft((prev) => prev - 1);
-            }, 1000);
-        } else if (timeLeft === 0) {
-            const main = dumps.find(d => d.status === 'main');
-            if (main) commitToHistory(main.id);
-        }
-        return () => clearInterval(timer);
-    }, [isTimerRunning, timeLeft, dumps]);
-
-    const autoSave = (id: string, updates: { content?: string; title?: string }) => {
-        const now = new Date().toISOString();
-        // 1. Actualizamos el estado local de React
-        setDumps(prev => prev.map(d => d.id === id ? { ...d, ...updates, updated_at: now } : d));
-        setSyncStatus('saving');
-
-        // 2. Debounce a la Base de Datos (400ms)
-        if (saveTimeoutRef.current[id]) {
-            clearTimeout(saveTimeoutRef.current[id]);
-        }
-
+    const autoSave = (id: string, updates: Partial<BrainDump>) => {
+        setDumps(prev => prev.map(d => d.id === id ? { ...d, ...updates, updated_at: new Date().toISOString() } : d));
+        if (saveTimeoutRef.current[id]) clearTimeout(saveTimeoutRef.current[id]);
         saveTimeoutRef.current[id] = setTimeout(async () => {
-            try {
-                const { error } = await supabase
-                    .from('brain_dumps')
-                    .update({ ...updates, updated_at: now })
-                    .eq('id', id);
-                if (error) throw error;
-                setSyncStatus('saved');
-                setTimeout(() => setSyncStatus(current => current === 'saved' ? 'idle' : current), 2000);
-            } catch (err: any) {
-                console.error('Error en autoSave:', err.message);
-            } finally {
-                delete saveTimeoutRef.current[id];
-            }
-        }, 400);
+            await supabase.from('brain_dumps').update(updates).eq('id', id);
+        }, 500);
     };
 
-    const stashMain = () => {
-        // Usamos un pequeño timeout para darle tiempo al editor de hacer su 'blur' y pasar el texto actualizado a React
-        setTimeout(async () => {
-            const main = dumpsRef.current.find(d => d.status === 'main');
-            if (!main || !main.content.trim()) return;
-
-            if (saveTimeoutRef.current[main.id]) {
-                clearTimeout(saveTimeoutRef.current[main.id]);
-                delete saveTimeoutRef.current[main.id];
-            }
-
-            const now = new Date().toISOString();
-
-            try {
-                const { error } = await supabase
-                    .from('brain_dumps')
-                    .update({
-                        status: 'stash',
-                        content: main.content,
-                        updated_at: now
-                    })
-                    .eq('id', main.id);
-
-                if (error) throw error;
-                await fetchDumps();
-            } catch (err: any) {
-                console.error('Error in stashMain:', err.message);
-                alert('Error al guardar borrador: ' + err.message);
-            }
-        }, 150);
+    const createNewDraft = async () => {
+        const { data: newMain } = await supabase.from('brain_dumps')
+            .insert([{ title: '', content: '', status: 'main', user_id: session.user.id }])
+            .select().single();
+        if (newMain) setDumps(prev => [newMain as BrainDump, ...prev]);
     };
 
-    const commitToHistory = (id: string) => {
-        setTimeout(async () => {
-            const dump = dumpsRef.current.find(d => d.id === id);
-            if (!dump || !dump.content.trim()) return;
-
-            if (saveTimeoutRef.current[id]) {
-                clearTimeout(saveTimeoutRef.current[id]);
-                delete saveTimeoutRef.current[id];
-            }
-
-            const now = new Date().toISOString();
-
-            try {
-                const { error } = await supabase
-                    .from('brain_dumps')
-                    .update({
-                        status: 'history',
-                        content: dump.content,
-                        updated_at: now
-                    })
-                    .eq('id', id);
-
-                if (error) throw error;
-
-                if (dump.status === 'main') {
-                    setIsTimerRunning(false);
-                    setTimeLeft(300);
-                }
-                await fetchDumps();
-            } catch (err: any) {
-                console.error('Error in commitToHistory:', err.message);
-                alert('Error al archivar sesión: ' + err.message);
-            }
-        }, 150);
+    const changeStatus = async (id: string, newStatus: BrainDumpStatus) => {
+        setDumps(prev => prev.map(d => d.id === id ? { ...d, status: newStatus } : d));
+        await supabase.from('brain_dumps').update({ status: newStatus }).eq('id', id);
     };
 
-    const reviveToMain = (id: string) => {
-        setTimeout(async () => {
-            const currentDumps = dumpsRef.current;
-            const main = currentDumps.find(d => d.status === 'main');
-
-            try {
-                // Si la pizarra principal actual tiene texto, la convertimos en stash primero para no perderla
-                if (main) {
-                    if (main.content.trim()) {
-                        await supabase
-                            .from('brain_dumps')
-                            .update({ status: 'stash', content: main.content, updated_at: new Date().toISOString() })
-                            .eq('id', main.id);
-                    } else {
-                        await supabase.from('brain_dumps').delete().eq('id', main.id);
-                    }
-                }
-
-                // Revivimos el borrador o historial a principal
-                const { error } = await supabase
-                    .from('brain_dumps')
-                    .update({ status: 'main', updated_at: new Date().toISOString() })
-                    .eq('id', id);
-
-                if (error) throw error;
-                await fetchDumps();
-            } catch (err: any) {
-                console.error('Error in reviveToMain:', err.message);
-                alert('Error al revivir sesión: ' + err.message);
-            }
-        }, 150);
-    };
-
-    const handleDelete = async (id: string) => {
-        const originalDumps = [...dumps];
+    const deleteDump = async (id: string) => {
+        if (!window.confirm('¿Eliminar permanentemente este pizarrón?')) return;
         setDumps(prev => prev.filter(d => d.id !== id));
-
-        try {
-            const { error } = await supabase.from('brain_dumps').delete().eq('id', id);
-            if (error) throw error;
-        } catch (err: any) {
-            console.error('Error in handleDelete:', err.message);
-            alert('Error al eliminar borrador: ' + err.message);
-            setDumps(originalDumps);
-        }
+        await supabase.from('brain_dumps').delete().eq('id', id);
     };
 
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
+    const toggleExpandHistory = (id: string) => setExpandedHistoryIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
-    const mainDump = dumps.find(d => d.status === 'main');
-    const stashes = dumps.filter(d => d.status === 'stash');
-    const history = dumps.filter(d => d.status === 'history');
+    if (loading) return <div className="p-10 text-center animate-pulse text-zinc-500">Cargando Pizarrón...</div>;
+
+    // 🚀 FIX: Fusión lógica. Todo lo que no está en el archivo, es un Pizarrón activo.
+    const pizarrones = dumps.filter(d => d.status !== 'history');
+    const archivo = dumps.filter(d => d.status === 'history');
 
     return (
-        <div className="flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 px-4 py-6 md:p-8 overflow-hidden animate-fadeIn">
-            <div className="max-w-4xl mx-auto w-full flex flex-col h-full overflow-hidden">
-
-                {/* Header View */}
-                <div className="flex items-center gap-2 mb-6 shrink-0">
-                    <div className="w-10 h-10 bg-[#1F3760] rounded-xl flex items-center justify-center shadow-lg shadow-[#1F3760]/20">
-                        <Zap className="text-amber-400 fill-current" size={20} />
-                    </div>
-                    <div>
-                        <h2 className="text-xl font-bold text-zinc-800 dark:text-zinc-100 italic leading-tight">El Rayo</h2>
-                        <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Patio de Recreo mental</p>
-                    </div>
-                    <div className="ml-auto flex items-center gap-4">
-                        {syncStatus === 'saving' && <span className="text-[10px] text-amber-500 font-bold animate-pulse">Guardando...</span>}
-                        {syncStatus === 'saved' && <span className="text-[10px] text-emerald-500 font-bold">Guardado</span>}
-                    </div>
+        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
+            <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
+                <div className="flex items-center justify-between px-4 md:px-6 py-4">
+                    <h1 className="text-xl font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-3">
+                        <div className="p-2 bg-[#FFD700] rounded-lg text-amber-900 shadow-lg shadow-amber-500/20">
+                            <PenTool size={20} />
+                        </div>
+                        Pizarrón
+                    </h1>
+                    <button onClick={createNewDraft} className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-xl shadow-lg transition-colors flex items-center gap-2">
+                        <Plus size={20} /> <span className="text-sm font-bold hidden sm:inline pr-2">Nuevo Pizarrón</span>
+                    </button>
                 </div>
+            </div>
 
-                <div className="flex-1 overflow-y-auto hidden-scrollbar pr-1 space-y-10 pb-20">
+            <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 hidden-scrollbar">
+                <div className="max-w-4xl mx-auto space-y-12 pb-20">
+                    
+                    {/* 1. PIZARRONES (PERSISTENTES) */}
+                    {pizarrones.length > 0 && (
+                        <div className="space-y-6 animate-fadeIn">
+                            {pizarrones.map(pizarron => {
+                                const createdMs = new Date(pizarron.created_at).getTime();
+                                const updatedMs = new Date(pizarron.updated_at).getTime();
+                                const isEdited = (updatedMs - createdMs) > 60000;
 
-                    {/* Level 1: PIZARRA PRINCIPAL */}
-                    {mainDump && (
-                        <div className="space-y-4 animate-fadeIn">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
-                                    <Sparkles size={14} className="text-[#1F3760]" />
-                                    <span className="text-xs font-bold uppercase tracking-wider">Pizarra Principal</span>
-                                </div>
-                                {mainDump.content.trim() !== '' && renderTimestamps(mainDump.created_at, mainDump.updated_at)}
-                            </div>
-
-                            <input
-                                type="text"
-                                value={mainDump.title || ''}
-                                onChange={(e) => autoSave(mainDump.id, { title: e.target.value })}
-                                placeholder="Título del volcado (opcional)..."
-                                className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-zinc-100 placeholder-zinc-300 dark:placeholder-zinc-700 border-none outline-none mb-3 px-6"
-                            />
-
-                            {/* REEMPLAZO POR EL EDITOR INTELIGENTE */}
-                            <div className="bg-white dark:bg-zinc-900 shadow-xl shadow-zinc-200/50 dark:shadow-none rounded-2xl p-6 w-full min-h-[16rem] border border-transparent focus-within:border-[#1F3760]/30 transition-all overflow-visible flex flex-col cursor-text">
-                                <SmartNotesEditor
-                                    noteId={mainDump.id}
-                                    initialContent={mainDump.content}
-                                    onChange={(newContent) => autoSave(mainDump.id, { content: newContent })}
-                                    noteFont={noteFont}
-                                    noteFontSize={noteFontSize}
-                                />
-                                {mainDump.content.trim() === '' && (
-                                    <div className="text-zinc-400 mt-2 pointer-events-none text-sm absolute">Escribe tu volcado mental aquí... se guarda solo.</div>
-                                )}
-                            </div>
-
-                            <div className="flex items-center justify-between gap-3 bg-white/50 dark:bg-zinc-900/50 p-2 rounded-2xl border border-zinc-100 dark:border-zinc-800/50">
-                                <button
-                                    onClick={() => setIsTimerRunning(!isTimerRunning)}
-                                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-all ${isTimerRunning
-                                        ? 'bg-red-500 text-white shadow-lg shadow-red-500/20'
-                                        : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-700'
-                                        }`}
-                                >
-                                    {isTimerRunning ? (
-                                        <>
-                                            <Square size={14} className="fill-current" />
-                                            <span className="font-mono">{formatTime(timeLeft)}</span>
-                                            <span>Detener</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Play size={14} className="fill-current" />
-                                            <span>Modo 5 Minutos</span>
-                                        </>
-                                    )}
-                                </button>
-
-                                <div className="flex items-center gap-2">
-                                    <div className="flex items-center justify-center p-2.5 bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 mr-2 hover:border-indigo-500/50 transition-colors">
-                                        <KanbanSemaphore sourceId={mainDump.id} sourceTitle={mainDump.title || 'Volcado principal'} />
+                                return (
+                                <div key={pizarron.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-800 transition-all focus-within:ring-2 focus-within:ring-indigo-500/50 flex flex-col">
+                                    
+                                    {/* Título */}
+                                    <div className="flex items-center justify-between pr-4">
+                                        <input 
+                                            type="text" 
+                                            placeholder="Título del pizarrón (opcional)" 
+                                            value={pizarron.title || ''} 
+                                            onChange={e => autoSave(pizarron.id, { title: e.target.value })} 
+                                            className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-zinc-100 p-4 pb-3 outline-none placeholder-zinc-400" 
+                                        />
                                     </div>
-
-                                    <button
-                                        onClick={stashMain}
-                                        disabled={!mainDump.content.trim()}
-                                        className="flex items-center gap-2 bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 px-4 py-2.5 rounded-xl font-bold text-xs hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-all disabled:opacity-30"
-                                        title="Guardar como Borrador"
-                                    >
-                                        <Inbox size={14} />
-                                        <span>Stash</span>
-                                    </button>
-
-                                    <button
-                                        onClick={() => commitToHistory(mainDump.id)}
-                                        disabled={!mainDump.content.trim()}
-                                        className="flex items-center gap-2 bg-[#1F3760] text-white px-5 py-2.5 rounded-xl font-bold text-xs hover:bg-[#152643] transition-all disabled:opacity-30 shadow-lg shadow-[#1F3760]/20"
-                                    >
-                                        <Send size={14} />
-                                        <span>Soltar Juguete</span>
-                                    </button>
+                                    <div className="h-px bg-zinc-100 dark:bg-zinc-800/80 mx-4 mb-2" />
+                                    
+                                    {/* Editor de Notas */}
+                                    <div className="mx-4 mb-4 p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl cursor-text min-h-[150px]">
+                                        <SmartNotesEditor noteId={pizarron.id} initialContent={pizarron.content} onChange={c => autoSave(pizarron.id, { content: c })} noteFont={noteFont} noteFontSize={noteFontSize} />
+                                    </div>
+                                    
+                                    {/* Footer: Fechas y Acciones */}
+                                    <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800">
+                                        <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
+                                            <span>Creado: {formatCleanDate(pizarron.created_at)}</span>
+                                            {isEdited && (
+                                                <>
+                                                    <span className="opacity-50">|</span>
+                                                    <span>Editado: {formatCleanDate(pizarron.updated_at)}</span>
+                                                </>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <button onClick={() => deleteDump(pizarron.id)} className="text-xs font-bold text-zinc-400 hover:text-red-600 px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-2" title="Eliminar permanentemente">
+                                                <Trash2 size={14} /> Eliminar
+                                            </button>
+                                            <button onClick={() => changeStatus(pizarron.id, 'history')} className="text-xs font-bold text-amber-600 hover:text-amber-700 dark:text-amber-500 dark:hover:text-amber-400 px-3 py-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors flex items-center gap-2" title="Archivar pizarrón">
+                                                <ArchiveIcon size={14} /> Archivar
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            )})}
                         </div>
                     )}
 
-                    {/* Level 2: STASHES */}
-                    {stashes.length > 0 && (
-                        <div className="space-y-4 animate-fadeIn">
-                            <div className="flex items-center gap-2 text-zinc-400">
-                                <Inbox size={14} />
-                                <span className="text-xs font-bold uppercase tracking-wider">Borradores Activos ({stashes.length})</span>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {stashes.map(stash => (
-                                    <div key={stash.id} className="group bg-white dark:bg-zinc-900 p-5 rounded-2xl transition-all duration-500 ease-in-out border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5 flex flex-col">
-
-                                        {/* Header Stash */}
-                                        <div className="flex justify-between items-start mb-3">
-                                            <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-tighter bg-zinc-50 dark:bg-zinc-800 px-2 py-0.5 rounded-md">
-                                                <Inbox size={10} /> Borrador
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <KanbanSemaphore sourceId={stash.id} sourceTitle={stash.title || 'Borrador sin título'} />
-                                                <button
-                                                    onClick={() => handleDelete(stash.id)}
-                                                    className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                                    title="Eliminar borrador"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {stash.title && <h4 className="font-bold text-sm text-zinc-800 dark:text-zinc-200 mb-2">{stash.title}</h4>}
-                                        
-                                        {/* EDITOR PARA LOS BORRADORES */}
-                                        <div className="w-full max-h-48 md:max-h-60 overflow-y-auto hidden-scrollbar cursor-text mt-2 mb-4 flex-1">
-                                            <SmartNotesEditor
-                                                noteId={stash.id}
-                                                initialContent={stash.content}
-                                                onChange={(newContent) => autoSave(stash.id, { content: newContent })}
-                                                noteFont={noteFont}
-                                                noteFontSize={noteFontSize}
-                                            />
-                                        </div>
-
-                                        {/* Footer Stash */}
-                                        <div className="flex items-center justify-between mt-auto pt-3 border-t border-zinc-100 dark:border-zinc-800/50 w-full">
-                                            {renderTimestamps(stash.created_at, stash.updated_at)}
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => reviveToMain(stash.id)}
-                                                    className="flex items-center gap-1.5 bg-[#1F3760]/10 text-[#1F3760] dark:bg-[#5c7eb1]/20 dark:text-[#5c7eb1] px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase hover:bg-[#1F3760] hover:text-white dark:hover:bg-[#5c7eb1] dark:hover:text-zinc-900 transition-colors"
-                                                    title="Mover a la pizarra principal"
-                                                >
-                                                    <Zap size={10} />
-                                                    Revivir
-                                                </button>
-                                                <button
-                                                    onClick={() => commitToHistory(stash.id)}
-                                                    className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-                                                    title="Archivar"
-                                                >
-                                                    <Send size={10} />
-                                                    Archivar
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Level 3: HISTORIAL (Modo Lectura Crudo, sin editor para preservar estado) */}
-                    <div className="space-y-4 animate-fadeIn">
+                    {/* 2. ARCHIVO (HISTORIAL) */}
+                    <div className="space-y-4 pt-4 border-t border-zinc-200 dark:border-zinc-800/50 opacity-70">
                         <div className="flex items-center gap-2 text-zinc-400">
-                            <History size={14} />
-                            <span className="text-xs font-bold uppercase tracking-wider">Historial</span>
+                            <ArchiveIcon size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Archivo ({archivo.length})</span>
                         </div>
-                        {history.length === 0 ? (
-                            <div className="py-12 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl flex flex-col items-center justify-center text-zinc-400">
-                                <Archive size={24} className="mb-2 opacity-20" />
-                                <p className="text-[11px] font-medium uppercase tracking-tighter">Sin registros archivados</p>
-                            </div>
+                        {archivo.length === 0 ? (
+                            <div className="text-sm text-center text-zinc-400 p-4">El archivo está limpio.</div>
                         ) : (
-                            <div className="space-y-4">
-                                {history.map((h) => (
-                                    <div
-                                        key={h.id}
-                                        className="group bg-white dark:bg-zinc-900 p-5 rounded-2xl transition-all duration-500 ease-in-out border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5"
-                                    >
-                                        {/* Header Historial */}
-                                        <div className="flex justify-between items-start mb-3">
-                                            <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-tighter bg-zinc-50 dark:bg-zinc-800 px-2 py-0.5 rounded-md">
-                                                <History size={10} /> Archivado
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <KanbanSemaphore sourceId={h.id} sourceTitle={h.title || 'Volcado archivado'} />
-                                                <button
-                                                    onClick={() => reviveToMain(h.id)}
-                                                    className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
-                                                    title="Revivir a la pizarra"
-                                                >
-                                                    <Zap size={16} />
+                            <div className="space-y-2">
+                                {archivo.map(a => {
+                                    const isExpanded = expandedHistoryIds.has(a.id);
+                                    const createdMs = new Date(a.created_at).getTime();
+                                    const updatedMs = new Date(a.updated_at).getTime();
+                                    const isEdited = (updatedMs - createdMs) > 60000;
+                                    
+                                    return (
+                                    <div key={a.id} className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-100 dark:border-zinc-800 transition-colors">
+                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                            
+                                            {/* Título y Botón Expandir */}
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <button onClick={() => toggleExpandHistory(a.id)} className="p-1.5 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded-md text-zinc-500 transition-colors" title="Desplegar pizarrón">
+                                                    {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                                 </button>
-                                                <button
-                                                    onClick={() => handleDelete(h.id)}
-                                                    className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                                    title="Eliminar permanentemente"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                <ArchiveIcon size={16} className="text-zinc-400 shrink-0" />
+                                                <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400 line-through truncate">
+                                                    {a.title || 'Pizarrón sin título'}
+                                                </span>
+                                            </div>
+
+                                            {/* Fechas y Acciones en el Archivo */}
+                                            <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto pl-11 md:pl-0">
+                                                <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-bold shrink-0">
+                                                    <span>Creado: {formatCleanDate(a.created_at)}</span>
+                                                    {isEdited && (
+                                                        <>
+                                                            <span className="opacity-50">|</span>
+                                                            <span>Editado: {formatCleanDate(a.updated_at)}</span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-1 shrink-0">
+                                                    <div className="w-px h-4 bg-zinc-300 dark:bg-zinc-700 mx-1"></div>
+                                                    <button onClick={() => changeStatus(a.id, 'main')} className="p-1.5 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md transition-colors" title="Restaurar Pizarrón"><RotateCcw size={16}/></button>
+                                                    <button onClick={() => deleteDump(a.id)} className="p-1.5 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors" title="Eliminar para siempre"><Trash2 size={16}/></button>
+                                                </div>
                                             </div>
                                         </div>
-
-                                        {/* Contenido (Solo Lectura) */}
-                                        <div className="max-h-48 overflow-y-auto hidden-scrollbar">
-                                            {h.title && <h4 className="font-bold text-sm text-zinc-800 dark:text-zinc-200 mb-2">{h.title}</h4>}
-                                            <p className="text-sm text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap leading-relaxed">
-                                                {h.content}
-                                            </p>
-                                        </div>
-
-                                        {/* Footer Historial */}
-                                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800/50 w-full transition-opacity">
-                                            {renderTimestamps(h.created_at, h.updated_at)}
-                                        </div>
+                                        
+                                        {/* Vista expandida del Archivo (Opaca) */}
+                                        {isExpanded && (
+                                            <div className="mt-2 bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 opacity-70 animate-fadeIn">
+                                                <div className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed" dangerouslySetInnerHTML={{__html: parseMarkdownPreview(a.content)}} />
+                                            </div>
+                                        )}
                                     </div>
-                                ))}
+                                )})}
                             </div>
                         )}
                     </div>

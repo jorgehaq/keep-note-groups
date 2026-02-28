@@ -1,373 +1,334 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Languages, ArrowRightLeft, Save, Trash2, Clock, Type, Zap, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Languages, Volume2, Trash2, Copy, CheckCircle2, ArrowRightLeft, Loader2, Sparkles, Archive as ArchiveIcon, X } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
-import { Session } from '@supabase/supabase-js';
-import { KanbanSemaphore } from './KanbanSemaphore';
 
-// --- HELPER PARA RESALTAR TEXTO ---
-const highlightText = (text: string, highlight: string) => {
-    if (!highlight.trim()) return text;
-    const parts = text.split(new RegExp(`(${highlight.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')})`, 'gi'));
-    return parts.map((part, i) =>
-        part.toLowerCase() === highlight.toLowerCase()
-            ? <mark key={i} className="bg-amber-200 dark:bg-amber-500/40 text-amber-900 dark:text-amber-100 rounded-sm px-0.5 font-bold transition-colors">{part}</mark>
-            : part
-    );
+const LANGUAGES = [
+  { code: 'es', name: 'Español' },
+  { code: 'en', name: 'Inglés' },
+  { code: 'fr', name: 'Francés' },
+  { code: 'de', name: 'Alemán' },
+  { code: 'it', name: 'Italiano' },
+  { code: 'pt', name: 'Portugués' }
+];
+
+// --- UTILS FORMATO DE FECHA ---
+const formatCleanDate = (isoString: string) => {
+    const d = new Date(isoString);
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const year = d.getFullYear();
+    let hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? ' PM' : ' AM';
+    hours = hours % 12 || 12;
+    return `${day}/${month}/${year}, ${hours.toString().padStart(2, '0')}:${minutes}${ampm}`;
 };
 
 interface Translation {
-    id: string;
-    user_id: string;
-    source_text: string;
-    translated_text: string;
-    source_lang: string;
-    target_lang: string;
-    created_at: string;
+  id: string;
+  source_text: string;
+  translated_text: string;
+  source_lang: string;
+  target_lang: string;
+  created_at: string;
 }
 
-interface TranslatorAppProps {
-    session: Session;
-}
+export const TranslatorApp = () => {
+  const [translations, setTranslations] = useState<Translation[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export const TranslatorApp: React.FC<TranslatorAppProps> = ({ session }) => {
-    // --- STATES ---
-    const [sourceLang, setSourceLang] = useState<'en' | 'es'>('en');
-    const [targetLang, setTargetLang] = useState<'en' | 'es'>('es');
-    const [inputText, setInputText] = useState('');
-    const [translatedText, setTranslatedText] = useState('');
-    const [isTranslating, setIsTranslating] = useState(false);
-    const [history, setHistory] = useState<Translation[]>([]);
-    const [sortMode, setSortMode] = useState<'date-desc' | 'date-asc' | 'alpha-asc' | 'alpha-desc'>('date-desc');
+  // Form states
+  const [originalText, setOriginalText] = useState('');
+  const [translatedText, setTranslatedText] = useState('');
+  const [sourceLang, setSourceLang] = useState('es');
+  const [targetLang, setTargetLang] = useState('en');
+  
+  // Action states
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-    // NUEVO ESTADO: Para el filtrado diferido (solo actualiza cuando pedimos traducción)
-    const [searchTerm, setSearchTerm] = useState('');
+  useEffect(() => {
+    fetchTranslations();
+  }, []);
 
-    // --- PERSISTENCE: LOAD HISTORY ---
-    const fetchHistory = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('translations')
-                .select('*')
-                .eq('user_id', session.user.id);
+  const fetchTranslations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('translations')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      setTranslations(data || []);
+    } catch (error) {
+      console.error('Error fetching translations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            if (error) throw error;
-            setHistory(data || []);
-        } catch (error: any) {
-            console.error('Error fetching history:', error.message);
-        }
-    };
-
-    useEffect(() => {
-        fetchHistory();
-    }, [session.user.id]);
-
-    // --- GEMINI AI INTEGRATION (DEBOUNCE) ---
-    useEffect(() => {
-        if (!inputText.trim()) {
+  // 🚀 FIX: Traducción REAL automática (usando MyMemory API) y con Debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        if (originalText.trim()) {
+            performTranslation();
+        } else {
             setTranslatedText('');
-            setSearchTerm(''); // Limpiar búsqueda si borramos todo
-            return;
         }
-
-        const timer = setTimeout(async () => {
-            setIsTranslating(true);
-            setSearchTerm(inputText); // ¡MAGIA! Solo aplicamos el filtro cuando disparamos la IA
-
-            try {
-                const { data, error } = await supabase.functions.invoke('translateMyAppNotes', {
-                    body: { sourceLang, targetLang, text: inputText },
-                    headers: {
-                        Authorization: `Bearer ${session.access_token}`
-                    }
-                });
-
-                if (error) {
-                let realErrorMessage = error.message;
-                try {
-                    // Extraemos el JSON real del error 400
-                    const errorResponse = await error.context.json();
-                    if (errorResponse && errorResponse.error) {
-                        realErrorMessage = errorResponse.error;
-                    }
-                } catch (e) { /* ignorar */ }
+    }, 800); // Espera 800ms después de que dejas de escribir para traducir
     
-    console.error("Detalle del Error 400:", realErrorMessage);
-    alert('Fallo al traducir: ' + realErrorMessage);
-    throw new Error(realErrorMessage);
-}
-                setTranslatedText(data.translation);
-            } catch (error) {
-                console.error('Translation error:', error);
-                setTranslatedText('Error al traducir. Verifica la conexión.');
-            } finally {
-                setIsTranslating(false);
-            }
-        }, 2000);
+    return () => clearTimeout(timer);
+  }, [originalText, sourceLang, targetLang]);
 
-        return () => clearTimeout(timer);
-    }, [inputText, sourceLang, targetLang]);
-
-    // --- HANDLERS ---
-    const handleSwapLanguages = () => {
-        setSourceLang(targetLang);
-        setTargetLang(sourceLang);
-        setInputText(translatedText);
-        setTranslatedText(inputText);
-    };
-
-    const handleSave = async () => {
-        if (!inputText || !translatedText) return;
-
-        try {
-            const { error } = await supabase.from('translations').insert([{
-                user_id: session.user.id,
-                source_text: inputText,
-                translated_text: translatedText,
-                source_lang: sourceLang,
-                target_lang: targetLang
-            }]);
-
-            if (error) throw error;
-
-            setInputText('');
-            setTranslatedText('');
-            setSearchTerm('');
-            fetchHistory();
-        } catch (error: any) {
-            alert('Error saving translation: ' + error.message);
+  const performTranslation = async () => {
+    setIsTranslating(true);
+    try {
+        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(originalText)}&langpair=${sourceLang}|${targetLang}`);
+        const data = await res.json();
+        
+        if (data && data.responseData && data.responseData.translatedText) {
+            setTranslatedText(data.responseData.translatedText);
+        } else {
+            setTranslatedText("Error al traducir.");
         }
-    };
+    } catch (error) {
+        console.error("Error traduciendo:", error);
+        setTranslatedText("...");
+    } finally {
+        setIsTranslating(false);
+    }
+  };
 
-    const handleDelete = async (id: string) => {
-        try {
-            const { error } = await supabase.from('translations').delete().eq('id', id);
-            if (error) throw error;
-            setHistory(prev => prev.filter(h => h.id !== id));
-        } catch (error: any) {
-            alert('Error deleting: ' + error.message);
-        }
-    };
+  const saveTranslation = async () => {
+    if (!originalText.trim() || !translatedText.trim()) return;
+    setIsSaving(true);
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+      const newTranslation = {
+        source_text: originalText,
+        translated_text: translatedText,
+        source_lang: sourceLang,
+        target_lang: targetLang,
+        user_id: user?.id
+      };
 
-    const handleRevive = (h: Translation) => {
-        setInputText(h.source_text);
-        setSourceLang(h.source_lang as 'en' | 'es');
-        setTargetLang(h.target_lang as 'en' | 'es');
-    };
+      const { data, error } = await supabase
+        .from('translations')
+        .insert([newTranslation])
+        .select()
+        .single();
 
-    // --- SORTED HISTORY (No desaparece, solo reordena y resalta) ---
-    const sortedHistory = useMemo(() => {
-        let list = [...history];
-        const query = searchTerm.toLowerCase();
+      if (error) throw error;
+      
+      setTranslations([data, ...translations]);
+      setOriginalText('');
+      setTranslatedText('');
+    } catch (error) {
+      console.error('Error saving translation:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-        list.sort((a, b) => {
-            // 1. Prioridad absoluta: Si hay búsqueda, los que coinciden van arriba
-            if (query) {
-                const aMatches = a.source_text.toLowerCase().includes(query) || a.translated_text.toLowerCase().includes(query);
-                const bMatches = b.source_text.toLowerCase().includes(query) || b.translated_text.toLowerCase().includes(query);
+  const deleteTranslation = async (id: string) => {
+    if (!window.confirm('¿Eliminar esta traducción?')) return;
+    try {
+      const { error } = await supabase.from('translations').delete().eq('id', id);
+      if (error) throw error;
+      setTranslations(translations.filter(t => t.id !== id));
+    } catch (error) {
+      console.error('Error deleting translation:', error);
+    }
+  };
 
-                if (aMatches && !bMatches) return -1;
-                if (!aMatches && bMatches) return 1;
-            }
+  const swapLanguages = () => {
+    setSourceLang(targetLang);
+    setTargetLang(sourceLang);
+    setOriginalText(translatedText);
+    // No vaciamos translatedText manualmente, el useEffect se encargará de traducir el nuevo originalText.
+  };
 
-            // 2. Ordenamiento secundario (por fecha o alfabético)
-            switch (sortMode) {
-                case 'date-desc': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-                case 'date-asc': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-                case 'alpha-asc': return a.source_text.localeCompare(b.source_text);
-                case 'alpha-desc': return b.source_text.localeCompare(a.source_text);
-                default: return 0;
-            }
-        });
+  const copyToClipboard = async (text: string, id: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
-        return list;
-    }, [history, searchTerm, sortMode]);
+  const playAudio = (text: string, lang: string) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang;
+    window.speechSynthesis.speak(utterance);
+  };
 
-    return (
-        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
-            {/* Header */}
-            <header className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 px-6 py-4">
-                <div className="max-w-5xl mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-500 rounded-lg text-white shadow-lg shadow-indigo-500/20">
-                            <Languages size={24} />
-                        </div>
-                        <h1 className="text-xl font-bold text-zinc-800 dark:text-white">Traductor AI</h1>
+  const getLangName = (code: string) => LANGUAGES.find(l => l.code === code)?.name || code;
+
+  if (loading) return <div className="p-10 text-center animate-pulse text-zinc-500">Cargando Traductor...</div>;
+
+  return (
+    <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
+        
+        <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
+            <div className="flex items-center justify-between px-4 md:px-6 py-4">
+                <h1 className="text-xl font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-3">
+                    <div className="p-2 bg-[#8B5CF6] rounded-lg text-white shadow-lg shadow-violet-500/20">
+                        <Languages size={20} />
+                    </div>
+                    Traductor
+                </h1>
+            </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 hidden-scrollbar">
+            <div className="max-w-4xl mx-auto space-y-12 pb-20">
+                
+                {/* 1. MÓDULO DE CREACIÓN */}
+                <div className="space-y-6 animate-fadeIn">
+                    <div className="flex items-center gap-2 text-violet-500">
+                        <Sparkles size={18} className="fill-current" />
+                        <span className="text-sm font-bold uppercase tracking-widest">Nueva Traducción</span>
                     </div>
 
-                    {/* BOTÓN SWAP MEJORADO */}
-                    <button
-                        onClick={handleSwapLanguages}
-                        className="flex items-center gap-3 px-5 py-2.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-full transition-all font-bold border border-indigo-200 dark:border-indigo-800/50 active:scale-95 shadow-md hover:shadow-indigo-500/20 group"
-                    >
-                        <span className="uppercase text-[11px] tracking-widest">{sourceLang}</span>
-                        <ArrowRightLeft size={16} className="text-indigo-500 group-hover:rotate-180 transition-transform duration-300" />
-                        <span className="uppercase text-[11px] tracking-widest">{targetLang}</span>
-                    </button>
-                </div>
-            </header>
-
-            {/* Main Translation Area */}
-            <main className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
-                <div className="max-w-5xl mx-auto">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        {/* Source Column */}
-                        <div className="relative group">
-                            <div className="absolute top-3 left-3 flex items-center gap-1.5 text-xs font-bold text-zinc-400 uppercase tracking-widest">
-                                <Type size={12} /> {sourceLang === 'en' ? 'Inglés' : 'Español'}
-                            </div>
-                            <textarea
-                                value={inputText}
-                                onChange={(e) => setInputText(e.target.value)}
-                                placeholder="Escribe algo para traducir..."
-                                className="w-full h-48 md:h-64 p-10 pt-12 text-lg bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-800 rounded-2xl focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all resize-none shadow-sm dark:text-zinc-100 placeholder-zinc-300 dark:placeholder-zinc-700"
-                            />
-                            {inputText && (
-                                <button
-                                    onClick={() => { setInputText(''); setSearchTerm(''); }}
-                                    className="absolute bottom-4 right-4 p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
-                            )}
+                    {/* 🚀 FIX: focus-within EN LA TARJETA EXTERIOR EXCLUSIVAMENTE */}
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-violet-500/30 p-1 transition-all focus-within:ring-2 focus-within:ring-violet-500/50">
+                        
+                        <div className="bg-zinc-50 dark:bg-[#1B1B1E] rounded-xl m-4 p-4 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-4">
+                            <select 
+                                value={sourceLang} 
+                                onChange={(e) => setSourceLang(e.target.value)}
+                                className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-bold rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer transition-all"
+                            >
+                                {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
+                            </select>
+                            
+                            <button onClick={swapLanguages} className="p-2.5 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded-lg text-zinc-600 dark:text-zinc-400 transition-colors shadow-sm">
+                                <ArrowRightLeft size={16} />
+                            </button>
+                            
+                            <select 
+                                value={targetLang} 
+                                onChange={(e) => setTargetLang(e.target.value)}
+                                className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-bold rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer transition-all"
+                            >
+                                {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
+                            </select>
                         </div>
 
-                        {/* Target Column */}
-                        <div className="relative">
-                            <div className="absolute top-3 left-3 flex items-center gap-1.5 text-xs font-bold text-zinc-400 uppercase tracking-widest">
-                                <Type size={12} /> {targetLang === 'en' ? 'Inglés' : 'Español'}
-                                {isTranslating && (
-                                    <div className="flex items-center gap-1.5 bg-indigo-500/10 text-indigo-500 px-2 py-0.5 rounded-full animate-pulse ml-2">
-                                        <Loader2 size={10} className="animate-spin" />
-                                        Traduciendo...
-                                    </div>
+                        {/* 🚀 FIX: Eliminado el 'focus-within:ring-2' de los textarea internos */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 m-4">
+                            <div className="relative flex flex-col bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden transition-all">
+                                <textarea
+                                    value={originalText}
+                                    onChange={(e) => setOriginalText(e.target.value)}
+                                    placeholder="Escribe el texto a traducir..."
+                                    className="w-full h-40 bg-transparent p-4 outline-none resize-none text-zinc-800 dark:text-zinc-200 placeholder-zinc-400"
+                                />
+                                {originalText && (
+                                    <button onClick={() => playAudio(originalText, sourceLang)} className="absolute bottom-3 right-3 p-2 text-zinc-400 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg transition-colors">
+                                        <Volume2 size={16} />
+                                    </button>
                                 )}
                             </div>
-                            <textarea
-                                value={translatedText}
-                                readOnly
-                                placeholder="Traducción..."
-                                className={`w-full h-48 md:h-64 p-10 pt-12 text-lg rounded-2xl border-2 outline-none transition-all resize-none shadow-sm
-                  ${isTranslating
-                                        ? 'bg-indigo-50/10 border-indigo-200/30'
-                                        : 'bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200/50 dark:border-zinc-800/50 text-zinc-600 dark:text-zinc-300'
-                                    }`}
-                            />
-                            {translatedText && !isTranslating && (
-                                <button
-                                    onClick={handleSave}
-                                    className="absolute bottom-4 right-4 flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg shadow-indigo-600/20 transition-all font-bold active:scale-95 animate-fadeIn"
-                                >
-                                    <Save size={18} />
-                                    Guardar en Diccionario
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Dictionary/History Section */}
-                    <div className="mt-12 border-t border-zinc-200 dark:border-zinc-800 pt-10 px-2 md:px-0">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-amber-500/10 text-amber-500 rounded-lg">
-                                    <Clock size={20} />
-                                </div>
-                                <h2 className="text-xl font-bold text-zinc-800 dark:text-white">Diccionario Personal</h2>
-                                <span className="text-xs bg-zinc-200 dark:bg-zinc-800 text-zinc-500 px-2 py-0.5 rounded-full font-mono">
-                                    {sortedHistory.length}
-                                </span>
-                            </div>
-
-                            <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 no-scrollbar">
-                                <button
-                                    onClick={() => setSortMode(sortMode === 'date-desc' ? 'date-asc' : 'date-desc')}
-                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap
-                    ${sortMode.includes('date') ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200' : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'}
-                  `}
-                                >
-                                    <Clock size={14} />
-                                    {sortMode === 'date-desc' ? 'Más recientes' : 'Más antiguos'}
-                                </button>
-                                <button
-                                    onClick={() => setSortMode(sortMode === 'alpha-asc' ? 'alpha-desc' : 'alpha-asc')}
-                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap
-                    ${sortMode.includes('alpha') ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200' : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'}
-                  `}
-                                >
-                                    <Type size={14} />
-                                    {sortMode === 'alpha-asc' ? 'A-Z' : 'Z-A'}
-                                </button>
+                            
+                            <div className="relative flex flex-col bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden transition-all">
+                                {isTranslating && (
+                                    <div className="absolute top-4 right-4 text-violet-500 animate-spin">
+                                        <Loader2 size={18} />
+                                    </div>
+                                )}
+                                <textarea
+                                    value={translatedText}
+                                    readOnly
+                                    placeholder="La traducción aparecerá aquí..."
+                                    className="w-full h-40 bg-transparent p-4 outline-none resize-none text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 opacity-90"
+                                />
+                                {translatedText && !isTranslating && (
+                                    <button onClick={() => playAudio(translatedText, targetLang)} className="absolute bottom-3 right-3 p-2 text-zinc-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors">
+                                        <Volume2 size={16} />
+                                    </button>
+                                )}
                             </div>
                         </div>
 
-                        {sortedHistory.length === 0 ? (
-                            <div className="py-20 flex flex-col items-center justify-center text-zinc-400 text-center animate-fadeIn">
-                                <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-900 rounded-full flex items-center justify-center mb-4">
-                                    <Languages size={32} className="opacity-20" />
-                                </div>
-                                <p className="max-w-xs mx-auto">
-                                    Tu diccionario personal está vacío. Traduce algo y guárdalo para que aparezca aquí.
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {sortedHistory.map(h => {
-                                    // Verificamos si esta tarjeta es una coincidencia de búsqueda
-                                    const isMatch = searchTerm && (h.source_text.toLowerCase().includes(searchTerm.toLowerCase()) || h.translated_text.toLowerCase().includes(searchTerm.toLowerCase()));
-
-                                    return (
-                                        <div
-                                            key={h.id}
-                                            className={`group bg-white dark:bg-zinc-900 p-5 rounded-2xl transition-all duration-500 ease-in-out
-                                                ${isMatch
-                                                    ? 'border-2 border-amber-400/50 shadow-lg shadow-amber-500/10 scale-[1.02]'
-                                                    : 'border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5'
-                                                }`}
-                                        >
-                                            <div className="flex justify-between items-start mb-3">
-                                                <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-tighter bg-zinc-50 dark:bg-zinc-800 px-2 py-0.5 rounded-md">
-                                                    {h.source_lang} <ArrowRightLeft size={10} /> {h.target_lang}
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    <KanbanSemaphore sourceId={h.id} sourceTitle={h.source_text.substring(0, 50)} />
-                                                    <button
-                                                        onClick={() => handleRevive(h)}
-                                                        className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
-                                                        title="Revivir"
-                                                    >
-                                                        <Zap size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(h.id)}
-                                                        className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                                        title="Eliminar"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-3">
-                                                <div>
-                                                    <p className="text-[10px] text-zinc-400 font-bold uppercase mb-1">{h.source_lang === 'en' ? 'Original (EN)' : 'Original (ES)'}</p>
-                                                    <p className="text-zinc-800 dark:text-zinc-100 font-medium leading-tight">
-                                                        {highlightText(h.source_text, searchTerm)}
-                                                    </p>
-                                                </div>
-                                                <div className="h-px bg-zinc-100 dark:bg-zinc-800 w-full"></div>
-                                                <div>
-                                                    <p className="text-[10px] text-indigo-400/80 font-bold uppercase mb-1">{h.target_lang === 'en' ? 'Traducción (EN)' : 'Traducción (ES)'}</p>
-                                                    <p className="text-indigo-600 dark:text-indigo-400 font-bold leading-tight">
-                                                        {highlightText(h.translated_text, searchTerm)}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
+                        {/* 🚀 FIX: Botones reemplazados por Limpiar y un Guardar bloqueado si está vacío */}
+                        <div className="flex justify-between items-center gap-3 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800">
+                            <button 
+                                onClick={() => { setOriginalText(''); setTranslatedText(''); }} 
+                                disabled={!originalText.trim()}
+                                className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-zinc-500 hover:text-red-500 transition-colors disabled:opacity-50"
+                            >
+                                <X size={14} /> Limpiar
+                            </button>
+                            
+                            <button 
+                                onClick={saveTranslation} 
+                                disabled={!originalText.trim() || !translatedText.trim() || isTranslating || isSaving}
+                                className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-lg shadow-emerald-600/20 transition-all disabled:opacity-50"
+                            >
+                                {isSaving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                                Guardar Traducción
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </main>
+
+                {/* 2. ARCHIVO DE TRADUCCIONES */}
+                <div className="space-y-4 pt-4 border-t border-zinc-200 dark:border-zinc-800/50 opacity-90">
+                    <div className="flex items-center gap-2 text-zinc-400">
+                        <ArchiveIcon size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Archivo de Traducciones ({translations.length})</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4">
+                        {translations.map((t) => (
+                            <div key={t.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 p-5 flex flex-col transition-all hover:border-violet-500/30 focus-within:ring-2 focus-within:ring-violet-500/50">
+                                
+                                <div className="flex items-center gap-3 text-xs font-bold text-violet-600 dark:text-violet-400 mb-4 px-1">
+                                    <span className="bg-violet-50 dark:bg-violet-900/20 px-3 py-1 rounded-full">{getLangName(t.source_lang)}</span>
+                                    <ArrowRightLeft size={12} className="opacity-50" />
+                                    <span className="bg-violet-50 dark:bg-violet-900/20 px-3 py-1 rounded-full">{getLangName(t.target_lang)}</span>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div className="p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl relative group text-sm text-zinc-800 dark:text-zinc-200 leading-relaxed">
+                                        {t.source_text}
+                                        <button onClick={() => playAudio(t.source_text, t.source_lang)} className="absolute top-2 right-2 p-1.5 opacity-0 group-hover:opacity-100 bg-white dark:bg-zinc-800 text-zinc-400 hover:text-violet-500 rounded-md transition-all shadow-sm">
+                                            <Volume2 size={14} />
+                                        </button>
+                                    </div>
+                                    <div className="p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl relative group text-sm text-zinc-800 dark:text-zinc-200 leading-relaxed font-medium">
+                                        {t.translated_text}
+                                        <button onClick={() => playAudio(t.translated_text, t.target_lang)} className="absolute top-2 right-2 p-1.5 opacity-0 group-hover:opacity-100 bg-white dark:bg-zinc-800 text-zinc-400 hover:text-emerald-500 rounded-md transition-all shadow-sm">
+                                            <Volume2 size={14} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                                    <span className="text-[10px] font-bold text-zinc-400 pl-1">
+                                        Creado: {formatCleanDate(t.created_at)}
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={() => copyToClipboard(t.translated_text, t.id)} className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md transition-colors" title="Copiar traducción">
+                                            {copiedId === t.id ? <CheckCircle2 size={16} className="text-emerald-500" /> : <Copy size={16} />}
+                                        </button>
+                                        <button onClick={() => deleteTranslation(t.id)} className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors" title="Eliminar registro">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </div>
+                        ))}
+                    </div>
+                    {translations.length === 0 && (
+                        <div className="text-center text-sm text-zinc-400 p-8 border border-zinc-200 dark:border-zinc-800 border-dashed rounded-2xl">
+                            Aún no tienes traducciones guardadas.
+                        </div>
+                    )}
+                </div>
+
+            </div>
         </div>
-    );
+    </div>
+  );
 };

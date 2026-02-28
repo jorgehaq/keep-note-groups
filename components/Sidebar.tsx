@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Settings, Grid, X, LogOut, StickyNote, KanbanSquare, Clock, Bell, Zap, Languages } from 'lucide-react';
+import { Plus, Settings, Grid, X, LogOut, StickyNote, KanbanSquare, Clock, Bell, PenTool, Languages } from 'lucide-react';
 import { Group } from '../types';
 import { GroupLauncher } from './GroupLauncher';
 import { useUIStore } from '../src/lib/store';
@@ -42,38 +42,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const getAppStyle = (appId: string) => {
     // ESTADO 1: ACTIVO (Azul) - Es la app que estás mirando en este momento exacto
     if (globalView === appId) {
-      return 'bg-[#1F3760] text-white shadow-lg shadow-[#1F3760]/30 ring-2 ring-white/30';
+      return 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)] ring-2 ring-indigo-400/50 scale-105';
     }
 
     // ESTADO 2: RECIÉN PERDIÓ EL FOCO (Gris Medio) - Fue la última app en la que estuviste
     if (lastUsedApp === appId) {
-      return 'bg-zinc-400 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-inner ring-1 ring-zinc-500/20';
+      return 'bg-zinc-300 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-inner ring-1 ring-zinc-400/30';
     }
 
     // ESTADO 3: MUERTO / INACTIVO (Gris Oscuro)
-    return 'bg-zinc-300 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-400 dark:hover:bg-zinc-700';
+    return 'bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-700 hover:shadow-sm hover:scale-105 active:scale-95';
   };
 
   return (
     <>
       <div className="w-12 md:w-16 bg-zinc-200 dark:bg-zinc-900 border-r border-zinc-300 dark:border-zinc-800 flex flex-col items-center py-3 gap-3 h-full shrink-0 z-50 overflow-visible">
-
-        {/* Timer Button with Badge */}
-        <button
-          onClick={() => setGlobalView('timers')}
-          className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all mb-1 shrink-0 ${getAppStyle('timers')}`}
-          title="Cronómetros"
-        >
-          <Clock size={20} />
-          {activeTimersCount > 0 && (
-            <div
-              className="absolute -top-2 -right-2 bg-[#DC2626] text-white text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-red-600/50 animate-pulse z-30"
-              style={{ animationDuration: '1s' }}
-            >
-              {activeTimersCount}
-            </div>
-          )}
-        </button>
 
         {/* Reminders Button */}
         <button
@@ -95,6 +78,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {imminentRemindersCount}
             </div>
           ) : null}
+        </button>
+
+        {/* Timer Button with Badge */}
+        <button
+          onClick={() => setGlobalView('timers')}
+          className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all mb-1 shrink-0 ${getAppStyle('timers')}`}
+          title="Cronómetros"
+        >
+          <Clock size={20} />
+          {activeTimersCount > 0 && (
+            <div
+              className="absolute -top-2 -right-2 bg-[#DC2626] text-white text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-red-600/50 animate-pulse z-30"
+              style={{ animationDuration: '1s' }}
+            >
+              {activeTimersCount}
+            </div>
+          )}
         </button>
 
         {/* Kanban Button */}
@@ -125,13 +125,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </button>
 
-        {/* BrainDump Button (El Rayo) */}
+        {/* Botón Pizarrón */}
         <button
           onClick={() => setGlobalView('braindump')}
           className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all mb-1 shrink-0 ${getAppStyle('braindump')}`}
-          title="Patio de Recreo mental (Rayo)"
+          title="Pizarrón"
         >
-          <Zap size={20} />
+          <PenTool size={20} />
         </button>
 
         {/* Translator Button */}
@@ -143,10 +143,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Languages size={20} />
         </button>
 
+        <div className="w-8 h-0.5 bg-zinc-300 dark:bg-zinc-700 rounded-full mb-1 shrink-0"></div>
+
+        {/* New Group Button (Quick Add) */}
+        <button
+          onClick={onAddGroup}
+          className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 text-white shadow-md hover:from-indigo-600 hover:to-indigo-700 hover:shadow-lg transition-all duration-300 shrink-0 hover:scale-105 active:scale-95 mb-1"
+          title="Crear Nuevo Grupo"
+        >
+          <Plus size={18} />
+        </button>
+
         {/* Launcher Button */}
         <button
           onClick={() => setIsLauncherOpen(true)}
-          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-300 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-400 dark:hover:bg-zinc-700 transition-all mb-1 shrink-0"
+          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all duration-300 hover:scale-105 active:scale-95 mb-1 shrink-0"
           title="Abrir Launcher de Grupos"
         >
           <Grid size={20} />
@@ -156,15 +167,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Docked Groups List */}
         <div className="flex flex-col gap-3 w-full items-center flex-1 overflow-y-auto hidden-scrollbar py-2">
-          {/* New Group Button (Quick Add) */}
-          <button
-            onClick={onAddGroup}
-            className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-lg bg-[#1F3760] text-white shadow-md hover:bg-[#152643] transition-all shrink-0 focus:outline-none focus:ring-2 focus:ring-[#1F3760]/50"
-            title="Crear Nuevo Grupo"
-          >
-            <Plus size={18} />
-          </button>
-
           {/* Separator if we have groups */}
           {sortedDockedGroups.length > 0 && <div className="w-6 h-px bg-zinc-300 dark:bg-zinc-800 shrink-0"></div>}
 
@@ -189,12 +191,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     setGlobalView('notes');
                   }}
                   className={`
-                    relative flex items-center justify-center w-full transition-all duration-300 overflow-hidden rounded-lg
+                    relative flex items-center justify-center w-full transition-all duration-300 overflow-hidden rounded-xl group/dockedbtn
                     ${activeGroupId === group.id && !focusedNoteId && globalView === 'notes'
-                      ? 'h-32 bg-[#1F3760] text-white shadow-lg ring-2 ring-white/50 scale-[1.02]'
+                      ? 'h-32 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)] ring-2 ring-indigo-400/50 scale-[1.02]'
                       : activeGroupId === group.id && (focusedNoteId || globalView !== 'notes')
-                        ? 'h-32 bg-zinc-300 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 shadow-inner'
-                        : 'h-24 bg-zinc-200/50 dark:bg-zinc-800/50 text-zinc-400 dark:text-zinc-500 hover:bg-zinc-300 dark:hover:bg-zinc-700'}
+                        ? 'h-32 bg-zinc-300 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-inner ring-1 ring-zinc-400/30'
+                        : 'h-24 bg-zinc-200/50 dark:bg-zinc-800/50 text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-700 hover:scale-[1.02]'}
                     `}
                   title={group.title}
                 >
@@ -225,14 +227,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       const isGroupDefaultTrail = isGroupActive && !isNotesView && !focusedNoteId;
 
                       const bubbleClass = isActiveFocus
-                        ? 'bg-[#1F3760] text-white ring-2 ring-white/50 shadow-lg scale-110' // Activa enfocada
+                        ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-[0_0_10px_rgba(99,102,241,0.5)] ring-2 ring-indigo-400/50 scale-[1.15]' // Activa enfocada
                         : isTrailFocus
-                          ? 'bg-zinc-400 dark:bg-zinc-600 text-zinc-800 dark:text-zinc-100 shadow-inner scale-110' // Rastro enfocada
+                          ? 'bg-zinc-300 dark:bg-zinc-600 text-zinc-700 dark:text-zinc-100 shadow-inner scale-110 ring-1 ring-zinc-400/30' // Rastro enfocada
                           : isGroupDefaultActive
-                            ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-600 ring-1 ring-zinc-300 dark:ring-zinc-600' // Activa sin enfocar
+                            ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 ring-1 ring-zinc-300 dark:ring-zinc-600 hover:scale-110' // Activa sin enfocar
                             : isGroupDefaultTrail
-                              ? 'bg-zinc-400 dark:bg-zinc-600 text-zinc-800 dark:text-zinc-100 shadow-inner' // Rastro sin enfocar (GRIS MEDIO)
-                              : 'bg-zinc-300 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-400 dark:hover:bg-zinc-700'; // Muerta
+                              ? 'bg-zinc-300 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 shadow-inner hover:scale-110' // Rastro sin enfocar (GRIS MEDIO)
+                              : 'bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-700 hover:scale-110 active:scale-95'; // Muerta
 
                       // NUEVO: LÓGICA DEL SEMÁFORO KANBAN
                       const linkedTask = globalTasks?.find(t => t.id === note.id);
@@ -280,14 +282,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="w-8 h-0.5 bg-zinc-300 dark:bg-zinc-700 rounded-full"></div>
           <button
             onClick={onOpenSettings}
-            className="w-10 h-10 flex items-center justify-center rounded-xl text-zinc-500 hover:bg-zinc-300 dark:hover:bg-zinc-800 transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-transparent text-zinc-500 hover:text-indigo-600 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50 transition-all duration-300 hover:scale-105 active:scale-95"
             title="Configuración"
           >
             <Settings size={18} />
           </button>
           <button
             onClick={onLogout}
-            className="w-10 h-10 flex items-center justify-center rounded-xl text-zinc-500 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-transparent text-zinc-500 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-all duration-300 hover:scale-105 active:scale-95 mb-2"
             title="Cerrar Sesión"
           >
             <LogOut size={18} />
