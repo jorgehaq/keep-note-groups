@@ -3,6 +3,7 @@ import { Plus, Settings, Grid, X, LogOut, StickyNote, KanbanSquare, Clock, Bell,
 import { Group } from '../types';
 import { GroupLauncher } from './GroupLauncher';
 import { useUIStore } from '../src/lib/store';
+import { useTranslation } from 'react-i18next';
 
 interface SidebarProps {
   groups: Group[]; // All groups (needed for Launcher)
@@ -29,6 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { dockedGroupIds, closeGroup, globalView, setGlobalView, activeTimersCount, overdueRemindersCount, imminentRemindersCount, lastAppView, kanbanTodoCount, kanbanInProgressCount, kanbanDoneCount, lastUsedApp, globalTasks } = useUIStore();
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
+  const { t } = useTranslation();
 
   // Filter groups to only show docked ones
   const dockedGroups = groups.filter(g => dockedGroupIds.includes(g.id));
@@ -47,7 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
     // ESTADO 2: RECIÉN PERDIÓ EL FOCO (Gris Medio) - Fue la última app en la que estuviste
     if (lastUsedApp === appId) {
-      return 'bg-zinc-300 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-inner ring-1 ring-zinc-400/30';
+      return 'bg-zinc-300 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-inner ring-1 ring-zinc-400/30 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:ring-0 hover:scale-105 active:scale-95';
     }
 
     // ESTADO 3: MUERTO / INACTIVO (Gris Oscuro)
@@ -62,7 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => setGlobalView('reminders')}
           className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all mb-1 shrink-0 ${getAppStyle('reminders')}`}
-          title="Recordatorios"
+          title={t('sidebar.reminders')}
         >
           <Bell size={20} />
           {overdueRemindersCount > 0 ? (
@@ -84,7 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => setGlobalView('timers')}
           className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all mb-1 shrink-0 ${getAppStyle('timers')}`}
-          title="Cronómetros"
+          title={t('sidebar.timers')}
         >
           <Clock size={20} />
           {activeTimersCount > 0 && (
@@ -101,23 +103,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => setGlobalView('kanban')}
           className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all mb-1 shrink-0 ${getAppStyle('kanban')}`}
-          title="Tablero Kanban"
+          title={t('sidebar.kanban')}
         >
           <KanbanSquare size={20} />
           {(kanbanTodoCount > 0 || kanbanInProgressCount > 0 || kanbanDoneCount > 0) && (
-            <div className="absolute -top-2 -right-8 flex items-center gap-0.5 shadow-sm">
+            <div className="absolute -top-2 -right-2 flex items-center gap-px">
               {kanbanTodoCount > 0 && (
-                <div className="bg-blue-500 text-white text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-blue-600/50 z-30" title="Pendientes">
+                <div className="bg-blue-500 text-white text-[10px] font-bold min-w-[16px] h-4 px-1 flex items-center justify-center rounded-md shadow-md ring-1 ring-blue-600/50 z-30" title={t('sidebar.pending')}>
                   {kanbanTodoCount}
                 </div>
               )}
               {kanbanInProgressCount > 0 && (
-                <div className="bg-amber-500 text-white text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-amber-600/50 z-20" title="En Proceso">
+                <div className="bg-amber-500 text-white text-[10px] font-bold min-w-[16px] h-4 px-1 flex items-center justify-center rounded-md shadow-md ring-1 ring-amber-600/50 z-20" title={t('sidebar.in_progress')}>
                   {kanbanInProgressCount}
                 </div>
               )}
               {kanbanDoneCount > 0 && (
-                <div className="bg-emerald-500 text-white text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-emerald-600/50 z-10" title="Terminados">
+                <div className="bg-emerald-500 text-white text-[10px] font-bold min-w-[16px] h-4 px-1 flex items-center justify-center rounded-md shadow-md ring-1 ring-emerald-600/50 z-10" title={t('sidebar.done')}>
                   {kanbanDoneCount}
                 </div>
               )}
@@ -129,7 +131,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => setGlobalView('braindump')}
           className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all mb-1 shrink-0 ${getAppStyle('braindump')}`}
-          title="Pizarrón"
+          title={t('sidebar.braindump')}
         >
           <PenTool size={20} />
         </button>
@@ -138,7 +140,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => setGlobalView('translator')}
           className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all mb-1 shrink-0 ${getAppStyle('translator')}`}
-          title="Traductor AI"
+          title={t('sidebar.translator')}
         >
           <Languages size={20} />
         </button>
@@ -149,7 +151,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={onAddGroup}
           className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 text-white shadow-md hover:from-indigo-600 hover:to-indigo-700 hover:shadow-lg transition-all duration-300 shrink-0 hover:scale-105 active:scale-95 mb-1"
-          title="Crear Nuevo Grupo"
+          title={t('sidebar.new_group')}
         >
           <Plus size={18} />
         </button>
@@ -158,7 +160,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => setIsLauncherOpen(true)}
           className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all duration-300 hover:scale-105 active:scale-95 mb-1 shrink-0"
-          title="Abrir Launcher de Grupos"
+          title={t('sidebar.launcher')}
         >
           <Grid size={20} />
         </button>
@@ -167,10 +169,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Docked Groups List */}
         <div className="flex flex-col gap-3 w-full items-center flex-1 overflow-y-auto hidden-scrollbar py-2">
-          {/* Separator if we have groups */}
-          {sortedDockedGroups.length > 0 && <div className="w-6 h-px bg-zinc-300 dark:bg-zinc-800 shrink-0"></div>}
+          {sortedDockedGroups.map((group) => {
+            const isGroupActive = activeGroupId === group.id;
+            const isNotesView = globalView === 'notes';
+            const focusedNoteIsDocked = focusedNoteId ? group.notes?.some(n => n.id === focusedNoteId && n.is_docked) : false;
 
-          {sortedDockedGroups.map((group) => (
+            return (
             <div key={group.id} className="flex flex-col items-center shrink-0">
               <div className="relative group w-10 md:w-12">
                 {/* Close Button (Hover) */}
@@ -180,7 +184,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     closeGroup(group.id);
                   }}
                   className="absolute -top-1 -right-1 z-20 w-5 h-5 bg-zinc-500 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md text-xs"
-                  title="Cerrar del Dock"
+                  title={t('sidebar.close_dock')}
                 >
                   <X size={12} />
                 </button>
@@ -192,11 +196,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   }}
                   className={`
                     relative flex items-center justify-center w-full transition-all duration-300 overflow-hidden rounded-xl group/dockedbtn
-                    ${activeGroupId === group.id && !focusedNoteId && globalView === 'notes'
+                    ${isGroupActive && isNotesView && !focusedNoteIsDocked
                       ? 'h-32 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)] ring-2 ring-indigo-400/50 scale-[1.02]'
-                      : activeGroupId === group.id && (focusedNoteId || globalView !== 'notes')
-                        ? 'h-32 bg-zinc-300 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-inner ring-1 ring-zinc-400/30'
-                        : 'h-24 bg-zinc-200/50 dark:bg-zinc-800/50 text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-700 hover:scale-[1.02]'}
+                      : isGroupActive && (!isNotesView || focusedNoteIsDocked)
+                        ? 'h-32 bg-zinc-300 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-inner ring-1 ring-zinc-400/30 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:ring-0 hover:scale-[1.04] active:scale-95'
+                        : 'h-24 bg-zinc-200/50 dark:bg-zinc-800/50 text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:scale-[1.04] active:scale-95'}
                     `}
                   title={group.title}
                 >
@@ -217,24 +221,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     {dockedNotes.map(note => {
 
                       // LOGICA DE COLOR Y RASTRO
-                      const isGroupActive = activeGroupId === group.id;
-                      const isNotesView = globalView === 'notes';
                       const isFocused = note.id === focusedNoteId;
 
                       const isActiveFocus = isFocused && isNotesView;
-                      const isTrailFocus = isFocused && !isNotesView;
-                      const isGroupDefaultActive = isGroupActive && isNotesView && !focusedNoteId;
-                      const isGroupDefaultTrail = isGroupActive && !isNotesView && !focusedNoteId;
-
+                      
                       const bubbleClass = isActiveFocus
-                        ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-[0_0_10px_rgba(99,102,241,0.5)] ring-2 ring-indigo-400/50 scale-[1.15]' // Activa enfocada
-                        : isTrailFocus
-                          ? 'bg-zinc-300 dark:bg-zinc-600 text-zinc-700 dark:text-zinc-100 shadow-inner scale-110 ring-1 ring-zinc-400/30' // Rastro enfocada
-                          : isGroupDefaultActive
-                            ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 ring-1 ring-zinc-300 dark:ring-zinc-600 hover:scale-110' // Activa sin enfocar
-                            : isGroupDefaultTrail
-                              ? 'bg-zinc-300 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 shadow-inner hover:scale-110' // Rastro sin enfocar (GRIS MEDIO)
-                              : 'bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-700 hover:scale-110 active:scale-95'; // Muerta
+                        ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-[0_0_10px_rgba(99,102,241,0.5)] ring-2 ring-indigo-400/50 scale-[1.15]' // Activa enfocada (Azul)
+                        : isGroupActive
+                          ? 'bg-zinc-300 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-inner ring-1 ring-zinc-400/30 scale-105 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:ring-0 hover:scale-110 active:scale-95' // Parte de grupo activo o rastro (Gris Medio)
+                          : 'bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:scale-110 active:scale-95'; // Muerta / Inactiva
 
                       // NUEVO: LÓGICA DEL SEMÁFORO KANBAN
                       const linkedTask = globalTasks?.find(t => t.id === note.id);
@@ -274,7 +269,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 );
               })()}
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Bottom Area: Settings */}
@@ -282,14 +278,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="w-8 h-0.5 bg-zinc-300 dark:bg-zinc-700 rounded-full"></div>
           <button
             onClick={onOpenSettings}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-transparent text-zinc-500 hover:text-indigo-600 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50 transition-all duration-300 hover:scale-105 active:scale-95"
+            className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white dark:hover:bg-zinc-700 hover:shadow-sm transition-all duration-300 hover:scale-105 active:scale-95"
             title="Configuración"
           >
             <Settings size={18} />
           </button>
           <button
             onClick={onLogout}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-transparent text-zinc-500 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-all duration-300 hover:scale-105 active:scale-95 mb-2"
+            className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 hover:shadow-sm transition-all duration-300 hover:scale-105 active:scale-95 mb-2"
             title="Cerrar Sesión"
           >
             <LogOut size={18} />

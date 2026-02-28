@@ -50,10 +50,10 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
 
-  const [isEditingGroup, setIsEditingGroup] = useState(false);
-  const [tempGroupName, setTempGroupName] = useState('');
+  const [tempGroupName, setTempGroupName] = useState<string | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const mainRef = useRef<HTMLElement>(null);
+  const [groupTitleSyncStatus, setGroupTitleSyncStatus] = useState<'saved' | 'saving' | ''>('');
   const [focusedNoteId, setFocusedNoteId] = useState<string | null>(null);
   const [overdueRemindersList, setOverdueRemindersList] = useState<{ id: string; title: string; targetId?: string }[]>([]);
 
@@ -287,11 +287,22 @@ function App() {
     const title = prompt('Nombre del nuevo grupo (ej. "Trabajo", "Ideas"):');
     if (!title || !session) return;
     try {
-      const { data, error } = await supabase.from('groups').insert([{ name: title.slice(0, 15), user_id: session.user.id }]).select().single();
-      if (error) throw error;
-      const newGroup: Group = { id: data.id, title: data.name, notes: [], user_id: data.user_id, is_pinned: false, last_accessed_at: new Date().toISOString() };
+      const { data: groupData, error: groupError } = await supabase.from('groups').insert([{ name: title.slice(0, 15), user_id: session.user.id }]).select().single();
+      if (groupError) throw groupError;
+
+      const { data: noteData, error: noteError } = await supabase.from('notes').insert([{ title: '', content: '', group_id: groupData.id, user_id: session.user.id, position: 0 }]).select().single();
+      if (noteError) throw noteError;
+
+      const newNote: Note = { id: noteData.id, title: noteData.title, content: noteData.content || '', isOpen: true, created_at: noteData.created_at, group_id: noteData.group_id, position: noteData.position };
+      const newGroup: Group = { id: groupData.id, title: groupData.name, notes: [newNote], user_id: groupData.user_id, is_pinned: false, last_accessed_at: new Date().toISOString() };
+      
       setGroups([...groups, newGroup]);
       openGroup(newGroup.id);
+      
+      setGlobalView('notes');
+      setFocusedNoteId(null);
+      toggleNote(newGroup.id, newNote.id);
+      setEditingNoteId(newNote.id);
     } catch (error: any) {
       alert('Error al crear grupo: ' + error.message);
     }
@@ -307,18 +318,19 @@ function App() {
     }
   }
 
+  const { closeGroup } = useUIStore();
   const deleteGroup = async (groupId: string) => {
-    if (groups.length <= 1) {
-      alert("Debes mantener al menos un grupo.");
-      return;
-    }
     if (confirm("¿Estás seguro? Todas las notas de este grupo se perderán.")) {
       try {
         const { error } = await supabase.from('groups').delete().eq('id', groupId);
         if (error) throw error;
-        const remaining = groups.filter(g => g.id !== groupId);
-        setGroups(remaining);
-        if (activeGroupId === groupId) setActiveGroup(remaining[0]?.id || null);
+        
+        // 1. Eliminar del estado local de grupos
+        setGroups(prev => prev.filter(g => g.id !== groupId));
+        
+        // 2. Sincronizar UI (cerrar del dock y cambiar activeGroupId si aplica)
+        closeGroup(groupId);
+        
       } catch (error: any) {
         alert('Error al eliminar grupo: ' + error.message);
       }
@@ -337,23 +349,20 @@ function App() {
     }
   };
 
-  const handleStartEdit = () => {
-    if (activeGroup) {
-      setTempGroupName(activeGroup.title);
-      setIsEditingGroup(true);
+  useEffect(() => {
+    if (activeGroupId) {
+      const activeGroup = groups.find(g => g.id === activeGroupId);
+      if (activeGroup) {
+        if (tempGroupName !== null && tempGroupName.trim() && tempGroupName !== activeGroup.title) {
+          updateGroupTitle(activeGroup.id, tempGroupName.trim());
+        }
+        setTempGroupName(null);
+      }
     }
-  };
-
-  const handleSaveGroup = async () => {
-    if (activeGroup && tempGroupName.trim()) {
-      await updateGroupTitle(activeGroup.id, tempGroupName);
-      setIsEditingGroup(false);
-    }
-  };
+  }, [activeGroupId]);
 
   const handleCancelEdit = () => {
-    setIsEditingGroup(false);
-    setTempGroupName('');
+    setTempGroupName(null);
   };
 
   const addNote = async () => {
@@ -499,6 +508,11 @@ function App() {
     updateNote(noteId, updates);
   };
 
+  const cleanMarkdownForExport = (text: string) =>
+    text
+      .replace(/\{=|=\}/g, '')                           // Strip highlights
+      .replace(/\[\[tr:[^|]*\|([^\]]*)\]\]/g, '$1');     // Strip translation marks, keep original text
+
   const downloadGroupAsMarkdown = () => {
     if (!activeGroup) return;
     const sortedNotes = [...activeGroup.notes].sort((a, b) => {
@@ -513,7 +527,7 @@ function App() {
     };
 
     const mdContent = sortedNotes.map(note => {
-      return `titulo: ${note.title || 'Sin título'}\nfecha creacion: ${formatNoteDate(note.created_at)}\nfecha ultima edicion: ${formatNoteDate(note.updated_at || note.created_at)}\ncontenido de la nota:\n${note.content || ''}`;
+      return `titulo: ${note.title || 'Sin título'}\nfecha creacion: ${formatNoteDate(note.created_at)}\nfecha ultima edicion: ${formatNoteDate(note.updated_at || note.created_at)}\ncontenido de la nota:\n${cleanMarkdownForExport(note.content || '')}`;
     }).join('\n\n---\n\n');
 
     const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8;' });
@@ -525,6 +539,53 @@ function App() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const downloadNoteAsMarkdown = (note: Note) => {
+    const formatNoteDate = (dateString?: string) => {
+      if (!dateString) return 'Desconocida';
+      return new Date(dateString).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    };
+    const mdContent = `titulo: ${note.title || 'Sin título'}\nfecha creacion: ${formatNoteDate(note.created_at)}\nfecha ultima edicion: ${formatNoteDate(note.updated_at || note.created_at)}\ncontenido de la nota:\n${cleanMarkdownForExport(note.content || '')}`;
+    const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${(note.title || 'nota').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const copyNoteToClipboard = async (note: Note) => {
+    const clean = cleanMarkdownForExport(note.content || '');
+    const text = `${note.title || 'Sin título'}\n\n${clean}`;
+    await navigator.clipboard.writeText(text);
+  };
+
+  const duplicateNote = async (noteId: string) => {
+    if (!session || !activeGroupId) return;
+    const currentGroup = groups.find(g => g.id === activeGroupId);
+    if (!currentGroup) return;
+    const original = currentGroup.notes.find(n => n.id === noteId);
+    if (!original) return;
+    try {
+      const position = currentGroup.notes.length;
+      const { data, error } = await supabase.from('notes').insert([{
+        title: `Copia de ${original.title || 'Sin título'}`,
+        content: original.content || '',
+        group_id: activeGroupId,
+        user_id: session.user.id,
+        position,
+        is_checklist: original.is_checklist || false,
+      }]).select().single();
+      if (error) throw error;
+      const newNote: Note = { id: data.id, title: data.title, content: data.content || '', isOpen: false, created_at: data.created_at, group_id: data.group_id, position: data.position, is_checklist: data.is_checklist };
+      setGroups(groups.map(g => g.id === activeGroupId ? { ...g, notes: [newNote, ...g.notes] } : g));
+    } catch (error: any) {
+      alert('Error al duplicar nota: ' + error.message);
+    }
   };
 
   return (
@@ -569,15 +630,12 @@ function App() {
             `}</style>
             
             <div className="relative w-full z-50 shrink-0 shadow-md bg-[#ff2800] text-white border-b border-red-900/50">
-              <div className="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-2">
+              <div className="px-4 md:px-6 py-3 flex flex-col gap-2">
                 {overdueRemindersList.map(r => (
                   <div key={`${r.id}-${r.targetId}`} className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="shrink-0 text-white drop-shadow-md">⚠️</span>
-                      <span className="text-sm font-black tracking-wide truncate animate-shimmer-text drop-shadow-sm">
-                        Vencido: {r.title}
-                      </span>
-                    </div>
+                    <span className="text-sm font-black tracking-wide truncate animate-shimmer-text drop-shadow-sm">
+                      Recordatorio vencido: {r.title}
+                    </span>
                     <button
                       onClick={() => setGlobalView('reminders')}
                       className="shrink-0 px-5 py-1.5 bg-white text-[#ff2800] hover:bg-zinc-100 text-xs font-black uppercase tracking-widest rounded-lg transition-transform active:scale-95 shadow-lg"
@@ -594,6 +652,8 @@ function App() {
         {globalView === 'kanban' ? (
           <KanbanApp 
             groups={groups} 
+            dateFormat={dateFormat}
+            timeFormat={timeFormat}
             onOpenNote={async (groupId, noteId) => {
               // 1. ZUSTAND: Ancla el grupo y cambia a la vista de notas
               openGroup(groupId);
@@ -647,39 +707,28 @@ function App() {
                           >
                               <Grid size={20} />
                           </button>
-                          {isEditingGroup ? (
-                            <input
-                              type="text"
-                              value={tempGroupName}
-                              autoFocus
-                              onChange={(e) => setTempGroupName(e.target.value)}
-                              onBlur={() => {
-                                updateGroupTitle(activeGroup.id, tempGroupName);
-                                setIsEditingGroup(false);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  updateGroupTitle(activeGroup.id, tempGroupName);
-                                  setIsEditingGroup(false);
-                                } else if (e.key === 'Escape') {
-                                  setIsEditingGroup(false);
-                                }
-                              }}
-                              className="flex-1 bg-transparent text-xl md:text-2xl font-bold text-zinc-800 dark:text-zinc-100 outline-none px-2 w-full min-w-[150px] border-b-2 border-indigo-500"
-                              placeholder="Nombre del grupo de notas ..."
-                            />
-                          ) : (
-                            <span 
-                              onDoubleClick={() => {
-                                setTempGroupName(activeGroup.title);
-                                setIsEditingGroup(true);
-                              }}
-                              className={`flex-1 text-xl md:text-2xl font-bold px-2 w-full min-w-[150px] cursor-text truncate ${activeGroup.title ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-400 italic'}`}
-                              title="Doble clic para editar"
-                            >
-                              {activeGroup.title || "Nombre del grupo de notas ..."}
-                            </span>
-                          )}
+                          <input
+                            type="text"
+                            value={tempGroupName !== null ? tempGroupName : (activeGroup.title || '')}
+                            onChange={(e) => setTempGroupName(e.target.value)}
+                            onBlur={() => {
+                              if (tempGroupName !== null && tempGroupName.trim() && tempGroupName !== activeGroup.title) {
+                                updateGroupTitle(activeGroup.id, tempGroupName.trim());
+                              }
+                              setTempGroupName(null);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.currentTarget.blur();
+                              } else if (e.key === 'Escape') {
+                                setTempGroupName(null);
+                                e.currentTarget.blur();
+                              }
+                            }}
+                            className="flex-1 bg-transparent text-xl md:text-2xl font-bold text-zinc-800 dark:text-zinc-100 outline-none px-2 w-full min-w-[150px] cursor-text truncate placeholder-zinc-400"
+                            placeholder="Nombre del grupo de notas ..."
+                            title="Haz clic para editar"
+                          />
                           <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-full shrink-0">
                               {activeGroup.notes.length} notas
                           </span>
@@ -828,6 +877,9 @@ function App() {
                               onToggle={() => toggleNote(activeGroup.id, note.id)}
                               onUpdate={(id, updates) => handleUpdateNoteWrapper(id, updates)}
                               onDelete={deleteNote}
+                              onExportNote={downloadNoteAsMarkdown}
+                              onCopyNote={copyNoteToClipboard}
+                              onDuplicate={duplicateNote}
                               searchQuery={currentSearchQuery}
                               noteFont={noteFont}
                               noteFontSize={noteFontSize}

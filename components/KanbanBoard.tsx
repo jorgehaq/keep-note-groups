@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Task, TaskStatus, Group } from '../types';
+import { useTranslation } from 'react-i18next';
 import { Archive, Trash2, GripVertical, StickyNote, Link as LinkIcon } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 import { KanbanLinkerModal } from './KanbanLinkerModal';
@@ -11,6 +12,8 @@ interface KanbanBoardProps {
     onOpenNote?: (groupId: string, noteId: string) => void;
     onUpdate: (id: string, updates: Partial<Task>) => void;
     onDelete: (id: string) => void;
+    dateFormat?: string;
+    timeFormat?: string;
 }
 
 const COLUMNS: { status: TaskStatus; label: string; accent: string }[] = [
@@ -19,18 +22,24 @@ const COLUMNS: { status: TaskStatus; label: string; accent: string }[] = [
     { status: 'done', label: 'Terminado', accent: 'bg-[#75FA61]' },
 ];
 
-const formatDate = (dateString?: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('es-ES', {
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-    }).format(date);
+const formatCustomDate = (isoString: string, dateFormat: string, timeFormat: string): string => {
+    const d = new Date(isoString);
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const year = d.getFullYear();
+    const datePart = dateFormat === 'mm/dd/yyyy' ? `${month}/${day}/${year}` : `${day}/${month}/${year}`;
+    let hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    let ampm = '';
+    if (timeFormat === '12h') {
+        ampm = hours >= 12 ? ' PM' : ' AM';
+        hours = hours % 12 || 12;
+    }
+    return `${datePart}, ${hours.toString().padStart(2, '0')}:${minutes}${ampm}`;
 };
 
-export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], onOpenNote, onUpdate, onDelete }) => {
+export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], onOpenNote, onUpdate, onDelete, dateFormat = 'dd/mm/yyyy', timeFormat = '12h' }) => {
+    const { t } = useTranslation();
     const getColumnTasks = (status: TaskStatus) =>
         tasks.filter(t => t.status === status).sort((a, b) => a.position - b.position);
 
@@ -105,9 +114,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], on
                                     <div
                                         ref={provided.innerRef}
                                         {...provided.droppableProps}
-                                        className={`flex-1 flex flex-col gap-2 rounded-xl p-2 min-h-[200px] transition-colors ${snapshot.isDraggingOver
-                                            ? 'bg-zinc-200/70 dark:bg-zinc-700/40 ring-2 ring-zinc-300 dark:ring-zinc-600 ring-dashed'
-                                            : 'bg-zinc-100/50 dark:bg-zinc-800/30'
+                                        className={`flex-1 flex flex-col gap-2 rounded-xl p-2 min-h-[200px] transition-colors border ${snapshot.isDraggingOver
+                                            ? 'bg-zinc-200/70 dark:bg-zinc-700/40 ring-2 ring-zinc-300 dark:ring-zinc-600 ring-dashed border-zinc-300 dark:border-zinc-600'
+                                            : 'bg-zinc-100/50 dark:bg-zinc-800/30 border-zinc-200 dark:border-zinc-800'
                                             }`}
                                     >
                                         {colTasks.map((task, index) => (
@@ -122,6 +131,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], on
                                                             onDelete={onDelete}
                                                             groups={groups}
                                                             onOpenNote={onOpenNote}
+                                                            dateFormat={dateFormat}
+                                                            timeFormat={timeFormat}
                                                         />
                                                 )}
                                             </Draggable>
@@ -153,10 +164,12 @@ interface TaskCardProps {
     onDelete: (id: string) => void;
     groups?: Group[];
     onOpenNote?: (groupId: string, noteId: string) => void;
+    dateFormat?: string;
+    timeFormat?: string;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnStatus, onUpdate, onDelete, groups = [], onOpenNote }) => {
-    const [isEditing, setIsEditing] = useState(false);
+const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnStatus, onUpdate, onDelete, groups = [], onOpenNote, dateFormat = 'dd/mm/yyyy', timeFormat = '12h' }) => {
+    const [isEditing, setIsEditing] = useState(() => task.title.trim() === '');
     const [tempTitle, setTempTitle] = useState(task.title);
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
 
@@ -181,9 +194,9 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
         <div
             ref={provided.innerRef}
             {...provided.draggableProps}
-            className={`group bg-white dark:bg-zinc-900 rounded-2xl border transition-all duration-300 ease-in-out mb-3 ${isDragging
+            className={`group bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 transition-all duration-300 mb-3 focus-within:ring-2 focus-within:ring-indigo-500/50 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5 ${isDragging
                 ? 'shadow-2xl border-indigo-500/50 ring-2 ring-indigo-500/30 scale-[1.02] rotate-1'
-                : 'border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5'
+                : ''
                 }`}
         >
             <div className="flex items-start gap-2 p-4">
@@ -211,22 +224,24 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
                                 }
                             }}
                             autoFocus
-                            className="w-full text-zinc-800 dark:text-zinc-100 font-medium leading-tight bg-transparent border-b border-indigo-500 outline-none pb-0.5"
+                            className="w-full text-zinc-800 dark:text-zinc-100 font-medium leading-tight bg-transparent outline-none placeholder-zinc-400"
+                            placeholder="Nueva tarea..."
                         />
                     ) : (
-                        <p
-                            className="text-zinc-800 dark:text-zinc-100 font-medium leading-tight cursor-pointer hover:underline decoration-dashed"
-                            onDoubleClick={() => {
+                        <input
+                            type="text"
+                            value={task.title}
+                            onFocus={() => {
                                 setTempTitle(task.title);
                                 setIsEditing(true);
                             }}
-                            title="Doble clic para editar"
-                        >
-                            {task.title}
-                        </p>
+                            readOnly
+                            className="w-full text-zinc-800 dark:text-zinc-100 font-medium leading-tight bg-transparent outline-none cursor-text placeholder-zinc-400"
+                            placeholder="Nueva tarea..."
+                        />
                     )}
                     <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter mt-2 block">
-                        {formatDate(task.updated_at)}
+                        {task.updated_at ? formatCustomDate(task.updated_at, dateFormat, timeFormat) : ''}
                     </span>
                 </div>
 
@@ -243,7 +258,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
                     ) : (
                         <button
                             onClick={() => setIsLinkModalOpen(true)}
-                            className="p-1.5 text-zinc-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
+                            className="p-1.5 text-zinc-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
                             title="Convertir en Nota"
                         >
                             <LinkIcon size={14} />

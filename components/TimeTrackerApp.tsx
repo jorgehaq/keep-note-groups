@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Clock, Trash2, CheckCircle2, Play, Pause, Square, Flag, History as HistoryIcon, Zap, ChevronDown, ChevronUp, RotateCcw, Archive as ArchiveIcon } from 'lucide-react';
+import { Plus, Clock, Trash2, CheckCircle2, Play, Pause, Square, Flag, History as HistoryIcon, Zap, ChevronDown, ChevronUp, RotateCcw, Archive as ArchiveIcon, Wrench } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import { SmartNotesEditor } from '../src/components/editor/SmartNotesEditor';
@@ -63,7 +63,7 @@ const parseMarkdownPreview = (text: string) => {
     if (!text) return '';
     return text
         .replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/==([^=]+)==/g, '<mark class="bg-yellow-200/60 dark:bg-yellow-500/40 text-inherit rounded-sm px-1 font-medium">$1</mark>')
+        .replace(/\{=([^=}]+)=\}/g, '<mark class="bg-yellow-200/60 dark:bg-yellow-500/40 text-inherit rounded-sm px-1 font-medium">$1</mark>')
         .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
         .replace(/\*([^*]+)\*/g, '<em>$1</em>').replace(/_([^_]+)_/g, '<em>$1</em>')
         .replace(/~~([^~]+)~~/g, '<del class="opacity-70">$1</del>')
@@ -241,7 +241,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                         </div>
                         Cronómetros
                     </h1>
-                    <button onClick={createNewDraft} className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-xl shadow-lg transition-colors flex items-center gap-2">
+                    <button onClick={createNewDraft} className="bg-[#2563EB] hover:bg-blue-700 text-white p-2 rounded-xl shadow-lg shadow-blue-500/20 transition-colors flex items-center gap-2">
                         <Plus size={20} /> <span className="text-sm font-bold hidden sm:inline pr-2">Nuevo</span>
                     </button>
                 </div>
@@ -254,11 +254,11 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                     {drafts.length > 0 && (
                         <div className="space-y-6 animate-fadeIn">
                             <div className="flex items-center gap-2 text-indigo-500">
-                                <Zap size={18} className="fill-current" />
-                                <span className="text-sm font-bold uppercase tracking-widest">En Construcción</span>
+                                <Wrench size={18} className="fill-current" />
+                                <span className="text-sm font-bold uppercase tracking-widest">Creación de Cronómetro</span>
                             </div>
                             {drafts.map(draft => (
-                                <div key={draft.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-indigo-500/30 p-1 transition-all focus-within:ring-2 focus-within:ring-indigo-500/50">
+                                <div key={draft.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:border-[#2563EB]/50 hover:shadow-xl hover:shadow-[#2563EB]/5 focus-within:ring-2 focus-within:ring-[#2563EB]/50 p-1">
                                     <div className="flex items-center justify-between pr-4">
                                         <input 
                                             type="text" placeholder="¿Qué vamos a medir? (ej. Sprint Programación)" 
@@ -287,10 +287,10 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
 
                                     <div className="flex justify-end p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800">
                                         <div className="flex items-center gap-2">
-                                            <button onClick={() => deleteTimer(draft.id)} className="text-xs font-bold text-zinc-400 hover:text-red-600 px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-2">
-                                                <Trash2 size={14} /> Eliminar
+                                            <button onClick={() => deleteTimer(draft.id)} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Eliminar">
+                                                <Trash2 size={18} />
                                             </button>
-                                            <button onClick={() => changeStatus(draft.id, 'active')} className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-600/20 transition-all">
+                                            <button onClick={() => changeStatus(draft.id, 'active')} className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-[#2563EB] hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/20 transition-all">
                                                 <Play size={14}/> Establecer e Iniciar
                                             </button>
                                         </div>
@@ -309,36 +309,25 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                             
                             <div className="grid grid-cols-1 gap-4">
                                 {actives.map(timer => {
-                                    const isExpanded = expandedActiveIds.has(timer.id);
                                     const isRunning = timer.last_started_at !== null;
 
                                     return (
-                                        <div key={timer.id} className={`bg-white dark:bg-zinc-900 p-5 rounded-2xl shadow-lg transition-all flex flex-col ${isExpanded ? 'border-2 border-indigo-500/50' : 'border border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/50'}`}>
+                                        <div key={timer.id} className="bg-white dark:bg-zinc-900 p-5 rounded-2xl shadow-lg transition-all duration-300 flex flex-col border border-zinc-200 dark:border-zinc-800 hover:border-[#2563EB]/50 hover:shadow-xl hover:shadow-[#2563EB]/5 focus-within:ring-2 focus-within:ring-[#2563EB]/50">
                                             
                                             {/* HEADER */}
                                             <div className="flex justify-between items-start mb-4">
                                                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                    <button onClick={() => toggleExpandActive(timer.id)} className="p-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md text-zinc-600 dark:text-zinc-400 transition-colors shrink-0">
-                                                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                                    </button>
-                                                    <div className="flex flex-col min-w-0">
+                                                    <div className="flex flex-col min-w-0 pl-1">
                                                         <h3 className="font-bold text-lg text-zinc-800 dark:text-zinc-100 truncate">{timer.title || 'Cronómetro'}</h3>
                                                         <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
                                                             {timer.type === 'cycle' ? <><RotateCcw size={10}/> Modo Ciclo</> : <><Flag size={10}/> Modo Carrera</>}
                                                         </span>
                                                     </div>
                                                 </div>
-                                                {!isExpanded && (
-                                                    <div className="shrink-0 pl-4 flex items-center gap-3">
-                                                        {isRunning && <span className="flex w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>}
-                                                        <LiveClock accumulatedMs={timer.accumulated_ms} lastStartedAt={timer.last_started_at} />
-                                                    </div>
-                                                )}
                                             </div>
 
                                             {/* ÁREA EXPANDIDA */}
-                                            {isExpanded ? (
-                                                <div className="animate-fadeIn space-y-4">
+                                            <div className="animate-fadeIn space-y-4">
                                                     <input type="text" value={timer.title} onChange={e => autoSave(timer.id, { title: e.target.value })} className="w-full bg-zinc-50 dark:bg-zinc-950 text-sm font-bold p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 outline-none" />
                                                     
                                                     <div className="bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-text min-h-[100px]">
@@ -372,16 +361,13 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                                         </div>
                                                     </div>
                                                 </div>
-                                            ) : (
-                                                <div className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2 mb-2 opacity-80 pl-11 leading-relaxed" dangerouslySetInnerHTML={{__html: parseMarkdownPreview(timer.content)}} />
-                                            )}
 
                                             {/* LISTA DE LAPS (DISEÑO 2 RENGLONES ESTILO REMINDERS) */}
                                             {timer.laps.length > 0 && (
                                                 <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
                                                     <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">Registro de Laps ({timer.laps.length})</span>
                                                     {timer.laps.map((lap, idx) => (
-                                                        <div key={lap.id} className="flex flex-col group p-3 bg-zinc-50 dark:bg-zinc-800/30 rounded-xl border border-zinc-100 dark:border-zinc-800/80">
+                                                        <div key={lap.id} className="flex flex-col group p-3 bg-zinc-50 dark:bg-zinc-800/30 rounded-xl border border-zinc-200 dark:border-zinc-800/80">
                                                             <div className="flex justify-between items-start w-full">
                                                                 <span className="font-bold text-sm text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
                                                                     <span className="bg-zinc-200 dark:bg-zinc-700 px-2 py-0.5 rounded text-xs">Lap {idx + 1}</span>
@@ -402,16 +388,14 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                             )}
 
                                             {/* FOOTER ACCIONES */}
-                                            {isExpanded && (
-                                                <div className="flex items-center justify-between pt-4 border-t border-zinc-100 dark:border-zinc-800 mt-6">
-                                                    <button onClick={() => deleteTimer(timer.id)} className="text-xs font-bold text-zinc-400 hover:text-red-600 px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-2">
-                                                        <Trash2 size={14} /> Eliminar
-                                                    </button>
-                                                    <button onClick={() => changeStatus(timer.id, 'history')} className="text-xs font-bold text-amber-600 hover:text-amber-700 dark:text-amber-500 dark:hover:text-amber-400 px-3 py-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors flex items-center gap-2">
-                                                        <ArchiveIcon size={14} /> Archivar Cronómetro
-                                                    </button>
-                                                </div>
-                                            )}
+                                            <div className="flex items-center justify-end pt-4 border-t border-zinc-100 dark:border-zinc-800 mt-6 gap-2">
+                                                <button onClick={() => deleteTimer(timer.id)} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Eliminar">
+                                                    <Trash2 size={18} />
+                                                </button>
+                                                <button onClick={() => changeStatus(timer.id, 'history')} className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-[#2563EB] hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/20 transition-all">
+                                                    <ArchiveIcon size={14} /> Archivar Cronómetro
+                                                </button>
+                                            </div>
                                         </div>
                                     );
                                 })}
@@ -422,7 +406,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                     {/* 3. ARCHIVO (HISTORIAL) */}
                     <div className="space-y-4 pt-4 border-t border-zinc-200 dark:border-zinc-800/50 opacity-70">
                         <div className="flex items-center gap-2 text-zinc-400">
-                            <HistoryIcon size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Archivo ({history.length})</span>
+                            <ArchiveIcon size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Archivo ({history.length})</span>
                         </div>
                         {history.length === 0 ? (
                             <div className="text-sm text-center text-zinc-400 p-4">No hay cronómetros archivados.</div>
@@ -432,7 +416,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                     const isExpanded = expandedHistoryIds.has(t.id);
                                     
                                     return (
-                                    <div key={t.id} className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-100 dark:border-zinc-800 transition-colors">
+                                    <div key={t.id} className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-200 dark:border-zinc-800 transition-colors">
                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                                             
                                             <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -468,7 +452,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                                 
                                                 <div className="space-y-2">
                                                     {t.laps.map((lap, idx) => (
-                                                        <div key={lap.id} className="flex flex-col group p-3 bg-zinc-100/50 dark:bg-zinc-800/30 rounded-xl border border-zinc-100 dark:border-zinc-800/50 opacity-60">
+                                                        <div key={lap.id} className="flex flex-col group p-3 bg-zinc-100/50 dark:bg-zinc-800/30 rounded-xl border border-zinc-200 dark:border-zinc-800/50 opacity-60">
                                                             <div className="flex justify-between items-start w-full">
                                                                 <span className="font-bold text-sm text-zinc-500 line-through">Lap {idx + 1}</span>
                                                                 <span className="text-[12px] font-mono text-zinc-500">{formatDuration(lap.duration_ms)}</span>

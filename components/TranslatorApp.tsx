@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Languages, Volume2, Trash2, Copy, CheckCircle2, ArrowRightLeft, Loader2, Sparkles, Archive as ArchiveIcon, X } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Languages, Volume2, Trash2, Copy, CheckCircle2, ArrowRightLeft, Loader2, Sparkles, Archive as ArchiveIcon, X, Eraser, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 
 const LANGUAGES = [
@@ -24,6 +24,8 @@ const formatCleanDate = (isoString: string) => {
     return `${day}/${month}/${year}, ${hours.toString().padStart(2, '0')}:${minutes}${ampm}`;
 };
 
+import { Session } from '@supabase/supabase-js';
+
 interface Translation {
   id: string;
   source_text: string;
@@ -31,9 +33,10 @@ interface Translation {
   source_lang: string;
   target_lang: string;
   created_at: string;
+  user_id: string;
 }
 
-export const TranslatorApp = () => {
+export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
   const [translations, setTranslations] = useState<Translation[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,16 +50,20 @@ export const TranslatorApp = () => {
   const [isTranslating, setIsTranslating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [expandedTranslationIds, setExpandedTranslationIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    fetchTranslations();
-  }, []);
+  const toggleExpandTranslation = (id: string) => setExpandedTranslationIds(prev => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+  });
 
-  const fetchTranslations = async () => {
+  const fetchTranslations = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('translations')
         .select('*')
+        .eq('user_id', session.user.id)
         .order('created_at', { ascending: false });
         
       if (error) throw error;
@@ -66,7 +73,11 @@ export const TranslatorApp = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session.user.id]);
+
+  useEffect(() => {
+    fetchTranslations();
+  }, [fetchTranslations]);
 
   // 🚀 FIX: Traducción REAL automática (usando MyMemory API) y con Debounce
   useEffect(() => {
@@ -104,13 +115,12 @@ export const TranslatorApp = () => {
     if (!originalText.trim() || !translatedText.trim()) return;
     setIsSaving(true);
     try {
-      const user = (await supabase.auth.getUser()).data.user;
       const newTranslation = {
         source_text: originalText,
         translated_text: translatedText,
         source_lang: sourceLang,
         target_lang: targetLang,
-        user_id: user?.id
+        user_id: session.user.id
       };
 
       const { data, error } = await supabase
@@ -163,6 +173,13 @@ export const TranslatorApp = () => {
 
   const getLangName = (code: string) => LANGUAGES.find(l => l.code === code)?.name || code;
 
+  // Filtrado en tiempo real del archivo basado en el texto de entrada actual
+  const filteredTranslations = originalText.trim()
+    ? translations
+        .filter(t => t.source_text.toLowerCase().includes(originalText.trim().toLowerCase()))
+        .slice(0, 10) // Mostrar máximo las 10 coincidencias más recientes
+    : translations;
+
   if (loading) return <div className="p-10 text-center animate-pulse text-zinc-500">Cargando Traductor...</div>;
 
   return (
@@ -190,7 +207,7 @@ export const TranslatorApp = () => {
                     </div>
 
                     {/* 🚀 FIX: focus-within EN LA TARJETA EXTERIOR EXCLUSIVAMENTE */}
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-violet-500/30 p-1 transition-all focus-within:ring-2 focus-within:ring-violet-500/50">
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 p-1 transition-all duration-300 hover:border-violet-500/50 hover:shadow-xl hover:shadow-violet-500/5 focus-within:ring-2 focus-within:ring-violet-500/50">
                         
                         <div className="bg-zinc-50 dark:bg-[#1B1B1E] rounded-xl m-4 p-4 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-4">
                             <select 
@@ -242,28 +259,36 @@ export const TranslatorApp = () => {
                                     placeholder="La traducción aparecerá aquí..."
                                     className="w-full h-40 bg-transparent p-4 outline-none resize-none text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 opacity-90"
                                 />
-                                {translatedText && !isTranslating && (
-                                    <button onClick={() => playAudio(translatedText, targetLang)} className="absolute bottom-3 right-3 p-2 text-zinc-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors">
-                                        <Volume2 size={16} />
-                                    </button>
-                                )}
+                                <div className="absolute bottom-3 right-3 flex items-center gap-1">
+                                    {translatedText && !isTranslating && (
+                                        <>
+                                            <button onClick={() => copyToClipboard(translatedText, 'current_output')} className="p-2 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors" title="Copiar traducción">
+                                                {copiedId === 'current_output' ? <CheckCircle2 size={16} className="text-emerald-500" /> : <Copy size={16} />}
+                                            </button>
+                                            <button onClick={() => playAudio(translatedText, targetLang)} className="p-2 text-zinc-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors" title="Escuchar traducción">
+                                                <Volume2 size={16} />
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
-                        {/* 🚀 FIX: Botones reemplazados por Limpiar y un Guardar bloqueado si está vacío */}
-                        <div className="flex justify-between items-center gap-3 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800">
+                        {/* 🚀 FIX: Botón de Limpiar como icono y alineado a la derecha */}
+                        <div className="flex justify-end items-center gap-3 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800">
                             <button 
                                 onClick={() => { setOriginalText(''); setTranslatedText(''); }} 
                                 disabled={!originalText.trim()}
-                                className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-zinc-500 hover:text-red-500 transition-colors disabled:opacity-50"
+                                className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50"
+                                title="Limpiar contenido"
                             >
-                                <X size={14} /> Limpiar
+                                <Eraser size={18} />
                             </button>
                             
                             <button 
                                 onClick={saveTranslation} 
                                 disabled={!originalText.trim() || !translatedText.trim() || isTranslating || isSaving}
-                                className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-lg shadow-emerald-600/20 transition-all disabled:opacity-50"
+                                className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-[#8B5CF6] hover:bg-violet-600 rounded-xl shadow-lg shadow-violet-500/20 transition-all disabled:opacity-50"
                             >
                                 {isSaving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                                 Guardar Traducción
@@ -273,56 +298,82 @@ export const TranslatorApp = () => {
                 </div>
 
                 {/* 2. ARCHIVO DE TRADUCCIONES */}
-                <div className="space-y-4 pt-4 border-t border-zinc-200 dark:border-zinc-800/50 opacity-90">
+                <div className="space-y-4 pt-4 border-t border-zinc-300 dark:border-zinc-800/50">
                     <div className="flex items-center gap-2 text-zinc-400">
-                        <ArchiveIcon size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Archivo de Traducciones ({translations.length})</span>
+                        <ArchiveIcon size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Archivo ({filteredTranslations.length}{originalText.trim() && ' de ' + translations.length})</span>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-4">
-                        {translations.map((t) => (
-                            <div key={t.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 p-5 flex flex-col transition-all hover:border-violet-500/30 focus-within:ring-2 focus-within:ring-violet-500/50">
-                                
-                                <div className="flex items-center gap-3 text-xs font-bold text-violet-600 dark:text-violet-400 mb-4 px-1">
-                                    <span className="bg-violet-50 dark:bg-violet-900/20 px-3 py-1 rounded-full">{getLangName(t.source_lang)}</span>
-                                    <ArrowRightLeft size={12} className="opacity-50" />
-                                    <span className="bg-violet-50 dark:bg-violet-900/20 px-3 py-1 rounded-full">{getLangName(t.target_lang)}</span>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                    <div className="p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl relative group text-sm text-zinc-800 dark:text-zinc-200 leading-relaxed">
-                                        {t.source_text}
-                                        <button onClick={() => playAudio(t.source_text, t.source_lang)} className="absolute top-2 right-2 p-1.5 opacity-0 group-hover:opacity-100 bg-white dark:bg-zinc-800 text-zinc-400 hover:text-violet-500 rounded-md transition-all shadow-sm">
-                                            <Volume2 size={14} />
+                    <div className="space-y-2">
+                        {filteredTranslations.map((t) => {
+                            const isExpanded = expandedTranslationIds.has(t.id);
+                            
+                            return (
+                            <div key={t.id} className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-200 dark:border-zinc-800 transition-colors">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                    
+                                    {/* Cabecera / Fila Compacta */}
+                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                        <button onClick={() => toggleExpandTranslation(t.id)} className="p-1.5 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded-md text-zinc-500 transition-colors shrink-0" title="Desplegar traducción">
+                                            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                         </button>
-                                    </div>
-                                    <div className="p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl relative group text-sm text-zinc-800 dark:text-zinc-200 leading-relaxed font-medium">
-                                        {t.translated_text}
-                                        <button onClick={() => playAudio(t.translated_text, t.target_lang)} className="absolute top-2 right-2 p-1.5 opacity-0 group-hover:opacity-100 bg-white dark:bg-zinc-800 text-zinc-400 hover:text-emerald-500 rounded-md transition-all shadow-sm">
-                                            <Volume2 size={14} />
-                                        </button>
-                                    </div>
-                                </div>
+                                        
+                                        <div className="flex items-center gap-1 text-[10px] font-bold text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20 px-2 py-0.5 rounded shrink-0">
+                                            <span>{t.source_lang}</span>
+                                            <ArrowRightLeft size={10} className="opacity-50" />
+                                            <span>{t.target_lang}</span>
+                                        </div>
 
-                                <div className="flex items-center justify-between pt-3 border-t border-zinc-100 dark:border-zinc-800">
-                                    <span className="text-[10px] font-bold text-zinc-400 pl-1">
-                                        Creado: {formatCleanDate(t.created_at)}
-                                    </span>
-                                    <div className="flex items-center gap-2">
-                                        <button onClick={() => copyToClipboard(t.translated_text, t.id)} className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md transition-colors" title="Copiar traducción">
+                                        <div className="flex flex-1 items-center gap-2 min-w-0 overflow-hidden text-sm">
+                                            <span className="text-zinc-500 dark:text-zinc-500 truncate max-w-[40%]">{t.source_text}</span>
+                                            <span className="text-zinc-300 dark:text-zinc-700 shrink-0">|</span>
+                                            <span className="text-zinc-700 dark:text-zinc-300 font-medium truncate flex-1">{t.translated_text}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Acciones */}
+                                    <div className="flex items-center gap-1 shrink-0 pl-11 md:pl-0">
+                                        <div className="w-px h-4 bg-zinc-300 dark:bg-zinc-700 mx-1 hidden md:block"></div>
+                                        <button onClick={() => copyToClipboard(t.translated_text, t.id)} className="p-1.5 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md transition-colors text-zinc-400" title="Copiar traducción">
                                             {copiedId === t.id ? <CheckCircle2 size={16} className="text-emerald-500" /> : <Copy size={16} />}
                                         </button>
-                                        <button onClick={() => deleteTranslation(t.id)} className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors" title="Eliminar registro">
+                                        <button onClick={() => deleteTranslation(t.id)} className="p-1.5 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors text-zinc-400" title="Eliminar para siempre">
                                             <Trash2 size={16} />
                                         </button>
                                     </div>
                                 </div>
-
+                                
+                                {/* Vista Expandida */}
+                                {isExpanded && (
+                                    <div className="mt-2 bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 animate-fadeIn">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="relative group text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                                                <div className="mb-1 text-[10px] font-bold text-violet-500/70 uppercase tracking-wider">{getLangName(t.source_lang)}</div>
+                                                {t.source_text}
+                                                <button onClick={() => playAudio(t.source_text, t.source_lang)} className="absolute top-0 right-0 p-1.5 opacity-0 group-hover:opacity-100 bg-white dark:bg-zinc-800 text-zinc-400 hover:text-violet-500 rounded-md transition-all shadow-sm">
+                                                    <Volume2 size={14} />
+                                                </button>
+                                            </div>
+                                            <div className="relative group text-sm text-zinc-800 dark:text-zinc-200 leading-relaxed font-medium">
+                                                <div className="mb-1 text-[10px] font-bold text-violet-500/70 uppercase tracking-wider">{getLangName(t.target_lang)}</div>
+                                                {t.translated_text}
+                                                <button onClick={() => playAudio(t.translated_text, t.target_lang)} className="absolute top-0 right-0 p-1.5 opacity-0 group-hover:opacity-100 bg-white dark:bg-zinc-800 text-zinc-400 hover:text-emerald-500 rounded-md transition-all shadow-sm">
+                                                    <Volume2 size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                        ))}
+                        )})}
+                        {filteredTranslations.length === 0 && translations.length > 0 && (
+                            <div className="text-center text-sm text-zinc-400 p-8 border border-zinc-200 dark:border-zinc-800 border-dashed rounded-2xl">
+                                No se encontraron traducciones que coincidan con la búsqueda.
+                            </div>
+                        )}
                     </div>
                     {translations.length === 0 && (
                         <div className="text-center text-sm text-zinc-400 p-8 border border-zinc-200 dark:border-zinc-800 border-dashed rounded-2xl">
-                            Aún no tienes traducciones guardadas.
+                            Aún no tienes traducciones guardadas en el archivo.
                         </div>
                     )}
                 </div>

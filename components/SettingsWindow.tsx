@@ -1,6 +1,7 @@
 import React from 'react';
-import { X, Moon, Sun, Monitor, Type, CalendarClock, Palette, TextSelect } from 'lucide-react';
+import { X, Moon, Sun, Monitor, Type, CalendarClock, Palette, TextSelect, Languages } from 'lucide-react';
 import { Theme, NoteFont } from '../types';
+import { useTranslation } from 'react-i18next';
 
 interface SettingsWindowProps {
   isOpen: boolean; 
@@ -20,6 +21,13 @@ interface SettingsWindowProps {
 export const SettingsWindow: React.FC<SettingsWindowProps> = ({
   isOpen, onClose, theme, onThemeChange, noteFont, onNoteFontChange, noteFontSize, onNoteFontSizeChange, dateFormat, onDateFormatChange, timeFormat, onTimeFormatChange
 }) => {
+  const { t, i18n } = useTranslation();
+
+  const changeLanguage = (lng: string) => {
+    i18n.changeLanguage(lng);
+    localStorage.setItem('app-language', lng);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -29,7 +37,7 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
         {/* HEADER */}
         <div className="sticky top-0 px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md z-10">
           <h2 className="text-lg font-bold text-zinc-800 dark:text-white flex items-center gap-2">
-            Configuración
+            {t('settings.title')}
           </h2>
           <button onClick={onClose} className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-full text-zinc-500 transition-colors">
             <X size={20} />
@@ -37,17 +45,38 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
         </div>
 
         <div className="p-6 space-y-6">
-          
-          {/* SECCIÓN 1: TEMA VISUAL */}
+
+          {/* SECCIÓN: IDIOMA */}
           <section className="p-5 bg-zinc-50 dark:bg-zinc-800/30 rounded-3xl border border-zinc-100 dark:border-zinc-800">
             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-              <Palette size={14}/> Apariencia
+              <Languages size={14}/> {t('settings.language')}
+            </label>
+            <div className="flex bg-zinc-200/50 dark:bg-zinc-900/50 rounded-xl p-1">
+              <button 
+                onClick={() => changeLanguage('es')}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${i18n.language?.startsWith('es') ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+              >
+                Español
+              </button>
+              <button 
+                onClick={() => changeLanguage('en')}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${i18n.language?.startsWith('en') ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+              >
+                English
+              </button>
+            </div>
+          </section>
+          
+          {/* SECCIÓN: TEMA VISUAL */}
+          <section className="p-5 bg-zinc-50 dark:bg-zinc-800/30 rounded-3xl border border-zinc-100 dark:border-zinc-800">
+            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+              <Palette size={14}/> {t('settings.appearance')}
             </label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { id: 'light', icon: Sun, label: 'Claro' }, 
-                { id: 'dark', icon: Moon, label: 'Oscuro' }, 
-                { id: 'system', icon: Monitor, label: 'Sistema' }
+                { id: 'light', icon: Sun, label: t('settings.light') }, 
+                { id: 'dark', icon: Moon, label: t('settings.dark') }, 
+                { id: 'system', icon: Monitor, label: t('settings.system') }
               ].map(({ id, icon: Icon, label }) => (
                 <button 
                   key={id} 
@@ -61,20 +90,20 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
             </div>
           </section>
 
-          {/* SECCIÓN 2: TIPOGRAFÍA Y TAMAÑO (REVIVIDO) */}
+          {/* SECCIÓN: TIPOGRAFÍA Y TAMAÑO */}
           <section className="p-5 bg-zinc-50 dark:bg-zinc-800/30 rounded-3xl border border-zinc-100 dark:border-zinc-800">
             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-              <Type size={14}/> Tipografía de Notas
+              <Type size={14}/> {t('settings.typography')}
             </label>
             
             <div className="space-y-5">
               <div>
-                <p className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2">Estilo de Fuente</p>
+                <p className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2">{t('settings.font_style')}</p>
                 <div className="flex bg-zinc-200/50 dark:bg-zinc-900/50 rounded-xl p-1">
                   {[
-                    { id: 'sans', label: 'Moderna' }, 
-                    { id: 'serif', label: 'Clásica' }, 
-                    { id: 'mono', label: 'Código' }
+                    { id: 'sans', label: t('settings.modern') }, 
+                    { id: 'serif', label: t('settings.classic') }, 
+                    { id: 'mono', label: t('settings.code') }
                   ].map((font) => (
                     <button 
                       key={font.id} 
@@ -90,13 +119,13 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
 
               <div>
                 <p className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2 flex items-center gap-1">
-                  <TextSelect size={12}/> Tamaño de Letra
+                  <TextSelect size={12}/> {t('settings.font_size')}
                 </p>
                 <div className="flex bg-zinc-200/50 dark:bg-zinc-900/50 rounded-xl p-1">
                   {[
-                    { id: 'small', label: 'Pequeña', sizeClass: 'text-sm' }, 
-                    { id: 'medium', label: 'Normal', sizeClass: 'text-base' }, 
-                    { id: 'large', label: 'Grande', sizeClass: 'text-lg' }
+                    { id: 'small', label: t('settings.small'), sizeClass: 'text-sm' }, 
+                    { id: 'medium', label: t('settings.medium'), sizeClass: 'text-base' }, 
+                    { id: 'large', label: t('settings.large'), sizeClass: 'text-lg' }
                   ].map((size) => (
                     <button 
                       key={size.id} 
@@ -111,25 +140,25 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
             </div>
           </section>
 
-          {/* SECCIÓN 3: FORMATOS REGIONALES (FECHAS/TIEMPOS) */}
+          {/* SECCIÓN: FORMATOS REGIONALES */}
           <section className="p-5 bg-zinc-50 dark:bg-zinc-800/30 rounded-3xl border border-zinc-100 dark:border-zinc-800">
             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-              <CalendarClock size={14}/> Formato Regional
+              <CalendarClock size={14}/> {t('settings.regional')}
             </label>
             
             <div className="space-y-5">
               <div>
-                <p className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2">Formato de Fecha</p>
+                <p className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2">{t('settings.date_format')}</p>
                 <div className="flex bg-zinc-200/50 dark:bg-zinc-900/50 rounded-xl p-1">
-                  <button onClick={() => onDateFormatChange('dd/mm/yyyy')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${dateFormat === 'dd/mm/yyyy' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>Día/Mes/Año</button>
-                  <button onClick={() => onDateFormatChange('mm/dd/yyyy')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${dateFormat === 'mm/dd/yyyy' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>Mes/Día/Año</button>
+                  <button onClick={() => onDateFormatChange('dd/mm/yyyy')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${dateFormat === 'dd/mm/yyyy' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>{t('settings.day_month_year')}</button>
+                  <button onClick={() => onDateFormatChange('mm/dd/yyyy')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${dateFormat === 'mm/dd/yyyy' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>{t('settings.month_day_year')}</button>
                 </div>
               </div>
               <div>
-                <p className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2">Formato de Hora</p>
+                <p className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2">{t('settings.time_format')}</p>
                 <div className="flex bg-zinc-200/50 dark:bg-zinc-900/50 rounded-xl p-1">
                   <button onClick={() => onTimeFormatChange('12h')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${timeFormat === '12h' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>12h (AM/PM)</button>
-                  <button onClick={() => onTimeFormatChange('24h')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${timeFormat === '24h' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>24h (Militar)</button>
+                  <button onClick={() => onTimeFormatChange('24h')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${timeFormat === '24h' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>{t('settings.military')}</button>
                 </div>
               </div>
             </div>

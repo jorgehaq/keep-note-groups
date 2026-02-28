@@ -13,9 +13,9 @@ interface SmartNotesEditorProps {
     initialContent: string;
     searchQuery?: string;
     onChange: (markdown: string) => void;
-    // --- NUEVAS PROPS DE TIPOGRAFÍA DINÁMICA ---
     noteFont?: string; 
     noteFontSize?: string; 
+    readOnly?: boolean;
 }
 
 const ForceRedrawEffect = StateEffect.define<null>();
@@ -37,6 +37,27 @@ class HrWidget extends WidgetType {
     toDOM() { const span = document.createElement("span"); span.className = "cm-custom-hr"; return span; }
 }
 
+class CodeBlockCopyWidget extends WidgetType {
+    constructor(readonly code: string) { super(); }
+    eq(other: CodeBlockCopyWidget) { return other.code === this.code; }
+    toDOM() {
+        const btn = document.createElement("button");
+        btn.className = "cm-codeblock-copy";
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+        btn.title = "Copiar código";
+        btn.onmousedown = (e) => {
+            e.preventDefault(); e.stopPropagation();
+            navigator.clipboard.writeText(this.code).then(() => {
+                btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+                setTimeout(() => { btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'; }, 1500);
+            });
+        };
+        return btn;
+    }
+}
+
+const KNOWN_LANGS = new Set(['bash','sh','zsh','javascript','js','typescript','ts','python','py','css','html','json','sql','java','go','rust','c','cpp','jsx','tsx','yaml','yml','xml','ruby','rb','php','swift','kotlin','dart','lua','r','scala','perl','powershell','dockerfile','makefile','graphql','toml','ini','markdown','md','plaintext','text','diff']);
+
 const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Record<string, string>>, searchQueryRef: React.MutableRefObject<string>) => ViewPlugin.fromClass(class {
     decorations;
     constructor(view: EditorView) { this.decorations = this.buildDecorations(view); }
@@ -56,8 +77,76 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
 
         for (let { from, to } of view.visibleRanges) {
             const textToSearch = view.state.doc.sliceString(from, to);
+
+            // --- STEP 1: Code blocks via LINE decorations (line-by-line scanner) ---
+            const codeBlockRanges: { from: number; to: number }[] = [];
+            const isDark = document.documentElement.classList.contains('dark');
+            const cbHeaderClass = isDark ? 'cm-cb-header-dark' : 'cm-cb-header';
+            const cbLineClass = isDark ? 'cm-cb-line-dark' : 'cm-cb-line';
+            const cbFooterClass = isDark ? 'cm-cb-footer-dark' : 'cm-cb-footer';
+            const totalLines = view.state.doc.lines;
+            let scanLine = 1;
+            while (scanLine <= totalLines) {
+                const line = view.state.doc.line(scanLine);
+                const lineText = line.text;
+                // Check if line starts with ``` (opening fence)
+                if (lineText.startsWith('```') && lineText.trimEnd() !== '```' ? /^```\w*$/.test(lineText.trimEnd()) : lineText.trimEnd() === '```') {
+                    const openLine = scanLine;
+                    const rawLang = lineText.slice(3).trim().toLowerCase();
+                    // Look for closing ``` (must be exactly ``` on its own line)
+                    let closeLine = -1;
+                    for (let search = openLine + 1; search <= totalLines; search++) {
+                        if (view.state.doc.line(search).text.trimEnd() === '```') {
+                            closeLine = search;
+                            break;
+                        }
+                    }
+                    if (closeLine > 0) {
+                        const openLineObj = view.state.doc.line(openLine);
+                        const closeLineObj = view.state.doc.line(closeLine);
+                        codeBlockRanges.push({ from: openLineObj.from, to: closeLineObj.to });
+
+                        // Collect code content for copy
+                        const codeLines: string[] = [];
+                        for (let cl = openLine + 1; cl < closeLine; cl++) {
+                            codeLines.push(view.state.doc.line(cl).text);
+                        }
+                        const codeContent = codeLines.join('\n');
+
+                        // Apply line decorations + hide ``` when not focused
+                        const openFocused = lineAtCursor === openLine;
+                        const closeFocused = lineAtCursor === closeLine;
+
+                        decos.push(Decoration.line({ class: cbHeaderClass }).range(openLineObj.from));
+                        if (!openFocused) {
+                            // Hide the ```lang text
+                            safeReplace(openLineObj.from, openLineObj.to);
+                        }
+                        decos.push(Decoration.widget({ widget: new CodeBlockCopyWidget(codeContent), side: 1 }).range(openLineObj.to, openLineObj.to));
+
+                        for (let cl = openLine + 1; cl < closeLine; cl++) {
+                            decos.push(Decoration.line({ class: cbLineClass }).range(view.state.doc.line(cl).from));
+                        }
+
+                        decos.push(Decoration.line({ class: cbFooterClass }).range(closeLineObj.from));
+                        if (!closeFocused) {
+                            // Hide the closing ```
+                            safeReplace(closeLineObj.from, closeLineObj.to);
+                        }
+
+                        scanLine = closeLine + 1;
+                        continue;
+                    }
+                }
+                scanLine++;
+            }
+
+            // Helper to skip inline formatting inside code blocks
+            const insideCB = (pos: number) => codeBlockRanges.some(r => pos >= r.from && pos < r.to);
+
+            // --- STEP 2: Inline formatting (skip inside code blocks) ---
             const rules = [
-                { type: 'hl', regex: /==([\s\S]*?)==/g }, { type: 'tr', regex: /\[\[tr:([^|\]]+)\|([\s\S]*?)\]\]/g },
+                { type: 'hl', regex: /\{=([\s\S]*?)=\}/g }, { type: 'tr', regex: /\[\[tr:([^|\]]+)\|([\s\S]*?)\]\]/g },
                 { type: 'h1', regex: /^(#{1,6})\s+(.*)/gm }, { type: 'bold', regex: /\*\*([\s\S]*?)\*\*/g }, 
                 { type: 'italic_under', regex: /(?<!_)_([^_]+)_(?!_)/g }, { type: 'italic_star', regex: /(?<!\*)\*([^*]+)\*(?!\*)/g }, 
                 { type: 'hr', regex: /^---+$/gm }, { type: 'md-link', regex: /\[([^\]]*)\]\(([^)\n]*)\)/g },
@@ -68,6 +157,7 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
                 let match;
                 while ((match = rule.regex.exec(textToSearch)) !== null) {
                     const mFrom = from + match.index; const mTo = from + match.index + match[0].length;
+                    if (insideCB(mFrom)) continue;
                     const isFocused = view.state.doc.lineAt(mFrom).number === lineAtCursor;
 
                     if (rule.type === 'raw-link') safeMark('cm-custom-link', mFrom, mTo, { 'data-url': match[0] });
@@ -158,7 +248,9 @@ const createNotesTheme = (font: string, size: string) => {
         "&.cm-focused": { outline: "none" },
         ".cm-gutters": { display: "none" },
         ".cm-custom-hl": { backgroundColor: "#ccff00", color: "#000 !important", borderRadius: "4px", padding: "0 2px", fontWeight: "600" },
+        ".dark .cm-custom-hl": { backgroundColor: "rgba(204, 255, 0, 0.3)", color: "inherit !important" },
         ".cm-custom-tr": { position: "relative", backgroundColor: "rgba(96, 165, 250, 0.9)", color: "#000 !important", borderRadius: "4px", padding: "0 2px", fontWeight: "600", cursor: "help" },
+        ".dark .cm-custom-tr": { backgroundColor: "rgba(96, 165, 250, 0.35)", color: "inherit !important" },
         ".cm-custom-h1": { fontSize: "1.4em", fontWeight: "bold", color: "inherit", lineHeight: "1.2" },
         ".cm-custom-bold": { fontWeight: "bold", color: "inherit" },
         ".cm-custom-italic": { fontStyle: "italic", color: "inherit" },
@@ -167,6 +259,15 @@ const createNotesTheme = (font: string, size: string) => {
         ".cm-custom-hr": { display: "inline-block", verticalAlign: "middle", width: "calc(100% - 30px)", height: "2px", backgroundColor: "#d4d4d8", margin: "12px 0", borderRadius: "2px" },
         ".dark .cm-custom-hr": { backgroundColor: "#3f3f46" },
         ".cm-search-match": { backgroundColor: "rgba(245, 158, 11, 0.4) !important", borderBottom: "2px solid #f59e0b", borderRadius: "2px", color: "inherit" },
+        ".cm-cb-header": { backgroundColor: "#E4E4E7", borderRadius: "8px 8px 0 0", fontFamily: "var(--font-mono)", fontSize: "0.85em", color: "#71717a", position: "relative", padding: "2px 8px" },
+        ".cm-cb-header-dark": { backgroundColor: "#18181B", borderRadius: "8px 8px 0 0", fontFamily: "var(--font-mono)", fontSize: "0.85em", color: "#a1a1aa", position: "relative", padding: "2px 8px" },
+        ".cm-cb-line": { backgroundColor: "#E4E4E7", fontFamily: "var(--font-mono) !important", fontSize: "0.9em !important", color: "#18181b", padding: "0 8px" },
+        ".cm-cb-line-dark": { backgroundColor: "#18181B", fontFamily: "var(--font-mono) !important", fontSize: "0.9em !important", color: "#ffffff", padding: "0 8px" },
+        ".cm-cb-footer": { backgroundColor: "#E4E4E7", borderRadius: "0 0 8px 8px", fontFamily: "var(--font-mono)", fontSize: "0.85em", color: "#71717a", padding: "2px 8px" },
+        ".cm-cb-footer-dark": { backgroundColor: "#18181B", borderRadius: "0 0 8px 8px", fontFamily: "var(--font-mono)", fontSize: "0.85em", color: "#a1a1aa", padding: "2px 8px" },
+        ".cm-codeblock-copy": { position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "4px", borderRadius: "4px", backgroundColor: "transparent", color: "#a1a1aa", cursor: "pointer", border: "none", transition: "all 0.15s", opacity: "0" },
+        ".cm-cb-header:hover .cm-codeblock-copy, .cm-cb-header-dark:hover .cm-codeblock-copy": { opacity: "1" },
+        ".cm-codeblock-copy:hover": { backgroundColor: "#d4d4d8", color: "#52525b" },
         ".cm-remove-btn": { position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", backgroundColor: "#ef4444", border: "2px solid #ffffff", color: "white !important", width: "18px", height: "18px", marginRight: "-18px", top: "-10px", left: "-6px", borderRadius: "50%", fontSize: "14px", fontWeight: "bold", lineHeight: "1", cursor: "pointer !important", zIndex: "100", opacity: "0", transform: "scale(0.8)", transition: "all 0.2s", pointerEvents: "auto" },
         ".cm-line:hover .cm-remove-btn": { opacity: "0.4", transform: "scale(0.9)" },
         ".cm-remove-btn:hover": { opacity: "1 !important", transform: "scale(1.1) !important" }
@@ -174,7 +275,7 @@ const createNotesTheme = (font: string, size: string) => {
 };
 
 export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
-    noteId, initialContent, searchQuery, onChange, noteFont = 'sans', noteFontSize = 'medium'
+    noteId, initialContent, searchQuery, onChange, noteFont = 'sans', noteFontSize = 'medium', readOnly = false
 }) => {
     const [content, setContent] = useState('');
     const editorRef = useRef<ReactCodeMirrorRef>(null);
@@ -210,7 +311,7 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
         if (clean.includes('<p>')) {
             clean = clean.replace(/<mark data-type="translation"[^>]*data-translation-text="([^"]+)"[^>]*>([\s\S]*?)<\/mark>/g, '[[tr:$1|$2]]')
                 .replace(/<p>/g, '').replace(/<\/p>/g, '\n').replace(/<br>/g, '\n')
-                .replace(/<mark data-type="highlight">([^<]+)<\/mark>/g, '==$1==')
+                .replace(/<mark data-type="highlight">([^<]+)<\/mark>/g, '{=$1=}')
                 .replace(/<mark data-type="translation"[^>]*>([\s\S]*?)<\/mark>/g, '[[tr:legacy|$1]]');
         }
         setContent(prev => prev !== clean ? clean : prev);
@@ -239,7 +340,7 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
 
     const doHighlight = () => {
         if (!menuState || !editorRef.current?.view) return;
-        const r = `==${menuState.text}==`;
+        const r = `{=${menuState.text}=}`;
         editorRef.current.view.dispatch({ changes: { from: menuState.from, to: menuState.to, insert: r }, selection: { anchor: menuState.from + r.length } });
         setMenuState(null);
     };
@@ -320,9 +421,9 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
     };
 
     return (
-        <div className="relative group/editor w-full bg-transparent">
+        <div className={`relative group/editor w-full bg-transparent ${readOnly ? 'pointer-events-none' : ''}`}>
             <CodeMirror
-                ref={editorRef} value={content} onChange={handleChange} onBlur={handleBlur} theme="none" 
+                ref={editorRef} value={content} onChange={handleChange} onBlur={handleBlur} theme="none" readOnly={readOnly} 
                 extensions={[
                     // 🚀 MAGIA ANTI-HIJACKING: Prec.highest toma el control absoluto del evento
                     Prec.highest(
@@ -340,7 +441,7 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
                     markdown({ base: markdownLanguage, codeLanguages: languages }),
                     dynamicTheme, 
                     createVisualMarkupPlugin(translationsMapRef, searchQueryRef), 
-                    clickHandlerExtension, hoverTooltipExtension, selectionListener, EditorView.lineWrapping
+                    clickHandlerExtension, hoverTooltipExtension, selectionListener, EditorView.lineWrapping, EditorView.editable.of(!readOnly)
                 ]}
                 basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false, syntaxHighlighting: false }}
                 className="text-zinc-900 dark:text-zinc-100" 
@@ -354,9 +455,9 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
                 </div>
             )}
             {menuState && (
-                <div 
+                <div
                     className={`
-                        z-[100] flex items-center gap-1 bg-zinc-900 text-white p-1.5 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-zinc-700 animate-fadeIn pointer-events-auto
+                        z-[100] flex items-center gap-1 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-white p-1.5 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-zinc-200 dark:border-zinc-700 animate-fadeIn pointer-events-auto
                         ${menuState.isMobile 
                             ? 'fixed bottom-6 left-4 right-4 justify-around p-2' 
                             : 'fixed origin-bottom'
@@ -365,11 +466,13 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
                     style={menuState.isMobile ? undefined : { top: menuState.top, left: menuState.left, transform: 'translateX(-50%)' }} 
                     onMouseDown={(e) => e.preventDefault()} 
                 >
-                    {isTranslating ? ( <div className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-blue-400"><Loader2 size={16} className="animate-spin" /> Traduciendo...</div> ) : (
-                        <><button onClick={doHighlight} className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800 hover:bg-black rounded-lg text-xs font-bold transition-colors text-white active:scale-95"><Highlighter size={14} className="text-[#ccff00]" /> Resaltar</button>
-                        <button onClick={doLink} className="p-2 text-zinc-400 hover:text-blue-400 hover:bg-zinc-800 rounded-lg transition-colors"><LinkIcon size={16} /></button><div className="w-px h-6 bg-zinc-700 mx-1"></div>
-                        <button onClick={() => doTranslate('en')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/20 hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-400 active:scale-95"> EN</button>
-                        <button onClick={() => doTranslate('es')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/20 hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-400 active:scale-95"> ES</button></>
+                    {isTranslating ? ( <div className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-blue-500"><Loader2 size={16} className="animate-spin" /> Traduciendo...</div> ) : (
+                        <><button onClick={doHighlight} className="flex items-center gap-1.5 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-black rounded-lg text-xs font-bold transition-colors text-zinc-800 dark:text-white active:scale-95"><Highlighter size={14} className="text-[#6B8E23] dark:text-[#ccff00]" /> Resaltar</button>
+                        <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
+                        <button onClick={doLink} className="p-2 text-zinc-400 hover:text-blue-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"><LinkIcon size={16} /></button>
+                        <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
+                        <button onClick={() => doTranslate('en')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-500 dark:text-blue-400 active:scale-95"> EN</button>
+                        <button onClick={() => doTranslate('es')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-500 dark:text-blue-400 active:scale-95"> ES</button></>
                     )}
                 </div>
             )}

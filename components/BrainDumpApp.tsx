@@ -34,7 +34,7 @@ const parseMarkdownPreview = (text: string) => {
     if (!text) return '';
     return text
         .replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/==([^=]+)==/g, '<mark class="bg-yellow-200/60 dark:bg-yellow-500/40 text-inherit rounded-sm px-1 font-medium">$1</mark>')
+        .replace(/\{=([^=}]+)=\}/g, '<mark class="bg-yellow-200/60 dark:bg-yellow-500/40 text-inherit rounded-sm px-1 font-medium">$1</mark>')
         .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
         .replace(/\*([^*]+)\*/g, '<em>$1</em>').replace(/_([^_]+)_/g, '<em>$1</em>')
         .replace(/~~([^~]+)~~/g, '<del class="opacity-70">$1</del>')
@@ -116,7 +116,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                         </div>
                         Pizarrón
                     </h1>
-                    <button onClick={createNewDraft} className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-xl shadow-lg transition-colors flex items-center gap-2">
+                    <button onClick={createNewDraft} className="bg-[#FFD700] hover:bg-[#E5C100] text-amber-950 p-2 rounded-xl shadow-lg shadow-amber-500/20 transition-colors flex items-center gap-2">
                         <Plus size={20} /> <span className="text-sm font-bold hidden sm:inline pr-2">Nuevo Pizarrón</span>
                     </button>
                 </div>
@@ -134,7 +134,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                 const isEdited = (updatedMs - createdMs) > 60000;
 
                                 return (
-                                <div key={pizarron.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-800 transition-all focus-within:ring-2 focus-within:ring-indigo-500/50 flex flex-col">
+                                <div key={pizarron.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 flex flex-col">
                                     
                                     {/* Título */}
                                     <div className="flex items-center justify-between pr-4">
@@ -165,10 +165,10 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                             )}
                                         </div>
                                         <div className="flex items-center gap-2 shrink-0">
-                                            <button onClick={() => deleteDump(pizarron.id)} className="text-xs font-bold text-zinc-400 hover:text-red-600 px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-2" title="Eliminar permanentemente">
-                                                <Trash2 size={14} /> Eliminar
+                                            <button onClick={() => deleteDump(pizarron.id)} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Eliminar permanentemente">
+                                                <Trash2 size={18} />
                                             </button>
-                                            <button onClick={() => changeStatus(pizarron.id, 'history')} className="text-xs font-bold text-amber-600 hover:text-amber-700 dark:text-amber-500 dark:hover:text-amber-400 px-3 py-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors flex items-center gap-2" title="Archivar pizarrón">
+                                            <button onClick={() => changeStatus(pizarron.id, 'history')} className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-amber-950 bg-[#FFD700] hover:bg-[#E5C100] rounded-xl shadow-lg shadow-amber-500/20 transition-all" title="Archivar pizarrón">
                                                 <ArchiveIcon size={14} /> Archivar
                                             </button>
                                         </div>
@@ -194,7 +194,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                     const isEdited = (updatedMs - createdMs) > 60000;
                                     
                                     return (
-                                    <div key={a.id} className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-100 dark:border-zinc-800 transition-colors">
+                                    <div key={a.id} className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-200 dark:border-zinc-800 transition-colors">
                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                                             
                                             {/* Título y Botón Expandir */}

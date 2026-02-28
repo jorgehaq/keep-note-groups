@@ -44,7 +44,7 @@ const highlightSegment = (text: string, highlight?: string): React.ReactNode => 
 };
 
 const parseAugmentedText = (text: string) => {
-    const regex = /(https?:\/\/[^\s]+)|==(.+?)==|\[\[tr:([^|]+)\|(.+?)\]\]|\*\*([^*]+)\*\*|\*([^*]+)\*/g;
+    const regex = /(https?:\/\/[^\s]+)|\{=(.+?)=\}|\[\[tr:([^|]+)\|(.+?)\]\]|\*\*([^*]+)\*\*|\*([^*]+)\*/g;
     const parts = [];
     let lastIndex = 0;
     let match;
@@ -446,8 +446,8 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
         }
 
         if (type === 'highlight') {
-            // Para abarcar un bloque multimedias, inyectamos == al principio y fin de su match crudo en lugar del text recortado por window.selection()
-            newContent = newContent.replace(targetTextToReplace, `==${targetTextToReplace}==`);
+            // Para abarcar un bloque multimedias, inyectamos {= al principio y =} al fin de su match crudo
+            newContent = newContent.replace(targetTextToReplace, `{=${targetTextToReplace}=}`);
         }
         else if (type === 'bold') {
             newContent = newContent.replace(targetTextToReplace, `**${targetTextToReplace}**`);
@@ -608,7 +608,7 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
             // MARCAS ESTABLES (Sin Padding vertical que rompa la altura)
             if (segment.type === 'highlight') {
                 return (
-                    <mark key={idx} className="relative bg-[#ccff00] text-black rounded px-0.5 font-bold group/hl cursor-pointer transition-colors mx-0.5">
+                    <mark key={idx} className="relative bg-[#ccff00] dark:bg-[#ccff00]/30 text-black dark:text-inherit rounded px-0.5 font-bold group/hl cursor-pointer transition-colors mx-0.5">
                         {highlightSegment(segment.content, searchQuery)}
                         <button onClick={(e) => { e.stopPropagation(); removeMarkup(segment.raw!, segment.content); }} className="absolute -top-2.5 -right-2 bg-zinc-900 text-white rounded-full w-[16px] h-[16px] flex items-center justify-center opacity-0 group-hover/hl:opacity-100 transition-opacity shadow-lg active:scale-90" title="Quitar resaltado">
                             <X size={10} strokeWidth={3} />
@@ -623,7 +623,7 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
                 if (isMissing) return <span key={idx}>{highlightSegment(segment.content, searchQuery)}</span>;
 
                 return (
-                    <mark key={idx} className="relative bg-[#60A5FA] text-black rounded px-0.5 font-bold group/tr cursor-help transition-colors mx-0.5">
+                    <mark key={idx} className="relative bg-[#60A5FA] dark:bg-[#60A5FA]/35 text-black dark:text-inherit rounded px-0.5 font-bold group/tr cursor-help transition-colors mx-0.5">
                         {highlightSegment(segment.content, searchQuery)}
                         <button onClick={(e) => { e.stopPropagation(); removeMarkup(segment.raw!, segment.content); }} className="absolute -top-2.5 -right-2 bg-zinc-900 text-white rounded-full w-[16px] h-[16px] flex items-center justify-center opacity-0 group-hover/tr:opacity-100 transition-opacity shadow-lg active:scale-90" title="Quitar traducción">
                             <X size={10} strokeWidth={3} />
@@ -711,35 +711,37 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
             {/* MENÚ FLOTANTE ALTO CONTRASTE */}
             {selectionMenu && (
                 <div
-                    className="floating-menu-container fixed z-[100] bg-zinc-900 text-white p-1.5 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex items-center gap-1 border border-zinc-700 animate-fadeIn origin-bottom"
+                    className="floating-menu-container fixed z-[100] bg-white dark:bg-zinc-900 text-zinc-800 dark:text-white p-1.5 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex items-center gap-1 border border-zinc-200 dark:border-zinc-700 animate-fadeIn origin-bottom"
                     style={{ top: selectionMenu.top, left: selectionMenu.left, transform: 'translateX(-50%)' }}
                 >
                     {isTranslating ? (
-                        <div className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-blue-400">
+                        <div className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-blue-500">
                             <Loader2 size={16} className="animate-spin" /> Traduciendo...
                         </div>
                     ) : (
                         <>
-                            <button onClick={() => doFormat('h1')} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors" title="Convertir en Título">
+                            <button onClick={() => doFormat('h1')} className="p-2 text-zinc-400 hover:text-zinc-800 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Convertir en Título">
                                 <Heading1 size={16} />
                             </button>
-                            <button onClick={() => doFormat('bold')} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors" title="Negrita">
+                            <button onClick={() => doFormat('bold')} className="p-2 text-zinc-400 hover:text-zinc-800 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Negrita">
                                 <Bold size={16} />
                             </button>
                             <button onClick={doDelete} className="p-2 text-red-400 hover:text-white hover:bg-red-500/20 rounded-lg transition-colors" title="Eliminar Texto">
                                 <Trash2 size={16} />
                             </button>
 
-                            <div className="w-px h-6 bg-zinc-700 mx-1"></div>
+                            <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
 
-                            <button onClick={() => doFormat('highlight')} className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800 hover:bg-black rounded-lg text-xs font-bold transition-colors text-white active:scale-95" title="Resaltar">
-                                <Highlighter size={14} className="text-[#ccff00]" /> Resaltar
+                            <button onClick={() => doFormat('highlight')} className="flex items-center gap-1.5 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-black rounded-lg text-xs font-bold transition-colors text-zinc-800 dark:text-white active:scale-95" title="Resaltar">
+                                <Highlighter size={14} className="text-[#6B8E23] dark:text-[#ccff00]" /> Resaltar
                             </button>
 
-                            <button onClick={() => doTranslate('es', 'en')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/20 hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-400 active:scale-95" title="Traducir a Inglés">
+                            <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
+
+                            <button onClick={() => doTranslate('es', 'en')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-500 dark:text-blue-400 active:scale-95" title="Traducir a Inglés">
                                 <Languages size={14} /> EN
                             </button>
-                            <button onClick={() => doTranslate('en', 'es')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/20 hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-400 active:scale-95" title="Traducir a Español">
+                            <button onClick={() => doTranslate('en', 'es')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-500 dark:text-blue-400 active:scale-95" title="Traducir a Español">
                                 ES
                             </button>
                         </>

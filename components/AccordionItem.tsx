@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus } from 'lucide-react';
 import { Note, NoteFont } from '../types';
 import { SmartNotesEditor } from '../src/components/editor/SmartNotesEditor';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -10,6 +10,9 @@ interface AccordionItemProps {
   onToggle: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Note>) => void;
   onDelete: (id: string) => void;
+  onExportNote?: (note: Note) => void;
+  onCopyNote?: (note: Note) => void;
+  onDuplicate?: (noteId: string) => void;
   searchQuery?: string;
   noteFont?: NoteFont;
   noteFontSize?: string;
@@ -48,6 +51,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   onToggle,
   onUpdate,
   onDelete,
+  onExportNote,
+  onCopyNote,
+  onDuplicate,
   searchQuery,
   noteFont = 'sans',
   noteFontSize = 'medium',
@@ -152,17 +158,12 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       setTempTitle(fallback);
       onUpdate(note.id, { title: fallback });
     }
-    setIsEditingTitle(false);
     if (shouldFocusEditor && !note.isOpen) onToggle(note.id);
   };
 
-  // 🚀 FIX: Uso de ring-2 en lugar de border-2 para evitar el salto de layout, y focus-within incorporado
+  // 🚀 FIX: Estandarización de ring y hover across toda la app, dependiente exclusivamente de pseudo-clases css
   return (
-    <div className={`mb-4 transition-all duration-300 flex flex-col bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 ${
-      note.isOpen
-      ? 'ring-2 ring-indigo-500/50 shadow-indigo-500/5'
-      : 'hover:border-indigo-500/50 hover:shadow-xl focus-within:ring-2 focus-within:ring-indigo-500/50'
-      }`}>
+    <div className="mb-4 transition-all duration-300 flex flex-col bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50">
       
       <div
         ref={headerRef}
@@ -170,52 +171,34 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           ? 'border-b border-zinc-100 dark:border-zinc-800'
           : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 rounded-2xl'
           }`}
-        onClick={() => { if (!isEditingTitle) onToggle(note.id); }}
+        onClick={() => { onToggle(note.id); }}
       >
         <div className="flex items-center gap-3 flex-1 overflow-hidden pl-1">
           <div className="flex flex-col flex-1 min-w-0 justify-center">
-            {isEditingTitle ? (
-              <div className="flex items-center gap-1.5 flex-1 animate-fadeIn">
-                <input
-                  ref={titleInputRef}
-                  type="text"
-                  value={tempTitle}
-                  onChange={(e) => setTempTitle(e.target.value)}
-                  onBlur={() => handleSaveTitle(false)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSaveTitle(true);
-                    if (e.key === 'Escape') { e.stopPropagation(); handleCancelTitle(); }
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  placeholder="Título de la nota..."
-                  className="flex-1 min-w-0 text-lg font-bold text-zinc-800 dark:text-zinc-100 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded px-2 py-0.5 outline-none focus:ring-2 focus:ring-indigo-500 placeholder-zinc-400"
-                />
-                <button
-                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleCancelTitle(); }}
-                  className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md transition-colors shrink-0"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ) : (
-              <h3
-                className="font-bold text-lg text-zinc-800 dark:text-zinc-100 truncate select-none hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors cursor-pointer hover:underline decoration-zinc-400 decoration-dashed underline-offset-4"
-                onDoubleClick={(e) => { e.stopPropagation(); setIsEditingTitle(true); }}
-              >
-                {note.title ? highlightText(note.title, searchQuery) : <span className="text-zinc-400 italic">Sin título</span>}
-              </h3>
-            )}
+            <input
+              ref={titleInputRef}
+              type="text"
+              value={tempTitle}
+              onChange={(e) => setTempTitle(e.target.value)}
+              onBlur={() => handleSaveTitle(false)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveTitle(true);
+                if (e.key === 'Escape') { e.stopPropagation(); handleCancelTitle(); }
+              }}
+              onClick={(e) => e.stopPropagation()}
+              placeholder="Título de la nota..."
+              className="flex-1 min-w-0 bg-transparent text-lg font-bold text-zinc-800 dark:text-zinc-100 outline-none placeholder-zinc-400 truncate hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors cursor-text"
+              title="Haz clic para editar"
+            />
 
-            {!isEditingTitle && (
-              <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 truncate">
-                {note.created_at && (<span>Creado: {formatCleanDate(note.created_at)}</span>)}
-                {note.updated_at && note.created_at && (new Date(note.updated_at).getTime() - new Date(note.created_at).getTime() > 60000) && (
-                  <><span className="opacity-50">|</span><span>Editado: {formatCleanDate(note.updated_at)}</span></>
-                )}
-                {syncStatus === 'saving' && (<span className="flex items-center gap-1 text-amber-500 animate-pulse ml-1"><Loader2 size={10} className="animate-spin" /> Guardando...</span>)}
-                {syncStatus === 'saved' && (<span className="flex items-center gap-1 text-emerald-500 ml-1"><CloudCheck size={10} /> Sincronizado</span>)}
-              </div>
-            )}
+            <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 truncate">
+              {note.created_at && (<span>Creado: {formatCleanDate(note.created_at)}</span>)}
+              {note.updated_at && note.created_at && (new Date(note.updated_at).getTime() - new Date(note.created_at).getTime() > 60000) && (
+                <><span className="opacity-50">|</span><span>Editado: {formatCleanDate(note.updated_at)}</span></>
+              )}
+              {syncStatus === 'saving' && (<span className="flex items-center gap-1 text-amber-500 animate-pulse ml-1"><Loader2 size={10} className="animate-spin" /> Guardando...</span>)}
+              {syncStatus === 'saved' && (<span className="flex items-center gap-1 text-emerald-500 ml-1"><CloudCheck size={10} /> Sincronizado</span>)}
+            </div>
           </div>
         </div>
 
@@ -225,6 +208,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             <button onClick={(e) => { e.stopPropagation(); onUpdate(note.id, { is_checklist: !note.is_checklist }); }} className={`p-1.5 rounded-lg transition-all ${note.is_checklist ? 'text-[#1F3760] bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}><ListTodo size={15} /></button>
             <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); onUpdate(note.id, { is_pinned: !note.is_pinned }); }} className={`p-1.5 rounded-lg transition-all ${note.is_pinned ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'text-zinc-400 hover:text-amber-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}><Pin size={15} className={note.is_pinned ? "fill-current" : ""} /></button>
             <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); onUpdate(note.id, { is_docked: !note.is_docked }); }} className={`p-1.5 rounded-lg transition-all ${note.is_docked ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'text-zinc-400 hover:text-indigo-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}><PanelLeft size={15} /></button>
+            {onCopyNote && <button onClick={(e) => { e.stopPropagation(); onCopyNote(note); }} className="p-1.5 text-zinc-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors" title="Copiar Nota"><Clipboard size={15} /></button>}
+            {onExportNote && <button onClick={(e) => { e.stopPropagation(); onExportNote(note); }} className="p-1.5 text-zinc-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors" title="Exportar Nota (.md)"><Download size={15} /></button>}
+            {onDuplicate && <button onClick={(e) => { e.stopPropagation(); onDuplicate(note.id); }} className="p-1.5 text-zinc-400 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg transition-colors" title="Duplicar Nota"><CopyPlus size={15} /></button>}
             <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); if (confirm('¿Estás seguro de eliminar esta nota?')) onDelete(note.id); }} className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={15} /></button>
           </div>
 
@@ -235,6 +221,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 <button onClick={(e) => { e.stopPropagation(); onUpdate(note.id, { is_pinned: !note.is_pinned }); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_pinned ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}><Pin size={14} className={note.is_pinned ? "fill-current" : ""} />{note.is_pinned ? 'Desfijar' : 'Fijar Nota'}</button>
                 <button onClick={(e) => { e.stopPropagation(); onUpdate(note.id, { is_docked: !note.is_docked }); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_docked ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}><PanelLeft size={14} />{note.is_docked ? 'Quitar del Sidebar' : 'Anclar al Sidebar'}</button>
                 <button onClick={(e) => { e.stopPropagation(); onUpdate(note.id, { is_checklist: !note.is_checklist }); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_checklist ? 'text-[#1F3760] dark:text-blue-400 bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}><ListTodo size={14} />{note.is_checklist ? 'Quitar Checklist' : 'Hacer Checklist'}</button>
+                {onCopyNote && <button onClick={(e) => { e.stopPropagation(); onCopyNote(note); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><Clipboard size={14} />Copiar Nota</button>}
+                {onExportNote && <button onClick={(e) => { e.stopPropagation(); onExportNote(note); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><Download size={14} />Exportar (.md)</button>}
+                {onDuplicate && <button onClick={(e) => { e.stopPropagation(); onDuplicate(note.id); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><CopyPlus size={14} />Duplicar Nota</button>}
                 <div className="border-t border-zinc-100 dark:border-zinc-700 my-0.5" />
                 <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false); if (confirm('¿Estás seguro de eliminar esta nota?')) onDelete(note.id); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"><Trash2 size={14} />Eliminar Nota</button>
               </div>

@@ -5,24 +5,28 @@ import { supabase } from '../src/lib/supabaseClient';
 import { KanbanBoard } from './KanbanBoard';
 import { KanbanList } from './KanbanList';
 import { useUIStore } from '../src/lib/store';
+import { useTranslation } from 'react-i18next';
 
 type KanbanTab = 'board' | 'backlog' | 'archive';
 
-const TABS: { key: KanbanTab; label: string; icon: React.ReactNode }[] = [
-    { key: 'board', label: 'Tablero', icon: <LayoutDashboard size={16} /> },
-    { key: 'backlog', label: 'Backlog', icon: <Inbox size={16} /> },
-    { key: 'archive', label: 'Archivo', icon: <Archive size={16} /> },
+const TABS: { key: KanbanTab; labelKey: string; icon: React.ReactNode }[] = [
+    { key: 'board', labelKey: 'kanban.board', icon: <LayoutDashboard size={16} /> },
+    { key: 'backlog', labelKey: 'kanban.backlog', icon: <Inbox size={16} /> },
+    { key: 'archive', labelKey: 'kanban.archive', icon: <Archive size={16} /> },
 ];
 
 interface KanbanAppProps {
     groups?: Group[];
     onOpenNote?: (groupId: string, noteId: string) => void;
+    dateFormat?: string;
+    timeFormat?: string;
 }
 
-export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote }) => {
+export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, dateFormat = 'dd/mm/yyyy', timeFormat = '12h' }) => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<KanbanTab>('board');
+    const { t } = useTranslation();
 
     // --- STORE ---
     const { setKanbanCounts } = useUIStore();
@@ -40,9 +44,10 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote })
                 setTasks(data as Task[]);
                 
                 // Actualizar store (solo counts globales si es necesario)
-                const active = data.filter(t => t.status !== 'backlog' && t.status !== 'archived').length;
-                const backlog = data.filter(t => t.status === 'backlog').length;
-                setKanbanCounts(active, backlog);
+                const todo = data.filter(t => t.status === 'todo').length;
+                const inProgress = data.filter(t => t.status === 'in_progress').length;
+                const done = data.filter(t => t.status === 'done').length;
+                setKanbanCounts(todo, inProgress, done);
             }
             setLoading(false);
         };
@@ -52,10 +57,13 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote })
     // --- HANDLERS (FUNCIONALIDAD INTACTA) ---
     const handleAdd = async () => {
         const user = (await supabase.auth.getUser()).data.user;
+        const targetStatus = activeTab === 'backlog' ? 'backlog' : 'todo';
+        const position = tasks.filter(t => t.status === targetStatus).length * 1024;
+        
         const newTask: Partial<Task> = {
             title: '',
-            content: '',
-            status: activeTab === 'backlog' ? 'backlog' : 'todo',
+            status: targetStatus,
+            position: position,
             user_id: user?.id
         };
 
@@ -65,21 +73,22 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote })
             
             // Re-calc
             const allTasks = [data as Task, ...tasks];
-            const active = allTasks.filter(t => t.status !== 'backlog' && t.status !== 'archived').length;
-            const backlog = allTasks.filter(t => t.status === 'backlog').length;
-            setKanbanCounts(active, backlog);
+            const todo = allTasks.filter(t => t.status === 'todo').length;
+            const inProgress = allTasks.filter(t => t.status === 'in_progress').length;
+            const done = allTasks.filter(t => t.status === 'done').length;
+            setKanbanCounts(todo, inProgress, done);
         }
     };
 
     const updateTask = async (id: string, updates: Partial<Task>) => {
-        setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t));
-        
         // Re-calc counts inmediatamente para UI fluida
         setTasks(prev => {
-            const active = prev.filter(t => t.status !== 'backlog' && t.status !== 'archived').length;
-            const backlog = prev.filter(t => t.status === 'backlog').length;
-            setKanbanCounts(active, backlog);
-            return prev;
+            const next = prev.map(t => t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t);
+            const todo = next.filter(t => t.status === 'todo').length;
+            const inProgress = next.filter(t => t.status === 'in_progress').length;
+            const done = next.filter(t => t.status === 'done').length;
+            setKanbanCounts(todo, inProgress, done);
+            return next;
         });
 
         await supabase.from('tasks').update(updates).eq('id', id);
@@ -88,16 +97,17 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote })
     const deleteTask = async (id: string) => {
         setTasks(prev => {
             const next = prev.filter(t => t.id !== id);
-            const active = next.filter(t => t.status !== 'backlog' && t.status !== 'archived').length;
-            const backlog = next.filter(t => t.status === 'backlog').length;
-            setKanbanCounts(active, backlog);
+            const todo = next.filter(t => t.status === 'todo').length;
+            const inProgress = next.filter(t => t.status === 'in_progress').length;
+            const done = next.filter(t => t.status === 'done').length;
+            setKanbanCounts(todo, inProgress, done);
             return next;
         });
         await supabase.from('tasks').delete().eq('id', id);
     };
 
     if (loading) {
-        return <div className="p-10 text-center animate-pulse text-zinc-500">Cargando Kanban...</div>;
+        return <div className="p-10 text-center animate-pulse text-zinc-500">{t('kanban.loading')}</div>;
     }
 
     return (
@@ -114,10 +124,10 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote })
                     </h1>
                     <button 
                         onClick={handleAdd} 
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
+                        className="bg-[#10B981] hover:bg-emerald-600 text-white p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
                     >
                         <Plus size={18} /> 
-                        <span className="text-sm font-bold hidden sm:inline pr-1">Nueva Tarea</span>
+                        <span className="text-sm font-bold hidden sm:inline pr-1">{t('kanban.new_task')}</span>
                     </button>
                 </div>
             </div>
@@ -139,7 +149,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote })
                                 }`}
                             >
                                 {tab.icon}
-                                <span>{tab.label}</span>
+                                <span>{t(tab.labelKey)}</span>
                             </button>
                         ))}
                     </div>
@@ -147,7 +157,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote })
                     {/* VISTAS FUNCIONALES INTACTAS */}
                     <div className="flex-1 flex flex-col min-h-0 animate-fadeIn">
                         {activeTab === 'board' && (
-                            <KanbanBoard tasks={tasks} groups={groups} onOpenNote={onOpenNote} onUpdate={updateTask} onDelete={deleteTask} />
+                            <KanbanBoard tasks={tasks} groups={groups} onOpenNote={onOpenNote} onUpdate={updateTask} onDelete={deleteTask} dateFormat={dateFormat} timeFormat={timeFormat} />
                         )}
                         {activeTab === 'backlog' && (
                             <KanbanList view="backlog" tasks={tasks} groups={groups} onOpenNote={onOpenNote} onUpdate={updateTask} onDelete={deleteTask} />

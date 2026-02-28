@@ -109,7 +109,7 @@ export const KanbanLinkerModal: React.FC<KanbanLinkerModalProps> = ({ task, grou
                 <div className="border-b border-zinc-200 dark:border-zinc-800">
                     <div className="flex justify-between items-center p-4 pb-2">
                         <h3 className="font-bold text-lg text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
-                            <LinkIcon size={18} className="text-indigo-500"/>
+                            <LinkIcon size={18} className="text-emerald-500"/>
                             Asociar Tarea
                         </h3>
                         <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">
@@ -119,13 +119,13 @@ export const KanbanLinkerModal: React.FC<KanbanLinkerModalProps> = ({ task, grou
                     <div className="flex px-4 gap-4">
                         <button 
                             onClick={() => setMode('create')}
-                            className={`pb-3 text-sm font-bold transition-colors border-b-2 ${mode === 'create' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                            className={`pb-3 text-sm font-bold transition-colors border-b-2 ${mode === 'create' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
                         >
                             Crear Nueva Nota
                         </button>
                         <button 
                             onClick={() => setMode('link')}
-                            className={`pb-3 text-sm font-bold transition-colors border-b-2 ${mode === 'link' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                            className={`pb-3 text-sm font-bold transition-colors border-b-2 ${mode === 'link' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
                         >
                             Vincular a Existente
                         </button>
@@ -145,7 +145,7 @@ export const KanbanLinkerModal: React.FC<KanbanLinkerModalProps> = ({ task, grou
                                 value={groupInput}
                                 onChange={e => setGroupInput(e.target.value)}
                                 placeholder="Ej: Trabajo, Ideas, Proyecto X..."
-                                className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
                             />
                             <datalist id="groups-list">
                                 {groups.map(g => <option key={g.id} value={g.title} />)}
@@ -162,7 +162,7 @@ export const KanbanLinkerModal: React.FC<KanbanLinkerModalProps> = ({ task, grou
                             <button 
                                 onClick={handleCreateFlow}
                                 disabled={!groupInput.trim() || loading}
-                                className="mt-auto w-full flex items-center justify-center gap-2 bg-[#1F3760] hover:bg-[#152643] text-white font-bold py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                                className="mt-auto w-full flex items-center justify-center gap-2 bg-[#10B981] hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-emerald-500/20"
                             >
                                 {loading ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
                                 Generar y Abrir Nota
@@ -176,7 +176,7 @@ export const KanbanLinkerModal: React.FC<KanbanLinkerModalProps> = ({ task, grou
                                     value={searchQuery}
                                     onChange={e => setSearchQuery(e.target.value)}
                                     placeholder="Buscar nota por título..."
-                                    className="w-full pl-9 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    className="w-full pl-9 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                                 />
                             </div>
 
