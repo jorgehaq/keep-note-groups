@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid } from 'lucide-react';
+import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid, Maximize2, Minimize2 } from 'lucide-react';
 import { Note, Group, Theme, NoteFont, Reminder } from './types';
 import { AccordionItem } from './components/AccordionItem';
 import { Sidebar } from './components/Sidebar';
@@ -36,7 +36,7 @@ function App() {
   const hasLoadedOnce = React.useRef(false);
   const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({}); 
 
-  const { activeGroupId, setActiveGroup, openNotesByGroup, openGroup, dockedGroupIds, noteSortMode, setNoteSortMode, toggleNote, globalView, setGlobalView, setKanbanCounts, setGlobalTasks } = useUIStore();
+  const { activeGroupId, setActiveGroup, openNotesByGroup, openGroup, dockedGroupIds, noteSortMode, setNoteSortMode, toggleNote, globalView, setGlobalView, setKanbanCounts, setGlobalTasks, isMaximized, setIsMaximized } = useUIStore();
   const [searchQueries, setSearchQueries] = useState<Record<string, string>>({});
   const currentSearchQuery = activeGroupId ? (searchQueries[activeGroupId] || '') : '';
   const [searchExemptNoteIds, setSearchExemptNoteIds] = useState<Set<string>>(new Set());
@@ -732,6 +732,15 @@ function App() {
                           <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-full shrink-0">
                               {activeGroup.notes.length} notas
                           </span>
+
+                          {/* Botón Maximizar/Minimizar */}
+                          <button
+                            onClick={() => setIsMaximized(!isMaximized)}
+                            className="p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all active:scale-95 shrink-0"
+                            title={isMaximized ? "Minimizar" : "Maximizar"}
+                          >
+                            {isMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                          </button>
                       </div>
 
                       {/* Lado Derecho: Opciones de Grupo y Botón Nueva Nota */}
@@ -854,8 +863,8 @@ function App() {
                </div>
             </div>
 
-            <main ref={mainRef} className="flex-1 overflow-y-auto hidden-scrollbar p-4 md:p-8">
-              <div className="max-w-4xl mx-auto pb-20">
+            <main ref={mainRef} className={`flex-1 overflow-y-auto hidden-scrollbar ${isMaximized ? 'p-8' : 'p-4 md:p-8'}`}>
+              <div className={`${isMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto pb-20`}>
                 {activeGroup ? (
                   <>
 

@@ -262,7 +262,7 @@ const createNotesTheme = (font: string, size: string) => {
         ".cm-cb-header": { backgroundColor: "#E4E4E7", borderRadius: "8px 8px 0 0", fontFamily: "var(--font-mono)", fontSize: "0.85em", color: "#71717a", position: "relative", padding: "2px 8px" },
         ".cm-cb-header-dark": { backgroundColor: "#18181B", borderRadius: "8px 8px 0 0", fontFamily: "var(--font-mono)", fontSize: "0.85em", color: "#a1a1aa", position: "relative", padding: "2px 8px" },
         ".cm-cb-line": { backgroundColor: "#E4E4E7", fontFamily: "var(--font-mono) !important", fontSize: "0.9em !important", color: "#18181b", padding: "0 8px" },
-        ".cm-cb-line-dark": { backgroundColor: "#18181B", fontFamily: "var(--font-mono) !important", fontSize: "0.9em !important", color: "#ffffff", padding: "0 8px" },
+        ".cm-cb-line-dark": { backgroundColor: "#18181B", fontFamily: "var(--font-mono) !important", fontSize: "0.9em !important", color: "#A5A7A6", padding: "0 8px" },
         ".cm-cb-footer": { backgroundColor: "#E4E4E7", borderRadius: "0 0 8px 8px", fontFamily: "var(--font-mono)", fontSize: "0.85em", color: "#71717a", padding: "2px 8px" },
         ".cm-cb-footer-dark": { backgroundColor: "#18181B", borderRadius: "0 0 8px 8px", fontFamily: "var(--font-mono)", fontSize: "0.85em", color: "#a1a1aa", padding: "2px 8px" },
         ".cm-codeblock-copy": { position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "4px", borderRadius: "4px", backgroundColor: "transparent", color: "#a1a1aa", cursor: "pointer", border: "none", transition: "all 0.15s", opacity: "0" },
@@ -270,9 +270,12 @@ const createNotesTheme = (font: string, size: string) => {
         ".cm-codeblock-copy:hover": { backgroundColor: "#d4d4d8", color: "#52525b" },
         ".cm-remove-btn": { position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", backgroundColor: "#ef4444", border: "2px solid #ffffff", color: "white !important", width: "18px", height: "18px", marginRight: "-18px", top: "-10px", left: "-6px", borderRadius: "50%", fontSize: "14px", fontWeight: "bold", lineHeight: "1", cursor: "pointer !important", zIndex: "100", opacity: "0", transform: "scale(0.8)", transition: "all 0.2s", pointerEvents: "auto" },
         ".cm-line:hover .cm-remove-btn": { opacity: "0.4", transform: "scale(0.9)" },
-        ".cm-remove-btn:hover": { opacity: "1 !important", transform: "scale(1.1) !important" }
+        ".cm-remove-btn:hover": { opacity: "1 !important", transform: "scale(1.1) !important" },
+        ".dark .cm-content": { color: "#A5A7A6 !important" },
+        ".dark .cm-line": { color: "#A5A7A6 !important" }
     });
 };
+
 
 export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
     noteId, initialContent, searchQuery, onChange, noteFont = 'sans', noteFontSize = 'medium', readOnly = false
@@ -444,7 +447,7 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
                     clickHandlerExtension, hoverTooltipExtension, selectionListener, EditorView.lineWrapping, EditorView.editable.of(!readOnly)
                 ]}
                 basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false, syntaxHighlighting: false }}
-                className="text-zinc-900 dark:text-zinc-100" 
+                className="text-zinc-900 dark:text-[#A5A7A6]" 
             />
              {tooltipState && (
                 <div
