@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid, Maximize2, Minimize2 } from 'lucide-react';
+import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid, Maximize2, Minimize2, ChevronsDownUp } from 'lucide-react';
 import { Note, Group, Theme, NoteFont, Reminder } from './types';
 import { AccordionItem } from './components/AccordionItem';
 import { Sidebar } from './components/Sidebar';
@@ -111,35 +111,28 @@ function App() {
       const now = new Date();
       const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
       
-      let overdueGroupCount = 0;
-      let imminentGroupCount = 0;
+      let overdueTotalCount = 0;
+      let imminentTotalCount = 0;
       let overdueList: { id: string; title: string; targetId: string }[] = [];
 
       data.forEach(r => {
           const targets = Array.isArray(r.targets) ? r.targets : [];
-          let groupHasOverdue = false;
-          let groupHasImminent = false;
           
           targets.forEach(t => {
               if (!t.is_completed) {
                   const d = new Date(t.due_at);
                   if (d <= now) {
-                      groupHasOverdue = true;
-                      // Mantenemos la lista individual por si el usuario quiere saber qué sub-tarea falló en el banner superior
+                      overdueTotalCount++;
                       overdueList.push({ id: r.id, title: t.title || r.title || 'Recordatorio', targetId: t.id });
                   } else if (d > now && d <= in24h) {
-                      groupHasImminent = true;
+                      imminentTotalCount++;
                   }
               }
           });
-
-          // 🚀 MAGIA: Solo sumamos 1 por cada grupo problemático, no importa si tiene 10 sub-tareas vencidas
-          if (groupHasOverdue) overdueGroupCount++;
-          else if (groupHasImminent) imminentGroupCount++;
       });
 
-      setOverdueRemindersCount(overdueGroupCount);
-      setImminentRemindersCount(imminentGroupCount);
+      setOverdueRemindersCount(overdueTotalCount);
+      setImminentRemindersCount(imminentTotalCount);
       setOverdueRemindersList(overdueList);
     };
 
@@ -166,12 +159,23 @@ function App() {
   useEffect(() => {
     if (!session) return;
     const checkTimers = async () => {
-      const { count } = await supabase.from('timers').select('id', { count: 'exact', head: true }).eq('status', 'running');
+      const { count } = await supabase.from('timers').select('id', { count: 'exact', head: true }).not('last_started_at', 'is', null);
       setActiveTimersCount(count ?? 0);
     };
+
+    const handleTimerChanged = () => {
+      // Pequeño delay de 500ms para asegurar que la base de datos se haya actualizado tras el autoSave de 500ms
+      setTimeout(checkTimers, 600);
+    };
+
     checkTimers();
-    const interval = setInterval(checkTimers, 30000);
-    return () => clearInterval(interval);
+    const interval = setInterval(checkTimers, 10000); // 10 segundos de polling
+    window.addEventListener('timer-changed', handleTimerChanged);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('timer-changed', handleTimerChanged);
+    };
   }, [session, setActiveTimersCount]);
 
   useEffect(() => {
@@ -625,26 +629,26 @@ function App() {
                 color: transparent;
                 -webkit-background-clip: text;
                 background-clip: text;
-                animation: shimmer-sweep 2.5s linear infinite;
+                animation: shimmer-sweep 5s linear infinite;
               }
             `}</style>
             
-            <div className="relative w-full z-50 shrink-0 shadow-md bg-[#ff2800] text-white border-b border-red-900/50">
-              <div className="px-4 md:px-6 py-3 flex flex-col gap-2">
-                {overdueRemindersList.map(r => (
-                  <div key={`${r.id}-${r.targetId}`} className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-black tracking-wide truncate animate-shimmer-text drop-shadow-sm">
+            <div className="relative w-full z-50 shrink-0 flex flex-col gap-[3px] px-[3px] pt-[3px]">
+              {overdueRemindersList.map(r => (
+                <div key={`${r.id}-${r.targetId}`} className="bg-[#DC2626] text-white shadow-md rounded-2xl">
+                  <div className="px-3 md:px-4 py-1.5 flex items-center justify-between gap-2">
+                    <span className="text-sm font-normal tracking-wide truncate animate-shimmer-text drop-shadow-sm">
                       Recordatorio vencido: {r.title}
                     </span>
                     <button
                       onClick={() => setGlobalView('reminders')}
-                      className="shrink-0 px-5 py-1.5 bg-white text-[#ff2800] hover:bg-zinc-100 text-xs font-black uppercase tracking-widest rounded-lg transition-transform active:scale-95 shadow-lg"
+                      className="shrink-0 px-3 py-1 bg-white text-[#ff2800] hover:bg-zinc-100 text-xs font-normal uppercase tracking-widest rounded-lg transition-transform active:scale-95 shadow-lg"
                     >
                       Atender
                     </button>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </>
         )}
@@ -702,7 +706,7 @@ function App() {
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                           <button
                             onClick={() => setIsLauncherOpen(true)}
-                            className="p-2 bg-[#6366F1] hover:bg-indigo-600 rounded-lg text-white shadow-lg shadow-indigo-500/20 shrink-0 transition-colors"
+                            className="p-2 bg-[#4940D9] hover:bg-[#3D35C0] rounded-lg text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 shrink-0 transition-all"
                             title="Menú de Grupos"
                           >
                               <Grid size={20} />
@@ -725,7 +729,7 @@ function App() {
                                 e.currentTarget.blur();
                               }
                             }}
-                            className="flex-1 bg-transparent text-xl md:text-2xl font-bold text-zinc-800 dark:text-zinc-100 outline-none px-2 w-full min-w-[150px] cursor-text truncate placeholder-zinc-400"
+                            className="flex-1 bg-transparent text-xl md:text-2xl font-bold text-zinc-800 dark:text-[#C4C7C5] outline-none px-2 w-full min-w-[150px] cursor-text truncate placeholder-zinc-400"
                             placeholder="Nombre del grupo de notas ..."
                             title="Haz clic para editar"
                           />
@@ -783,28 +787,36 @@ function App() {
                                   <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-800 shadow-xl rounded-xl border border-zinc-200 dark:border-zinc-700 p-1.5 flex flex-col gap-0.5 min-w-[200px] animate-fadeIn">
                                     <div className="px-2 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1 border-b border-zinc-100 dark:border-zinc-700">Ordenar por</div>
                                     
-                                    <button onClick={() => applyManualSort('date-desc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'date-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                    <button onClick={() => applyManualSort('date-desc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'date-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
                                       <Calendar size={14} /> Fecha (Recientes)
                                       {noteSortMode === 'date-desc' && <Check size={14} className="ml-auto" />}
                                     </button>
                                     
-                                    <button onClick={() => applyManualSort('date-asc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'date-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                    <button onClick={() => applyManualSort('date-asc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'date-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
                                       <Calendar size={14} /> Fecha (Antiguos)
                                       {noteSortMode === 'date-asc' && <Check size={14} className="ml-auto" />}
                                     </button>
                                     
-                                    <button onClick={() => applyManualSort('alpha-asc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'alpha-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                    <button onClick={() => applyManualSort('alpha-asc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'alpha-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
                                       <Type size={14} /> Nombre (A-Z)
                                       {noteSortMode === 'alpha-asc' && <Check size={14} className="ml-auto" />}
                                     </button>
                                     
-                                    <button onClick={() => applyManualSort('alpha-desc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'alpha-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                    <button onClick={() => applyManualSort('alpha-desc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'alpha-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
                                       <Type size={14} /> Nombre (Z-A)
                                       {noteSortMode === 'alpha-desc' && <Check size={14} className="ml-auto" />}
                                     </button>
                                   </div>
                                 )}
                               </div>
+
+                              <button 
+                                  onClick={() => { if (activeGroupId) { const store = useUIStore.getState(); store.toggleNote; useUIStore.setState({ openNotesByGroup: { ...store.openNotesByGroup, [activeGroupId]: [] } }); } }}
+                                  className="p-2 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg hover:bg-white dark:hover:bg-zinc-800 transition-colors"
+                                  title="Contraer todas las notas"
+                              >
+                                  <ChevronsDownUp size={18} />
+                              </button>
 
                               <button 
                                   onClick={downloadGroupAsMarkdown} 
@@ -828,14 +840,14 @@ function App() {
                               className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
                           >
                               <Plus size={18} /> 
-                              <span className="text-sm font-bold hidden sm:inline pr-1">Nueva Nota</span>
+                              <span className="text-sm font-normal hidden sm:inline pr-1">Nueva Nota</span>
                           </button>
                       </div>
                     </>
                  ) : (
                     <>
-                      <h1 className="text-xl font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-3">
-                        <div className="p-2 bg-indigo-500 rounded-lg text-white shadow-lg shadow-indigo-500/20">
+                      <h1 className="text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-3">
+                        <div className="p-2 bg-[#4940D9] hover:bg-[#3D35C0] rounded-lg text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 transition-all cursor-default">
                           <StickyNote size={20} />
                         </div>
                         Grupos de notas
@@ -843,19 +855,18 @@ function App() {
                       <div className="flex items-center gap-2 shrink-0">
                         <button
                           onClick={addGroup}
-                          className="bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 p-2 md:px-4 md:py-2 rounded-xl transition-all flex items-center gap-2 shrink-0 border border-zinc-200 dark:border-zinc-700 shadow-sm"
+                          className="bg-[#4940D9] hover:bg-[#3D35C0] hover:shadow-lg hover:shadow-[#4940D9]/30 text-white p-3 rounded-full transition-all flex items-center justify-center shrink-0 shadow-md active:scale-95"
                           title="Crear Nuevo Grupo"
                         >
-                          <Plus size={18} />
-                          <span className="text-sm font-bold hidden sm:inline pr-1">Nuevo Grupo</span>
+                          <Plus size={20} />
                         </button>
                         <button
                           onClick={() => setIsLauncherOpen(true)}
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 md:px-4 md:py-2 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
+                          className="bg-[#4940D9] hover:bg-[#3D35C0] hover:shadow-lg hover:shadow-[#4940D9]/30 text-white p-2 md:px-4 md:py-2 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
                           title="Abrir Menú de Grupos"
                         >
                           <Grid size={18} />
-                          <span className="text-sm font-bold hidden sm:inline pr-1">Abrir Menú</span>
+                          <span className="text-sm font-normal hidden sm:inline pr-1">Abrir Menú</span>
                         </button>
                       </div>
                     </>

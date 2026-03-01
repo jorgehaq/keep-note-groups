@@ -130,6 +130,12 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
 
     const autoSave = (id: string, updates: Partial<AdvancedTimer>) => {
         setTimers(prev => prev.map(t => t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t));
+        
+        // Si el cambio involucra iniciar/detener el reloj, avisamos al sistema para actualizar el badge del Sidebar
+        if ('last_started_at' in updates) {
+            window.dispatchEvent(new CustomEvent('timer-changed'));
+        }
+
         if (saveTimeoutRef.current[id]) clearTimeout(saveTimeoutRef.current[id]);
         saveTimeoutRef.current[id] = setTimeout(async () => {
             await supabase.from('timers').update(updates).eq('id', id);
@@ -155,6 +161,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
     const deleteTimer = async (id: string) => {
         if (!window.confirm('¿Eliminar permanentemente este cronómetro y todos sus registros?')) return;
         setTimers(prev => prev.filter(t => t.id !== id));
+        window.dispatchEvent(new CustomEvent('timer-changed'));
         await supabase.from('timers').delete().eq('id', id);
     };
 
@@ -235,14 +242,14 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
             {/* HEADER */}
             <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
                 <div className="flex items-center justify-between px-4 md:px-6 py-4">
-                    <h1 className="text-xl font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-3">
+                    <h1 className="text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-3">
                         <div className="p-2 bg-[#2563EB] rounded-lg text-white shadow-lg shadow-blue-500/20">
                             <Clock size={20} />
                         </div>
                         Cronómetros
                     </h1>
                     <button onClick={createNewDraft} className="bg-[#2563EB] hover:bg-blue-700 text-white p-2 rounded-xl shadow-lg shadow-blue-500/20 transition-colors flex items-center gap-2">
-                        <Plus size={20} /> <span className="text-sm font-bold hidden sm:inline pr-2">Nuevo</span>
+                        <Plus size={20} /> <span className="text-sm font-normal hidden sm:inline pr-2">Nuevo</span>
                     </button>
                 </div>
             </div>
@@ -263,7 +270,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                         <input 
                                             type="text" placeholder="¿Qué vamos a medir? (ej. Sprint Programación)" 
                                             value={draft.title || ''} onChange={e => autoSave(draft.id, { title: e.target.value })} 
-                                            className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-zinc-100 p-4 pb-3 outline-none placeholder-zinc-400" 
+                                            className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] p-4 pb-3 outline-none placeholder-zinc-400" 
                                         />
                                     </div>
                                     <div className="h-px bg-zinc-100 dark:bg-zinc-800/80 mx-4 mb-2" />
@@ -278,7 +285,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                         <select 
                                             value={draft.type} 
                                             onChange={e => autoSave(draft.id, { type: e.target.value as TimerType })}
-                                            className="w-full p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                                            className="w-full p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm font-normal outline-none focus:ring-2 focus:ring-indigo-500 dark:text-[#C4C7C5]"
                                         >
                                             <option value="cycle">🔄 Modo Ciclo (Pausar crea un Lap y detiene el reloj)</option>
                                             <option value="racing">🏁 Modo Carrera (Marcar Hitos sin detener el reloj principal)</option>
@@ -290,7 +297,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                             <button onClick={() => deleteTimer(draft.id)} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Eliminar">
                                                 <Trash2 size={18} />
                                             </button>
-                                            <button onClick={() => changeStatus(draft.id, 'active')} className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-[#2563EB] hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/20 transition-all">
+                                            <button onClick={() => changeStatus(draft.id, 'active')} className="flex items-center gap-2 px-5 py-2 text-xs font-normal text-white bg-[#2563EB] hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/20 transition-all">
                                                 <Play size={14}/> Establecer e Iniciar
                                             </button>
                                         </div>
@@ -318,7 +325,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                             <div className="flex justify-between items-start mb-4">
                                                 <div className="flex items-center gap-3 flex-1 min-w-0">
                                                     <div className="flex flex-col min-w-0 pl-1">
-                                                        <h3 className="font-bold text-lg text-zinc-800 dark:text-zinc-100 truncate">{timer.title || 'Cronómetro'}</h3>
+                                                        <input type="text" value={timer.title} onChange={e => autoSave(timer.id, { title: e.target.value })} className="font-bold text-lg text-zinc-800 dark:text-[#C4C7C5] truncate bg-transparent outline-none w-full placeholder-zinc-400" placeholder="Cronómetro" />
                                                         <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
                                                             {timer.type === 'cycle' ? <><RotateCcw size={10}/> Modo Ciclo</> : <><Flag size={10}/> Modo Carrera</>}
                                                         </span>
@@ -328,7 +335,6 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
 
                                             {/* ÁREA EXPANDIDA */}
                                             <div className="animate-fadeIn space-y-4">
-                                                    <input type="text" value={timer.title} onChange={e => autoSave(timer.id, { title: e.target.value })} className="w-full bg-zinc-50 dark:bg-zinc-950 text-sm font-bold p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 outline-none" />
                                                     
                                                     <div className="bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-text min-h-[100px]">
                                                         <SmartNotesEditor noteId={timer.id} initialContent={timer.content} onChange={c => autoSave(timer.id, { content: c })} noteFont={noteFont} noteFontSize={noteFontSize} />
@@ -341,19 +347,19 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                                         {/* BOTONES DE CONTROL DE TIEMPO */}
                                                         <div className="flex items-center justify-center gap-4 mt-8">
                                                             {!isRunning ? (
-                                                                <button onClick={() => handlePlay(timer.id)} className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg transition-transform active:scale-95">
+                                                                <button onClick={() => handlePlay(timer.id)} className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-normal rounded-xl shadow-lg transition-transform active:scale-95">
                                                                     <Play size={18} /> Iniciar / Reanudar
                                                                 </button>
                                                             ) : timer.type === 'cycle' ? (
-                                                                <button onClick={() => handlePauseCycle(timer.id)} className="flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-lg transition-transform active:scale-95">
+                                                                <button onClick={() => handlePauseCycle(timer.id)} className="flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-normal rounded-xl shadow-lg transition-transform active:scale-95">
                                                                     <Pause size={18} /> Pausar y Marcar Lap
                                                                 </button>
                                                             ) : (
                                                                 <>
-                                                                    <button onClick={() => handleLapRacing(timer.id)} className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg transition-transform active:scale-95">
+                                                                    <button onClick={() => handleLapRacing(timer.id)} className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-normal rounded-xl shadow-lg transition-transform active:scale-95">
                                                                         <Flag size={18} /> Marcar Hito
                                                                     </button>
-                                                                    <button onClick={() => handleStopRacing(timer.id)} className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg transition-transform active:scale-95">
+                                                                    <button onClick={() => handleStopRacing(timer.id)} className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-normal rounded-xl shadow-lg transition-transform active:scale-95">
                                                                         <Square size={18} /> Pausar
                                                                     </button>
                                                                 </>
@@ -392,7 +398,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                                 <button onClick={() => deleteTimer(timer.id)} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Eliminar">
                                                     <Trash2 size={18} />
                                                 </button>
-                                                <button onClick={() => changeStatus(timer.id, 'history')} className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-[#2563EB] hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/20 transition-all">
+                                                <button onClick={() => changeStatus(timer.id, 'history')} className="flex items-center gap-2 px-4 py-2 text-xs font-normal text-white bg-[#2563EB] hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/20 transition-all">
                                                     <ArchiveIcon size={14} /> Archivar Cronómetro
                                                 </button>
                                             </div>

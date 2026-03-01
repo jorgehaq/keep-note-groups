@@ -116,18 +116,18 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
             {/* 🚀 FIX: HEADER UNIFICADO (Estilo Enterprise Mental Space) */}
             <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
                 <div className="flex items-center justify-between px-4 md:px-6 py-4">
-                    <h1 className="text-xl font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-3">
-                        <div className="p-2 bg-[#10B981] rounded-lg text-white shadow-lg shadow-emerald-500/20 shrink-0">
+                    <h1 className="text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-3">
+                        <div className="p-2 bg-[#10B981] rounded-lg text-emerald-950 shadow-lg shadow-emerald-500/20 shrink-0">
                             <KanbanSquare size={20} />
                         </div>
                         Kanban
                     </h1>
                     <button 
                         onClick={handleAdd} 
-                        className="bg-[#10B981] hover:bg-emerald-600 text-white p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
+                        className="bg-[#10B981] hover:bg-emerald-600 text-emerald-950 p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
                     >
                         <Plus size={18} /> 
-                        <span className="text-sm font-bold hidden sm:inline pr-1">{t('kanban.new_task')}</span>
+                        <span className="text-sm font-normal hidden sm:inline pr-1">{t('kanban.new_task')}</span>
                     </button>
                 </div>
             </div>
@@ -142,9 +142,9 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                             <button
                                 key={tab.key}
                                 onClick={() => setActiveTab(tab.key)}
-                                className={`flex items-center justify-center gap-2 px-5 py-2 text-xs font-bold rounded-lg transition-all ${
+                                className={`flex items-center justify-center gap-2 px-5 py-2 text-xs font-normal rounded-lg transition-all ${
                                     activeTab === tab.key
-                                        ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                                        ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#C4C7C5] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
                                         : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
                                 }`}
                             >

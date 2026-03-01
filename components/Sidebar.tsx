@@ -44,7 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const getAppStyle = (appId: string) => {
     // ESTADO 1: ACTIVO (Azul) - Es la app que estás mirando en este momento exacto
     if (globalView === appId) {
-      return 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)] ring-2 ring-indigo-400/50 scale-105';
+      return 'bg-[#4940D9] hover:bg-[#3D35C0] text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 scale-105 active:scale-95 transition-all';
     }
 
     // ESTADO 2: RECIÉN PERDIÓ EL FOCO (Gris Medio) - Fue la última app en la que estuviste
@@ -109,17 +109,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {(kanbanTodoCount > 0 || kanbanInProgressCount > 0 || kanbanDoneCount > 0) && (
             <div className="absolute -top-2 -right-2 flex items-center gap-px">
               {kanbanTodoCount > 0 && (
-                <div className="bg-blue-500 text-white text-[10px] font-bold min-w-[16px] h-4 px-1 flex items-center justify-center rounded-md shadow-md ring-1 ring-blue-600/50 z-30" title={t('sidebar.pending')}>
+                <div className="bg-blue-500 text-white text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-blue-600/50 z-30" title={t('sidebar.pending')}>
                   {kanbanTodoCount}
                 </div>
               )}
               {kanbanInProgressCount > 0 && (
-                <div className="bg-amber-500 text-white text-[10px] font-bold min-w-[16px] h-4 px-1 flex items-center justify-center rounded-md shadow-md ring-1 ring-amber-600/50 z-20" title={t('sidebar.in_progress')}>
+                <div className="bg-amber-500 text-white text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-amber-600/50 z-20" title={t('sidebar.in_progress')}>
                   {kanbanInProgressCount}
                 </div>
               )}
               {kanbanDoneCount > 0 && (
-                <div className="bg-emerald-500 text-white text-[10px] font-bold min-w-[16px] h-4 px-1 flex items-center justify-center rounded-md shadow-md ring-1 ring-emerald-600/50 z-10" title={t('sidebar.done')}>
+                <div className="bg-emerald-500 text-white text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-emerald-600/50 z-10" title={t('sidebar.done')}>
                   {kanbanDoneCount}
                 </div>
               )}
@@ -150,7 +150,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* New Group Button (Quick Add) */}
         <button
           onClick={onAddGroup}
-          className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 text-white shadow-md hover:from-indigo-600 hover:to-indigo-700 hover:shadow-lg transition-all duration-300 shrink-0 hover:scale-105 active:scale-95 mb-1"
+          className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-[#4940D9] hover:bg-[#3D35C0] text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 transition-all duration-300 shrink-0 hover:scale-105 active:scale-95 mb-1"
           title={t('sidebar.new_group')}
         >
           <Plus size={18} />
@@ -159,7 +159,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Launcher Button */}
         <button
           onClick={() => setIsLauncherOpen(true)}
-          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 hover:bg-[#6366F1] dark:hover:bg-[#6366F1] hover:text-white shadow-lg shadow-indigo-500/20 transition-all duration-300 hover:scale-105 active:scale-95 mb-1 shrink-0"
+          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 hover:bg-[#4940D9] dark:hover:bg-[#4940D9] hover:text-white dark:hover:text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 transition-all duration-300 hover:scale-105 active:scale-95 mb-1 shrink-0"
           title={t('sidebar.launcher')}
         >
           <Grid size={20} />
@@ -197,7 +197,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   className={`
                     relative flex items-center justify-center w-full transition-all duration-300 overflow-hidden rounded-xl group/dockedbtn
                     ${isGroupActive && isNotesView && !focusedNoteIsDocked
-                      ? 'h-32 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)] ring-2 ring-indigo-400/50 scale-[1.02]'
+                      ? 'h-32 bg-[#4940D9] hover:bg-[#3D35C0] text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 scale-[1.02] active:scale-95'
                       : isGroupActive && (!isNotesView || focusedNoteIsDocked)
                         ? 'h-32 bg-zinc-300 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-inner ring-1 ring-zinc-400/30 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:ring-0 hover:scale-[1.04] active:scale-95'
                         : 'h-24 bg-zinc-200/50 dark:bg-zinc-800/50 text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:scale-[1.04] active:scale-95'}
@@ -205,7 +205,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   title={group.title}
                 >
                   <div className="absolute top-1.5 w-6 h-0.5 rounded-full bg-current opacity-30"></div>
-                  <span className="writing-vertical-rl rotate-180 text-xs font-bold tracking-wide uppercase truncate max-h-[85%] py-1">
+                  <span className="writing-vertical-rl rotate-180 text-xs font-normal tracking-wide uppercase truncate max-h-[85%] py-1">
                     {group.title}
                   </span>
                 </button>
@@ -226,7 +226,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       const isActiveFocus = isFocused && isNotesView;
                       
                       const bubbleClass = isActiveFocus
-                        ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-[0_0_10px_rgba(99,102,241,0.5)] ring-2 ring-indigo-400/50 scale-[1.15]' // Activa enfocada (Azul)
+                        ? 'bg-[#4940D9] hover:bg-[#3D35C0] text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 scale-[1.15] active:scale-95' // Activa enfocada
                         : isGroupActive
                           ? 'bg-zinc-300 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-inner ring-1 ring-zinc-400/30 scale-105 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:ring-0 hover:scale-110 active:scale-95' // Parte de grupo activo o rastro (Gris Medio)
                           : 'bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:scale-110 active:scale-95'; // Muerta / Inactiva
@@ -249,7 +249,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <div key={note.id} className="relative group/bubble">
                           <button
                             onClick={() => onSelectDockedNote(group.id, note.id)}
-                            className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] font-semibold uppercase transition-all duration-200 ${bubbleClass}`}
+                            className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] font-normal uppercase transition-all duration-200 ${bubbleClass}`}
                             title={note.title || 'Sin título'}
                           >
                             {note.title ? note.title.substring(0, 2) : <StickyNote size={12} />}

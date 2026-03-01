@@ -68,6 +68,15 @@ const TaskListItem: React.FC<{
                     {view === 'backlog' ? 'Backlog' : 'Archivado'}
                 </div>
                 <div className="flex items-center gap-1">
+                    {view === 'backlog' && (
+                        <button
+                            onClick={() => onUpdate(task.id, { status: 'archived' })}
+                            className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
+                            title="Archivar"
+                        >
+                            <Archive size={16} />
+                        </button>
+                    )}
                     <button
                         onClick={() => onUpdate(task.id, { status: promoteStatus })}
                         className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
@@ -107,7 +116,7 @@ const TaskListItem: React.FC<{
                                 }
                             }}
                             autoFocus
-                            className="w-full text-zinc-800 dark:text-zinc-100 font-medium leading-tight bg-transparent outline-none placeholder-zinc-400"
+                            className="w-full text-zinc-800 dark:text-[#C4C7C5] font-medium leading-tight bg-transparent outline-none placeholder-zinc-400"
                             placeholder="Nueva tarea..."
                         />
                     ) : (
@@ -119,7 +128,7 @@ const TaskListItem: React.FC<{
                                 setIsEditing(true);
                             }}
                             readOnly
-                            className="w-full text-zinc-800 dark:text-zinc-100 font-medium leading-tight bg-transparent outline-none cursor-text placeholder-zinc-400"
+                            className="w-full text-zinc-800 dark:text-[#C4C7C5] font-medium leading-tight bg-transparent outline-none cursor-text placeholder-zinc-400"
                             placeholder="Nueva tarea..."
                         />
                     )}

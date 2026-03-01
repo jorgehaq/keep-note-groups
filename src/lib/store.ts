@@ -25,6 +25,8 @@ interface UIStore {
     kanbanDoneCount: number;
     globalTasks: Task[]; // Assuming Task type is defined
     isMaximized: boolean;
+    isBraindumpMaximized: boolean;
+    isTranslatorMaximized: boolean;
 
     setActiveGroup: (id: string | null) => void;
     toggleNote: (groupId: string, noteId: string) => void;
@@ -32,6 +34,8 @@ interface UIStore {
     setKanbanCounts: (todo: number, inProgress: number, done: number) => void;
     setGlobalTasks: (tasks: Task[]) => void;
     setIsMaximized: (maximized: boolean) => void;
+    setIsBraindumpMaximized: (maximized: boolean) => void;
+    setIsTranslatorMaximized: (maximized: boolean) => void;
 
     // Dock Actions
     openGroup: (id: string) => void; // Adds to dock and sets active
@@ -66,6 +70,8 @@ export const useUIStore = create<UIStore>()(
             kanbanDoneCount: 0,
             globalTasks: [],
             isMaximized: false,
+            isBraindumpMaximized: false,
+            isTranslatorMaximized: false,
 
             setActiveGroup: (id) => set({ activeGroupId: id }),
 
@@ -167,6 +173,10 @@ export const useUIStore = create<UIStore>()(
                 })),
             setGlobalTasks: (tasks) => set({ globalTasks: tasks }),
             setIsMaximized: (maximized) => set({ isMaximized: maximized }),
+            setIsBraindumpMaximized: (maximized) =>
+                set({ isBraindumpMaximized: maximized }),
+            setIsTranslatorMaximized: (maximized) =>
+                set({ isTranslatorMaximized: maximized }),
         }),
         {
             name: "keep-note-groups-ui-storage-v4", // Bump version for editingNotes state

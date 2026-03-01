@@ -119,13 +119,13 @@ export const KanbanLinkerModal: React.FC<KanbanLinkerModalProps> = ({ task, grou
                     <div className="flex px-4 gap-4">
                         <button 
                             onClick={() => setMode('create')}
-                            className={`pb-3 text-sm font-bold transition-colors border-b-2 ${mode === 'create' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                            className={`pb-3 text-sm font-normal transition-colors border-b-2 ${mode === 'create' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
                         >
                             Crear Nueva Nota
                         </button>
                         <button 
                             onClick={() => setMode('link')}
-                            className={`pb-3 text-sm font-bold transition-colors border-b-2 ${mode === 'link' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                            className={`pb-3 text-sm font-normal transition-colors border-b-2 ${mode === 'link' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
                         >
                             Vincular a Existente
                         </button>
@@ -162,7 +162,7 @@ export const KanbanLinkerModal: React.FC<KanbanLinkerModalProps> = ({ task, grou
                             <button 
                                 onClick={handleCreateFlow}
                                 disabled={!groupInput.trim() || loading}
-                                className="mt-auto w-full flex items-center justify-center gap-2 bg-[#10B981] hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-emerald-500/20"
+                                className="mt-auto w-full flex items-center justify-center gap-2 bg-[#10B981] hover:bg-emerald-600 text-white font-normal py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-emerald-500/20"
                             >
                                 {loading ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
                                 Generar y Abrir Nota

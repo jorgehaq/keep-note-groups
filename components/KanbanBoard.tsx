@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Task, TaskStatus, Group } from '../types';
 import { useTranslation } from 'react-i18next';
-import { Archive, Trash2, GripVertical, StickyNote, Link as LinkIcon } from 'lucide-react';
+import { Archive, Inbox, Trash2, GripVertical, StickyNote, Link as LinkIcon } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 import { KanbanLinkerModal } from './KanbanLinkerModal';
 
@@ -92,11 +92,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], on
 
     return (
         <DragDropContext onDragEnd={handleDragEnd}>
-            <div className="flex-1 flex gap-4 p-4 md:p-6 overflow-x-auto overflow-y-hidden hidden-scrollbar snap-x snap-mandatory sm:snap-none">
+            <div className="flex-1 flex gap-2 sm:gap-4 p-2 sm:p-4 md:p-6 overflow-x-auto overflow-y-hidden hidden-scrollbar snap-x snap-mandatory sm:snap-none">
                 {COLUMNS.map(col => {
                     const colTasks = getColumnTasks(col.status);
                     return (
-                        <div key={col.status} className="w-[85vw] shrink-0 sm:w-auto sm:shrink sm:flex-1 min-w-[260px] max-w-[400px] flex flex-col snap-center">
+                        <div key={col.status} className="w-[72vw] shrink-0 sm:w-auto sm:shrink sm:flex-1 min-w-[220px] max-w-[400px] flex flex-col snap-center">
                             {/* Column Header */}
                             <div className="flex items-center gap-2 mb-3 px-1">
                                 <div className={`w-2 h-2 rounded-full ${col.accent}`}></div>
@@ -224,7 +224,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
                                 }
                             }}
                             autoFocus
-                            className="w-full text-zinc-800 dark:text-zinc-100 font-medium leading-tight bg-transparent outline-none placeholder-zinc-400"
+                            className="w-full text-zinc-800 dark:text-[#C4C7C5] font-medium leading-tight bg-transparent outline-none placeholder-zinc-400"
                             placeholder="Nueva tarea..."
                         />
                     ) : (
@@ -236,7 +236,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
                                 setIsEditing(true);
                             }}
                             readOnly
-                            className="w-full text-zinc-800 dark:text-zinc-100 font-medium leading-tight bg-transparent outline-none cursor-text placeholder-zinc-400"
+                            className="w-full text-zinc-800 dark:text-[#C4C7C5] font-medium leading-tight bg-transparent outline-none cursor-text placeholder-zinc-400"
                             placeholder="Nueva tarea..."
                         />
                     )}
@@ -264,15 +264,20 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
                             <LinkIcon size={14} />
                         </button>
                     )}
-                    {columnStatus === 'done' && (
-                        <button
+                    <button
+                            onClick={() => onUpdate(task.id, { status: 'backlog' })}
+                            className="p-1.5 text-zinc-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
+                            title="Mover a Backlog"
+                        >
+                            <Inbox size={14} />
+                        </button>
+                    <button
                             onClick={() => onUpdate(task.id, { status: 'archived' })}
                             className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
                             title="Archivar"
                         >
                             <Archive size={14} />
                         </button>
-                    )}
                     <button
                         onClick={() => {
                             if (confirm('¿Eliminar esta tarea?')) onDelete(task.id);

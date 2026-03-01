@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import { SmartNotesEditor } from '../src/components/editor/SmartNotesEditor';
+import { useUIStore } from '../src/lib/store';
 
 // --- TYPES ---
 type BrainDumpStatus = 'main' | 'active' | 'history';
@@ -44,6 +45,7 @@ const parseMarkdownPreview = (text: string) => {
 };
 
 export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteFontSize?: string }> = ({ session, noteFont, noteFontSize }) => {
+    const { isBraindumpMaximized, setIsBraindumpMaximized } = useUIStore();
     const [dumps, setDumps] = useState<BrainDump[]>([]);
     const [loading, setLoading] = useState(true);
     
@@ -110,20 +112,29 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
             <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
                 <div className="flex items-center justify-between px-4 md:px-6 py-4">
-                    <h1 className="text-xl font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-3">
+                    <h1 className="text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-3">
                         <div className="p-2 bg-[#FFD700] rounded-lg text-amber-900 shadow-lg shadow-amber-500/20">
                             <PenTool size={20} />
                         </div>
                         Pizarrón
                     </h1>
+                <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setIsBraindumpMaximized(!isBraindumpMaximized)}
+                        className="p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400 transition-all active:scale-95 shrink-0"
+                        title={isBraindumpMaximized ? "Minimizar" : "Maximizar"}
+                      >
+                        {isBraindumpMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                      </button>
                     <button onClick={createNewDraft} className="bg-[#FFD700] hover:bg-[#E5C100] text-amber-950 p-2 rounded-xl shadow-lg shadow-amber-500/20 transition-colors flex items-center gap-2">
-                        <Plus size={20} /> <span className="text-sm font-bold hidden sm:inline pr-2">Nuevo Pizarrón</span>
+                        <Plus size={20} /> <span className="text-sm font-normal hidden sm:inline pr-2">Nuevo Pizarrón</span>
                     </button>
+                </div>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 hidden-scrollbar">
-                <div className="max-w-4xl mx-auto space-y-12 pb-20">
+            <div className={`flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-950 ${isBraindumpMaximized ? 'p-8' : 'p-4 md:p-8'} hidden-scrollbar`}>
+                <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto space-y-12 pb-20`}>
                     
                     {/* 1. PIZARRONES (PERSISTENTES) */}
                     {pizarrones.length > 0 && (
@@ -143,7 +154,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                             placeholder="Título del pizarrón (opcional)" 
                                             value={pizarron.title || ''} 
                                             onChange={e => autoSave(pizarron.id, { title: e.target.value })} 
-                                            className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-zinc-100 p-4 pb-3 outline-none placeholder-zinc-400" 
+                                            className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] p-4 pb-3 outline-none placeholder-zinc-400" 
                                         />
                                     </div>
                                     <div className="h-px bg-zinc-100 dark:bg-zinc-800/80 mx-4 mb-2" />
@@ -168,7 +179,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                             <button onClick={() => deleteDump(pizarron.id)} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Eliminar permanentemente">
                                                 <Trash2 size={18} />
                                             </button>
-                                            <button onClick={() => changeStatus(pizarron.id, 'history')} className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-amber-950 bg-[#FFD700] hover:bg-[#E5C100] rounded-xl shadow-lg shadow-amber-500/20 transition-all" title="Archivar pizarrón">
+                                            <button onClick={() => changeStatus(pizarron.id, 'history')} className="flex items-center gap-2 px-5 py-2 text-xs font-normal text-amber-950 bg-[#FFD700] hover:bg-[#E5C100] rounded-xl shadow-lg shadow-amber-500/20 transition-all" title="Archivar pizarrón">
                                                 <ArchiveIcon size={14} /> Archivar
                                             </button>
                                         </div>

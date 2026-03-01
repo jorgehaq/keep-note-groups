@@ -187,7 +187,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               }}
               onClick={(e) => e.stopPropagation()}
               placeholder="Título de la nota..."
-              className="flex-1 min-w-0 bg-transparent text-lg font-bold text-zinc-800 dark:text-zinc-100 outline-none placeholder-zinc-400 truncate hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors cursor-text"
+              className="flex-1 min-w-0 bg-transparent text-lg font-bold text-zinc-800 dark:text-[#C4C7C5] outline-none placeholder-zinc-400 truncate hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors cursor-text"
               title="Haz clic para editar"
             />
 
@@ -239,8 +239,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       {note.isOpen && (
         <div ref={contentRef} className="p-0 bg-white dark:bg-zinc-900 animate-fadeIn relative rounded-b-2xl">
           {showStickyTitle && (
-            <div className="fixed top-14 md:top-16 left-0 right-0 z-[40] flex justify-center pointer-events-none animate-fadeIn px-4">
-              <div onClick={(e) => { e.stopPropagation(); headerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }} className="bg-zinc-800/95 dark:bg-zinc-200/95 backdrop-blur-md text-white dark:text-zinc-900 px-5 py-1.5 rounded-full shadow-lg shadow-black/10 text-xs font-bold flex items-center gap-2 pointer-events-auto cursor-pointer active:scale-95 transition-transform border border-zinc-700 dark:border-zinc-300"><span className="truncate max-w-[200px] sm:max-w-[400px]">{note.title || 'Sin título'}</span><ChevronUp size={14} className="opacity-70" /></div>
+            <div className="sticky top-0 left-0 right-0 z-[40] flex justify-center pointer-events-none animate-fadeIn px-4">
+              <div onClick={(e) => { e.stopPropagation(); headerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }} className="bg-zinc-800/95 dark:bg-zinc-200/95 backdrop-blur-md text-white dark:text-zinc-900 px-5 py-1.5 rounded-full shadow-lg shadow-black/10 text-xs font-normal flex items-center gap-2 pointer-events-auto cursor-pointer active:scale-95 transition-transform -translate-y-1/2 border border-zinc-700 dark:border-zinc-300"><span className="truncate max-w-[200px] sm:max-w-[400px]">{note.title || 'Sin título'}</span><ChevronUp size={14} className="opacity-70" /></div>
             </div>
           )}
 
@@ -280,7 +280,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             )}
           </div>
 
-          <div onClick={(e) => { e.stopPropagation(); onToggle(note.id); }} className="flex items-center justify-center gap-2 py-3 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800/30 dark:hover:bg-zinc-800/60 border-t border-zinc-200 dark:border-zinc-800 cursor-pointer transition-colors text-zinc-500 dark:text-zinc-400 font-bold rounded-b-2xl"><ChevronUp size={16} /><span className="text-xs uppercase tracking-wider">Cerrar Nota</span></div>
+          <div onClick={(e) => { e.stopPropagation(); onToggle(note.id); }} className="flex items-center justify-center gap-2 py-3 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800/30 dark:hover:bg-zinc-800/60 border-t border-zinc-200 dark:border-zinc-800 cursor-pointer transition-colors text-zinc-500 dark:text-zinc-400 font-normal rounded-b-2xl"><ChevronUp size={16} /><span className="text-xs uppercase tracking-wider">Cerrar Nota</span></div>
         </div>
       )}
     </div>
