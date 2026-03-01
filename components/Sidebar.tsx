@@ -159,7 +159,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Launcher Button */}
         <button
           onClick={() => setIsLauncherOpen(true)}
-          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all duration-300 hover:scale-105 active:scale-95 mb-1 shrink-0"
+          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 hover:bg-[#6366F1] dark:hover:bg-[#6366F1] hover:text-white shadow-lg shadow-indigo-500/20 transition-all duration-300 hover:scale-105 active:scale-95 mb-1 shrink-0"
           title={t('sidebar.launcher')}
         >
           <Grid size={20} />
