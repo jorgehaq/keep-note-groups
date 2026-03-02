@@ -471,12 +471,12 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
                     onMouseDown={(e) => e.preventDefault()} 
                 >
                     {isTranslating ? ( <div className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-blue-500"><Loader2 size={16} className="animate-spin" /> Traduciendo...</div> ) : (
-                        <><button onClick={doHighlight} className="flex items-center gap-1.5 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-black rounded-lg text-xs font-bold transition-colors text-zinc-800 dark:text-white active:scale-95"><Highlighter size={14} className="text-[#6B8E23] dark:text-[#ccff00]" /> Resaltar</button>
+                        <><button onClick={doHighlight} className="flex items-center gap-1.5 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-black rounded-lg text-xs font-bold transition-colors text-zinc-800 dark:text-white active:scale-95" title="Resaltar"><Highlighter size={14} className="text-[#6B8E23] dark:text-[#ccff00]" /></button>
                         <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
-                        <button onClick={doLink} className="p-2 text-zinc-400 hover:text-blue-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"><LinkIcon size={16} /></button>
+                        <button onClick={doLink} className="flex items-center gap-1.5 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-black rounded-lg transition-colors text-zinc-400 hover:text-blue-500 active:scale-95" title="Convertir a Link"><LinkIcon size={16} /></button>
                         <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
-                        <button onClick={() => doTranslate('en')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-500 dark:text-blue-400 active:scale-95"> EN</button>
-                        <button onClick={() => doTranslate('es')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-500 dark:text-blue-400 active:scale-95"> ES</button></>
+                        <button onClick={() => doTranslate('en')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-500 dark:text-blue-400 active:scale-95" title="Traducir a Inglés"> EN</button>
+                        <button onClick={() => doTranslate('es')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-500 dark:text-blue-400 active:scale-95" title="Traducir al Español"> ES</button></>
                     )}
                 </div>
             )}

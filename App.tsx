@@ -840,7 +840,7 @@ function App() {
                               className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
                           >
                               <Plus size={18} /> 
-                              <span className="text-sm font-normal hidden sm:inline pr-1">Nueva Nota</span>
+                              <span className="text-sm font-normal hidden sm:inline pr-1 text-white">Nueva Nota</span>
                           </button>
                       </div>
                     </>

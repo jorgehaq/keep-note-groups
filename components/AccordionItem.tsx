@@ -240,7 +240,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         <div ref={contentRef} className="p-0 bg-white dark:bg-zinc-900 animate-fadeIn relative rounded-b-2xl">
           {showStickyTitle && (
             <div className="sticky top-0 left-0 right-0 z-[40] flex justify-center pointer-events-none animate-fadeIn px-4">
-              <div onClick={(e) => { e.stopPropagation(); headerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }} className="bg-zinc-800/95 dark:bg-zinc-200/95 backdrop-blur-md text-white dark:text-zinc-900 px-5 py-1.5 rounded-full shadow-lg shadow-black/10 text-xs font-normal flex items-center gap-2 pointer-events-auto cursor-pointer active:scale-95 transition-transform -translate-y-1/2 border border-zinc-700 dark:border-zinc-300"><span className="truncate max-w-[200px] sm:max-w-[400px]">{note.title || 'Sin título'}</span><ChevronUp size={14} className="opacity-70" /></div>
+              <div onClick={(e) => { e.stopPropagation(); headerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }} className="bg-zinc-800/95 dark:bg-zinc-200/95 backdrop-blur-md text-black dark:text-black px-5 py-1.5 rounded-full shadow-lg shadow-black/10 text-xs font-normal flex items-center gap-2 pointer-events-auto cursor-pointer active:scale-95 transition-transform -translate-y-1/2 border border-zinc-700 dark:border-zinc-300"><span className="truncate max-w-[200px] sm:max-w-[400px]">{note.title || 'Sin título'}</span><ChevronUp size={14} className="opacity-70" /></div>
             </div>
           )}
 
