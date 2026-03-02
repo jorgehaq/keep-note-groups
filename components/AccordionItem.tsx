@@ -37,7 +37,7 @@ const highlightText = (text: string, highlight?: string): React.ReactNode => {
   const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
   return parts.map((part, index) =>
     part.toLowerCase() === highlight.toLowerCase() ? (
-      <mark key={index} className="bg-yellow-200 dark:bg-yellow-500/40 text-yellow-900 dark:text-yellow-100 rounded-sm px-0.5 font-medium">
+      <mark key={index} className="bg-yellow-200 dark:bg-yellow-500/40 text-yellow-900 dark:text-yellow-100 px-0.5 font-medium">
         {part}
       </mark>
     ) : (
