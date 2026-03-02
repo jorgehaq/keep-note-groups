@@ -37,9 +37,10 @@ const formatCleanDate = (isoString: string) => {
     const year = d.getFullYear();
     let hours = d.getHours();
     const minutes = d.getMinutes().toString().padStart(2, '0');
+    const seconds = d.getSeconds().toString().padStart(2, '0');
     const ampm = hours >= 12 ? ' PM' : ' AM';
     hours = hours % 12 || 12;
-    return `${day}/${month}/${year}, ${hours.toString().padStart(2, '0')}:${minutes}${ampm}`;
+    return `${day}/${month}/${year}, ${hours.toString().padStart(2, '0')}:${minutes}:${seconds}${ampm}`;
 };
 
 const formatDuration = (totalMs: number) => {
