@@ -58,6 +58,19 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
 
 
 
+
+CREATE OR REPLACE FUNCTION "public"."update_modified_column"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;   
+END;
+$$;
+
+
+ALTER FUNCTION "public"."update_modified_column"() OWNER TO "postgres";
+
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
@@ -68,7 +81,9 @@ CREATE TABLE IF NOT EXISTS "public"."brain_dumps" (
     "user_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
     "content" "text" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"(),
-    "status" character varying DEFAULT 'history'::character varying
+    "status" character varying DEFAULT 'history'::character varying,
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "title" "text"
 );
 
 
@@ -109,11 +124,14 @@ ALTER TABLE "public"."notes" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."reminders" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "title" "text" NOT NULL,
-    "note" "text",
-    "due_at" timestamp with time zone NOT NULL,
+    "content" "text",
+    "due_at" timestamp with time zone,
     "is_completed" boolean DEFAULT false NOT NULL,
     "user_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"()
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "status" "text" DEFAULT 'active'::"text",
+    "targets" "jsonb" DEFAULT '[]'::"jsonb",
+    "updated_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"())
 );
 
 
@@ -127,7 +145,8 @@ CREATE TABLE IF NOT EXISTS "public"."tasks" (
     "position" integer DEFAULT 0 NOT NULL,
     "user_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"(),
-    "updated_at" timestamp with time zone DEFAULT "now"()
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "source_id" "uuid"
 );
 
 
@@ -156,11 +175,28 @@ CREATE TABLE IF NOT EXISTS "public"."timers" (
     "last_started_at" timestamp with time zone,
     "user_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"(),
-    "updated_at" timestamp with time zone DEFAULT "now"()
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "content" "text" DEFAULT ''::"text",
+    "laps" "jsonb" DEFAULT '[]'::"jsonb",
+    "accumulated_ms" bigint DEFAULT 0
 );
 
 
 ALTER TABLE "public"."timers" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."translations" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
+    "source_text" "text" NOT NULL,
+    "translated_text" "text" NOT NULL,
+    "source_lang" character varying(10) NOT NULL,
+    "target_lang" character varying(10) NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."translations" OWNER TO "postgres";
 
 
 ALTER TABLE ONLY "public"."brain_dumps"
@@ -198,6 +234,15 @@ ALTER TABLE ONLY "public"."timers"
 
 
 
+ALTER TABLE ONLY "public"."translations"
+    ADD CONSTRAINT "translations_pkey" PRIMARY KEY ("id");
+
+
+
+CREATE INDEX "idx_tasks_source_id" ON "public"."tasks" USING "btree" ("source_id");
+
+
+
 CREATE OR REPLACE TRIGGER "handle_tasks_updated_at" BEFORE UPDATE ON "public"."tasks" FOR EACH ROW EXECUTE FUNCTION "extensions"."moddatetime"('updated_at');
 
 
@@ -207,6 +252,10 @@ CREATE OR REPLACE TRIGGER "handle_timers_updated_at" BEFORE UPDATE ON "public"."
 
 
 CREATE OR REPLACE TRIGGER "handle_updated_at" BEFORE UPDATE ON "public"."notes" FOR EACH ROW EXECUTE FUNCTION "extensions"."moddatetime"('updated_at');
+
+
+
+CREATE OR REPLACE TRIGGER "update_reminders_modtime" BEFORE UPDATE ON "public"."reminders" FOR EACH ROW EXECUTE FUNCTION "public"."update_modified_column"();
 
 
 
@@ -255,6 +304,11 @@ ALTER TABLE ONLY "public"."timers"
 
 
 
+ALTER TABLE ONLY "public"."translations"
+    ADD CONSTRAINT "translations_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
 CREATE POLICY "Users can manage their own reminders" ON "public"."reminders" USING (("auth"."uid"() = "user_id"));
 
 
@@ -272,6 +326,10 @@ CREATE POLICY "Users can manage their own timers" ON "public"."timers" USING (("
 
 
 CREATE POLICY "Users manage their own dumps" ON "public"."brain_dumps" USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users manage their own translations" ON "public"."translations" USING (("auth"."uid"() = "user_id"));
 
 
 
@@ -328,9 +386,16 @@ ALTER TABLE "public"."timer_logs" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."timers" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."translations" ENABLE ROW LEVEL SECURITY;
+
+
 
 
 ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
+
+
+
+
 
 
 GRANT USAGE ON SCHEMA "public" TO "postgres";
@@ -493,6 +558,12 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."update_modified_column"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_modified_column"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_modified_column"() TO "service_role";
+
+
+
 
 
 
@@ -547,6 +618,12 @@ GRANT ALL ON TABLE "public"."timer_logs" TO "service_role";
 GRANT ALL ON TABLE "public"."timers" TO "anon";
 GRANT ALL ON TABLE "public"."timers" TO "authenticated";
 GRANT ALL ON TABLE "public"."timers" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."translations" TO "anon";
+GRANT ALL ON TABLE "public"."translations" TO "authenticated";
+GRANT ALL ON TABLE "public"."translations" TO "service_role";
 
 
 

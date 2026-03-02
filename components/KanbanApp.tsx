@@ -52,6 +52,8 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
             setLoading(false);
         };
         fetchTasks();
+        window.addEventListener('kanban-updated', fetchTasks);
+        return () => window.removeEventListener('kanban-updated', fetchTasks);
     }, [setKanbanCounts]);
 
     // --- HANDLERS (FUNCIONALIDAD INTACTA) ---

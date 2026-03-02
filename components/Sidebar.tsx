@@ -109,17 +109,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {(kanbanTodoCount > 0 || kanbanInProgressCount > 0 || kanbanDoneCount > 0) && (
             <div className="absolute -top-2 -right-2 flex items-center gap-px">
               {kanbanTodoCount > 0 && (
-                <div className="bg-blue-500 text-white text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-blue-600/50 z-30" title={t('sidebar.pending')}>
+                <div 
+                  className="bg-[#FBC02D] text-white text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#FBC02D]/50 z-30" 
+                  title={t('sidebar.pending')}
+                >
                   {kanbanTodoCount}
                 </div>
               )}
               {kanbanInProgressCount > 0 && (
-                <div className="bg-amber-500 text-white text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-amber-600/50 z-20" title={t('sidebar.in_progress')}>
+                <div 
+                  className="bg-[#1E88E5] text-white text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#1E88E5]/50 z-20" 
+                  title={t('sidebar.in_progress')}
+                >
                   {kanbanInProgressCount}
                 </div>
               )}
               {kanbanDoneCount > 0 && (
-                <div className="bg-emerald-500 text-white text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-emerald-600/50 z-10" title={t('sidebar.done')}>
+                <div 
+                  className="bg-[#43A047] text-white text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#43A047]/50 z-10" 
+                  title={t('sidebar.done')}
+                >
                   {kanbanDoneCount}
                 </div>
               )}
@@ -237,10 +246,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       
                       if (linkedTask) {
                           switch (linkedTask.status) {
-                              case 'backlog': dotColorClass = 'bg-white dark:bg-zinc-200 ring-1 ring-zinc-300'; break;
-                              case 'todo': dotColorClass = 'bg-blue-500'; break;
-                              case 'in_progress': dotColorClass = 'bg-amber-500'; break;
-                              case 'done': dotColorClass = 'bg-emerald-500'; break;
+                              case 'backlog': dotColorClass = 'bg-[#9E9E9E]'; break;
+                              case 'todo': dotColorClass = 'bg-[#FBC02D]'; break;
+                              case 'in_progress': dotColorClass = 'bg-[#1E88E5]'; break;
+                              case 'done': dotColorClass = 'bg-[#43A047]'; break;
                               // 'archived' ignora el color como solicitaste
                           }
                       }

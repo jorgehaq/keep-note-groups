@@ -66,7 +66,10 @@ const TaskListItem: React.FC<{
             {/* Header + Title */}
             <div className="p-3.5 pb-2.5">
                 <div className="flex items-center gap-2 mb-2">
-                    <div className="flex items-center gap-1.5 text-[9px] font-bold text-zinc-400 uppercase tracking-tighter bg-zinc-50 dark:bg-zinc-800 px-2 py-0.5 rounded-md">
+                    <div 
+                        className="flex items-center gap-1.5 text-[9px] font-bold text-zinc-400 uppercase tracking-tighter bg-zinc-50 dark:bg-zinc-800 px-2 py-0.5 rounded-md border-l-2"
+                        style={{ borderLeftColor: view === 'backlog' ? '#9E9E9E' : '#424242' }}
+                    >
                         {view === 'backlog' ? <Inbox size={10} /> : <Archive size={10} />}
                         {view === 'backlog' ? 'Backlog' : 'Archivado'}
                     </div>

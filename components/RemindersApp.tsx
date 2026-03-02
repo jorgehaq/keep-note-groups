@@ -181,7 +181,11 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
         } catch (e: any) { console.error(e.message); } finally { setLoading(false); }
     }, [session.user.id]);
 
-    useEffect(() => { fetchReminders(); }, [fetchReminders]);
+    useEffect(() => { 
+        fetchReminders(); 
+        window.addEventListener('reminder-attended', fetchReminders);
+        return () => window.removeEventListener('reminder-attended', fetchReminders);
+    }, [fetchReminders]);
 
     useEffect(() => {
         const now = new Date();

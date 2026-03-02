@@ -1,6 +1,13 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { GlobalAppView, Task } from "../../types";
+import {
+    BrainDump,
+    GlobalAppView,
+    Group,
+    Note,
+    Task,
+    Translation,
+} from "../../types";
 
 type LauncherTab = "alpha" | "recent" | "pinned";
 
@@ -27,6 +34,33 @@ interface UIStore {
     isMaximized: boolean;
     isBraindumpMaximized: boolean;
     isTranslatorMaximized: boolean;
+
+    // Realtime Sync Data
+    groups: Group[];
+    translations: Translation[];
+    brainDumps: BrainDump[];
+
+    setGroups: (groups: Group[] | ((prev: Group[]) => Group[])) => void;
+    setTranslations: (
+        translations: Translation[] | ((prev: Translation[]) => Translation[]),
+    ) => void;
+    setBrainDumps: (
+        dumps: BrainDump[] | ((prev: BrainDump[]) => BrainDump[]),
+    ) => void;
+
+    // Helper to update a group in the list
+    updateGroupSync: (groupId: string, updates: Partial<Group>) => void;
+    // Helper to update a note inside ANY group
+    updateNoteSync: (noteId: string, updates: Partial<Note>) => void;
+    // Helper to update a translation
+    updateTranslationSync: (id: string, updates: Partial<Translation>) => void;
+    // Helper to update a brain dump
+    updateBrainDumpSync: (id: string, updates: Partial<BrainDump>) => void;
+
+    deleteGroupSync: (groupId: string) => void;
+    deleteNoteSync: (noteId: string) => void;
+    deleteTranslationSync: (id: string) => void;
+    deleteBrainDumpSync: (id: string) => void;
 
     setActiveGroup: (id: string | null) => void;
     toggleNote: (groupId: string, noteId: string) => void;
@@ -177,6 +211,87 @@ export const useUIStore = create<UIStore>()(
                 set({ isBraindumpMaximized: maximized }),
             setIsTranslatorMaximized: (maximized) =>
                 set({ isTranslatorMaximized: maximized }),
+
+            // Realtime Sync Implementation
+            groups: [],
+            translations: [],
+            brainDumps: [],
+
+            setGroups: (groupsOrFn) =>
+                set((state) => ({
+                    groups: typeof groupsOrFn === "function"
+                        ? groupsOrFn(state.groups)
+                        : groupsOrFn,
+                })),
+            setTranslations: (translationsOrFn) =>
+                set((state) => ({
+                    translations: typeof translationsOrFn === "function"
+                        ? translationsOrFn(state.translations)
+                        : translationsOrFn,
+                })),
+            setBrainDumps: (dumpsOrFn) =>
+                set((state) => ({
+                    brainDumps: typeof dumpsOrFn === "function"
+                        ? dumpsOrFn(state.brainDumps)
+                        : dumpsOrFn,
+                })),
+
+            updateGroupSync: (groupId, updates) =>
+                set((state) => ({
+                    groups: state.groups.map((g) =>
+                        g.id === groupId ? { ...g, ...updates } : g
+                    ),
+                })),
+
+            updateNoteSync: (noteId, updates) =>
+                set((state) => ({
+                    groups: state.groups.map((g) => ({
+                        ...g,
+                        notes: g.notes.map((n) =>
+                            n.id === noteId ? { ...n, ...updates } : n
+                        ),
+                    })),
+                })),
+
+            updateTranslationSync: (id, updates) =>
+                set((state) => ({
+                    translations: state.translations.map((t) =>
+                        t.id === id ? { ...t, ...updates } : t
+                    ),
+                })),
+
+            updateBrainDumpSync: (id, updates) =>
+                set((state) => ({
+                    brainDumps: state.brainDumps.map((d) =>
+                        d.id === id ? { ...d, ...updates } : d
+                    ),
+                })),
+
+            deleteGroupSync: (groupId) =>
+                set((state) => ({
+                    groups: state.groups.filter((g) => g.id !== groupId),
+                    activeGroupId: state.activeGroupId === groupId
+                        ? null
+                        : state.activeGroupId,
+                })),
+
+            deleteNoteSync: (noteId) =>
+                set((state) => ({
+                    groups: state.groups.map((g) => ({
+                        ...g,
+                        notes: g.notes.filter((n) => n.id !== noteId),
+                    })),
+                })),
+
+            deleteTranslationSync: (id) =>
+                set((state) => ({
+                    translations: state.translations.filter((t) => t.id !== id),
+                })),
+
+            deleteBrainDumpSync: (id) =>
+                set((state) => ({
+                    brainDumps: state.brainDumps.filter((d) => d.id !== id),
+                })),
         }),
         {
             name: "keep-note-groups-ui-storage-v4", // Bump version for editingNotes state

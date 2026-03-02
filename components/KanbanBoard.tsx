@@ -17,9 +17,9 @@ interface KanbanBoardProps {
 }
 
 const COLUMNS: { status: TaskStatus; label: string; accent: string }[] = [
-    { status: 'todo', label: 'Pendiente', accent: 'bg-[#3282F6]' },
-    { status: 'in_progress', label: 'En Proceso', accent: 'bg-[#F08650]' },
-    { status: 'done', label: 'Terminado', accent: 'bg-[#75FA61]' },
+    { status: 'todo', label: 'Pendiente', accent: 'bg-[#FBC02D]' },
+    { status: 'in_progress', label: 'En Proceso', accent: 'bg-[#1E88E5]' },
+    { status: 'done', label: 'Terminado', accent: 'bg-[#43A047]' },
 ];
 
 const formatCustomDate = (isoString: string, dateFormat: string, timeFormat: string): string => {

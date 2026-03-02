@@ -14,7 +14,7 @@ export interface Note {
   is_checklist?: boolean;
 }
 
-export type NoteFont = 'sans' | 'serif' | 'mono';
+export type NoteFont = "sans" | "serif" | "mono";
 
 export interface Group {
   id: string;
@@ -26,15 +26,25 @@ export interface Group {
   last_accessed_at?: string;
 }
 
-export type Theme = 'light' | 'dark' | 'system';
+export type Theme = "light" | "dark" | "system";
 
 export type NoteAction =
-  | { type: 'ADD_NOTE'; groupId: string }
-  | { type: 'DELETE_NOTE'; groupId: string; noteId: string }
-  | { type: 'UPDATE_NOTE'; groupId: string; noteId: string; payload: { content?: string; title?: string } }
-  | { type: 'TOGGLE_NOTE'; groupId: string; noteId: string };
+  | { type: "ADD_NOTE"; groupId: string }
+  | { type: "DELETE_NOTE"; groupId: string; noteId: string }
+  | {
+    type: "UPDATE_NOTE";
+    groupId: string;
+    noteId: string;
+    payload: { content?: string; title?: string };
+  }
+  | { type: "TOGGLE_NOTE"; groupId: string; noteId: string };
 
-export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'done' | 'archived';
+export type TaskStatus =
+  | "backlog"
+  | "todo"
+  | "in_progress"
+  | "done"
+  | "archived";
 
 export interface Task {
   id: string;
@@ -47,10 +57,16 @@ export interface Task {
   source_id?: string;
 }
 
-export type GlobalAppView = 'notes' | 'kanban' | 'timers' | 'reminders' | 'braindump' | 'translator';
+export type GlobalAppView =
+  | "notes"
+  | "kanban"
+  | "timers"
+  | "reminders"
+  | "braindump"
+  | "translator";
 
-export type TimerType = 'stopwatch' | 'countdown';
-export type TimerStatus = 'running' | 'paused';
+export type TimerType = "stopwatch" | "countdown";
+export type TimerStatus = "running" | "paused";
 
 export interface Timer {
   id: string;
@@ -72,4 +88,26 @@ export interface Reminder {
   is_completed: boolean;
   user_id: string;
   created_at: string;
+}
+
+export interface Translation {
+  id: string;
+  source_text: string;
+  translated_text: string;
+  source_lang: string;
+  target_lang: string;
+  created_at: string;
+  user_id: string;
+}
+
+export type BrainDumpStatus = "main" | "active" | "history";
+
+export interface BrainDump {
+  id: string;
+  title?: string;
+  content: string;
+  status: BrainDumpStatus;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
 }

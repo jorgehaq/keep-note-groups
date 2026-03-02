@@ -42,13 +42,18 @@ const sortNotesArray = (notes: Note[], mode: string) => {
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
-  const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
 
   const hasLoadedOnce = React.useRef(false);
   const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({}); 
 
-  const { activeGroupId, setActiveGroup, openNotesByGroup, openGroup, dockedGroupIds, noteSortMode, setNoteSortMode, toggleNote, globalView, setGlobalView, setKanbanCounts, setGlobalTasks, isMaximized, setIsMaximized } = useUIStore();
+  const { 
+    activeGroupId, setActiveGroup, openNotesByGroup, openGroup, dockedGroupIds, 
+    noteSortMode, setNoteSortMode, toggleNote, globalView, setGlobalView, 
+    setKanbanCounts, setGlobalTasks, isMaximized, setIsMaximized,
+    groups, setGroups, updateNoteSync, deleteNoteSync, updateGroupSync, deleteGroupSync,
+    setTranslations, setBrainDumps
+  } = useUIStore();
   const [searchQueries, setSearchQueries] = useState<Record<string, string>>({});
   const currentSearchQuery = activeGroupId ? (searchQueries[activeGroupId] || '') : '';
   const [searchExemptNoteIds, setSearchExemptNoteIds] = useState<Set<string>>(new Set());
@@ -112,6 +117,61 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // 📡 REALTIME SYNC - Listeners para sincronización entre dispositivos
+  useEffect(() => {
+    if (!session) return;
+
+    const channel = supabase
+      .channel('global-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          fetchData(); 
+        } else if (payload.eventType === 'UPDATE') {
+          // 🚀 OPTIMIZATION: Actualización granular para no colapsar notas ni recargar todo
+          updateNoteSync(payload.new.id, payload.new as Partial<Note>);
+        } else if (payload.eventType === 'DELETE') {
+          deleteNoteSync(payload.old.id);
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'groups' }, (payload) => {
+        fetchData(); 
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, (payload) => {
+        // Trigger de recarga para Kanban
+        window.dispatchEvent(new CustomEvent('kanban-updated'));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reminders' }, (payload: any) => {
+        // Trigger de recarga para Recordatorios
+        const id = payload.new?.id || payload.old?.id;
+        window.dispatchEvent(new CustomEvent('reminder-attended', { detail: id }));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'translations' }, (payload) => {
+        // Trigger de recarga para Traducciones
+        fetchTranslations();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'brain_dumps' }, (payload) => {
+        // Trigger de recarga para Pizarras
+        fetchBrainDumps();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session]);
+
+  const fetchTranslations = async () => {
+    if (!session) return;
+    const { data } = await supabase.from('translations').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false });
+    if (data) setTranslations(data);
+  };
+
+  const fetchBrainDumps = async () => {
+    if (!session) return;
+    const { data } = await supabase.from('brain_dumps').select('*').eq('user_id', session.user.id).order('updated_at', { ascending: false });
+    if (data) setBrainDumps(data);
+  };
 
   const { setOverdueRemindersCount, setImminentRemindersCount } = useUIStore();
   useEffect(() => {
@@ -225,10 +285,14 @@ function App() {
   }, [session, setGlobalTasks]);
 
   useEffect(() => {
-    const handleReload = () => fetchData();
+    const handleReload = () => {
+        fetchData();
+        fetchTranslations();
+        fetchBrainDumps();
+    };
     window.addEventListener('reload-app-data', handleReload);
     return () => window.removeEventListener('reload-app-data', handleReload);
-  }, []);
+  }, [session]);
 
   const fetchData = async () => {
     if (!hasLoadedOnce.current) setLoading(true);
@@ -239,10 +303,16 @@ function App() {
       const { data: notesData, error: notesError } = await supabase.from('notes').select('*').order('position', { ascending: true });
       if (notesError) throw notesError;
 
-      const currentSortPref = useUIStore.getState().noteSortMode;
+      const store = useUIStore.getState();
+      const currentSortPref = store.noteSortMode;
+      const openNotes = store.openNotesByGroup;
 
       const mergedGroups: Group[] = (groupsData || []).map(g => {
-        let groupNotes: Note[] = (notesData || []).filter(n => n.group_id === g.id).map(n => ({ ...n, isOpen: false }));
+        const currentlyOpenIds = openNotes[g.id] || [];
+        let groupNotes: Note[] = (notesData || []).filter(n => n.group_id === g.id).map(n => ({ 
+          ...n, 
+          isOpen: currentlyOpenIds.includes(n.id) 
+        }));
         groupNotes = sortNotesArray(groupNotes, currentSortPref);
 
         return {
@@ -660,6 +730,37 @@ function App() {
     }
   };
 
+  const moveNoteToGroup = async (noteId: string, targetGroupId: string) => {
+    if (!session) return;
+    try {
+      const { error } = await supabase.from('notes').update({ group_id: targetGroupId }).eq('id', noteId);
+      if (error) throw error;
+
+      setGroups(prev => {
+        let movedNote: Note | null = null;
+        const withRemoved = prev.map(g => {
+          if (g.notes.some(n => n.id === noteId)) {
+            movedNote = g.notes.find(n => n.id === noteId) || null;
+            return { ...g, notes: g.notes.filter(n => n.id !== noteId) };
+          }
+          return g;
+        });
+
+        if (!movedNote) return prev;
+
+        return withRemoved.map(g => {
+          if (g.id === targetGroupId) {
+            return { ...g, notes: [...g.notes, { ...movedNote!, group_id: targetGroupId }] };
+          }
+          return g;
+        });
+      });
+    } catch (error: any) {
+      alert('Error al mover nota: ' + error.message);
+      throw error;
+    }
+  };
+
   return (
     <div className="flex h-screen bg-zinc-50 dark:bg-zinc-950 overflow-hidden transition-colors duration-300">
       <Sidebar
@@ -983,6 +1084,8 @@ function App() {
                               onExportNote={downloadNoteAsMarkdown}
                               onCopyNote={copyNoteToClipboard}
                               onDuplicate={duplicateNote}
+                              onMove={moveNoteToGroup}
+                              groups={groups}
                               searchQuery={currentSearchQuery}
                               noteFont={noteFont}
                               noteFontSize={noteFontSize}

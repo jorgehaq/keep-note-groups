@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput } from 'lucide-react';
 import { Note, NoteFont } from '../types';
 import { SmartNotesEditor } from '../src/components/editor/SmartNotesEditor';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { KanbanSemaphore } from './KanbanSemaphore';
+import { MoveToGroupModal } from './MoveToGroupModal';
+import { Group } from '../types';
 
 interface AccordionItemProps {
   note: Note;
@@ -13,6 +15,8 @@ interface AccordionItemProps {
   onExportNote?: (note: Note) => void;
   onCopyNote?: (note: Note) => void;
   onDuplicate?: (noteId: string) => void;
+  onMove?: (noteId: string, targetGroupId: string) => Promise<void>;
+  groups?: Group[];
   searchQuery?: string;
   noteFont?: NoteFont;
   noteFontSize?: string;
@@ -54,14 +58,26 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   onExportNote,
   onCopyNote,
   onDuplicate,
+  onMove,
+  groups = [],
   searchQuery,
   noteFont = 'sans',
   noteFontSize = 'medium',
 }) => {
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const fontClass = noteFont === 'serif' ? 'font-serif' : noteFont === 'mono' ? 'font-mono text-xs' : 'font-sans';
   const [isEditingTitle, setIsEditingTitle] = useState(!note.title);
   const [tempTitle, setTempTitle] = useState(note.title);
   const titleInputRef = useRef<HTMLInputElement>(null);
+
+  // 🚀 NUEVO: Sincronización Realtime UI
+  // Fuerza la actualización del input local si el título cambia en otro dispositivo
+  useEffect(() => {
+    if (note.title !== undefined && note.title !== tempTitle) {
+      setTempTitle(note.title);
+    }
+  }, [note.title]);
+
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -214,6 +230,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             {onCopyNote && <button onClick={(e) => { e.stopPropagation(); onCopyNote(note); }} className="p-1.5 text-zinc-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors" title="Copiar Nota"><Clipboard size={15} /></button>}
             {onExportNote && <button onClick={(e) => { e.stopPropagation(); onExportNote(note); }} className="p-1.5 text-zinc-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors" title="Exportar Nota (.md)"><Download size={15} /></button>}
             {onDuplicate && <button onClick={(e) => { e.stopPropagation(); onDuplicate(note.id); }} className="p-1.5 text-zinc-400 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg transition-colors" title="Duplicar Nota"><CopyPlus size={15} /></button>}
+            {onMove && <button onClick={(e) => { e.stopPropagation(); setIsMoveModalOpen(true); }} className="p-1.5 text-zinc-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors" title="Mover a otro Grupo"><FolderInput size={15} /></button>}
             <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); if (confirm('¿Estás seguro de eliminar esta nota?')) onDelete(note.id); }} className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={15} /></button>
           </div>
 
@@ -227,6 +244,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 {onCopyNote && <button onClick={(e) => { e.stopPropagation(); onCopyNote(note); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><Clipboard size={14} />Copiar Nota</button>}
                 {onExportNote && <button onClick={(e) => { e.stopPropagation(); onExportNote(note); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><Download size={14} />Exportar (.md)</button>}
                 {onDuplicate && <button onClick={(e) => { e.stopPropagation(); onDuplicate(note.id); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><CopyPlus size={14} />Duplicar Nota</button>}
+                {onMove && <button onClick={(e) => { e.stopPropagation(); setIsMoveModalOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><FolderInput size={14} />Mover de Grupo</button>}
                 <div className="border-t border-zinc-100 dark:border-zinc-700 my-0.5" />
                 <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false); if (confirm('¿Estás seguro de eliminar esta nota?')) onDelete(note.id); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"><Trash2 size={14} />Eliminar Nota</button>
               </div>
@@ -285,6 +303,14 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
           <div onClick={(e) => { e.stopPropagation(); onToggle(note.id); }} className="flex items-center justify-center gap-2 py-3 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800/30 dark:hover:bg-zinc-800/60 border-t border-zinc-200 dark:border-zinc-800 cursor-pointer transition-colors text-zinc-500 dark:text-zinc-400 font-normal rounded-b-2xl"><ChevronUp size={16} /><span className="text-xs uppercase tracking-wider">Cerrar Nota</span></div>
         </div>
+      )}
+      {isMoveModalOpen && onMove && (
+        <MoveToGroupModal 
+          note={note} 
+          groups={groups} 
+          onClose={() => setIsMoveModalOpen(false)} 
+          onMove={onMove} 
+        />
       )}
     </div>
   );

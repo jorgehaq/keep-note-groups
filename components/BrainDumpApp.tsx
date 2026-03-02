@@ -46,34 +46,19 @@ const parseMarkdownPreview = (text: string) => {
 };
 
 export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteFontSize?: string }> = ({ session, noteFont, noteFontSize }) => {
-    const { isBraindumpMaximized, setIsBraindumpMaximized } = useUIStore();
-    const [dumps, setDumps] = useState<BrainDump[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { isBraindumpMaximized, setIsBraindumpMaximized, brainDumps: dumps, setBrainDumps: setDumps } = useUIStore();
+    const [loading, setLoading] = useState(false);
     
     // Memoria para expansiones en el Archivo
     const [expandedHistoryIds, setExpandedHistoryIds] = useState<Set<string>>(new Set());
     const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
 
-    const fetchDumps = useCallback(async () => {
-        setLoading(true);
-        try {
-            const { data, error } = await supabase
-                .from('brain_dumps')
-                .select('*')
-                .eq('user_id', session.user.id)
-                .order('updated_at', { ascending: false })
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            setDumps(data as BrainDump[]);
-        } catch (error: any) {
-            console.error("Error cargando Pizarrón:", error.message);
-        } finally {
-            setLoading(false);
+    // Cargamos pizarras al montar si el store está vacío
+    useEffect(() => {
+        if (dumps.length === 0) {
+            window.dispatchEvent(new CustomEvent('reload-app-data'));
         }
-    }, [session.user.id]);
-
-    useEffect(() => { fetchDumps(); }, [fetchDumps]);
+    }, []);
 
     const autoSave = (id: string, updates: Partial<BrainDump>) => {
         setDumps(prev => prev.map(d => d.id === id ? { ...d, ...updates, updated_at: new Date().toISOString() } : d));
@@ -87,17 +72,17 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
         const { data: newMain } = await supabase.from('brain_dumps')
             .insert([{ title: '', content: '', status: 'main', user_id: session.user.id }])
             .select().single();
-        if (newMain) setDumps(prev => [newMain as BrainDump, ...prev]);
+        if (newMain) {
+            // No agregamos manualmente al estado, Realtime lo hará vía reload-app-data o listener
+        }
     };
 
     const changeStatus = async (id: string, newStatus: BrainDumpStatus) => {
-        setDumps(prev => prev.map(d => d.id === id ? { ...d, status: newStatus } : d));
         await supabase.from('brain_dumps').update({ status: newStatus }).eq('id', id);
     };
 
     const deleteDump = async (id: string) => {
         if (!window.confirm('¿Eliminar permanentemente este pizarrón?')) return;
-        setDumps(prev => prev.filter(d => d.id !== id));
         await supabase.from('brain_dumps').delete().eq('id', id);
     };
 

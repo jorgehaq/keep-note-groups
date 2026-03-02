@@ -38,9 +38,8 @@ interface Translation {
 }
 
 export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
-  const { isTranslatorMaximized, setIsTranslatorMaximized } = useUIStore();
-  const [translations, setTranslations] = useState<Translation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { isTranslatorMaximized, setIsTranslatorMaximized, translations, setTranslations } = useUIStore();
+  const [loading, setLoading] = useState(false);
 
   // Form states
   const [originalText, setOriginalText] = useState('');
@@ -60,26 +59,12 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
       return n;
   });
 
-  const fetchTranslations = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('translations')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false });
-        
-      if (error) throw error;
-      setTranslations(data || []);
-    } catch (error) {
-      console.error('Error fetching translations:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [session.user.id]);
-
+  // Cargamos traducciones al montar si el store está vacío
   useEffect(() => {
-    fetchTranslations();
-  }, [fetchTranslations]);
+    if (translations.length === 0) {
+        window.dispatchEvent(new CustomEvent('reload-app-data'));
+    }
+  }, []);
 
   // 🚀 FIX: Traducción REAL automática (usando MyMemory API) y con Debounce
   useEffect(() => {
@@ -133,7 +118,6 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
 
       if (error) throw error;
       
-      setTranslations([data, ...translations]);
       setOriginalText('');
       setTranslatedText('');
     } catch (error) {
@@ -148,7 +132,6 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
     try {
       const { error } = await supabase.from('translations').delete().eq('id', id);
       if (error) throw error;
-      setTranslations(translations.filter(t => t.id !== id));
     } catch (error) {
       console.error('Error deleting translation:', error);
     }

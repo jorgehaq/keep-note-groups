@@ -11,10 +11,10 @@ interface KanbanSemaphoreProps {
 // Configuración de los 5 estados (incluyendo "Quitar" en Negro)
 const STATUS_CONFIG = [
     { status: 'remove', label: 'Quitar de Kanban', color: 'bg-zinc-800 dark:bg-black ring-1 ring-zinc-500' },
-    { status: 'backlog', label: 'Backlog', color: 'bg-white dark:bg-zinc-200 ring-1 ring-zinc-300' },
-    { status: 'todo', label: 'Pendiente', color: 'bg-blue-500' },
-    { status: 'in_progress', label: 'En Proceso', color: 'bg-amber-500' },
-    { status: 'done', label: 'Terminado', color: 'bg-emerald-500' },
+    { status: 'backlog', label: 'Backlog', color: 'bg-[#9E9E9E]' },
+    { status: 'todo', label: 'Pendiente', color: 'bg-[#FBC02D]' },
+    { status: 'in_progress', label: 'En Proceso', color: 'bg-[#1E88E5]' },
+    { status: 'done', label: 'Terminado', color: 'bg-[#43A047]' },
 ];
 
 export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({ sourceId, sourceTitle, onInteract }) => {
