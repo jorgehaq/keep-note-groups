@@ -167,29 +167,32 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       
       <div
         ref={headerRef}
-        className={`flex items-start sm:items-center justify-between px-4 py-4 cursor-pointer transition-colors ${note.isOpen
-          ? 'border-b border-zinc-100 dark:border-zinc-800'
+        className={`flex items-start sm:items-center justify-between px-4 ${note.isOpen ? 'pt-4 pb-[13px]' : 'py-4'} cursor-pointer transition-colors ${note.isOpen
+          ? ''
           : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 rounded-2xl'
           }`}
         onClick={() => { onToggle(note.id); }}
       >
         <div className="flex items-center gap-3 flex-1 overflow-hidden pl-1">
-          <div className="flex flex-col flex-1 min-w-0 justify-center">
-            <input
-              ref={titleInputRef}
-              type="text"
-              value={tempTitle}
-              onChange={(e) => setTempTitle(e.target.value)}
-              onBlur={() => handleSaveTitle(false)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSaveTitle(true);
-                if (e.key === 'Escape') { e.stopPropagation(); handleCancelTitle(); }
-              }}
-              onClick={(e) => e.stopPropagation()}
-              placeholder="Título de la nota..."
-              className="flex-1 min-w-0 bg-transparent text-lg font-bold text-zinc-800 dark:text-[#C4C7C5] outline-none placeholder-zinc-400 truncate hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors cursor-text"
-              title="Haz clic para editar"
-            />
+          <div className="flex flex-col min-w-0 justify-center">
+            <div className="relative inline-flex max-w-full">
+              <span className="invisible whitespace-pre text-lg font-bold px-0.5 min-h-[1.5em]">{tempTitle || "Título de la nota..."}</span>
+              <input
+                ref={titleInputRef}
+                type="text"
+                value={tempTitle}
+                onChange={(e) => setTempTitle(e.target.value)}
+                onBlur={() => handleSaveTitle(false)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveTitle(true);
+                  if (e.key === 'Escape') { e.stopPropagation(); handleCancelTitle(); }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                placeholder="Título de la nota..."
+                className="absolute inset-0 w-full bg-transparent text-lg font-bold text-zinc-800 dark:text-[#C4C7C5] outline-none placeholder-zinc-400 transition-colors cursor-text"
+                title="Haz clic para editar"
+              />
+            </div>
 
             <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 truncate">
               {note.created_at && (<span>Creado: {formatCleanDate(note.created_at)}</span>)}
@@ -240,11 +243,11 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         <div ref={contentRef} className="p-0 bg-white dark:bg-zinc-900 animate-fadeIn relative rounded-b-2xl">
           {showStickyTitle && (
             <div className="sticky top-0 left-0 right-0 z-[40] flex justify-center pointer-events-none animate-fadeIn px-4">
-              <div onClick={(e) => { e.stopPropagation(); headerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }} className="bg-zinc-800/95 dark:bg-zinc-200/95 backdrop-blur-md text-black dark:text-black px-5 py-1.5 rounded-full shadow-lg shadow-black/10 text-xs font-normal flex items-center gap-2 pointer-events-auto cursor-pointer active:scale-95 transition-transform -translate-y-1/2 border border-zinc-700 dark:border-zinc-300"><span className="truncate max-w-[200px] sm:max-w-[400px]">{note.title || 'Sin título'}</span><ChevronUp size={14} className="opacity-70" /></div>
+              <div onClick={(e) => { e.stopPropagation(); headerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }} className="bg-white/95 dark:bg-zinc-100/95 backdrop-blur-md text-black dark:text-black px-5 py-1.5 rounded-full shadow-lg shadow-black/10 text-xs font-bold flex items-center gap-2 pointer-events-auto cursor-pointer active:scale-95 transition-transform -translate-y-1/2 border border-zinc-200 dark:border-zinc-300"><span className="truncate max-w-[200px] sm:max-w-[400px]">{note.title || 'Sin título'}</span><ChevronUp size={14} className="opacity-70" /></div>
             </div>
           )}
 
-          <div className="px-4 py-4 w-full overflow-hidden">
+          <div className={`px-4 ${note.isOpen ? 'pt-1 pb-4' : 'py-4'} w-full overflow-hidden`}>
             {note.is_checklist ? (
               <div className="bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4">
                 <DragDropContext onDragEnd={handleDragEndChecklist}>

@@ -53,6 +53,18 @@ const toLocalDateTimeLocal = (isoString?: string) => {
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 };
 
+const formatCleanDate = (isoString: string) => {
+    const d = new Date(isoString);
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const year = d.getFullYear();
+    let hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? ' PM' : ' AM';
+    hours = hours % 12 || 12;
+    return `${day}/${month}/${year}, ${hours.toString().padStart(2, '0')}:${minutes}${ampm}`;
+};
+
 const formatCustomDate = (isoString: string, dateFormat: string, timeFormat: string): string => {
     const d = new Date(isoString);
     const day = d.getDate().toString().padStart(2, '0');
@@ -316,8 +328,8 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                         </div>
                         Recordatorios
                     </h1>
-                    <button onClick={createNewDraft} className="bg-[#1F3760] hover:bg-[#152643] text-white p-2 rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all flex items-center gap-2">
-                        <Plus size={20} /> <span className="text-sm font-normal hidden sm:inline pr-2">Nuevo</span>
+                    <button onClick={createNewDraft} className="bg-[#1F3760] hover:bg-[#152643] text-white p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all flex items-center gap-2 active:scale-95 shrink-0">
+                        <Plus size={20} /> <span className="text-sm font-bold hidden sm:inline pr-2 text-white">Nuevo</span>
                     </button>
                 </div>
             </div>
@@ -334,17 +346,17 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                             </div>
                             {drafts.map(draft => (
                                 /* 🚀 FIX: focus-within:ring-2 para iluminación exterior */
-                                <div key={draft.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 p-1">
+                                <div key={draft.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 flex flex-col overflow-hidden">
                                     <div className="flex items-center justify-between pr-4">
                                         <input type="text" placeholder="Título general (ej. Servicios Públicos)" value={draft.title} onChange={e => autoSave(draft.id, { title: e.target.value })} className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] p-4 pb-3 outline-none placeholder-zinc-400" />
                                     </div>
-                                    <div className="h-px bg-zinc-100 dark:bg-zinc-800/80 mx-4 mb-2" />
-                                    
+
+
                                     <div className="mb-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-text min-h-[120px] mx-4">
                                         <SmartNotesEditor noteId={draft.id} initialContent={draft.content} onChange={c => autoSave(draft.id, { content: c })} />
                                     </div>
 
-                                    <div className="bg-zinc-50 dark:bg-[#1B1B1E] rounded-xl m-4 p-4 border border-zinc-200 dark:border-zinc-800">
+                                    <div className="bg-zinc-50 dark:bg-[#1B1B1E] rounded-xl mx-4 mb-4 p-4 border border-zinc-200 dark:border-zinc-800">
                                         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                                             <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Tiempos:</span>
                                             <div className="flex gap-2">
@@ -358,11 +370,11 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                             {draft.targets.map((target, idx) => (
                                                 <div key={target.id} className="flex flex-col group p-3 bg-zinc-50 dark:bg-zinc-800/30 rounded-xl border border-zinc-200 dark:border-zinc-800/80 hover:border-zinc-200 transition-colors">
                                                     <div className="flex flex-wrap justify-between items-start w-full gap-2">
-                                                        <input 
-                                                            value={target.title} 
-                                                            onChange={e => { const newT = draft.targets.map((t, i) => i === idx ? { ...t, title: e.target.value } : t); autoSave(draft.id, { targets: newT }); }} 
-                                                            placeholder="Título del recordatorio" 
-                                                            className="flex-1 bg-transparent text-sm font-bold text-zinc-800 dark:text-[#C4C7C5] outline-none placeholder-zinc-400 dark:placeholder-zinc-600" 
+                                                        <input
+                                                            value={target.title}
+                                                            onChange={e => { const newT = draft.targets.map((t, i) => i === idx ? { ...t, title: e.target.value } : t); autoSave(draft.id, { targets: newT }); }}
+                                                            placeholder="Título del recordatorio"
+                                                            className="flex-1 bg-transparent text-sm font-bold text-zinc-800 dark:text-[#C4C7C5] outline-none placeholder-zinc-400 dark:placeholder-zinc-600"
                                                         />
                                                         <div className="flex items-center gap-3 shrink-0 ml-auto">
                                                             <div className="text-[11px] font-bold text-[#7E7E85] flex items-center">
@@ -383,21 +395,26 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="flex justify-end items-center gap-3 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800">
-                                        <button onClick={() => { 
+                                    <div className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800 mt-auto">
+                                        <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
+                                            <span>Borrador en edición...</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                        <button onClick={() => {
                                             if (!window.confirm('¿Descartar completamente esta creación?')) return;
                                             if (saveTimeoutRef.current[draft.id]) {
                                                 clearTimeout(saveTimeoutRef.current[draft.id]);
                                                 delete saveTimeoutRef.current[draft.id];
                                             }
-                                            setReminders(prev => prev.filter(r => r.id !== draft.id)); 
-                                            supabase.from('reminders').delete().eq('id', draft.id).then(); 
+                                            setReminders(prev => prev.filter(r => r.id !== draft.id));
+                                            supabase.from('reminders').delete().eq('id', draft.id).then();
                                         }} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Descartar"><Trash2 size={18}/></button>
-                                        
+
                                         <button onClick={() => changeStatus(draft.id, 'active')} disabled={draft.targets.length === 0} className="flex items-center gap-2 px-5 py-2 text-xs font-normal text-white bg-[#1F3760] hover:bg-[#152643] rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all disabled:opacity-50"><Play size={14}/> Activar Todos</button>
                                     </div>
                                 </div>
-                            ))}
+                            </div>
+                        ))}
                         </div>
                     )}
 
@@ -407,83 +424,154 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                             <div className="flex items-center gap-2 text-emerald-500">
                                 <Clock size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Activos y Corriendo</span>
                             </div>
-                            
+
                             <div className="grid grid-cols-1 gap-4">
                                 {activeReminders.map(r => {
                                     const isExpanded = expandedActiveIds.has(r.id);
                                     const isEditing = editingActiveIds.has(r.id);
 
-                                    return (
-                                        /* 🚀 FIX: Uso de ring-2 en lugar de border-2 para evitar layout shift, y focus-within incorporado en vez de estado react */
-                                        <div key={r.id} className="bg-white dark:bg-zinc-900 p-5 rounded-2xl shadow-lg transition-all duration-300 flex flex-col border border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50">
-                                            
-                                            <div className="flex justify-between items-start mb-2">
-                                                <div className="flex items-center gap-3 flex-1">
-                                                    {!isEditing && (
-                                                        <button onClick={() => toggleExpandActive(r.id)} className="p-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md text-zinc-600 dark:text-zinc-400 transition-colors" title="Desplegar nota">
-                                                            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                                        </button>
-                                                    )}
-                                                    {isEditing ? (
-                                                        <input 
-                                                            type="text" 
-                                                            placeholder="Título del recordatorio" 
-                                                            value={r.title} 
-                                                            onChange={e => autoSave(r.id, { title: e.target.value })} 
-                                                            className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] p-0 outline-none placeholder-zinc-400" 
-                                                        />
-                                                    ) : (
-                                                        <h3 className="font-bold text-lg text-zinc-800 dark:text-[#C4C7C5]">{r.title || 'Recordatorio Activo'}</h3>
-                                                    )}
-                                                </div>
-                                                <button onClick={() => toggleEditActive(r.id)} className={`transition-all flex items-center shrink-0 ${isEditing ? 'gap-2 px-3 py-1.5 rounded-lg text-xs font-normal bg-[#1F3760] text-white hover:bg-[#152643] active:scale-95 shadow-lg shadow-[#1F3760]/20' : 'p-2 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800'}`} title={isEditing ? 'Cerrar Edición' : 'Ajustar'}>
-                                                    <Wrench size={isEditing ? 14 : 18}/> {isEditing && <span>Cerrar Edición</span>}
-                                                </button>
-                                            </div>
-                                            
-                                            {isEditing && <div className="h-px bg-zinc-100 dark:bg-zinc-800/80 mb-4 mt-2" />}
-                                            
-                                            {isEditing ? (
-                                                <div className="mt-2 animate-fadeIn">
-                                                    <div className="mb-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-text min-h-[120px]">
-                                                        <SmartNotesEditor noteId={r.id} initialContent={r.content} onChange={content => autoSave(r.id, { content })} />
-                                                    </div>
+                                    const createdMs = new Date(r.created_at).getTime();
+                                    const updatedMs = new Date(r.updated_at).getTime();
+                                    const isEdited = (updatedMs - createdMs) > 60000;
 
-                                                    <div className="bg-zinc-50 dark:bg-[#1B1B1E] rounded-xl p-4 border border-zinc-200 dark:border-zinc-800">
-                                                        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                                                            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Ajustar Tiempos:</span>
-                                                            <div className="flex gap-2">
-                                                                {[1, 10, 30, 60].map(m => (
-                                                                    <button key={m} onClick={() => addTarget(r.id, m)} className="text-[10px] font-normal bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded-md">+{m}m</button>
+                                    return (
+                                        /* 🚀 FIX: border-0 removed because we already have overflow-hidden in container if we อยาก edge-to-edge but let's keep the user shadow approach */
+                                        <div key={r.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg transition-all duration-300 flex flex-col border border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 overflow-hidden">
+                                            <div className="p-5 pb-4">
+                                                {/* HEADER */}
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div className="flex items-center gap-3 flex-1">
+                                                        {!isEditing && (
+                                                            <button onClick={() => toggleExpandActive(r.id)} className="p-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md text-zinc-600 dark:text-zinc-400 transition-colors" title="Desplegar nota">
+                                                                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                            </button>
+                                                        )}
+                                                        {isEditing ? (
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Título del recordatorio"
+                                                                value={r.title}
+                                                                onChange={e => autoSave(r.id, { title: e.target.value })}
+                                                                className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] p-0 outline-none placeholder-zinc-400"
+                                                            />
+                                                        ) : (
+                                                            <h3 className="font-bold text-lg text-zinc-800 dark:text-[#C4C7C5]">{r.title || 'Recordatorio Activo'}</h3>
+                                                        )}
+                                                    </div>
+                                                    <button onClick={() => toggleEditActive(r.id)} className={`transition-all flex items-center shrink-0 ${isEditing ? 'gap-2 px-3 py-1.5 rounded-lg text-xs font-normal bg-[#1F3760] text-white hover:bg-[#152643] active:scale-95 shadow-lg shadow-[#1F3760]/20' : 'p-2 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800'}`} title={isEditing ? 'Cerrar Edición' : 'Ajustar'}>
+                                                        <Wrench size={isEditing ? 14 : 18}/> {isEditing && <span>Cerrar Edición</span>}
+                                                    </button>
+                                                </div>
+
+                                                {isEditing ? (
+                                                    <div className="mt-2 animate-fadeIn">
+                                                        <div className="mb-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-text min-h-[120px]">
+                                                            <SmartNotesEditor noteId={r.id} initialContent={r.content} onChange={content => autoSave(r.id, { content })} />
+                                                        </div>
+
+                                                        <div className="bg-zinc-50 dark:bg-[#1B1B1E] rounded-xl p-4 border border-zinc-200 dark:border-zinc-800">
+                                                            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                                                <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Ajustar Tiempos:</span>
+                                                                <div className="flex gap-2">
+                                                                    {[1, 10, 30, 60].map(m => (
+                                                                        <button key={m} onClick={() => addTarget(r.id, m)} className="text-[10px] font-normal bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded-md">+{m}m</button>
+                                                                    ))}
+                                                                    <button onClick={() => addTarget(r.id, 0)} className="text-[10px] font-normal bg-zinc-200 dark:bg-zinc-800 px-2 py-1 rounded-md hover:bg-zinc-300"><Plus size={12}/></button>
+                                                                </div>
+                                                            </div>
+                                                            <div className="space-y-3 mt-4">
+                                                                {r.targets.map((target, idx) => (
+                                                                    <div key={target.id} className="flex flex-col group p-3 bg-zinc-50 dark:bg-zinc-800/30 rounded-xl border border-zinc-200 dark:border-zinc-800/80 hover:border-zinc-200 transition-colors">
+                                                                        <div className="flex flex-wrap justify-between items-start w-full gap-2">
+                                                                            <input value={target.title} onChange={e => { const newT = r.targets.map((t, i) => i === idx ? { ...t, title: e.target.value } : t); autoSave(r.id, { targets: newT }); }} placeholder="Título del recordatorio" className="flex-1 bg-transparent text-sm font-bold text-zinc-800 dark:text-[#C4C7C5] outline-none placeholder-zinc-400 dark:placeholder-zinc-600" />
+                                                                            <div className="flex items-center gap-3 shrink-0 ml-auto">
+                                                                                <div className="text-[11px] font-bold text-[#7E7E85] flex items-center">
+                                                                                    <LiveCountdown dueAt={target.due_at} isSaved={true} isCompleted={target.is_completed} recurrence={target.recurrence} />
+                                                                                </div>
+                                                                                <button onClick={() => { autoSave(r.id, { targets: r.targets.filter(t => t.id !== target.id) }); }} className="text-zinc-400 hover:text-red-500 transition-colors" title="Eliminar"><Trash2 size={16}/></button>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="border-t border-zinc-200 dark:border-zinc-700/50 w-full my-2"></div>
+                                                                        <div className="flex items-center gap-2 text-[11px] flex-wrap">
+                                                                            <input type="datetime-local" value={toLocalDateTimeLocal(target.due_at)} onChange={e => { const newT = r.targets.map((t, i) => i === idx ? { ...t, due_at: new Date(e.target.value).toISOString() } : t); autoSave(r.id, { targets: newT }); }} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded py-1 px-2 text-zinc-800 dark:text-[#C4C7C5] font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all" />
+                                                                            <span className="text-zinc-300 dark:text-zinc-700 font-bold">|</span>
+                                                                            <select value={target.recurrence || 'none'} onChange={e => { const newT = r.targets.map((t, i) => i === idx ? { ...t, recurrence: e.target.value as RecurrenceType } : t); autoSave(r.id, { targets: newT }); }} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded py-1 px-2 text-zinc-800 dark:text-[#C4C7C5] font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer">
+                                                                                {Object.entries(recurrenceLabels).map(([val, label]) => <option key={val} value={val}>{label}</option>)}
+                                                                            </select>
+                                                                        </div>
+                                                                    </div>
                                                                 ))}
-                                                                <button onClick={() => addTarget(r.id, 0)} className="text-[10px] font-normal bg-zinc-200 dark:bg-zinc-800 px-2 py-1 rounded-md hover:bg-zinc-300"><Plus size={12}/></button>
                                                             </div>
                                                         </div>
-                                                        <div className="space-y-3 mt-4">
-                                                            {r.targets.map((target, idx) => (
-                                                                <div key={target.id} className="flex flex-col group p-3 bg-zinc-50 dark:bg-zinc-800/30 rounded-xl border border-zinc-200 dark:border-zinc-800/80 hover:border-zinc-200 transition-colors">
-                                                                    <div className="flex flex-wrap justify-between items-start w-full gap-2">
-                                                                        <input value={target.title} onChange={e => { const newT = r.targets.map((t, i) => i === idx ? { ...t, title: e.target.value } : t); autoSave(r.id, { targets: newT }); }} placeholder="Título del recordatorio" className="flex-1 bg-transparent text-sm font-bold text-zinc-800 dark:text-[#C4C7C5] outline-none placeholder-zinc-400 dark:placeholder-zinc-600" />
-                                                                        <div className="flex items-center gap-3 shrink-0 ml-auto">
-                                                                            <div className="text-[11px] font-bold text-[#7E7E85] flex items-center">
-                                                                                <LiveCountdown dueAt={target.due_at} isSaved={true} isCompleted={target.is_completed} recurrence={target.recurrence} />
-                                                                            </div>
-                                                                            <button onClick={() => { autoSave(r.id, { targets: r.targets.filter(t => t.id !== target.id) }); }} className="text-zinc-400 hover:text-red-500 transition-colors" title="Eliminar"><Trash2 size={16}/></button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="mt-2">
+                                                        <div className={`mb-4 pl-11 transition-all duration-300 overflow-hidden text-sm ${isExpanded ? 'opacity-90' : 'opacity-80 line-clamp-2 max-h-[40px] pointer-events-none'}`}>
+                                                            <SmartNotesEditor noteId={r.id} initialContent={r.content} onChange={() => {}} readOnly={true} />
+                                                        </div>
+
+                                                        <div className="space-y-3">
+                                                            {r.targets.map(t => {
+                                                                const { isSleeping } = getDerivedReminderState(t.due_at, t.recurrence, t.is_completed);
+                                                                const isRecurrent = t.recurrence && t.recurrence !== 'none';
+                                                                const colorClass = getUrgencyColor(t.due_at, t.recurrence);
+                                                                const relTime = getRelativeTimeLeft(t.due_at);
+
+                                                                return (
+                                                                <div key={t.id} className={`flex flex-col group p-3 bg-zinc-50 dark:bg-zinc-800/30 rounded-xl border border-zinc-200 dark:border-zinc-800/80 hover:border-zinc-200 transition-all ${isSleeping ? 'opacity-60' : 'opacity-100'}`}>
+                                                                    <div className="flex justify-between items-start w-full">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <button onClick={() => toggleTargetComplete(r.id, t.id)} className={`transition-colors group/btn ${isSleeping ? 'text-emerald-500 hover:text-amber-500' : 'text-zinc-400 hover:text-emerald-500'}`} title={isSleeping ? 'Deshacer completado' : 'Completar'}>
+                                                                                {isSleeping ? (
+                                                                                    <>
+                                                                                       <CheckCircle2 size={18} className="group-hover/btn:hidden" />
+                                                                                       <RotateCcw size={18} className="hidden group-hover/btn:block" />
+                                                                                    </>
+                                                                                ) : <Circle size={18}/>}
+                                                                            </button>
+                                                                            <span className={`font-bold text-sm ${isSleeping ? 'text-zinc-500 line-through' : 'text-zinc-800 dark:text-[#C4C7C5]'}`}>{t.title || 'Sin nombre'}</span>
+                                                                        </div>
+                                                                        <div className="flex items-center text-[11px] font-bold text-[#7E7E85]">
+                                                                            {isRecurrent ? <span className="flex items-center gap-1"><Repeat size={10} /> Ciclo: {recurrenceLabels[t.recurrence!]}</span> : <span>Único</span>}
+                                                                            <span className="mx-2 opacity-50">|</span>
+                                                                            <span className={isSleeping ? 'text-emerald-600 dark:text-emerald-500 font-bold' : (relTime.includes('Vencido') ? 'text-[#ff2800] animate-pulse' : 'text-[#7E7E85]')}>{isSleeping && isRecurrent ? 'Descansando' : (isSleeping ? 'Terminado' : relTime)}</span>
                                                                         </div>
                                                                     </div>
                                                                     <div className="border-t border-zinc-200 dark:border-zinc-700/50 w-full my-2"></div>
-                                                                    <div className="flex items-center gap-2 text-[11px] flex-wrap">
-                                                                        <input type="datetime-local" value={toLocalDateTimeLocal(target.due_at)} onChange={e => { const newT = r.targets.map((t, i) => i === idx ? { ...t, due_at: new Date(e.target.value).toISOString() } : t); autoSave(r.id, { targets: newT }); }} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded py-1 px-2 text-zinc-800 dark:text-[#C4C7C5] font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all" />
-                                                                        <span className="text-zinc-300 dark:text-zinc-700 font-bold">|</span>
-                                                                        <select value={target.recurrence || 'none'} onChange={e => { const newT = r.targets.map((t, i) => i === idx ? { ...t, recurrence: e.target.value as RecurrenceType } : t); autoSave(r.id, { targets: newT }); }} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded py-1 px-2 text-zinc-800 dark:text-[#C4C7C5] font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer">
-                                                                            {Object.entries(recurrenceLabels).map(([val, label]) => <option key={val} value={val}>{label}</option>)}
-                                                                        </select>
+                                                                    <div className="flex flex-col gap-1 text-[11px] pl-7">
+                                                                        <div className="flex items-center flex-wrap gap-2">
+                                                                            {t.last_completed_at && (
+                                                                                <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓ Última atención: {formatCustomDate(t.last_completed_at, dateFormat, timeFormat)}<span className="mx-1 text-zinc-300 dark:text-zinc-600 hidden sm:inline">,</span></span>
+                                                                            )}
+                                                                            <span className={isSleeping ? 'text-zinc-500' : colorClass}>Próximo recordatorio: {formatCustomDate(t.due_at, dateFormat, timeFormat)}</span>
+                                                                        </div>
+                                                                        {isSleeping && isRecurrent && (
+                                                                            <div className="mt-1">
+                                                                                <span className="inline-block text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
+                                                                                    ✓ Listo por ahora. Regresa el {formatCustomDate(t.due_at, dateFormat, timeFormat)}
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
                                                                     </div>
                                                                 </div>
-                                                            ))}
+                                                            )})}
                                                         </div>
                                                     </div>
-                                                    <div className="flex justify-end items-center gap-3 pt-2 border-t border-zinc-100 dark:border-zinc-800 mt-2">
+                                                )}
+                                            </div>
+
+                                            {isEditing && (
+                                                <div className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800 mt-auto">
+                                                    <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
+                                                        <span>Creado: {formatCleanDate(r.created_at)}</span>
+                                                        {isEdited && (
+                                                            <>
+                                                                <span className="opacity-50">|</span>
+                                                                <span>Editado: {formatCleanDate(r.updated_at)}</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 shrink-0">
                                                         <button onClick={() => deleteReminder(r.id)} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Eliminar">
                                                             <Trash2 size={18} />
                                                         </button>
@@ -492,59 +580,6 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                         </button>
                                                     </div>
                                                 </div>
-                                            ) : (
-                                                <>
-                                                    <div className={`mt-2 mb-2 pl-11 transition-all duration-300 overflow-hidden text-sm ${isExpanded ? 'opacity-90' : 'opacity-80 line-clamp-2 max-h-[40px] pointer-events-none'}`}>
-                                                        <SmartNotesEditor noteId={r.id} initialContent={r.content} onChange={() => {}} readOnly={true} />
-                                                    </div>
-                                                    
-                                                    <div className="space-y-3 pt-2 mt-auto">
-                                                        {r.targets.map(t => {
-                                                            const { isVisuallyPending, isSleeping } = getDerivedReminderState(t.due_at, t.recurrence, t.is_completed);
-                                                            const isRecurrent = t.recurrence && t.recurrence !== 'none';
-                                                            const colorClass = getUrgencyColor(t.due_at, t.recurrence);
-                                                            const relTime = getRelativeTimeLeft(t.due_at);
-
-                                                            return (
-                                                            <div key={t.id} className={`flex flex-col group p-3 bg-zinc-50 dark:bg-zinc-800/30 rounded-xl border border-zinc-200 dark:border-zinc-800/80 hover:border-zinc-200 transition-all ${isSleeping ? 'opacity-60' : 'opacity-100'}`}>
-                                                                <div className="flex justify-between items-start w-full">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <button onClick={() => toggleTargetComplete(r.id, t.id)} className={`transition-colors group/btn ${isSleeping ? 'text-emerald-500 hover:text-amber-500' : 'text-zinc-400 hover:text-emerald-500'}`} title={isSleeping ? 'Deshacer completado' : 'Completar'}>
-                                                                            {isSleeping ? (
-                                                                                <>
-                                                                                   <CheckCircle2 size={18} className="group-hover/btn:hidden" />
-                                                                                   <RotateCcw size={18} className="hidden group-hover/btn:block" />
-                                                                                </>
-                                                                            ) : <Circle size={18}/>}
-                                                                        </button>
-                                                                        <span className={`font-bold text-sm ${isSleeping ? 'text-zinc-500 line-through' : 'text-zinc-800 dark:text-[#C4C7C5]'}`}>{t.title || 'Sin nombre'}</span>
-                                                                    </div>
-                                                                    <div className="flex items-center text-[11px] font-bold text-[#7E7E85]">
-                                                                        {isRecurrent ? <span className="flex items-center gap-1"><Repeat size={10} /> Ciclo: {recurrenceLabels[t.recurrence!]}</span> : <span>Único</span>}
-                                                                        <span className="mx-2 opacity-50">|</span>
-                                                                        <span className={isSleeping ? 'text-emerald-600 dark:text-emerald-500 font-bold' : (relTime.includes('Vencido') ? 'text-[#ff2800] animate-pulse' : 'text-[#7E7E85]')}>{isSleeping && isRecurrent ? 'Descansando' : (isSleeping ? 'Terminado' : relTime)}</span>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="border-t border-zinc-200 dark:border-zinc-700/50 w-full my-2"></div>
-                                                                <div className="flex flex-col gap-1 text-[11px] pl-7">
-                                                                    <div className="flex items-center flex-wrap gap-2">
-                                                                        {t.last_completed_at && (
-                                                                            <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓ Última atención: {formatCustomDate(t.last_completed_at, dateFormat, timeFormat)}<span className="mx-1 text-zinc-300 dark:text-zinc-600 hidden sm:inline">,</span></span>
-                                                                        )}
-                                                                        <span className={isSleeping ? 'text-zinc-500' : colorClass}>Próximo recordatorio: {formatCustomDate(t.due_at, dateFormat, timeFormat)}</span>
-                                                                    </div>
-                                                                    {isSleeping && isRecurrent && (
-                                                                        <div className="mt-1">
-                                                                            <span className="inline-block text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
-                                                                                ✓ Listo por ahora. Regresa el {formatCustomDate(t.due_at, dateFormat, timeFormat)}
-                                                                            </span>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        )})}
-                                                    </div>
-                                                </>
                                             )}
                                         </div>
                                     );

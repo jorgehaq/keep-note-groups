@@ -58,12 +58,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      <div className="w-12 md:w-16 bg-zinc-200 dark:bg-zinc-900 border-r border-zinc-300 dark:border-zinc-800 flex flex-col items-center py-3 gap-3 h-full shrink-0 z-50 overflow-visible">
+      <div className="w-12 md:w-16 bg-zinc-200 dark:bg-zinc-900 border-r border-zinc-300 dark:border-zinc-800 flex flex-col items-center py-3 gap-4 h-full shrink-0 z-50 overflow-visible">
 
         {/* Reminders Button */}
         <button
           onClick={() => setGlobalView('reminders')}
-          className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all mb-1 shrink-0 ${getAppStyle('reminders')}`}
+          className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all shrink-0 ${getAppStyle('reminders')}`}
           title={t('sidebar.reminders')}
         >
           <Bell size={20} />
@@ -85,7 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Timer Button with Badge */}
         <button
           onClick={() => setGlobalView('timers')}
-          className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all mb-1 shrink-0 ${getAppStyle('timers')}`}
+          className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all shrink-0 ${getAppStyle('timers')}`}
           title={t('sidebar.timers')}
         >
           <Clock size={20} />
@@ -102,7 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Kanban Button */}
         <button
           onClick={() => setGlobalView('kanban')}
-          className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all mb-1 shrink-0 ${getAppStyle('kanban')}`}
+          className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all shrink-0 ${getAppStyle('kanban')}`}
           title={t('sidebar.kanban')}
         >
           <KanbanSquare size={20} />
@@ -130,7 +130,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Botón Pizarrón */}
         <button
           onClick={() => setGlobalView('braindump')}
-          className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all mb-1 shrink-0 ${getAppStyle('braindump')}`}
+          className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all shrink-0 ${getAppStyle('braindump')}`}
           title={t('sidebar.braindump')}
         >
           <PenTool size={20} />
@@ -139,18 +139,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Translator Button */}
         <button
           onClick={() => setGlobalView('translator')}
-          className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all mb-1 shrink-0 ${getAppStyle('translator')}`}
+          className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all shrink-0 ${getAppStyle('translator')}`}
           title={t('sidebar.translator')}
         >
           <Languages size={20} />
         </button>
 
-        <div className="w-8 h-0.5 bg-zinc-300 dark:bg-zinc-700 rounded-full mb-1 shrink-0"></div>
+        <div className="w-8 h-0.5 bg-zinc-300 dark:bg-zinc-700 rounded-full shrink-0"></div>
 
         {/* New Group Button (Quick Add) */}
         <button
           onClick={onAddGroup}
-          className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-[#4940D9] hover:bg-[#3D35C0] text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 transition-all duration-300 shrink-0 hover:scale-105 active:scale-95 mb-1"
+          className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-[#4940D9] hover:bg-[#3D35C0] text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 transition-all duration-300 shrink-0 hover:scale-105 active:scale-95"
           title={t('sidebar.new_group')}
         >
           <Plus size={18} />
@@ -159,16 +159,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Launcher Button */}
         <button
           onClick={() => setIsLauncherOpen(true)}
-          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 hover:bg-[#4940D9] dark:hover:bg-[#4940D9] hover:text-white dark:hover:text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 transition-all duration-300 hover:scale-105 active:scale-95 mb-1 shrink-0"
+          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 hover:bg-[#4940D9] dark:hover:bg-[#4940D9] hover:text-white dark:hover:text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 transition-all duration-300 hover:scale-105 active:scale-95 shrink-0"
           title={t('sidebar.launcher')}
         >
           <Grid size={20} />
         </button>
 
-        <div className="w-8 h-0.5 bg-zinc-300 dark:bg-zinc-700 rounded-full mb-1 shrink-0"></div>
+        <div className="w-8 h-0.5 bg-zinc-300 dark:bg-zinc-700 rounded-full shrink-0"></div>
 
         {/* Docked Groups List */}
-        <div className="flex flex-col gap-3 w-full items-center flex-1 overflow-y-auto hidden-scrollbar py-2">
+        <div className="flex flex-col gap-4 w-full items-center flex-1 overflow-y-auto hidden-scrollbar">
           {sortedDockedGroups.map((group) => {
             const isGroupActive = activeGroupId === group.id;
             const isNotesView = globalView === 'notes';
@@ -258,7 +258,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           {/* El punto flotante del Kanban */}
                           {dotColorClass && (
                               <div 
-                                className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border border-[#9F9FA8] z-10 shadow-sm transition-transform hover:scale-110 ${dotColorClass}`} 
+                                className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border border-[#9F9FA8]/50 z-10 shadow-sm transition-transform hover:scale-110 ${dotColorClass}`} 
                                 title={`Estado Kanban`}
                               />
                           )}
@@ -274,7 +274,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Bottom Area: Settings */}
-        <div className="mt-auto pt-3 shrink-0 flex flex-col items-center gap-1.5">
+        <div className="mt-auto pt-3 shrink-0 flex flex-col items-center gap-4">
           <div className="w-8 h-0.5 bg-zinc-300 dark:bg-zinc-700 rounded-full"></div>
           <button
             onClick={onOpenSettings}
@@ -285,7 +285,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
           <button
             onClick={onLogout}
-            className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 hover:shadow-sm transition-all duration-300 hover:scale-105 active:scale-95 mb-2"
+            className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 hover:shadow-sm transition-all duration-300 hover:scale-105 active:scale-95"
             title="Cerrar Sesión"
           >
             <LogOut size={18} />

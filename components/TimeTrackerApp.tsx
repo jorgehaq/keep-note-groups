@@ -249,8 +249,8 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                         </div>
                         Cronómetros
                     </h1>
-                    <button onClick={createNewDraft} className="bg-[#2563EB] hover:bg-blue-700 text-white p-2 rounded-xl shadow-lg shadow-blue-500/20 transition-colors flex items-center gap-2">
-                        <Plus size={20} /> <span className="text-sm font-normal hidden sm:inline pr-2">Nuevo</span>
+                    <button onClick={createNewDraft} className="bg-[#2563EB] hover:bg-blue-700 text-white p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 active:scale-95 shrink-0">
+                        <Plus size={20} /> <span className="text-sm font-bold hidden sm:inline pr-2 text-white">Nuevo</span>
                     </button>
                 </div>
             </div>
@@ -266,7 +266,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                 <span className="text-sm font-bold uppercase tracking-widest">Creación de Cronómetro</span>
                             </div>
                             {drafts.map(draft => (
-                                <div key={draft.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:border-[#2563EB]/50 hover:shadow-xl hover:shadow-[#2563EB]/5 focus-within:ring-2 focus-within:ring-[#2563EB]/50 p-1">
+                                <div key={draft.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:border-[#2563EB]/50 hover:shadow-xl hover:shadow-[#2563EB]/5 focus-within:ring-2 focus-within:ring-[#2563EB]/50 flex flex-col overflow-hidden">
                                     <div className="flex items-center justify-between pr-4">
                                         <input 
                                             type="text" placeholder="¿Qué vamos a medir? (ej. Sprint Programación)" 
@@ -274,14 +274,14 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                             className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] p-4 pb-3 outline-none placeholder-zinc-400" 
                                         />
                                     </div>
-                                    <div className="h-px bg-zinc-100 dark:bg-zinc-800/80 mx-4 mb-2" />
+
                                     
                                     <div className="mx-4 mb-4 p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl cursor-text min-h-[100px]">
                                         <SmartNotesEditor noteId={draft.id} initialContent={draft.content} onChange={c => autoSave(draft.id, { content: c })} noteFont={noteFont} noteFontSize={noteFontSize} />
                                     </div>
                                     
                                     {/* SELECCIÓN DE TIPO DE CRONÓMETRO */}
-                                    <div className="bg-zinc-50 dark:bg-[#1B1B1E] rounded-xl m-4 p-4 border border-zinc-200 dark:border-zinc-800">
+                                    <div className="bg-zinc-50 dark:bg-[#1B1B1E] rounded-xl mx-4 mb-4 p-4 border border-zinc-200 dark:border-zinc-800">
                                         <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 block">Modo de Operación:</span>
                                         <select 
                                             value={draft.type} 
@@ -293,7 +293,10 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                         </select>
                                     </div>
 
-                                    <div className="flex justify-end p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800">
+                                    <div className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800 mt-auto">
+                                        <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
+                                            <span>Borrador en edición...</span>
+                                        </div>
                                         <div className="flex items-center gap-2">
                                             <button onClick={() => deleteTimer(draft.id)} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Eliminar">
                                                 <Trash2 size={18} />
@@ -320,11 +323,11 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                     const isRunning = timer.last_started_at !== null;
 
                                     return (
-                                        <div key={timer.id} className="bg-white dark:bg-zinc-900 p-5 rounded-2xl shadow-lg transition-all duration-300 flex flex-col border border-zinc-200 dark:border-zinc-800 hover:border-[#2563EB]/50 hover:shadow-xl hover:shadow-[#2563EB]/5 focus-within:ring-2 focus-within:ring-[#2563EB]/50">
-                                            
-                                            {/* HEADER */}
-                                            <div className="flex justify-between items-start mb-4">
-                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                        <div key={timer.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg transition-all duration-300 flex flex-col border border-zinc-200 dark:border-zinc-800 hover:border-[#2563EB]/50 hover:shadow-xl hover:shadow-[#2563EB]/5 focus-within:ring-2 focus-within:ring-[#2563EB]/50 overflow-hidden">
+                                            <div className="p-5 pb-4">
+                                                {/* HEADER */}
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div className="flex items-center gap-3 flex-1 min-w-0">
                                                     <div className="flex flex-col min-w-0 pl-1">
                                                         <input type="text" value={timer.title} onChange={e => autoSave(timer.id, { title: e.target.value })} className="font-bold text-lg text-zinc-800 dark:text-[#C4C7C5] truncate bg-transparent outline-none w-full placeholder-zinc-400" placeholder="Cronómetro" />
                                                         <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
@@ -371,7 +374,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
 
                                             {/* LISTA DE LAPS (DISEÑO 2 RENGLONES ESTILO REMINDERS) */}
                                             {timer.laps.length > 0 && (
-                                                <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
+                                                <div className="mt-4 space-y-3">
                                                     <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">Registro de Laps ({timer.laps.length})</span>
                                                     {timer.laps.map((lap, idx) => (
                                                         <div key={lap.id} className="flex flex-col group p-3 bg-zinc-50 dark:bg-zinc-800/30 rounded-xl border border-zinc-200 dark:border-zinc-800/80">
@@ -393,15 +396,27 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                                     ))}
                                                 </div>
                                             )}
+                                            </div>
 
                                             {/* FOOTER ACCIONES */}
-                                            <div className="flex items-center justify-end pt-4 border-t border-zinc-100 dark:border-zinc-800 mt-6 gap-2">
-                                                <button onClick={() => deleteTimer(timer.id)} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Eliminar">
-                                                    <Trash2 size={18} />
-                                                </button>
-                                                <button onClick={() => changeStatus(timer.id, 'history')} className="flex items-center gap-2 px-4 py-2 text-xs font-normal text-white bg-[#2563EB] hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/20 transition-all">
-                                                    <ArchiveIcon size={14} /> Archivar Cronómetro
-                                                </button>
+                                            <div className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800 mt-auto">
+                                                <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
+                                                    <span>Creado: {formatCleanDate(timer.created_at)}</span>
+                                                    {(new Date(timer.updated_at).getTime() - new Date(timer.created_at).getTime() > 60000) && (
+                                                        <>
+                                                            <span className="opacity-50">|</span>
+                                                            <span>Editado: {formatCleanDate(timer.updated_at)}</span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <button onClick={() => deleteTimer(timer.id)} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Eliminar">
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                    <button onClick={() => changeStatus(timer.id, 'history')} className="flex items-center gap-2 px-4 py-2 text-xs font-normal text-white bg-[#2563EB] hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/20 transition-all">
+                                                        <ArchiveIcon size={14} /> Archivar Cronómetro
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     );

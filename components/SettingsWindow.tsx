@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X, Moon, Sun, Monitor, Type, CalendarClock, Palette, TextSelect, Languages } from 'lucide-react';
 import { Theme, NoteFont } from '../types';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +22,17 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
   isOpen, onClose, theme, onThemeChange, noteFont, onNoteFontChange, noteFontSize, onNoteFontSizeChange, dateFormat, onDateFormatChange, timeFormat, onTimeFormatChange
 }) => {
   const { t, i18n } = useTranslation();
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
@@ -31,13 +42,22 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden max-h-[90vh] overflow-y-auto hidden-scrollbar">
+    <div 
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn cursor-pointer"
+        onClick={(e) => {
+            if (e.target === e.currentTarget) onClose();
+        }}
+    >
+      <div 
+        ref={modalRef}
+        className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden max-h-[90vh] overflow-y-auto hidden-scrollbar cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* HEADER */}
         <div className="sticky top-0 px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md z-10">
           <h2 className="text-lg font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-2">
-            {t('settings.title')}
+              {t('settings.title')}
           </h2>
           <button onClick={onClose} className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-full text-zinc-500 transition-colors">
             <X size={20} />
@@ -165,6 +185,12 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
           </section>
 
         </div>
+
+        {/* Footer Hint - Matching Group Launcher Style */}
+        <div className="sticky bottom-0 bg-zinc-50/90 dark:bg-zinc-950/90 backdrop-blur-md p-2 text-center text-[11px] text-zinc-400 border-t border-zinc-100 dark:border-zinc-800 z-10">
+            Presiona <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded border border-zinc-200 dark:border-zinc-700">Esc</code> para cerrar
+        </div>
+
       </div>
     </div>
   );

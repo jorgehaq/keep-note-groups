@@ -225,7 +225,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                     </div>
 
                     {/* 🚀 FIX: focus-within EN LA TARJETA EXTERIOR EXCLUSIVAMENTE */}
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 p-1 transition-all duration-300 hover:border-violet-500/50 hover:shadow-xl hover:shadow-violet-500/5 focus-within:ring-2 focus-within:ring-violet-500/50">
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:border-violet-500/50 hover:shadow-xl hover:shadow-violet-500/5 focus-within:ring-2 focus-within:ring-violet-500/50 overflow-hidden">
                         
                         <div className="bg-zinc-50 dark:bg-[#1B1B1E] rounded-xl m-4 p-4 border border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
                             <select 
@@ -250,7 +250,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                         </div>
 
                         {/* 🚀 FIX: Eliminado el 'focus-within:ring-2' de los textarea internos */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 m-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mx-4 mb-4">
                             <div className="relative flex flex-col bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden transition-all">
                                 <textarea
                                     value={originalText}
@@ -292,25 +292,36 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                             </div>
                         </div>
 
-                        {/* 🚀 FIX: Botón de Limpiar como icono y alineado a la derecha */}
-                        <div className="flex justify-end items-center gap-3 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800">
-                            <button 
-                                onClick={() => { setOriginalText(''); setTranslatedText(''); }} 
-                                disabled={!originalText.trim()}
-                                className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50"
-                                title="Limpiar contenido"
-                            >
-                                <Eraser size={18} />
-                            </button>
-                            
-                            <button 
-                                onClick={saveTranslation} 
-                                disabled={!originalText.trim() || !translatedText.trim() || isTranslating || isSaving}
-                                className="flex items-center gap-2 px-5 py-2 text-xs font-normal text-white dark:text-[#C4C7C5] bg-[#8B5CF6] hover:bg-violet-600 rounded-xl shadow-lg shadow-violet-500/20 transition-all disabled:opacity-50"
-                            >
-                                {isSaving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                                Guardar Traducción
-                            </button>
+                        {/* 🚀 FIX: Footer estandarizado edge-to-edge */}
+                        <div className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800">
+                            <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
+                                {isTranslating ? (
+                                    <span className="text-violet-500 animate-pulse">Traduciendo...</span>
+                                ) : translatedText ? (
+                                    <span className="text-emerald-500">Traducción lista</span>
+                                ) : (
+                                    <span>Esperando texto...</span>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <button 
+                                    onClick={() => { setOriginalText(''); setTranslatedText(''); }} 
+                                    disabled={!originalText.trim()}
+                                    className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50"
+                                    title="Limpiar contenido"
+                                >
+                                    <Eraser size={18} />
+                                </button>
+                                
+                                <button 
+                                    onClick={saveTranslation} 
+                                    disabled={!originalText.trim() || !translatedText.trim() || isTranslating || isSaving}
+                                    className="flex items-center gap-2 px-5 py-2 text-xs font-normal text-white dark:text-[#C4C7C5] bg-[#8B5CF6] hover:bg-violet-600 rounded-xl shadow-lg shadow-violet-500/20 transition-all disabled:opacity-50"
+                                >
+                                    {isSaving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                                    Guardar Traducción
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

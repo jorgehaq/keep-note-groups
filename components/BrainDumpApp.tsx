@@ -126,8 +126,8 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                       >
                         {isBraindumpMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                       </button>
-                    <button onClick={createNewDraft} className="bg-[#FFD700] hover:bg-[#E5C100] text-amber-950 p-2 rounded-xl shadow-lg shadow-amber-500/20 transition-colors flex items-center gap-2">
-                        <Plus size={20} /> <span className="text-sm font-normal hidden sm:inline pr-2">Nuevo Pizarrón</span>
+                    <button onClick={createNewDraft} className="bg-[#FFD700] hover:bg-[#E5C100] text-amber-950 p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2 active:scale-95 shrink-0">
+                        <Plus size={20} /> <span className="text-sm font-bold hidden sm:inline pr-2 text-amber-950">Nuevo Pizarrón</span>
                     </button>
                 </div>
                 </div>
@@ -149,15 +149,18 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                     
                                     {/* Título */}
                                     <div className="flex items-center justify-between pr-4">
-                                        <input 
-                                            type="text" 
-                                            placeholder="Título del pizarrón (opcional)" 
-                                            value={pizarron.title || ''} 
-                                            onChange={e => autoSave(pizarron.id, { title: e.target.value })} 
-                                            className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] p-4 pb-3 outline-none placeholder-zinc-400" 
-                                        />
+                                        <div className="relative inline-flex max-w-full p-4 pb-3">
+                                            <span className="invisible whitespace-pre text-xl font-bold px-0.5 min-h-[1.5em]">{pizarron.title || "Título del pizarrón (opcional)"}</span>
+                                            <input 
+                                                type="text" 
+                                                placeholder="Título del pizarrón (opcional)" 
+                                                value={pizarron.title || ''} 
+                                                onChange={e => autoSave(pizarron.id, { title: e.target.value })} 
+                                                className="absolute inset-0 w-full h-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] p-4 pb-3 outline-none placeholder-zinc-400 transition-colors" 
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="h-px bg-zinc-100 dark:bg-zinc-800/80 mx-4 mb-2" />
+
                                     
                                     {/* Editor de Notas */}
                                     <div className="mx-4 mb-4 p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl cursor-text min-h-[150px]">
