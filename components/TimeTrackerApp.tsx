@@ -293,7 +293,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                         </select>
                                     </div>
 
-                                    <div className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800 mt-auto">
+                                    <div className="flex justify-between items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800 mt-auto">
                                         <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
                                             <span>Borrador en edición...</span>
                                         </div>
@@ -399,7 +399,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                             </div>
 
                                             {/* FOOTER ACCIONES */}
-                                            <div className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800 mt-auto">
+                                            <div className="flex justify-between items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800 mt-auto">
                                                 <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
                                                     <span>Creado: {formatCleanDate(timer.created_at)}</span>
                                                     {(new Date(timer.updated_at).getTime() - new Date(timer.created_at).getTime() > 60000) && (

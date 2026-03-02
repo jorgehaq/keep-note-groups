@@ -219,11 +219,6 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                 
                 {/* 1. MÓDULO DE CREACIÓN */}
                 <div className="space-y-6 animate-fadeIn">
-                    <div className="flex items-center gap-2 text-violet-500">
-                        <Sparkles size={18} className="fill-current" />
-                        <span className="text-sm font-bold uppercase tracking-widest">Nueva Traducción</span>
-                    </div>
-
                     {/* 🚀 FIX: focus-within EN LA TARJETA EXTERIOR EXCLUSIVAMENTE */}
                     <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:border-violet-500/50 hover:shadow-xl hover:shadow-violet-500/5 focus-within:ring-2 focus-within:ring-violet-500/50 overflow-hidden">
                         
@@ -293,7 +288,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                         </div>
 
                         {/* 🚀 FIX: Footer estandarizado edge-to-edge */}
-                        <div className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800">
+                        <div className="flex justify-between items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800">
                             <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
                                 {isTranslating ? (
                                     <span className="text-violet-500 animate-pulse">Traduciendo...</span>

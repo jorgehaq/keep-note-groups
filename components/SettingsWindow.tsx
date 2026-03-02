@@ -187,7 +187,7 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
         </div>
 
         {/* Footer Hint - Matching Group Launcher Style */}
-        <div className="sticky bottom-0 bg-zinc-50/90 dark:bg-zinc-950/90 backdrop-blur-md p-2 text-center text-[11px] text-zinc-400 border-t border-zinc-100 dark:border-zinc-800 z-10">
+        <div className="sticky bottom-0 bg-zinc-50 dark:bg-[#202022] p-2 text-center text-[11px] text-zinc-400 border-t border-zinc-100 dark:border-zinc-800 z-10">
             Presiona <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded border border-zinc-200 dark:border-zinc-700">Esc</code> para cerrar
         </div>
 

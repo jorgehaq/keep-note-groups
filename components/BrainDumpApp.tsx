@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'lucide-react';
+import { KanbanSemaphore } from './KanbanSemaphore';
 import { supabase } from '../src/lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import { SmartNotesEditor } from '../src/components/editor/SmartNotesEditor';
@@ -147,7 +148,6 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                 return (
                                 <div key={pizarron.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 flex flex-col">
                                     
-                                    {/* Título */}
                                     <div className="flex items-center justify-between pr-4">
                                         <div className="relative inline-flex max-w-full p-4 pb-3">
                                             <span className="invisible whitespace-pre text-xl font-bold px-0.5 min-h-[1.5em]">{pizarron.title || "Título del pizarrón (opcional)"}</span>
@@ -168,7 +168,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                     </div>
                                     
                                     {/* Footer: Fechas y Acciones */}
-                                    <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800">
+                                    <div className="flex items-center justify-between pl-3 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800">
                                         <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
                                             <span>Creado: {formatCleanDate(pizarron.created_at)}</span>
                                             {isEdited && (
@@ -179,6 +179,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                             )}
                                         </div>
                                         <div className="flex items-center gap-2 shrink-0">
+                                            <KanbanSemaphore sourceId={pizarron.id} sourceTitle={pizarron.title || 'Pizarrón sin título'} />
                                             <button onClick={() => deleteDump(pizarron.id)} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Eliminar permanentemente">
                                                 <Trash2 size={18} />
                                             </button>

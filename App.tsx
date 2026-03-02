@@ -17,12 +17,24 @@ import { useUIStore } from './src/lib/store';
 
 const sortNotesArray = (notes: Note[], mode: string) => {
   return [...notes].sort((a, b) => {
-    if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
+    // Normalizar is_pinned para que undefined/null se traten como false
+    const pinA = !!a.is_pinned;
+    const pinB = !!b.is_pinned;
+    if (pinA !== pinB) return pinA ? -1 : 1;
+
     switch (mode) {
-      case 'date-desc': return new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime();
-      case 'date-asc': return new Date(a.updated_at || a.created_at || 0).getTime() - new Date(b.updated_at || b.created_at || 0).getTime();
-      case 'alpha-asc': return (a.title || '').localeCompare(b.title || '');
-      case 'alpha-desc': return (b.title || '').localeCompare(a.title || '');
+      case 'date-desc': {
+        const dateB = new Date(b.updated_at || b.created_at || 0).getTime();
+        const dateA = new Date(a.updated_at || a.created_at || 0).getTime();
+        return dateB - dateA;
+      }
+      case 'date-asc': {
+        const dateA = new Date(a.updated_at || a.created_at || 0).getTime();
+        const dateB = new Date(b.updated_at || b.created_at || 0).getTime();
+        return dateA - dateB;
+      }
+      case 'alpha-asc': return (a.title || '').toLowerCase().localeCompare((b.title || '').toLowerCase());
+      case 'alpha-desc': return (b.title || '').toLowerCase().localeCompare((a.title || '').toLowerCase());
       default: return 0;
     }
   });
@@ -272,19 +284,22 @@ function App() {
     setNoteSortMode(mode);
     setIsSortMenuOpen(false);
 
-    if (!activeGroupId) return;
+    const store = useUIStore.getState();
+    const currentActiveId = store.activeGroupId;
+    if (!currentActiveId) return;
 
-    // 🚀 FIX: setTimeout de 50ms rompe la condición de carrera.
-    // Garantiza que si el usuario da clic al ordenamiento mientras edita un título,
-    // el onBlur (guardado) termine de inyectar el título en el estado ANTES de ordenar.
-    setTimeout(() => {
-        setGroups(prev => prev.map(g => {
-            if (g.id === activeGroupId) {
-                return { ...g, notes: sortNotesArray(g.notes, mode) };
-            }
-            return g;
-        }));
-    }, 50);
+    // 🚀 FIX REAL: Eliminamos el setTimeout.
+    // React encola las actualizaciones funcionales (currentGroups => ...). 
+    // Como el onBlur del título se dispara milisegundos antes que el onClick de cerrar,
+    // este sort ejecutará inmediatamente DESPUÉS de que el título "Venus" ya esté en memoria.
+    setGroups(currentGroups => {
+      return currentGroups.map(g => {
+        if (g.id === currentActiveId) {
+          return { ...g, notes: sortNotesArray(g.notes, mode) };
+        }
+        return g;
+      });
+    });
   };
 
   const addGroup = async () => {
@@ -379,15 +394,40 @@ function App() {
 
       const newNote: Note = { id: data.id, title: data.title, content: data.content || '', isOpen: true, created_at: data.created_at, group_id: data.group_id, position: data.position };
 
+      // Identificar si hay alguna nota abierta para insertar debajo
+      const openNotes = openNotesByGroup[activeGroupId] || [];
+      const firstOpenNoteId = openNotes.length > 0 ? openNotes[0] : null;
+
       setGroups(groups.map(g => {
         if (g.id === activeGroupId) {
-          return { ...g, notes: [newNote, ...g.notes] };
+          // 🚀 FIX: Eliminamos la regla de "anclaje" complicada.
+          // Simplemente la ponemos al principio para que sea visible de inmediato,
+          // pero sin lógica de "splice" que pueda dejarla amarrada a un índice.
+          const newNotes = [newNote, ...g.notes];
+          return { ...g, notes: newNotes };
         }
         return g;
       }));
 
-      toggleNote(activeGroupId, newNote.id);
+      // Lógica de Foco y Colapso: Cerrar las anteriores y abrir la nueva
+      const store = useUIStore.getState();
+      useUIStore.setState({
+        openNotesByGroup: {
+          ...store.openNotesByGroup,
+          [activeGroupId]: [newNote.id]
+        }
+      });
+
       setEditingNoteId(newNote.id);
+      setFocusedNoteId(null);
+
+      // Scroll suave hacia la nueva nota para asegurar visibilidad
+      setTimeout(() => {
+        const noteElement = document.getElementById(`note-${newNote.id}`);
+        if (noteElement) {
+          noteElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 200);
 
       if (currentSearchQuery.trim()) {
         setSearchExemptNoteIds(prev => new Set(prev).add(newNote.id));
@@ -411,8 +451,31 @@ function App() {
     const shouldPreserveScroll = updates.is_pinned !== undefined;
     const savedScrollTop = shouldPreserveScroll ? mainRef.current?.scrollTop : undefined;
 
+    const dbUpdates: any = {};
+    if (updates.title !== undefined) dbUpdates.title = updates.title;
+    if (updates.content !== undefined) dbUpdates.content = updates.content;
+    if (updates.is_pinned !== undefined) dbUpdates.is_pinned = updates.is_pinned;
+    if (updates.is_docked !== undefined) dbUpdates.is_docked = updates.is_docked;
+    if (updates.is_checklist !== undefined) dbUpdates.is_checklist = updates.is_checklist;
+
+    const isTextUpdate = updates.title !== undefined || updates.content !== undefined;
+    if (isTextUpdate) {
+        dbUpdates.updated_at = new Date().toISOString();
+    }
+
     setGroups(currentGroups => currentGroups.map(g => {
-      const updatedNotes = g.notes.map(n => n.id === noteId ? { ...n, ...updates } : n);
+      const isRelevantGroup = g.id === (updates.group_id || activeGroupId); // Use group_id if provided (e.g. from duplication)
+      if (!isRelevantGroup) return g;
+
+      const updatedNotes = g.notes.map(n => {
+        if (n.id === noteId) {
+            const newNote = { ...n, ...updates };
+            if (isTextUpdate) newNote.updated_at = dbUpdates.updated_at;
+            return newNote;
+        }
+        return n;
+      });
+
       if (updates.is_pinned !== undefined) {
         updatedNotes.sort((a, b) => {
           if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
@@ -428,24 +491,7 @@ function App() {
       });
     }
 
-    const dbUpdates: any = {};
-    if (updates.title !== undefined) dbUpdates.title = updates.title;
-    if (updates.content !== undefined) dbUpdates.content = updates.content;
-    if (updates.is_pinned !== undefined) dbUpdates.is_pinned = updates.is_pinned;
-    if (updates.is_docked !== undefined) dbUpdates.is_docked = updates.is_docked;
-    if (updates.is_checklist !== undefined) dbUpdates.is_checklist = updates.is_checklist;
-
-    if (updates.title !== undefined || updates.content !== undefined) {
-      dbUpdates.updated_at = new Date().toISOString();
-      setGroups(currentGroups => currentGroups.map(g => ({
-        ...g,
-        notes: g.notes.map(n => n.id === noteId ? { ...n, updated_at: dbUpdates.updated_at } : n)
-      })));
-    }
-
     if (Object.keys(dbUpdates).length === 0) return;
-
-    const isTextUpdate = updates.content !== undefined || updates.title !== undefined;
     const debounceTime = isTextUpdate ? 2000 : 0; 
 
     if (saveTimeoutRef.current[noteId]) {
@@ -572,8 +618,9 @@ function App() {
     if (!session || !activeGroupId) return;
     const currentGroup = groups.find(g => g.id === activeGroupId);
     if (!currentGroup) return;
-    const original = currentGroup.notes.find(n => n.id === noteId);
-    if (!original) return;
+    const originalIndex = currentGroup.notes.findIndex(n => n.id === noteId);
+    if (originalIndex === -1) return;
+    const original = currentGroup.notes[originalIndex];
     try {
       const position = currentGroup.notes.length;
       const { data, error } = await supabase.from('notes').insert([{
@@ -585,8 +632,29 @@ function App() {
         is_checklist: original.is_checklist || false,
       }]).select().single();
       if (error) throw error;
-      const newNote: Note = { id: data.id, title: data.title, content: data.content || '', isOpen: false, created_at: data.created_at, group_id: data.group_id, position: data.position, is_checklist: data.is_checklist };
-      setGroups(groups.map(g => g.id === activeGroupId ? { ...g, notes: [newNote, ...g.notes] } : g));
+      const newNote: Note = { id: data.id, title: data.title, content: data.content || '', isOpen: true, created_at: data.created_at, group_id: data.group_id, position: data.position, is_checklist: data.is_checklist };
+      
+      setGroups(groups.map(g => {
+        if (g.id === activeGroupId) {
+          const newNotes = [...g.notes];
+          newNotes.splice(originalIndex + 1, 0, newNote);
+          return { ...g, notes: newNotes };
+        }
+        return g;
+      }));
+
+      // 🚀 UX: Cerrar las demás y abrir la duplicada
+      const store = useUIStore.getState();
+      useUIStore.setState({
+          openNotesByGroup: {
+              ...store.openNotesByGroup,
+              [activeGroupId]: [newNote.id]
+          }
+      });
+
+      if (store.noteSortMode) {
+          applyManualSort(store.noteSortMode);
+      }
     } catch (error: any) {
       alert('Error al duplicar nota: ' + error.message);
     }
@@ -811,7 +879,13 @@ function App() {
                               </div>
 
                               <button 
-                                  onClick={() => { if (activeGroupId) { const store = useUIStore.getState(); store.toggleNote; useUIStore.setState({ openNotesByGroup: { ...store.openNotesByGroup, [activeGroupId]: [] } }); } }}
+                                  onClick={() => { 
+                                      if (activeGroupId) { 
+                                          const store = useUIStore.getState(); 
+                                          useUIStore.setState({ openNotesByGroup: { ...store.openNotesByGroup, [activeGroupId]: [] } }); 
+                                          if (noteSortMode) applyManualSort(noteSortMode);
+                                      } 
+                                  }}
                                   className="p-2 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg hover:bg-white dark:hover:bg-zinc-800 transition-colors"
                                   title="Contraer todas las notas"
                               >
@@ -894,7 +968,16 @@ function App() {
                           <div key={note.id} id={`note-${note.id}`}>
                             <AccordionItem
                               note={{ ...note, isOpen }}
-                              onToggle={() => toggleNote(activeGroup.id, note.id)}
+                              onToggle={() => {
+                                const store = useUIStore.getState();
+                                const currentOpen = store.openNotesByGroup[activeGroup.id] || [];
+                                const wasOpen = currentOpen.includes(note.id);
+                                toggleNote(activeGroup.id, note.id);
+                                
+                                if (wasOpen && store.noteSortMode) {
+                                  applyManualSort(store.noteSortMode);
+                                }
+                              }}
                               onUpdate={(id, updates) => handleUpdateNoteWrapper(id, updates)}
                               onDelete={deleteNote}
                               onExportNote={downloadNoteAsMarkdown}

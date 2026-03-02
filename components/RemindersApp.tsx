@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Bell, Trash2, Clock, History as HistoryIcon, Wrench, Play, CheckCircle2, Circle, RotateCcw, Repeat, ChevronDown, ChevronUp, Settings2, Archive as ArchiveIcon } from 'lucide-react';
+import { Plus, Bell, Trash2, Clock, History as HistoryIcon, Wrench, Play, CheckCircle2, Circle, RotateCcw, Repeat, Check, ChevronDown, ChevronUp, Settings2, Archive as ArchiveIcon } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import { SmartNotesEditor } from '../src/components/editor/SmartNotesEditor';
@@ -31,7 +31,7 @@ const THRESHOLDS_MS: Record<RecurrenceType, number> = {
     bimonthly: 1000 * 60 * 60 * 24 * 7
 };
 
-export function getDerivedReminderState(dueAtIso: string, recurrence: RecurrenceType = 'none', isCompletedDB: boolean) {
+function getDerivedReminderState(dueAtIso: string, recurrence: RecurrenceType = 'none', isCompletedDB: boolean) {
     if (recurrence === 'none') {
         return { isVisuallyPending: !isCompletedDB, isSleeping: isCompletedDB };
     }
@@ -383,8 +383,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                             <button onClick={() => { autoSave(draft.id, { targets: draft.targets.filter(t => t.id !== target.id) }); }} className="text-zinc-400 hover:text-red-500 transition-colors" title="Eliminar"><Trash2 size={16}/></button>
                                                         </div>
                                                     </div>
-                                                    <div className="border-t border-zinc-200 dark:border-zinc-700/50 w-full my-2"></div>
-                                                    <div className="flex items-center gap-2 text-[11px] flex-wrap">
+                                                    <div className="flex items-center gap-2 text-[11px] flex-wrap mt-1.5">
                                                         <input type="datetime-local" value={toLocalDateTimeLocal(target.due_at)} onChange={e => { const newT = draft.targets.map((t, i) => i === idx ? { ...t, due_at: new Date(e.target.value).toISOString() } : t); autoSave(draft.id, { targets: newT }); }} className="w-full sm:w-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded py-1 px-2 text-zinc-800 dark:text-[#C4C7C5] font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all" />
                                                         <span className="text-zinc-300 dark:text-zinc-700 font-bold">|</span>
                                                         <select value={target.recurrence || 'none'} onChange={e => { const newT = draft.targets.map((t, i) => i === idx ? { ...t, recurrence: e.target.value as RecurrenceType } : t); autoSave(draft.id, { targets: newT }); }} className="w-full sm:w-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded py-1 px-2 text-zinc-800 dark:text-[#C4C7C5] font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer">
@@ -395,7 +394,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800 mt-auto">
+                                    <div className="flex justify-between items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800 mt-auto">
                                         <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
                                             <span>Borrador en edición...</span>
                                         </div>
@@ -421,7 +420,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                     {/* 2. ACTIVOS */}
                     {activeReminders.length > 0 && (
                         <div className="space-y-4">
-                            <div className="flex items-center gap-2 text-emerald-500">
+                            <div className="flex items-center gap-2 text-[#225B49]">
                                 <Clock size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Activos y Corriendo</span>
                             </div>
 
@@ -436,7 +435,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
 
                                     return (
                                         /* 🚀 FIX: border-0 removed because we already have overflow-hidden in container if we อยาก edge-to-edge but let's keep the user shadow approach */
-                                        <div key={r.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg transition-all duration-300 flex flex-col border border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 overflow-hidden">
+                                        <div key={r.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg transition-all duration-300 flex flex-col border border-zinc-200 dark:border-zinc-800 hover:border-[#225B49]/50 hover:shadow-xl hover:shadow-[#225B49]/5 focus-within:ring-2 focus-within:ring-indigo-500/50 overflow-hidden">
                                             <div className="p-5 pb-4">
                                                 {/* HEADER */}
                                                 <div className="flex justify-between items-start mb-2">
@@ -455,7 +454,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                                 className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] p-0 outline-none placeholder-zinc-400"
                                                             />
                                                         ) : (
-                                                            <h3 className="font-bold text-lg text-zinc-800 dark:text-[#C4C7C5]">{r.title || 'Recordatorio Activo'}</h3>
+                                                            <h3 className={`font-bold text-lg transition-colors duration-300 ${isExpanded ? 'text-zinc-800 dark:text-[#C4C7C5]' : 'text-[#4D4D54]'}`}>{r.title || 'Recordatorio Activo'}</h3>
                                                         )}
                                                     </div>
                                                     <button onClick={() => toggleEditActive(r.id)} className={`transition-all flex items-center shrink-0 ${isEditing ? 'gap-2 px-3 py-1.5 rounded-lg text-xs font-normal bg-[#1F3760] text-white hover:bg-[#152643] active:scale-95 shadow-lg shadow-[#1F3760]/20' : 'p-2 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800'}`} title={isEditing ? 'Cerrar Edición' : 'Ajustar'}>
@@ -491,8 +490,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                                                 <button onClick={() => { autoSave(r.id, { targets: r.targets.filter(t => t.id !== target.id) }); }} className="text-zinc-400 hover:text-red-500 transition-colors" title="Eliminar"><Trash2 size={16}/></button>
                                                                             </div>
                                                                         </div>
-                                                                        <div className="border-t border-zinc-200 dark:border-zinc-700/50 w-full my-2"></div>
-                                                                        <div className="flex items-center gap-2 text-[11px] flex-wrap">
+                                                                        <div className="flex items-center gap-2 text-[11px] flex-wrap mt-1.5">
                                                                             <input type="datetime-local" value={toLocalDateTimeLocal(target.due_at)} onChange={e => { const newT = r.targets.map((t, i) => i === idx ? { ...t, due_at: new Date(e.target.value).toISOString() } : t); autoSave(r.id, { targets: newT }); }} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded py-1 px-2 text-zinc-800 dark:text-[#C4C7C5] font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all" />
                                                                             <span className="text-zinc-300 dark:text-zinc-700 font-bold">|</span>
                                                                             <select value={target.recurrence || 'none'} onChange={e => { const newT = r.targets.map((t, i) => i === idx ? { ...t, recurrence: e.target.value as RecurrenceType } : t); autoSave(r.id, { targets: newT }); }} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded py-1 px-2 text-zinc-800 dark:text-[#C4C7C5] font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer">
@@ -506,7 +504,13 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                     </div>
                                                 ) : (
                                                     <div className="mt-2">
-                                                        <div className={`mb-4 pl-11 transition-all duration-300 overflow-hidden text-sm ${isExpanded ? 'opacity-90' : 'opacity-80 line-clamp-2 max-h-[40px] pointer-events-none'}`}>
+                                                        <style>{`
+                                                            .reminder-content-wrapper.is-collapsed .cm-content,
+                                                            .reminder-content-wrapper.is-collapsed .cm-line {
+                                                                color: #4D4D54 !important;
+                                                            }
+                                                        `}</style>
+                                                        <div className={`mb-4 pl-11 transition-all duration-300 overflow-hidden text-sm ${isExpanded ? 'opacity-90' : 'line-clamp-2 max-h-[40px] pointer-events-none is-collapsed'} reminder-content-wrapper`}>
                                                             <SmartNotesEditor noteId={r.id} initialContent={r.content} onChange={() => {}} readOnly={true} />
                                                         </div>
 
@@ -521,27 +525,21 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                                 <div key={t.id} className={`flex flex-col group p-3 bg-zinc-50 dark:bg-zinc-800/30 rounded-xl border border-zinc-200 dark:border-zinc-800/80 hover:border-zinc-200 transition-all ${isSleeping ? 'opacity-60' : 'opacity-100'}`}>
                                                                     <div className="flex justify-between items-start w-full">
                                                                         <div className="flex items-center gap-2">
-                                                                            <button onClick={() => toggleTargetComplete(r.id, t.id)} className={`transition-colors group/btn ${isSleeping ? 'text-emerald-500 hover:text-amber-500' : 'text-zinc-400 hover:text-emerald-500'}`} title={isSleeping ? 'Deshacer completado' : 'Completar'}>
-                                                                                {isSleeping ? (
-                                                                                    <>
-                                                                                       <CheckCircle2 size={18} className="group-hover/btn:hidden" />
-                                                                                       <RotateCcw size={18} className="hidden group-hover/btn:block" />
-                                                                                    </>
-                                                                                ) : <Circle size={18}/>}
+                                                                            <button onClick={() => toggleTargetComplete(r.id, t.id)} className={`transition-all group/btn flex items-center justify-center w-5 h-5 rounded-full border ${isSleeping ? 'bg-[#1E4037] border-[#1E4037] text-white' : 'border-zinc-300 dark:border-zinc-700 text-zinc-400 hover:border-[#225B49] hover:text-[#225B49]'}`} title={isSleeping ? 'Deshacer completado' : 'Completar'}>
+                                                                                {isSleeping ? <Check size={12} strokeWidth={4} /> : <Circle size={14} />}
                                                                             </button>
                                                                             <span className={`font-bold text-sm ${isSleeping ? 'text-zinc-500 line-through' : 'text-zinc-800 dark:text-[#C4C7C5]'}`}>{t.title || 'Sin nombre'}</span>
                                                                         </div>
                                                                         <div className="flex items-center text-[11px] font-bold text-[#7E7E85]">
                                                                             {isRecurrent ? <span className="flex items-center gap-1"><Repeat size={10} /> Ciclo: {recurrenceLabels[t.recurrence!]}</span> : <span>Único</span>}
                                                                             <span className="mx-2 opacity-50">|</span>
-                                                                            <span className={isSleeping ? 'text-emerald-600 dark:text-emerald-500 font-bold' : (relTime.includes('Vencido') ? 'text-[#ff2800] animate-pulse' : 'text-[#7E7E85]')}>{isSleeping && isRecurrent ? 'Descansando' : (isSleeping ? 'Terminado' : relTime)}</span>
+                                                                            <span className={isSleeping ? 'text-[#225B49] font-bold' : (relTime.includes('Vencido') ? 'text-[#ff2800] animate-pulse' : 'text-[#7E7E85]')}>{isSleeping && isRecurrent ? 'Descansando' : (isSleeping ? 'Terminado' : relTime)}</span>
                                                                         </div>
                                                                     </div>
-                                                                    <div className="border-t border-zinc-200 dark:border-zinc-700/50 w-full my-2"></div>
-                                                                    <div className="flex flex-col gap-1 text-[11px] pl-7">
+                                                                    <div className="flex flex-col gap-1 text-[11px] pl-7 mt-1.5">
                                                                         <div className="flex items-center flex-wrap gap-2">
                                                                             {t.last_completed_at && (
-                                                                                <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓ Última atención: {formatCustomDate(t.last_completed_at, dateFormat, timeFormat)}<span className="mx-1 text-zinc-300 dark:text-zinc-600 hidden sm:inline">,</span></span>
+                                                                                <span className="text-[#225B49] font-bold">✓ Última atención: {formatCustomDate(t.last_completed_at, dateFormat, timeFormat)}<span className="mx-1 text-zinc-300 dark:text-zinc-600 hidden sm:inline">,</span></span>
                                                                             )}
                                                                             <span className={isSleeping ? 'text-zinc-500' : colorClass}>Próximo recordatorio: {formatCustomDate(t.due_at, dateFormat, timeFormat)}</span>
                                                                         </div>
@@ -561,7 +559,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                             </div>
 
                                             {isEditing && (
-                                                <div className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800 mt-auto">
+                                                <div className="flex justify-between items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800 mt-auto">
                                                     <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
                                                         <span>Creado: {formatCleanDate(r.created_at)}</span>
                                                         {isEdited && (
@@ -610,7 +608,9 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                 <button onClick={() => toggleExpandHistory(r.id)} className="p-1.5 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded-md text-zinc-500 transition-colors" title="Desplegar grupo completo">
                                                     {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                                 </button>
-                                                <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                                                <div className="flex items-center justify-center w-5 h-5 rounded-full bg-[#1E4037] text-white shrink-0">
+                                                    <Check size={12} strokeWidth={4} />
+                                                </div>
                                                 <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400 line-through truncate">{r.title || 'Recordatorio completado'}</span>
                                             </div>
                                             <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto pl-11 md:pl-0">
@@ -639,16 +639,17 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                         <div key={t.id} className="flex flex-col group p-3 bg-zinc-100/50 dark:bg-zinc-800/30 rounded-xl border border-zinc-200 dark:border-zinc-800/50 opacity-60">
                                                             <div className="flex justify-between items-start w-full">
                                                                 <div className="flex items-center gap-2">
-                                                                    <CheckCircle2 size={18} className="text-zinc-400" />
+                                                                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-[#1E4037] text-white shrink-0">
+                                                                        <Check size={12} strokeWidth={4} />
+                                                                    </div>
                                                                     <span className="font-bold text-sm text-zinc-500 line-through">{t.title || 'Sin nombre'}</span>
                                                                 </div>
-                                                                <div className="flex items-center text-[11px] font-bold text-zinc-500">
-                                                                    {isRecurrent ? <span className="flex items-center gap-1"><Repeat size={10} /> Ciclo: {recurrenceLabels[t.recurrence!]}</span> : <span>Único</span>}
-                                                                    <span className="mx-2 opacity-50">|</span><span>Terminado</span>
+                                                                    <div className="flex items-center text-[11px] font-bold text-[#225B49]">
+                                                                        {isRecurrent ? <span className="flex items-center gap-1"><Repeat size={10} /> Ciclo: {recurrenceLabels[t.recurrence!]}</span> : <span>Único</span>}
+                                                                        <span className="mx-2 opacity-50">|</span><span>Terminado</span>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                            <div className="border-t border-zinc-200 dark:border-zinc-700/50 w-full my-2"></div>
-                                                            <div className="flex items-center text-[11px] pl-7 text-zinc-500 font-bold">✓ Última atención: {formatCustomDate(t.last_completed_at || t.due_at, dateFormat, timeFormat)}</div>
+                                                                <div className="flex items-center text-[11px] pl-7 text-[#225B49] font-bold mt-1.5">✓ Última atención: {formatCustomDate(t.last_completed_at || t.due_at, dateFormat, timeFormat)}</div>
                                                         </div>
                                                     )})}
                                                 </div>

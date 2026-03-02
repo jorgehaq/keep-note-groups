@@ -231,7 +231,7 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
 
                 {/* Footer Hint */}
                 {searchQuery.trim() === '' && (
-                    <div className="bg-zinc-50 dark:bg-zinc-950/50 p-2 text-center text-xs text-zinc-400 border-t border-zinc-100 dark:border-zinc-800">
+                    <div className="bg-zinc-50 dark:bg-[#202022] p-2 text-center text-xs text-zinc-400 border-t border-zinc-100 dark:border-zinc-800">
                         Presiona <code>Esc</code> para cerrar
                     </div>
                 )}
