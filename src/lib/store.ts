@@ -23,6 +23,12 @@ interface UIStore {
     globalView: GlobalAppView;
     activeTimersCount: number;
     overdueRemindersCount: number;
+    overdueRemindersList: {
+        id: string;
+        title: string;
+        targetId: string;
+        dueAt: string;
+    }[];
     imminentRemindersCount: number;
     editingNotes: Record<string, boolean>;
     lastAppView: GlobalAppView | null;
@@ -81,7 +87,24 @@ interface UIStore {
     setGlobalView: (view: GlobalAppView) => void;
     setActiveTimersCount: (count: number) => void;
     setOverdueRemindersCount: (count: number) => void;
+    setOverdueRemindersList: (
+        list:
+            | { id: string; title: string; targetId: string; dueAt: string }[]
+            | ((prev: {
+                id: string;
+                title: string;
+                targetId: string;
+                dueAt: string;
+            }[]) => {
+                id: string;
+                title: string;
+                targetId: string;
+                dueAt: string;
+            }[]),
+    ) => void;
     setImminentRemindersCount: (count: number) => void;
+    showOverdueMarquee: boolean;
+    setShowOverdueMarquee: (show: boolean) => void;
 }
 
 export const useUIStore = create<UIStore>()(
@@ -95,6 +118,7 @@ export const useUIStore = create<UIStore>()(
             globalView: "notes",
             activeTimersCount: 0,
             overdueRemindersCount: 0,
+            overdueRemindersList: [],
             imminentRemindersCount: 0,
             editingNotes: {},
             lastAppView: null,
@@ -106,6 +130,7 @@ export const useUIStore = create<UIStore>()(
             isMaximized: false,
             isBraindumpMaximized: false,
             isTranslatorMaximized: false,
+            showOverdueMarquee: false,
 
             setActiveGroup: (id) => set({ activeGroupId: id }),
 
@@ -196,6 +221,12 @@ export const useUIStore = create<UIStore>()(
             setActiveTimersCount: (count) => set({ activeTimersCount: count }),
             setOverdueRemindersCount: (count) =>
                 set({ overdueRemindersCount: count }),
+            setOverdueRemindersList: (listOrFn) =>
+                set((state) => ({
+                    overdueRemindersList: typeof listOrFn === "function"
+                        ? listOrFn(state.overdueRemindersList)
+                        : listOrFn,
+                })),
             setImminentRemindersCount: (count) =>
                 set({ imminentRemindersCount: count }),
             setEditingNote: (noteId, isEditing) =>
@@ -211,6 +242,7 @@ export const useUIStore = create<UIStore>()(
                 set({ isBraindumpMaximized: maximized }),
             setIsTranslatorMaximized: (maximized) =>
                 set({ isTranslatorMaximized: maximized }),
+            setShowOverdueMarquee: (show) => set({ showOverdueMarquee: show }),
 
             // Realtime Sync Implementation
             groups: [],

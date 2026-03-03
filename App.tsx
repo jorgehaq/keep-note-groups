@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid, Maximize2, Minimize2, ChevronsDownUp } from 'lucide-react';
+import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid, Maximize2, Minimize2, ChevronsDownUp, Bell, Pin } from 'lucide-react';
 import { Note, Group, Theme, NoteFont, Reminder } from './types';
 import { AccordionItem } from './components/AccordionItem';
 import { Sidebar } from './components/Sidebar';
@@ -50,7 +50,8 @@ function App() {
   const { 
     activeGroupId, setActiveGroup, openNotesByGroup, openGroup, dockedGroupIds, 
     noteSortMode, setNoteSortMode, toggleNote, globalView, setGlobalView, 
-    setKanbanCounts, setGlobalTasks, isMaximized, setIsMaximized,
+    setKanbanCounts, globalTasks, setGlobalTasks, isMaximized, setIsMaximized,
+    showOverdueMarquee, setShowOverdueMarquee,
     groups, setGroups, updateNoteSync, deleteNoteSync, updateGroupSync, deleteGroupSync,
     setTranslations, setBrainDumps
   } = useUIStore();
@@ -72,7 +73,7 @@ function App() {
   const mainRef = useRef<HTMLElement>(null);
   const [groupTitleSyncStatus, setGroupTitleSyncStatus] = useState<'saved' | 'saving' | ''>('');
   const [focusedNoteId, setFocusedNoteId] = useState<string | null>(null);
-  const [overdueRemindersList, setOverdueRemindersList] = useState<{ id: string; title: string; targetId?: string }[]>([]);
+  const [isGlobalNoteTrayOpen, setIsGlobalNoteTrayOpen] = useState(false);
 
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
@@ -89,7 +90,9 @@ function App() {
 
   useEffect(() => {
     if (activeGroupId && focusedNoteId) {
-      const ag = groups.find(g => g.id === activeGroupId);
+      // 🚀 FIX: Usamos el estado del store directamente para evitar race conditions con el 'groups' del scope local
+      const currentGroups = useUIStore.getState().groups;
+      const ag = currentGroups.find(g => g.id === activeGroupId);
       if (!ag?.notes.find(n => n.id === focusedNoteId)) {
         setFocusedNoteId(null);
       }
@@ -161,6 +164,7 @@ function App() {
     };
   }, [session]);
 
+
   const fetchTranslations = async () => {
     if (!session) return;
     const { data } = await supabase.from('translations').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false });
@@ -173,7 +177,7 @@ function App() {
     if (data) setBrainDumps(data);
   };
 
-  const { setOverdueRemindersCount, setImminentRemindersCount } = useUIStore();
+  const { setOverdueRemindersCount, setImminentRemindersCount, overdueRemindersList, setOverdueRemindersList } = useUIStore();
   useEffect(() => {
     if (!session) return;
     const checkReminders = async () => {
@@ -185,7 +189,7 @@ function App() {
       
       let overdueTotalCount = 0;
       let imminentTotalCount = 0;
-      let overdueList: { id: string; title: string; targetId: string }[] = [];
+      let overdueList: { id: string; title: string; targetId: string; dueAt: string }[] = [];
 
       data.forEach(r => {
           const targets = Array.isArray(r.targets) ? r.targets : [];
@@ -195,7 +199,7 @@ function App() {
                   const d = new Date(t.due_at);
                   if (d <= now) {
                       overdueTotalCount++;
-                      overdueList.push({ id: r.id, title: t.title || r.title || 'Recordatorio', targetId: t.id });
+                      overdueList.push({ id: r.id, title: t.title || r.title || 'Recordatorio', targetId: t.id, dueAt: t.due_at });
                   } else if (d > now && d <= in24h) {
                       imminentTotalCount++;
                   }
@@ -389,8 +393,16 @@ function App() {
       openGroup(newGroup.id);
       
       setGlobalView('notes');
-      setFocusedNoteId(null);
-      toggleNote(newGroup.id, newNote.id);
+      
+      // Explicitly set the initial note as open in the store
+      useUIStore.setState((state) => ({
+        openNotesByGroup: {
+          ...state.openNotesByGroup,
+          [newGroup.id]: [newNote.id]
+        }
+      }));
+
+      setFocusedNoteId(newNote.id);
       setEditingNoteId(newNote.id);
     } catch (error: any) {
       alert('Error al crear grupo: ' + error.message);
@@ -607,16 +619,8 @@ function App() {
 
   const activeGroup = groups.find(g => g.id === activeGroupId);
 
-  const filteredNotes = activeGroup
-    ? focusedNoteId
-      ? activeGroup.notes.filter(n => n.id === focusedNoteId)
-      : activeGroup.notes.filter(n => {
-          const isNewOrEditing = n.title.trim() === '' || n.id === editingNoteId || searchExemptNoteIds.has(n.id);
-          if (isNewOrEditing) return true;
-          const matchesSearch = n.title.toLowerCase().includes(currentSearchQuery.toLowerCase()) ||
-            n.content.toLowerCase().includes(currentSearchQuery.toLowerCase());
-          return matchesSearch;
-        })
+  const filteredNotes = activeGroup && focusedNoteId
+    ? activeGroup.notes.filter(n => n.id === focusedNoteId)
     : [];
 
   const handleUpdateNoteWrapper = (noteId: string, updates: Partial<Note>) => {
@@ -766,8 +770,12 @@ function App() {
       <Sidebar
         groups={groups}
         activeGroupId={activeGroupId}
-        onSelectGroup={(id) => { setActiveGroup(id); setFocusedNoteId(null); }}
-        onAddGroup={addGroup}
+        onSelectGroup={(id) => { 
+          setActiveGroup(id); 
+          setFocusedNoteId(null); 
+          setIsGlobalNoteTrayOpen(true); 
+        }}
+        onAddGroup={() => { addGroup(); setIsGlobalNoteTrayOpen(true); }}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onTogglePin={toggleGroupPin}
         onLogout={handleLogout}
@@ -777,50 +785,73 @@ function App() {
           const currentOpen = openNotesByGroup[groupId] || [];
           if (!currentOpen.includes(noteId)) toggleNote(groupId, noteId);
           setFocusedNoteId(noteId);
+          setIsGlobalNoteTrayOpen(true);
         }}
         focusedNoteId={focusedNoteId}
       />
 
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {/* --- BANNER DE RECORDATORIOS VENCIDOS --- */}
-        {overdueRemindersList.length > 0 && (
-          <>
-            {/* 🚀 Animación de Faro de Luz (Shimmer) de Izquierda a Derecha */}
-            <style>{`
-              @keyframes shimmer-sweep {
-                /* Invertimos de 200% a -200% para forzar el flujo Izquierda -> Derecha */
-                0% { background-position: 200% center; }
-                100% { background-position: -200% center; }
-              }
-              .animate-shimmer-text {
-                background: linear-gradient(90deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.4) 100%);
-                background-size: 200% auto;
-                color: transparent;
-                -webkit-background-clip: text;
-                background-clip: text;
-                animation: shimmer-sweep 5s linear infinite;
-              }
-            `}</style>
-            
-            <div className="relative w-full z-50 shrink-0 flex flex-col gap-[3px] px-[3px] pt-[3px]">
-              {overdueRemindersList.map(r => (
-                <div key={`${r.id}-${r.targetId}`} className="bg-[#DC2626] text-white shadow-md rounded-2xl">
-                  <div className="px-3 md:px-4 py-1.5 flex items-center justify-between gap-2">
-                    <span className="text-sm font-normal tracking-wide truncate animate-shimmer-text drop-shadow-sm">
-                      Recordatorio vencido: {r.title}
-                    </span>
-                    <button
-                      onClick={() => setGlobalView('reminders')}
-                      className="shrink-0 px-3 py-1 bg-white text-[#ff2800] hover:bg-zinc-100 text-xs font-normal uppercase tracking-widest rounded-lg transition-transform active:scale-95 shadow-lg"
-                    >
-                      Atender
-                    </button>
+        {/* --- STACK DE BANNERS (NAVEGACIÓN GLOBAL) --- */}
+        <style>{`
+          @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+          }
+          
+          .marquee-wrapper {
+            overflow: hidden;
+            width: 100%;
+            mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+          }
+          
+          .marquee-content {
+            display: inline-block;
+            white-space: nowrap;
+            animation: marquee 30s linear infinite;
+            padding-left: 20px;
+          }
+
+          .marquee-content:hover {
+            animation-play-state: paused;
+          }
+
+          .no-scrollbar::-webkit-scrollbar {
+            display: none;
+          }
+          .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+        `}</style>
+        <div className="flex flex-col z-50 shrink-0">
+          
+          {/* 1. BANNER DE RECORDATORIOS VENCIDOS (BARRA PLANA BORDERLESS) */}
+          {showOverdueMarquee && overdueRemindersList.length > 0 && (
+            <div className="w-full bg-[#0F0F12] overflow-hidden shrink-0 border-b border-zinc-800">
+              <div className="py-2.5 flex items-center">
+                <div className="flex-1 overflow-hidden relative h-6 flex items-center">
+                  <div className="marquee-content text-[11px] font-medium tracking-[0.1em] text-zinc-200 uppercase">
+                    {overdueRemindersList.map((r, idx) => (
+                      <span key={r.targetId}>
+                        {r.title} ({r.dueAt ? new Date(r.dueAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''})
+                        {idx < overdueRemindersList.length - 1 ? ' | ' : ''}
+                      </span>
+                    ))}
+                    <span className="inline-block w-20"></span>
+                    {overdueRemindersList.map((r, idx) => (
+                      <span key={`dup-${r.targetId}`}>
+                        {r.title} ({r.dueAt ? new Date(r.dueAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''})
+                        {idx < overdueRemindersList.length - 1 ? ' | ' : ''}
+                      </span>
+                    ))}
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
-          </>
-        )}
+          )}
+
+          {/* ELIMINADO DE AQUÍ EL BLOQUE 2. BANNERS DE GRUPOS */}
+        </div>
 
         {globalView === 'kanban' ? (
           <KanbanApp 
@@ -867,8 +898,8 @@ function App() {
          globalView === 'braindump' ? <BrainDumpApp session={session!} noteFont={noteFont} noteFontSize={noteFontSize} /> :
          globalView === 'translator' ? <TranslatorApp session={session!} /> : (
           <>
-            <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
-               <div className="flex flex-col xl:flex-row xl:items-center justify-between px-4 md:px-6 py-3 gap-3">
+            <div className={`sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md shrink-0 ${isGlobalNoteTrayOpen ? '' : 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm'}`}>
+               <div className={`flex flex-col xl:flex-row xl:items-center justify-between px-4 md:px-6 py-3 gap-3 ${isGlobalNoteTrayOpen ? 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm' : ''}`}>
                  {activeGroup ? (
                     <>
                       {/* Lado Izquierdo: Icono, Título Editable y Contador */}
@@ -902,11 +933,35 @@ function App() {
                             placeholder="Nombre del grupo de notas ..."
                             title="Haz clic para editar"
                           />
-                          <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-full shrink-0">
-                              {activeGroup.notes.length} notas
-                          </span>
+                          
+                          <button 
+                             onClick={() => setIsGlobalNoteTrayOpen(!isGlobalNoteTrayOpen)}
+                             className={`p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                               isGlobalNoteTrayOpen 
+                                 ? 'bg-[#4940D9] border-[#4940D9] text-white shadow-md shadow-[#4940D9]/20' 
+                                 : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 hover:text-indigo-600'
+                             }`}
+                             title={isGlobalNoteTrayOpen ? "Ocultar bandeja de notas" : "Mostrar bandeja de notas"}
+                           >
+                              <ChevronsDownUp size={18} className={`transition-transform duration-300 ${isGlobalNoteTrayOpen ? 'rotate-180' : ''}`} />
+                              <span className="text-xs font-bold">{activeGroup.notes.length}</span>
+                           </button>
 
-                          {/* Botón Maximizar/Minimizar */}
+                           {/* Botón Toggle Reminder */}
+                           <button
+                             onClick={() => setShowOverdueMarquee(!showOverdueMarquee)}
+                             className={`p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                               showOverdueMarquee 
+                                 ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
+                                 : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
+                             }`}
+                             title={showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
+                           >
+                              <Bell size={18} className={overdueRemindersList.length > 0 ? 'animate-pulse' : ''} />
+                              <span className="text-xs font-bold">{overdueRemindersList.length}</span>
+                           </button>
+
+                           {/* Botón Maximizar/Minimizar */}
                           <button
                             onClick={() => setIsMaximized(!isMaximized)}
                             className="p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all active:scale-95 shrink-0"
@@ -932,7 +987,6 @@ function App() {
                                   onChange={(e) => {
                                     if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: e.target.value }));
                                     setSearchExemptNoteIds(new Set());
-                                    if (focusedNoteId) setFocusedNoteId(null);
                                   }}
                                   className={`w-32 md:w-32 lg:w-48 pl-7 pr-8 py-1.5 text-xs rounded-lg border transition-all focus:outline-none ${currentSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50' : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'}`}
                                 />
@@ -979,19 +1033,6 @@ function App() {
                                 )}
                               </div>
 
-                              <button 
-                                  onClick={() => { 
-                                      if (activeGroupId) { 
-                                          const store = useUIStore.getState(); 
-                                          useUIStore.setState({ openNotesByGroup: { ...store.openNotesByGroup, [activeGroupId]: [] } }); 
-                                          if (noteSortMode) applyManualSort(noteSortMode);
-                                      } 
-                                  }}
-                                  className="p-2 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg hover:bg-white dark:hover:bg-zinc-800 transition-colors"
-                                  title="Contraer todas las notas"
-                              >
-                                  <ChevronsDownUp size={18} />
-                              </button>
 
                               <button 
                                   onClick={downloadGroupAsMarkdown} 
@@ -1012,7 +1053,7 @@ function App() {
                           {/* Botón Principal (Nueva Nota) */}
                           <button 
                               onClick={addNote} 
-                              className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
+                              className="bg-[#4940D9] hover:bg-[#3D35C0] text-white p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-[#4940D9]/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
                           >
                               <Plus size={18} /> 
                               <span className="text-sm font-normal hidden sm:inline pr-1 text-white">Nueva Nota</span>
@@ -1047,28 +1088,110 @@ function App() {
                     </>
                  )}
                </div>
+
+                {/* 2. FRANJA DE NOTAS (INTEGRADA EN EL ENCABEZADO) */}
+                {isGlobalNoteTrayOpen && activeGroup && (
+                  <div className="pt-4 px-4 pb-0 bg-[#09090B] dark:bg-[#09090B]">
+                    <div className="flex flex-wrap justify-center gap-2.5">
+                      {sortNotesArray(activeGroup.notes, noteSortMode)
+                        .map(note => {
+                        const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
+                        const isFocused = focusedNoteId === note.id;
+                        
+                        // --- LÓGICA DE BÚSQUEDA ---
+                        const query = currentSearchQuery.trim().toLowerCase();
+                        const titleMatch = query && note.title?.toLowerCase().includes(query);
+                        const contentMatch = query && !titleMatch && note.content?.toLowerCase().includes(query);
+                        const isSearchActive = titleMatch || contentMatch;
+
+                        // Helper para resaltar texto si coincide
+                        const highlightTitle = (text: string) => {
+                          if (!query || !text.toLowerCase().includes(query)) return text;
+                          const parts = text.split(new RegExp(`(${query})`, 'gi'));
+                          return parts.map((part, i) => 
+                            part.toLowerCase() === query 
+                              ? <mark key={i} className="bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 font-bold rounded-sm px-0.5">{part}</mark> 
+                              : part
+                          );
+                        };
+
+                          const linkedTask = globalTasks?.find(t => t.id === note.id);
+                          let dotColorClass = null;
+                          if (linkedTask) {
+                            switch (linkedTask.status) {
+                                case 'backlog': dotColorClass = 'bg-[#9E9E9E]'; break;
+                                case 'todo': dotColorClass = 'bg-[#FBC02D]'; break;
+                                case 'in_progress': dotColorClass = 'bg-[#1E88E5]'; break;
+                                case 'done': dotColorClass = 'bg-[#43A047]'; break;
+                            }
+                          }
+
+                          return (
+                            <button
+                              key={note.id}
+                              onClick={() => {
+                                const isNowFocused = focusedNoteId !== note.id;
+                                setFocusedNoteId(isNowFocused ? note.id : null);
+                                if (isNowFocused) {
+                                  const currentOpen = openNotesByGroup[activeGroup.id] || [];
+                                  if (!currentOpen.includes(note.id)) {
+                                    toggleNote(activeGroup.id, note.id);
+                                  }
+                                }
+                              }}
+                              className={`relative flex items-center justify-center gap-2 px-3 py-2 text-[11px] font-medium rounded-xl transition-all shrink-0 ${
+                                isFocused
+                                  ? 'bg-[#4940D9] text-white shadow-md shadow-[#4940D9]/20 scale-[1.02]'
+                                  : isSearchActive
+                                    ? 'bg-amber-50 dark:bg-amber-900/30 border border-amber-500 text-amber-900 dark:text-amber-100 shadow-sm ring-1 ring-amber-500/50'
+                                    : 'bg-white/10 dark:bg-white/10 text-[#A1A1AA] hover:text-white hover:bg-white/20'
+                              }`}
+                            >
+                              <span className="whitespace-nowrap">{highlightTitle(note.title || 'Sin Título')}</span>
+                              {note.is_pinned && <Pin size={12} className={`ml-1 fill-current ${isFocused ? 'text-white' : 'text-amber-500'}`} />}
+                              {dotColorClass && (
+                                <div 
+                                  className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border border-[#9F9FA8]/50 z-10 shadow-sm transition-transform hover:scale-110 ${dotColorClass}`} 
+                                  title={`Estado Kanban`}
+                                />
+                              )}
+                            </button>
+                          );
+                      })}
+                    </div>
+                  </div>
+                )}
             </div>
 
-            <main ref={mainRef} className={`flex-1 overflow-y-auto hidden-scrollbar ${isMaximized ? 'p-8' : 'p-4 md:p-8'}`}>
+            <main ref={mainRef} className="flex-1 overflow-y-auto hidden-scrollbar p-4">
               <div className={`${isMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto pb-20`}>
                 {activeGroup ? (
                   <>
 
                     <div className="space-y-4">
-                      {filteredNotes.length === 0 ? (
+                      {activeGroup.notes.length === 0 ? (
                       <div className="text-center py-20 opacity-60">
                         <div className="inline-block p-4 rounded-full bg-zinc-200 dark:bg-zinc-800 mb-4">
                           <Search size={32} className="text-zinc-500 dark:text-zinc-400" />
                         </div>
-                        <p className="text-lg text-zinc-600 dark:text-zinc-400">No se encontraron notas.</p>
+                        <p className="text-lg text-zinc-600 dark:text-zinc-400">Este grupo no tiene notas aún.</p>
                       </div>
                     ) : (
-                      filteredNotes.map(note => {
-                        const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
-                        return (
-                          <div key={note.id} id={`note-${note.id}`}>
-                            <AccordionItem
-                              note={{ ...note, isOpen }}
+                      filteredNotes
+                        .map(note => {
+                          const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
+                          const query = currentSearchQuery.trim().toLowerCase();
+                          const matchesSearch = query && (
+                            (note.title || '').toLowerCase().includes(query) ||
+                            (note.content || '').toLowerCase().includes(query)
+                          );
+
+                          return (
+                            <div key={note.id} id={`note-${note.id}`}>
+                              <AccordionItem
+                                note={{ ...note, isOpen }}
+                                searchQuery={currentSearchQuery}
+                                isHighlightedBySearch={!!matchesSearch}
                               onToggle={() => {
                                 const store = useUIStore.getState();
                                 const currentOpen = store.openNotesByGroup[activeGroup.id] || [];
@@ -1086,7 +1209,6 @@ function App() {
                               onDuplicate={duplicateNote}
                               onMove={moveNoteToGroup}
                               groups={groups}
-                              searchQuery={currentSearchQuery}
                               noteFont={noteFont}
                               noteFontSize={noteFontSize}
                             />

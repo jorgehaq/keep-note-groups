@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Languages, Volume2, Trash2, Copy, CheckCircle2, ArrowRightLeft, Loader2, Sparkles, Archive as ArchiveIcon, X, Eraser, ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'lucide-react';
+import { Languages, Volume2, Trash2, Copy, CheckCircle2, ArrowRightLeft, Loader2, Sparkles, Archive as ArchiveIcon, X, Eraser, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 import { useUIStore } from '../src/lib/store';
 
@@ -38,7 +38,7 @@ interface Translation {
 }
 
 export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
-  const { isTranslatorMaximized, setIsTranslatorMaximized, translations, setTranslations } = useUIStore();
+  const { isTranslatorMaximized, setIsTranslatorMaximized, translations, setTranslations, showOverdueMarquee, setShowOverdueMarquee, overdueRemindersCount } = useUIStore();
   const [loading, setLoading] = useState(false);
 
   // Form states
@@ -185,14 +185,28 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                     </div>
                     Traductor
                 </h1>
-                <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setIsTranslatorMaximized(!isTranslatorMaximized)}
-                        className="p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 hover:text-violet-600 dark:hover:text-violet-400 transition-all active:scale-95 shrink-0"
-                        title={isTranslatorMaximized ? "Minimizar" : "Maximizar"}
-                      >
-                        {isTranslatorMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-                      </button>
+                <div className="flex items-center gap-3">
+                    {/* Botón Toggle Reminder */}
+                    <button
+                      onClick={() => setShowOverdueMarquee(!showOverdueMarquee)}
+                      className={`p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                        showOverdueMarquee 
+                          ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
+                          : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
+                      }`}
+                      title={showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
+                    >
+                      <Bell size={18} className={overdueRemindersCount > 0 ? 'animate-pulse' : ''} />
+                      <span className="text-xs font-bold">{overdueRemindersCount}</span>
+                    </button>
+
+                    <button
+                      onClick={() => setIsTranslatorMaximized(!isTranslatorMaximized)}
+                      className="p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 hover:text-violet-600 dark:hover:text-violet-400 transition-all active:scale-95 shrink-0"
+                      title={isTranslatorMaximized ? "Minimizar" : "Maximizar"}
+                    >
+                      {isTranslatorMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                    </button>
                 </div>
                 </div>
         </div>

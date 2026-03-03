@@ -28,7 +28,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectDockedNote,
   focusedNoteId,
 }) => {
-  const { dockedGroupIds, closeGroup, globalView, setGlobalView, activeTimersCount, overdueRemindersCount, imminentRemindersCount, lastAppView, kanbanTodoCount, kanbanInProgressCount, kanbanDoneCount, lastUsedApp, globalTasks } = useUIStore();
+  const { dockedGroupIds, closeGroup, globalView, setGlobalView, activeTimersCount, overdueRemindersCount, overdueRemindersList, imminentRemindersCount, lastAppView, kanbanTodoCount, kanbanInProgressCount, kanbanDoneCount, lastUsedApp, globalTasks } = useUIStore();
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
   const { t } = useTranslation();
 
@@ -42,9 +42,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
     .filter((g): g is Group => !!g);
 
   const getAppStyle = (appId: string) => {
-    // ESTADO 1: ACTIVO (Azul) - Es la app que estás mirando en este momento exacto
+    // Identity mapping for each app
+    const APP_IDENTITY: Record<string, { bg: string, hover: string, shadow: string, text: string }> = {
+      notes: { bg: 'bg-[#4940D9]', hover: 'hover:bg-[#3D35C0]', shadow: 'shadow-[#4940D9]/30', text: 'text-white' },
+      reminders: { bg: 'bg-[#1F3760]', hover: 'hover:bg-[#152643]', shadow: 'shadow-[#1F3760]/30', text: 'text-white' },
+      timers: { bg: 'bg-[#2563EB]', hover: 'hover:bg-[#1D4ED8]', shadow: 'shadow-[#2563EB]/30', text: 'text-white' },
+      kanban: { bg: 'bg-[#10B981]', hover: 'hover:bg-[#059669]', shadow: 'shadow-[#10B981]/30', text: 'text-emerald-950' },
+      braindump: { bg: 'bg-[#FFD700]', hover: 'hover:bg-[#E5C100]', shadow: 'shadow-[#FFD700]/30', text: 'text-amber-950' },
+      translator: { bg: 'bg-[#8B5CF6]', hover: 'hover:bg-[#7C3AED]', shadow: 'shadow-[#8B5CF6]/30', text: 'text-white' }
+    };
+
+    // ESTADO 1: ACTIVO (Color de Identidad) - Es la app que estás mirando en este momento exacto
     if (globalView === appId) {
-      return 'bg-[#4940D9] hover:bg-[#3D35C0] text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 scale-105 active:scale-95 transition-all';
+      const identity = APP_IDENTITY[appId] || APP_IDENTITY.notes;
+      return `${identity.bg} ${identity.hover} ${identity.text} shadow-md hover:shadow-lg hover:${identity.shadow} scale-105 active:scale-95 transition-all`;
     }
 
     // ESTADO 2: RECIÉN PERDIÓ EL FOCO (Gris Medio) - Fue la última app en la que estuviste
@@ -67,19 +78,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           title={t('sidebar.reminders')}
         >
           <Bell size={20} />
-          {overdueRemindersCount > 0 ? (
+          {overdueRemindersList.length > 0 && (
             <div className="absolute -top-2 -right-2 bg-[#DC2626] text-white text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-red-600/50 animate-pulse z-30"
               style={{ animationDuration: '1s' }}
             >
-              {overdueRemindersCount}
+              {overdueRemindersList.length}
             </div>
-          ) : imminentRemindersCount > 0 ? (
-            <div className="absolute -top-2 -right-2 bg-[#FFFD55] text-[#451a03] text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-amber-500/50 animate-pulse z-30"
-              style={{ animationDuration: '1s' }}
-            >
-              {imminentRemindersCount}
-            </div>
-          ) : null}
+          )}
         </button>
 
         {/* Timer Button with Badge */}

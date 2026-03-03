@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Clock, Trash2, CheckCircle2, Play, Pause, Square, Flag, History as HistoryIcon, Zap, ChevronDown, ChevronUp, RotateCcw, Archive as ArchiveIcon, Wrench } from 'lucide-react';
+import { Plus, Clock, Trash2, CheckCircle2, Play, Pause, Square, Flag, History as HistoryIcon, Zap, ChevronDown, ChevronUp, RotateCcw, Archive as ArchiveIcon, Wrench, Bell } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import { SmartNotesEditor } from '../src/components/editor/SmartNotesEditor';
+import { useUIStore } from '../src/lib/store';
 
 // --- TYPES ---
 type TimerStatus = 'main' | 'active' | 'history';
@@ -107,6 +108,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
     const [expandedActiveIds, setExpandedActiveIds] = useState<Set<string>>(new Set());
     const [expandedHistoryIds, setExpandedHistoryIds] = useState<Set<string>>(new Set());
     const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
+    const { showOverdueMarquee, setShowOverdueMarquee, overdueRemindersCount } = useUIStore();
 
     const fetchTimers = useCallback(async () => {
         setLoading(true);
@@ -249,9 +251,26 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                         </div>
                         Cronómetros
                     </h1>
-                    <button onClick={createNewDraft} className="bg-[#2563EB] hover:bg-blue-700 text-white p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 active:scale-95 shrink-0">
-                        <Plus size={20} /> <span className="text-sm font-bold hidden sm:inline pr-2 text-white">Nuevo</span>
-                    </button>
+                    
+                    <div className="flex items-center gap-3">
+                        {/* Botón Toggle Reminder */}
+                        <button
+                          onClick={() => setShowOverdueMarquee(!showOverdueMarquee)}
+                          className={`p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                            showOverdueMarquee 
+                              ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
+                              : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
+                          }`}
+                          title={showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
+                        >
+                          <Bell size={18} className={overdueRemindersCount > 0 ? 'animate-pulse' : ''} />
+                          <span className="text-xs font-bold">{overdueRemindersCount}</span>
+                        </button>
+
+                        <button onClick={createNewDraft} className="bg-[#2563EB] hover:bg-blue-700 text-white p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 active:scale-95 shrink-0">
+                            <Plus size={20} /> <span className="text-sm font-bold hidden sm:inline pr-2 text-white">Nuevo</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 

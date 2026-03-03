@@ -170,21 +170,23 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
     const [editingActiveIds, setEditingActiveIds] = useState<Set<string>>(new Set());
     const [expandedHistoryIds, setExpandedHistoryIds] = useState<Set<string>>(new Set()); 
     const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
-    const { setOverdueRemindersCount, setImminentRemindersCount } = useUIStore();
+    const lastActionTimeRef = useRef<number>(0);
+    const { setOverdueRemindersCount, setImminentRemindersCount, showOverdueMarquee, setShowOverdueMarquee, overdueRemindersCount } = useUIStore();
 
-    const fetchReminders = useCallback(async () => {
-        setLoading(true);
+    const fetchReminders = useCallback(async (silent = false) => {
+        // Guard: Ignore background re-fetches if we just performed a manual action (2s window)
+        if (silent && (Date.now() - lastActionTimeRef.current < 2000)) return;
+
+        if (!silent) setLoading(true);
         try {
             const { data, error } = await supabase.from('reminders').select('*').eq('user_id', session.user.id).order('updated_at', { ascending: false }).order('created_at', { ascending: false });
             if (error) throw error;
             setReminders(data as AdvancedReminder[]);
-        } catch (e: any) { console.error(e.message); } finally { setLoading(false); }
+        } catch (e: any) { console.error(e.message); } finally { if (!silent) setLoading(false); }
     }, [session.user.id]);
 
     useEffect(() => { 
         fetchReminders(); 
-        window.addEventListener('reminder-attended', fetchReminders);
-        return () => window.removeEventListener('reminder-attended', fetchReminders);
     }, [fetchReminders]);
 
     useEffect(() => {
@@ -308,8 +310,15 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
             return t;
         });
         const allDone = newTargets.every(t => t.is_completed);
-        if (allDone) changeStatus(reminderId, 'history');
-        autoSave(reminderId, { targets: newTargets });
+        lastActionTimeRef.current = Date.now(); // Set guard timestamp
+
+        if (allDone) {
+            setReminders(prev => prev.map(r => r.id === reminderId ? { ...r, targets: newTargets, status: 'history' } : r));
+            supabase.from('reminders').update({ targets: newTargets, status: 'history' }).eq('id', reminderId).then();
+        } else {
+            setReminders(prev => prev.map(r => r.id === reminderId ? { ...r, targets: newTargets } : r));
+            supabase.from('reminders').update({ targets: newTargets }).eq('id', reminderId).then();
+        }
     };
 
     const toggleExpandActive = (id: string) => setExpandedActiveIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -318,9 +327,10 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
 
     if (loading) return <div className="p-10 text-center animate-pulse text-zinc-500">Cargando Tiempos...</div>;
 
-    const drafts = reminders.filter(r => r.status === 'main');
-    const activeReminders = reminders.filter(r => r.status === 'active');
-    const history = reminders.filter(r => r.status === 'history');
+    const sortAlpha = (arr: AdvancedReminder[]) => [...arr].sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    const drafts = sortAlpha(reminders.filter(r => r.status === 'main'));
+    const activeReminders = sortAlpha(reminders.filter(r => r.status === 'active'));
+    const history = sortAlpha(reminders.filter(r => r.status === 'history'));
 
     return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
@@ -332,9 +342,26 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                         </div>
                         Recordatorios
                     </h1>
-                    <button onClick={createNewDraft} className="bg-[#1F3760] hover:bg-[#152643] text-white p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all flex items-center gap-2 active:scale-95 shrink-0">
-                        <Plus size={20} /> <span className="text-sm font-bold hidden sm:inline pr-2 text-white">Nuevo</span>
-                    </button>
+                    
+                    <div className="flex items-center gap-3">
+                        {/* Botón Toggle Reminder */}
+                        <button
+                          onClick={() => setShowOverdueMarquee(!showOverdueMarquee)}
+                          className={`p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                            showOverdueMarquee 
+                              ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
+                              : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
+                          }`}
+                          title={showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
+                        >
+                          <Bell size={18} className={overdueRemindersCount > 0 ? 'animate-pulse' : ''} />
+                          <span className="text-xs font-bold">{overdueRemindersCount}</span>
+                        </button>
+
+                        <button onClick={createNewDraft} className="bg-[#1F3760] hover:bg-[#152643] text-white p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all flex items-center gap-2 active:scale-95 shrink-0">
+                            <Plus size={20} /> <span className="text-sm font-bold hidden sm:inline pr-2 text-white">Nuevo</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -540,20 +567,18 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                                             <span className={isSleeping ? 'text-[#225B49] font-bold' : (relTime.includes('Vencido') ? 'text-[#ff2800] animate-pulse' : 'text-[#7E7E85]')}>{isSleeping && isRecurrent ? 'Descansando' : (isSleeping ? 'Terminado' : relTime)}</span>
                                                                         </div>
                                                                     </div>
-                                                                    <div className="flex flex-col gap-1 text-[11px] pl-7 mt-1.5">
-                                                                        <div className="flex items-center flex-wrap gap-2">
+                                                                    <div className="flex flex-col gap-1 pl-7 mt-1.5">
+                                                                        <div className="flex items-center flex-wrap gap-2 text-[11px] font-bold">
                                                                             {t.last_completed_at && (
-                                                                                <span className="text-[#225B49] font-bold">✓ Última atención: {formatCustomDate(t.last_completed_at, dateFormat, timeFormat)}<span className="mx-1 text-zinc-300 dark:text-zinc-600 hidden sm:inline">,</span></span>
+                                                                                <span className="text-[#225B49]">✓ Última atención: {formatCustomDate(t.last_completed_at, dateFormat, timeFormat)}<span className="mx-1 text-zinc-300 dark:text-zinc-600 hidden sm:inline">,</span></span>
                                                                             )}
                                                                             <span className={isSleeping ? 'text-zinc-500' : colorClass}>Próximo recordatorio: {formatCustomDate(t.due_at, dateFormat, timeFormat)}</span>
-                                                                        </div>
-                                                                        {isSleeping && isRecurrent && (
-                                                                            <div className="mt-1">
-                                                                                <span className="inline-block text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
-                                                                                    ✓ Listo por ahora. Regresa el {formatCustomDate(t.due_at, dateFormat, timeFormat)}
+                                                                            {isSleeping && isRecurrent && (
+                                                                                <span className="text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded text-[10px]">
+                                                                                    ✓ Listo por ahora
                                                                                 </span>
-                                                                            </div>
-                                                                        )}
+                                                                            )}
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             )})}

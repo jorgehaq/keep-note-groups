@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, KanbanSquare, Archive, Inbox, LayoutDashboard } from 'lucide-react';
+import { Plus, KanbanSquare, Archive, Inbox, LayoutDashboard, Bell } from 'lucide-react';
 import { Task, TaskStatus, Group } from '../types';
 import { supabase } from '../src/lib/supabaseClient';
 import { KanbanBoard } from './KanbanBoard';
@@ -29,7 +29,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
     const { t } = useTranslation();
 
     // --- STORE ---
-    const { setKanbanCounts } = useUIStore();
+    const { setKanbanCounts, showOverdueMarquee, setShowOverdueMarquee, overdueRemindersCount } = useUIStore();
 
     // --- FETCH ---
     useEffect(() => {
@@ -143,6 +143,20 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                                 </button>
                             ))}
                         </div>
+                        
+                        {/* Botón Toggle Reminder */}
+                        <button
+                          onClick={() => setShowOverdueMarquee(!showOverdueMarquee)}
+                          className={`p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                            showOverdueMarquee 
+                              ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
+                              : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
+                          }`}
+                          title={showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
+                        >
+                          <Bell size={18} className={overdueRemindersCount > 0 ? 'animate-pulse' : ''} />
+                          <span className="text-xs font-bold">{overdueRemindersCount}</span>
+                        </button>
 
                         <button 
                             onClick={handleAdd} 

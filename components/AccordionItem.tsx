@@ -20,6 +20,7 @@ interface AccordionItemProps {
   searchQuery?: string;
   noteFont?: NoteFont;
   noteFontSize?: string;
+  isHighlightedBySearch?: boolean;
 }
 
 const formatCleanDate = (isoString?: string) => {
@@ -63,6 +64,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   searchQuery,
   noteFont = 'sans',
   noteFontSize = 'medium',
+  isHighlightedBySearch = false,
 }) => {
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const fontClass = noteFont === 'serif' ? 'font-serif' : noteFont === 'mono' ? 'font-mono text-xs' : 'font-sans';
@@ -179,11 +181,15 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
   // 🚀 FIX: Estandarización de ring y hover across toda la app, dependiente exclusivamente de pseudo-clases css
   return (
-    <div className="mb-4 transition-all duration-300 flex flex-col bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50">
+    <div className={`mb-4 transition-all duration-300 flex flex-col bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border hover:shadow-xl hover:shadow-indigo-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 ${
+      isHighlightedBySearch
+        ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50/30 dark:bg-amber-900/10'
+        : 'border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50'
+    }`}>
       
       <div
         ref={headerRef}
-        className={`flex items-start sm:items-center justify-between px-4 ${note.isOpen ? 'pt-4 pb-[13px]' : 'py-4'} cursor-pointer transition-colors ${note.isOpen
+        className={`flex items-start sm:items-center justify-between p-4 cursor-pointer transition-colors ${note.isOpen
           ? ''
           : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 rounded-2xl'
           }`}
@@ -192,7 +198,13 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         <div className="flex items-center gap-3 flex-1 overflow-hidden pl-1">
           <div className="flex flex-col min-w-0 justify-center">
             <div className="relative inline-flex max-w-full">
-              <span className="invisible whitespace-pre text-lg font-bold px-0.5 min-h-[1.5em]">{tempTitle || "Título de la nota..."}</span>
+              {/* Overlay para resaltado de búsqueda */}
+              <div className="absolute inset-0 w-full pointer-events-none text-lg font-bold px-0.5 min-h-[1.5em] flex items-center overflow-hidden whitespace-nowrap">
+                <span className="truncate">
+                  {searchQuery ? highlightText(tempTitle, searchQuery) : ""}
+                </span>
+              </div>
+              
               <input
                 ref={titleInputRef}
                 type="text"
@@ -205,7 +217,11 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 }}
                 onClick={(e) => e.stopPropagation()}
                 placeholder="Título de la nota..."
-                className="absolute inset-0 w-full bg-transparent text-lg font-bold text-zinc-800 dark:text-[#C4C7C5] outline-none placeholder-zinc-400 transition-colors cursor-text"
+                className={`w-full bg-transparent text-lg font-bold outline-none placeholder-zinc-400 transition-colors cursor-text pr-2 ${
+                  searchQuery && tempTitle.toLowerCase().includes(searchQuery.toLowerCase())
+                    ? "text-transparent caret-zinc-800 dark:caret-[#C4C7C5]"
+                    : "text-zinc-800 dark:text-[#C4C7C5]"
+                }`}
                 title="Haz clic para editar"
               />
             </div>
@@ -265,7 +281,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             </div>
           )}
 
-          <div className={`px-4 ${note.isOpen ? 'pt-1 pb-4' : 'py-4'} w-full overflow-hidden`}>
+          <div className="p-4 w-full overflow-hidden">
             {note.is_checklist ? (
               <div className="bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4">
                 <DragDropContext onDragEnd={handleDragEndChecklist}>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell, Grid, ChevronsDownUp } from 'lucide-react';
 import { KanbanSemaphore } from './KanbanSemaphore';
 import { supabase } from '../src/lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
@@ -46,11 +46,13 @@ const parseMarkdownPreview = (text: string) => {
 };
 
 export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteFontSize?: string }> = ({ session, noteFont, noteFontSize }) => {
-    const { isBraindumpMaximized, setIsBraindumpMaximized, brainDumps: dumps, setBrainDumps: setDumps } = useUIStore();
+    const { isBraindumpMaximized, setIsBraindumpMaximized, brainDumps: dumps, setBrainDumps: setDumps, showOverdueMarquee, setShowOverdueMarquee, overdueRemindersCount, globalTasks } = useUIStore();
     const [loading, setLoading] = useState(false);
     
     // Memoria para expansiones en el Archivo
     const [expandedHistoryIds, setExpandedHistoryIds] = useState<Set<string>>(new Set());
+    const [focusedDumpId, setFocusedDumpId] = useState<string | null>(null);
+    const [isDumpTrayOpen, setIsDumpTrayOpen] = useState(false);
     const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
 
     // Cargamos pizarras al montar si el store está vacío
@@ -59,6 +61,16 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
             window.dispatchEvent(new CustomEvent('reload-app-data'));
         }
     }, []);
+
+    // 🚀 Lógica de Foco Único: Auto-seleccionar el primero si no hay ninguno enfocado
+    useEffect(() => {
+        const activeDumps = dumps.filter(d => d.status !== 'history');
+        if (activeDumps.length > 0 && !focusedDumpId) {
+            setFocusedDumpId(activeDumps[0].id);
+        } else if (activeDumps.length === 0 && focusedDumpId) {
+            setFocusedDumpId(null);
+        }
+    }, [dumps, focusedDumpId]);
 
     const autoSave = (id: string, updates: Partial<BrainDump>) => {
         setDumps(prev => prev.map(d => d.id === id ? { ...d, ...updates, updated_at: new Date().toISOString() } : d));
@@ -73,7 +85,8 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
             .insert([{ title: '', content: '', status: 'main', user_id: session.user.id }])
             .select().single();
         if (newMain) {
-            // No agregamos manualmente al estado, Realtime lo hará vía reload-app-data o listener
+            setFocusedDumpId(newMain.id);
+            // El resto de la lista se actualizará vía Realtime
         }
     };
 
@@ -84,6 +97,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
     const deleteDump = async (id: string) => {
         if (!window.confirm('¿Eliminar permanentemente este pizarrón?')) return;
         await supabase.from('brain_dumps').delete().eq('id', id);
+        if (focusedDumpId === id) setFocusedDumpId(null);
     };
 
     const toggleExpandHistory = (id: string) => setExpandedHistoryIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -96,36 +110,107 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
 
     return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
-            <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
-                <div className="flex items-center justify-between px-4 md:px-6 py-4">
+            <div className={`sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md shrink-0 ${isDumpTrayOpen ? '' : 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm'}`}>
+                <div className={`flex items-center justify-between px-4 md:px-6 py-4 ${isDumpTrayOpen ? 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm' : ''}`}>
                     <h1 className="text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-3">
                         <div className="p-2 bg-[#FFD700] rounded-lg text-amber-900 shadow-lg shadow-amber-500/20">
                             <PenTool size={20} />
                         </div>
                         Pizarrón
                     </h1>
-                <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setIsBraindumpMaximized(!isBraindumpMaximized)}
-                        className="p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400 transition-all active:scale-95 shrink-0"
-                        title={isBraindumpMaximized ? "Minimizar" : "Maximizar"}
-                      >
-                        {isBraindumpMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-                      </button>
+                <div className="flex items-center gap-3">
+                    {/* Botón Toggle Bandeja de Pizarrones */}
+                    {pizarrones.length > 0 && (
+                        <button
+                            onClick={() => setIsDumpTrayOpen(!isDumpTrayOpen)}
+                            className={`p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                                isDumpTrayOpen
+                                    ? 'bg-[#FFD700] border-amber-400 text-amber-950 shadow-md shadow-amber-500/20'
+                                    : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-amber-50 dark:hover:bg-amber-900/10 hover:text-amber-600 dark:hover:text-amber-400'
+                            }`}
+                            title={isDumpTrayOpen ? "Ocultar Pizarrones" : "Mostrar Pizarrones"}
+                        >
+                            <ChevronsDownUp size={18} className={`transition-transform duration-300 ${isDumpTrayOpen ? 'rotate-180' : ''}`} />
+                            <span className="text-xs font-bold">{pizarrones.length}</span>
+                        </button>
+                    )}
+
+                    {/* Botón Toggle Reminder */}
+                    <button
+                      onClick={() => setShowOverdueMarquee(!showOverdueMarquee)}
+                      className={`p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                        showOverdueMarquee 
+                          ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
+                          : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
+                      }`}
+                      title={showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
+                    >
+                      <Bell size={18} className={overdueRemindersCount > 0 ? 'animate-pulse' : ''} />
+                      <span className="text-xs font-bold">{overdueRemindersCount}</span>
+                    </button>
+
+                    <button
+                      onClick={() => setIsBraindumpMaximized(!isBraindumpMaximized)}
+                      className="p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400 transition-all active:scale-95 shrink-0"
+                      title={isBraindumpMaximized ? "Minimizar" : "Maximizar"}
+                    >
+                      {isBraindumpMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                    </button>
                     <button onClick={createNewDraft} className="bg-[#FFD700] hover:bg-[#E5C100] text-amber-950 p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2 active:scale-95 shrink-0">
                         <Plus size={20} /> <span className="text-sm font-bold hidden sm:inline pr-2 text-amber-950">Nuevo Pizarrón</span>
                     </button>
                 </div>
                 </div>
+
+                {/* FRANJA DE PIZARRONES (ACCESOS DIRECTOS) */}
+                {isDumpTrayOpen && pizarrones.length > 0 && (
+                    <div className="pt-4 px-4 pb-0 bg-[#09090B] dark:bg-[#09090B]">
+                        <div className="flex flex-wrap justify-center gap-2.5">
+                             {pizarrones.map(p => {
+                                 const isFocused = focusedDumpId === p.id;
+                                 const linkedTask = globalTasks?.find(t => t.id === p.id);
+                                 let dotColorClass = null;
+                                 if (linkedTask) {
+                                     switch (linkedTask.status) {
+                                         case 'backlog': dotColorClass = 'bg-[#9E9E9E]'; break;
+                                         case 'todo': dotColorClass = 'bg-[#FBC02D]'; break;
+                                         case 'in_progress': dotColorClass = 'bg-[#1E88E5]'; break;
+                                         case 'done': dotColorClass = 'bg-[#43A047]'; break;
+                                     }
+                                 }
+
+                                 return (
+                                     <button
+                                         key={p.id}
+                                         onClick={() => setFocusedDumpId(isFocused ? null : p.id)}
+                                         className={`relative flex items-center justify-center px-4 py-2 text-[11px] font-medium rounded-xl transition-all shrink-0 ${
+                                             isFocused
+                                                 ? 'bg-[#FFD700] text-amber-950 shadow-md shadow-amber-500/20 scale-[1.02]'
+                                                 : 'bg-white/10 dark:bg-white/10 text-[#A1A1AA] hover:text-white hover:bg-white/20'
+                                         }`}
+                                     >
+                                         <span className="whitespace-nowrap">{p.title || 'Pizarrón Sin Título'}</span>
+                                         {dotColorClass && (
+                                             <div 
+                                               className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border border-[#9F9FA8]/50 z-10 shadow-sm transition-transform hover:scale-110 ${dotColorClass}`} 
+                                               title={`Estado Kanban`}
+                                             />
+                                         )}
+                                     </button>
+                                 );
+                             })}
+                        </div>
+                    </div>
+                )}
             </div>
 
-            <div className={`flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-950 ${isBraindumpMaximized ? 'p-8' : 'p-4 md:p-8'} hidden-scrollbar`}>
+            <div className={`flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-950 p-4 hidden-scrollbar`}>
                 <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto space-y-12 pb-20`}>
                     
-                    {/* 1. PIZARRONES (PERSISTENTES) */}
-                    {pizarrones.length > 0 && (
+                    {/* 1. PIZARRONES (PERSISTENTES - FILTRADO POR FOCO) */}
+                    {focusedDumpId && pizarrones.length > 0 && (
                         <div className="space-y-6 animate-fadeIn">
-                            {pizarrones.map(pizarron => {
+                            {pizarrones.filter(p => p.id === focusedDumpId).map(pizarron => {
                                 const createdMs = new Date(pizarron.created_at).getTime();
                                 const updatedMs = new Date(pizarron.updated_at).getTime();
                                 const isEdited = (updatedMs - createdMs) > 60000;
