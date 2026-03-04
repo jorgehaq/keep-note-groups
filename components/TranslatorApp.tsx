@@ -211,8 +211,8 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                 </div>
         </div>
 
-        <div className={`flex-1 overflow-y-auto ${isTranslatorMaximized ? 'p-8' : 'p-4 md:p-8'} hidden-scrollbar`}>
-            <div className={`${isTranslatorMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto space-y-12 pb-20`}>
+        <div className="flex-1 overflow-y-auto p-4 hidden-scrollbar">
+            <div className={`${isTranslatorMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto flex flex-col gap-12 pb-20`}>
                 
                 {/* 1. MÓDULO DE CREACIÓN */}
                 <div className="space-y-6 animate-fadeIn">
@@ -319,7 +319,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                 </div>
 
                 {/* 2. ARCHIVO DE TRADUCCIONES */}
-                <div className="space-y-4 pt-4 border-t border-zinc-300 dark:border-zinc-800/50">
+                <div className="space-y-4">
                     <div className="flex items-center gap-2 text-zinc-400">
                         <ArchiveIcon size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Archivo ({filteredTranslations.length}{totalArchiveCount > filteredTranslations.length ? ' de ' + totalArchiveCount : ''})</span>
                     </div>

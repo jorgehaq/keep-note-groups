@@ -53,8 +53,14 @@ function App() {
     setKanbanCounts, globalTasks, setGlobalTasks, isMaximized, setIsMaximized,
     showOverdueMarquee, setShowOverdueMarquee,
     groups, setGroups, updateNoteSync, deleteNoteSync, updateGroupSync, deleteGroupSync,
-    setTranslations, setBrainDumps
+    setTranslations, setBrainDumps,
+    focusedNoteByGroup, setFocusedNoteId,
+    noteTrayOpenByGroup, setIsGlobalNoteTrayOpen
   } = useUIStore();
+
+  // Derive per-group values for the active group
+  const focusedNoteId = activeGroupId ? (focusedNoteByGroup[activeGroupId] ?? null) : null;
+  const isGlobalNoteTrayOpen = activeGroupId ? (noteTrayOpenByGroup[activeGroupId] ?? true) : false;
   const [searchQueries, setSearchQueries] = useState<Record<string, string>>({});
   const currentSearchQuery = activeGroupId ? (searchQueries[activeGroupId] || '') : '';
   const [searchExemptNoteIds, setSearchExemptNoteIds] = useState<Set<string>>(new Set());
@@ -72,8 +78,6 @@ function App() {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const mainRef = useRef<HTMLElement>(null);
   const [groupTitleSyncStatus, setGroupTitleSyncStatus] = useState<'saved' | 'saving' | ''>('');
-  const [focusedNoteId, setFocusedNoteId] = useState<string | null>(null);
-  const [isGlobalNoteTrayOpen, setIsGlobalNoteTrayOpen] = useState(false);
 
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
@@ -88,16 +92,8 @@ function App() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (activeGroupId && focusedNoteId) {
-      // 🚀 FIX: Usamos el estado del store directamente para evitar race conditions con el 'groups' del scope local
-      const currentGroups = useUIStore.getState().groups;
-      const ag = currentGroups.find(g => g.id === activeGroupId);
-      if (!ag?.notes.find(n => n.id === focusedNoteId)) {
-        setFocusedNoteId(null);
-      }
-    }
-  }, [activeGroupId, focusedNoteId, groups]);
+  // Removed problematic focus-cleanup useEffect that was resetting state during app switch.
+  // Explicit cleanup is handled inside deleteNote and moveNote functions.
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -772,8 +768,7 @@ function App() {
         activeGroupId={activeGroupId}
         onSelectGroup={(id) => { 
           setActiveGroup(id); 
-          setFocusedNoteId(null); 
-          setIsGlobalNoteTrayOpen(true); 
+          // Per-group state is automatically restored — no forced resets needed
         }}
         onAddGroup={() => { addGroup(); setIsGlobalNoteTrayOpen(true); }}
         onOpenSettings={() => setIsSettingsOpen(true)}
@@ -784,8 +779,8 @@ function App() {
           setGlobalView('notes');
           const currentOpen = openNotesByGroup[groupId] || [];
           if (!currentOpen.includes(noteId)) toggleNote(groupId, noteId);
-          setFocusedNoteId(noteId);
-          setIsGlobalNoteTrayOpen(true);
+          setFocusedNoteId(noteId, groupId);
+          setIsGlobalNoteTrayOpen(true, groupId);
         }}
         focusedNoteId={focusedNoteId}
       />

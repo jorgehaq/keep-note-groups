@@ -41,6 +41,12 @@ interface UIStore {
     isBraindumpMaximized: boolean;
     isTranslatorMaximized: boolean;
 
+    // Persisted UI State (per-group for notes)
+    focusedNoteByGroup: Record<string, string | null>;
+    noteTrayOpenByGroup: Record<string, boolean>;
+    focusedDumpId: string | null;
+    isDumpTrayOpen: boolean;
+
     // Realtime Sync Data
     groups: Group[];
     translations: Translation[];
@@ -76,6 +82,10 @@ interface UIStore {
     setIsMaximized: (maximized: boolean) => void;
     setIsBraindumpMaximized: (maximized: boolean) => void;
     setIsTranslatorMaximized: (maximized: boolean) => void;
+    setFocusedNoteId: (id: string | null, groupId?: string) => void;
+    setIsGlobalNoteTrayOpen: (open: boolean, groupId?: string) => void;
+    setFocusedDumpId: (id: string | null) => void;
+    setIsDumpTrayOpen: (open: boolean) => void;
 
     // Dock Actions
     openGroup: (id: string) => void; // Adds to dock and sets active
@@ -109,7 +119,7 @@ interface UIStore {
 
 export const useUIStore = create<UIStore>()(
     persist(
-        (set) => ({
+        (set, get) => ({
             activeGroupId: null,
             openNotesByGroup: {},
             dockedGroupIds: [],
@@ -131,6 +141,10 @@ export const useUIStore = create<UIStore>()(
             isBraindumpMaximized: false,
             isTranslatorMaximized: false,
             showOverdueMarquee: false,
+            focusedNoteByGroup: {},
+            noteTrayOpenByGroup: {},
+            focusedDumpId: null,
+            isDumpTrayOpen: false,
 
             setActiveGroup: (id) => set({ activeGroupId: id }),
 
@@ -242,6 +256,28 @@ export const useUIStore = create<UIStore>()(
                 set({ isBraindumpMaximized: maximized }),
             setIsTranslatorMaximized: (maximized) =>
                 set({ isTranslatorMaximized: maximized }),
+            setFocusedNoteId: (id, groupId) => {
+                const gid = groupId ?? get().activeGroupId;
+                if (!gid) return;
+                set((state) => ({
+                    focusedNoteByGroup: {
+                        ...state.focusedNoteByGroup,
+                        [gid]: id,
+                    },
+                }));
+            },
+            setIsGlobalNoteTrayOpen: (open, groupId) => {
+                const gid = groupId ?? get().activeGroupId;
+                if (!gid) return;
+                set((state) => ({
+                    noteTrayOpenByGroup: {
+                        ...state.noteTrayOpenByGroup,
+                        [gid]: open,
+                    },
+                }));
+            },
+            setFocusedDumpId: (id) => set({ focusedDumpId: id }),
+            setIsDumpTrayOpen: (open) => set({ isDumpTrayOpen: open }),
             setShowOverdueMarquee: (show) => set({ showOverdueMarquee: show }),
 
             // Realtime Sync Implementation
@@ -326,8 +362,22 @@ export const useUIStore = create<UIStore>()(
                 })),
         }),
         {
-            name: "keep-note-groups-ui-storage-v4", // Bump version for editingNotes state
+            name: "keep-note-groups-ui-storage-v8", // v8: per-group focus & tray
             storage: createJSONStorage(() => localStorage),
+            partialize: (state) => ({
+                dockedGroupIds: state.dockedGroupIds,
+                openNotesByGroup: state.openNotesByGroup,
+                activeGroupId: state.activeGroupId,
+                noteSortMode: state.noteSortMode,
+                globalTasks: state.globalTasks,
+                isMaximized: state.isMaximized,
+                isBraindumpMaximized: state.isBraindumpMaximized,
+                isTranslatorMaximized: state.isTranslatorMaximized,
+                focusedNoteByGroup: state.focusedNoteByGroup,
+                noteTrayOpenByGroup: state.noteTrayOpenByGroup,
+                focusedDumpId: state.focusedDumpId,
+                isDumpTrayOpen: state.isDumpTrayOpen,
+            }),
         },
     ),
 );

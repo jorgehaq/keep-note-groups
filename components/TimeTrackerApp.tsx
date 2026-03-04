@@ -274,8 +274,8 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 hidden-scrollbar">
-                <div className="max-w-4xl mx-auto space-y-12 pb-20">
+            <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-950 p-4 hidden-scrollbar">
+                <div className="max-w-4xl mx-auto flex flex-col gap-12 pb-20">
                     
                     {/* 1. BORRADORES (EN CONSTRUCCIÓN) */}
                     {drafts.length > 0 && (
@@ -445,7 +445,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                     )}
 
                     {/* 3. ARCHIVO (HISTORIAL) */}
-                    <div className="space-y-4 pt-4 border-t border-zinc-200 dark:border-zinc-800/50 opacity-70">
+                    <div className="space-y-4 opacity-70">
                         <div className="flex items-center gap-2 text-zinc-400">
                             <ArchiveIcon size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Archivo ({history.length})</span>
                         </div>

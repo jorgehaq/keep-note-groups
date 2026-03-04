@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Star, Clock, List, X, Pin, PinOff } from 'lucide-react';
+import { Search, Clock, List, Pin, FolderOpen, X } from 'lucide-react';
 import { Group } from '../types';
 import { useUIStore } from '../src/lib/store';
 
@@ -102,58 +102,83 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
 
     if (!isOpen) return null;
 
+    // Highlight matching text in group names
+    const highlightMatch = (text: string) => {
+        if (!searchQuery.trim()) return text;
+        const regex = new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        const parts = text.split(regex);
+        return parts.map((part, i) =>
+            regex.test(part)
+                ? <mark key={i} className="bg-amber-200 dark:bg-amber-700/50 text-amber-900 dark:text-amber-100 rounded-sm px-0.5">{part}</mark>
+                : part
+        );
+    };
+
     return (
         <div className="fixed inset-0 z-[60] flex items-start justify-center pt-20 bg-black/50 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
             <div
-                className="w-full max-w-lg mx-4 sm:mx-auto bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden transform transition-all scale-100"
+                className="w-full max-w-2xl mx-4 sm:mx-auto bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden transform transition-all scale-100"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header: Search */}
-                <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-lg">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -tranzinc-y-1/2 text-zinc-400" size={20} />
+                <div className="p-4 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-lg pb-2">
+                    <div className="relative flex items-center">
+                        <Search size={15} className={`absolute left-3 pointer-events-none transition-colors ${searchQuery.trim() ? 'text-amber-600 dark:text-amber-500' : 'text-zinc-400'}`} />
                         <input
                             ref={inputRef}
                             type="text"
                             placeholder="Buscar grupos..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 bg-zinc-100 dark:bg-zinc-800 border-none rounded-xl text-zinc-900 dark:text-[#C4C7C5] placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all text-lg"
+                            className={`w-full pl-9 pr-8 py-2 text-sm rounded-lg border transition-all focus:outline-none ${searchQuery.trim()
+                                ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50'
+                                : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'}`}
                             autoFocus
                         />
+                        {searchQuery.trim() && (
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-2 p-0.5 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 bg-amber-200/50 dark:bg-amber-800/50 hover:bg-amber-300/50 dark:hover:bg-amber-700/50 rounded-full transition-colors"
+                                title="Limpiar búsqueda"
+                            >
+                                <X size={12} />
+                            </button>
+                        )}
                     </div>
                 </div>
 
                 {/* Tabs - Only show if NO search query */}
                 {!searchQuery.trim() && (
-                    <div className="flex items-center p-2 gap-2 border-b border-zinc-100 dark:border-zinc-800">
-                        <button
-                            onClick={() => handleTabChange('alpha')}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'alpha'
-                                ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-[#C4C7C5]'
-                                : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                                }`}
-                        >
-                            <List size={16} /> A-Z
-                        </button>
-                        <button
-                            onClick={() => handleTabChange('recent')}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'recent'
-                                ? 'bg-zinc-100 dark:bg-zinc-900/30 text-zinc-600 dark:text-zinc-400'
-                                : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                                }`}
-                        >
-                            <Clock size={16} /> Recientes
-                        </button>
-                        <button
-                            onClick={() => handleTabChange('pinned')}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'pinned'
-                                ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
-                                : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                                }`}
-                        >
-                            <Pin size={16} /> Pineados
-                        </button>
+                    <div className="px-4 py-1">
+                        <div className="flex bg-zinc-100 dark:bg-black/40 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                            <button
+                                onClick={() => handleTabChange('alpha')}
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-medium rounded-lg transition-all ${activeTab === 'alpha'
+                                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-[#C4C7C5] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                                    : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                                    }`}
+                            >
+                                <List size={14} /> A-Z
+                            </button>
+                            <button
+                                onClick={() => handleTabChange('recent')}
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-medium rounded-lg transition-all ${activeTab === 'recent'
+                                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-[#C4C7C5] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                                    : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                                    }`}
+                            >
+                                <Clock size={14} /> RECIENTES
+                            </button>
+                            <button
+                                onClick={() => handleTabChange('pinned')}
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-medium rounded-lg transition-all ${activeTab === 'pinned'
+                                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-[#C4C7C5] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                                    : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                                    }`}
+                            >
+                                <Pin size={14} /> PINEADOS
+                            </button>
+                        </div>
                     </div>
                 )}
 
@@ -166,62 +191,56 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
                     ) : (
                         <div className="grid grid-cols-1 gap-1">
                             {filteredGroups.map(group => {
-                                const isDocked = dockedGroupIds.includes(group.id);
                                 return (
                                     <div
                                         key={group.id}
-                                        className="group flex items-center justify-between w-full p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors relative"
+                                        className="group flex items-center justify-between w-full px-3 h-[25px] rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                                     >
                                         {/* ZONA 1: ABRIR GRUPO (Click Principal) */}
                                         <div
-                                            className="flex-1 flex items-center gap-3 cursor-pointer min-w-0"
+                                            className="flex-1 min-w-0 flex flex-row items-center gap-1.5"
                                             onClick={() => {
                                                 openGroup(group.id);
                                                 setGlobalView('notes');
                                                 onClose();
                                             }}
                                         >
-                                            {/* Avatar */}
-                                            <div className={`
-                                                w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center text-lg font-bold transition-colors
-                                                ${group.is_pinned
-                                                    ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/20 dark:text-amber-500'
-                                                    : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-400'}
-                                            `}>
-                                                {group.title.charAt(0).toUpperCase()}
-                                            </div>
-
-                                            {/* Texto */}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="font-semibold text-zinc-800 dark:text-[#C4C7C5] truncate flex items-center gap-2">
-                                                    {group.title}
-                                                </div>
-                                                <div className="text-xs text-zinc-500 flex items-center gap-1">
-                                                    {group.notes.length} notas
-                                                    {isDocked && <span className="text-zinc-500 font-medium ml-1">• Abierto</span>}
-                                                </div>
-                                            </div>
+                                            <span className="text-sm font-medium leading-none text-zinc-800 dark:text-[#C4C7C5] truncate uppercase">
+                                                {highlightMatch(group.title)}
+                                            </span>
+                                            <span className="text-sm font-medium leading-none text-zinc-800 dark:text-[#C4C7C5] opacity-40 group-hover:opacity-100 transition-opacity shrink-0">
+                                                ({group.notes.length})
+                                            </span>
                                         </div>
 
-                                        {/* ZONA 2: BOTÓN PIN (Acción Secundaria) */}
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation(); // CRÍTICO: Evita abrir el grupo
-                                                onTogglePin(group.id, !!group.is_pinned);
-                                            }}
-                                            className={`
-                                                p-2 rounded-lg transition-all ml-2
-                                                ${group.is_pinned
-                                                    ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/10 opacity-100'
-                                                    : 'text-zinc-400 hover:text-amber-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 opacity-0 group-hover:opacity-100 focus:opacity-100'}
-                                            `}
-                                            title={group.is_pinned ? "Desanclar grupo" : "Anclar grupo"}
-                                        >
-                                            {group.is_pinned
-                                                ? <Pin size={18} className="fill-current" />
-                                                : <Pin size={18} />
-                                            }
-                                        </button>
+                                        {/* ZONA 2: ACCIONES (Carpeta, Pin, Conteo) */}
+                                        <div className="flex items-center gap-1 ml-2 shrink-0">
+                                            {/* Status: Open (Folder) */}
+                                            <div className="w-6 h-6 flex items-center justify-center p-1">
+                                                {dockedGroupIds.includes(group.id) && (
+                                                    <FolderOpen size={14} className="text-[#4940D9] opacity-0 group-hover:opacity-100 transition-all shrink-0 fill-[#4940D9]" />
+                                                )}
+                                            </div>
+
+                                            {/* Action: Pin */}
+                                            <div className="w-6 h-6 flex items-center justify-center">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onTogglePin(group.id, !!group.is_pinned);
+                                                    }}
+                                                    className={`
+                                                        p-1 rounded-md transition-all
+                                                        ${group.is_pinned
+                                                            ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/10 opacity-100'
+                                                            : 'text-zinc-400 hover:text-amber-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 opacity-0 group-hover:opacity-100 focus:opacity-100'}
+                                                    `}
+                                                    title={group.is_pinned ? "Desanclar grupo" : "Anclar grupo"}
+                                                >
+                                                    <Pin size={14} className={group.is_pinned ? 'fill-current' : ''} />
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 );
                             })}

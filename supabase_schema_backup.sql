@@ -59,6 +59,18 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
 
 
 
+CREATE TYPE "public"."ai_job_status" AS ENUM (
+    'idle',
+    'queued',
+    'processing',
+    'completed',
+    'error'
+);
+
+
+ALTER TYPE "public"."ai_job_status" OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."update_modified_column"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -114,7 +126,8 @@ CREATE TABLE IF NOT EXISTS "public"."notes" (
     "is_pinned" boolean DEFAULT false,
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "is_docked" boolean DEFAULT false,
-    "is_checklist" boolean DEFAULT false
+    "is_checklist" boolean DEFAULT false,
+    "ai_summary_status" "public"."ai_job_status" DEFAULT 'idle'::"public"."ai_job_status"
 );
 
 
@@ -236,6 +249,10 @@ ALTER TABLE ONLY "public"."timers"
 
 ALTER TABLE ONLY "public"."translations"
     ADD CONSTRAINT "translations_pkey" PRIMARY KEY ("id");
+
+
+
+CREATE INDEX "idx_notes_ai_status" ON "public"."notes" USING "btree" ("ai_summary_status") WHERE ("ai_summary_status" = 'queued'::"public"."ai_job_status");
 
 
 
@@ -395,6 +412,30 @@ ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
 
 
 
+
+
+
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."brain_dumps";
+
+
+
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."groups";
+
+
+
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."notes";
+
+
+
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."reminders";
+
+
+
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."tasks";
+
+
+
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."translations";
 
 
 

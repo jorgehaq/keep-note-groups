@@ -46,31 +46,25 @@ const parseMarkdownPreview = (text: string) => {
 };
 
 export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteFontSize?: string }> = ({ session, noteFont, noteFontSize }) => {
-    const { isBraindumpMaximized, setIsBraindumpMaximized, brainDumps: dumps, setBrainDumps: setDumps, showOverdueMarquee, setShowOverdueMarquee, overdueRemindersCount, globalTasks } = useUIStore();
+    const { isBraindumpMaximized, setIsBraindumpMaximized, brainDumps: dumps, setBrainDumps: setDumps, showOverdueMarquee, setShowOverdueMarquee, overdueRemindersCount, globalTasks, focusedDumpId, setFocusedDumpId, isDumpTrayOpen, setIsDumpTrayOpen } = useUIStore();
     const [loading, setLoading] = useState(false);
     
     // Memoria para expansiones en el Archivo
     const [expandedHistoryIds, setExpandedHistoryIds] = useState<Set<string>>(new Set());
-    const [focusedDumpId, setFocusedDumpId] = useState<string | null>(null);
-    const [isDumpTrayOpen, setIsDumpTrayOpen] = useState(false);
     const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
+    const hasLoadedOnce = useRef(false);
 
     // Cargamos pizarras al montar si el store está vacío
     useEffect(() => {
         if (dumps.length === 0) {
             window.dispatchEvent(new CustomEvent('reload-app-data'));
+        } else {
+            hasLoadedOnce.current = true;
         }
-    }, []);
+    }, [dumps.length]);
 
-    // 🚀 Lógica de Foco Único: Auto-seleccionar el primero si no hay ninguno enfocado
-    useEffect(() => {
-        const activeDumps = dumps.filter(d => d.status !== 'history');
-        if (activeDumps.length > 0 && !focusedDumpId) {
-            setFocusedDumpId(activeDumps[0].id);
-        } else if (activeDumps.length === 0 && focusedDumpId) {
-            setFocusedDumpId(null);
-        }
-    }, [dumps, focusedDumpId]);
+    // Removed validation effect to prevent focus resets on app switch.
+    // Deletion explicitly clears focusedDumpId inside deleteDump.
 
     const autoSave = (id: string, updates: Partial<BrainDump>) => {
         setDumps(prev => prev.map(d => d.id === id ? { ...d, ...updates, updated_at: new Date().toISOString() } : d));
@@ -205,10 +199,10 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
             </div>
 
             <div className={`flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-950 p-4 hidden-scrollbar`}>
-                <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto space-y-12 pb-20`}>
+                <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto flex flex-col gap-12 pb-20`}>
                     
                     {/* 1. PIZARRONES (PERSISTENTES - FILTRADO POR FOCO) */}
-                    {focusedDumpId && pizarrones.length > 0 && (
+                    {focusedDumpId && pizarrones.some(p => p.id === focusedDumpId) && (
                         <div className="space-y-6 animate-fadeIn">
                             {pizarrones.filter(p => p.id === focusedDumpId).map(pizarron => {
                                 const createdMs = new Date(pizarron.created_at).getTime();
@@ -264,7 +258,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                     )}
 
                     {/* 2. ARCHIVO (HISTORIAL) */}
-                    <div className="space-y-4 pt-4 border-t border-zinc-200 dark:border-zinc-800/50 opacity-70">
+                    <div className="space-y-4 opacity-70">
                         <div className="flex items-center gap-2 text-zinc-400">
                             <ArchiveIcon size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Archivo ({archivo.length})</span>
                         </div>

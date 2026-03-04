@@ -19,7 +19,7 @@ export const KanbanList: React.FC<KanbanListProps> = ({ view, tasks, onUpdate, o
     const promoteStatus: TaskStatus = 'todo';
 
     return (
-        <div className="flex-1 overflow-y-auto hidden-scrollbar py-4 md:py-8 px-0 bg-zinc-50 dark:bg-zinc-950">
+        <div className="flex-1 overflow-y-auto hidden-scrollbar py-0 px-0">
             <div className="max-w-5xl mx-auto">
                 <div className="bg-zinc-100/50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm transition-colors min-h-[400px]">
                     {filtered.length === 0 ? (

@@ -190,7 +190,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
             </div>
 
             {/* CONTENIDO PRINCIPAL */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 hidden-scrollbar flex flex-col">
+            <div className="flex-1 overflow-y-auto p-4 hidden-scrollbar flex flex-col">
                 <div className="w-full flex flex-col h-full max-w-[1400px] mx-auto">
 
                     {/* VISTAS FUNCIONALES INTACTAS */}
