@@ -96,6 +96,15 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                         setTempTitle(pizarron.title || '');
                         inputRef.current?.blur();
                     }
+                    if (e.key === 'Tab') {
+                        e.preventDefault();
+                        // Find the editor container in the same pizarron card
+                        const card = inputRef.current?.closest('div.rounded-2xl');
+                        if (card) {
+                            const focusable = card.querySelector('.cm-content, input[type="text"]:not([placeholder*="Título"])') as HTMLElement;
+                            if (focusable) focusable.focus();
+                        }
+                    }
                 }}
                 onClick={e => e.stopPropagation()}
                 className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] outline-none placeholder-zinc-400 transition-colors p-4 pb-3"

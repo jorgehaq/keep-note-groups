@@ -187,6 +187,15 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleSaveTitle(true);
                   if (e.key === 'Escape') { e.stopPropagation(); handleCancelTitle(); }
+                  if (e.key === 'Tab') {
+                    e.preventDefault();
+                    // Focus directly into the editor area
+                    const editorContainer = contentRef.current;
+                    if (editorContainer) {
+                      const focusable = editorContainer.querySelector('input, .cm-content') as HTMLElement;
+                      if (focusable) focusable.focus();
+                    }
+                  }
                 }}
                 onClick={(e) => e.stopPropagation()}
                 placeholder="Título de la nota..."

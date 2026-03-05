@@ -620,7 +620,7 @@ function App() {
   const filteredNotes = activeGroup 
     ? (focusedNoteId 
         ? activeGroup.notes.filter(n => n.id === focusedNoteId)
-        : activeGroup.notes)
+        : [])
     : [];
 
   const handleUpdateNoteWrapper = (noteId: string, updates: Partial<Note>) => {
@@ -784,12 +784,22 @@ function App() {
         onTogglePin={toggleGroupPin}
         onLogout={handleLogout}
         onSelectDockedNote={(groupId, noteId) => {
-          setActiveGroup(groupId);
-          setGlobalView('notes');
+          const isAlreadyFocused = focusedNoteByGroup[groupId] === noteId;
           const currentOpen = openNotesByGroup[groupId] || [];
-          if (!currentOpen.includes(noteId)) toggleNote(groupId, noteId);
-          setFocusedNoteId(noteId, groupId);
-          setIsGlobalNoteTrayOpen(true, groupId);
+          const isOpen = currentOpen.includes(noteId);
+
+          if (isAlreadyFocused && globalView === 'notes') {
+            // Toggle OFF
+            setFocusedNoteId(null, groupId);
+            if (isOpen) toggleNote(groupId, noteId);
+          } else {
+            // Toggle ON or Switch
+            setActiveGroup(groupId);
+            setGlobalView('notes');
+            if (!isOpen) toggleNote(groupId, noteId);
+            setFocusedNoteId(noteId, groupId);
+            setIsGlobalNoteTrayOpen(true, groupId);
+          }
         }}
         focusedNoteId={focusedNoteId}
       />
@@ -1170,12 +1180,16 @@ function App() {
                               key={note.id}
                               onClick={() => {
                                 const isNowFocused = focusedNoteId !== note.id;
-                                setFocusedNoteId(isNowFocused ? note.id : null);
+                                const currentOpen = openNotesByGroup[activeGroup.id] || [];
+                                const isOpen = currentOpen.includes(note.id);
+
                                 if (isNowFocused) {
-                                  const currentOpen = openNotesByGroup[activeGroup.id] || [];
-                                  if (!currentOpen.includes(note.id)) {
-                                    toggleNote(activeGroup.id, note.id);
-                                  }
+                                  setFocusedNoteId(note.id);
+                                  if (!isOpen) toggleNote(activeGroup.id, note.id);
+                                } else {
+                                  // Toggle OFF
+                                  setFocusedNoteId(null);
+                                  if (isOpen) toggleNote(activeGroup.id, note.id);
                                 }
                               }}
                               className={`relative flex items-center justify-center gap-2 px-3 py-2 text-[11px] font-medium rounded-xl transition-all shrink-0 ${
