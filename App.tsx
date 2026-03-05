@@ -932,11 +932,11 @@ function App() {
          globalView === 'translator' ? <TranslatorApp session={session!} /> : (
           <>
             <div className={`sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md shrink-0 ${isGlobalNoteTrayOpen ? '' : 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm'}`}>
-               <div className={`h-[72px] flex flex-col xl:flex-row xl:items-center justify-between px-4 md:px-6 py-3 gap-3 ${isGlobalNoteTrayOpen ? 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm' : ''}`}>
+               <div className={`min-h-[72px] h-auto flex flex-col lg:flex-row lg:items-center justify-between px-4 md:px-6 py-3 gap-3 ${isGlobalNoteTrayOpen ? 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm' : ''}`}>
                  {activeGroup ? (
                     <>
                       {/* Lado Izquierdo: Icono, Título Editable y Contador */}
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
                           <button
                           onClick={() => setIsLauncherOpen(true)}
                             className="h-9 p-2 bg-[#4940D9] hover:bg-[#3D35C0] rounded-lg text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 shrink-0 transition-all"
@@ -1007,7 +1007,7 @@ function App() {
                       </div>
 
                       {/* Lado Derecho: Opciones de Grupo y Botón Nueva Nota */}
-                      <div className="flex items-center gap-2 shrink-0 pb-1 md:pb-0">
+                      <div className="flex flex-wrap items-center gap-2 shrink-0 pb-1 md:pb-0">
                           
                           {/* Controles de Grupo (En una mini-cápsula gris) */}
                           <div className="h-9 flex items-center gap-1 bg-zinc-50 dark:bg-zinc-950 p-1 rounded-xl border border-[#3F3F46] shrink-0">

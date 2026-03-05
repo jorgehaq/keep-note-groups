@@ -166,7 +166,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       
       <div
         ref={headerRef}
-        className="flex items-start sm:items-center justify-between px-4 pt-4 pb-2 transition-colors"
+        className="flex flex-wrap items-start sm:items-center justify-between px-4 pt-4 pb-2 transition-colors gap-2"
       >
         <div className="flex items-center gap-3 flex-1 overflow-hidden pl-1">
           <div className="flex flex-col min-w-0 justify-center w-full">
