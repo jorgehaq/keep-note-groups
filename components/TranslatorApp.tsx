@@ -192,7 +192,9 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                       className={`p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
                         showOverdueMarquee 
                           ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
-                          : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
+                          : overdueRemindersCount > 0
+                            ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
+                            : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
                       }`}
                       title={showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                     >

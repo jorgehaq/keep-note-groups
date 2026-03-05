@@ -197,7 +197,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     e.stopPropagation();
                     closeGroup(group.id);
                   }}
-                  className="absolute -top-1 -right-1 z-20 w-5 h-5 bg-zinc-500 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md text-xs"
+                  className="absolute top-0 right-0 z-20 w-4 h-4 bg-zinc-500 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md text-[10px]"
                   title={t('sidebar.close_dock')}
                 >
                   <X size={12} />

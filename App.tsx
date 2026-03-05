@@ -52,6 +52,8 @@ function App() {
     noteSortMode, setNoteSortMode, toggleNote, globalView, setGlobalView, 
     setKanbanCounts, globalTasks, setGlobalTasks, isMaximized, setIsMaximized,
     showOverdueMarquee, setShowOverdueMarquee,
+    overdueRemindersCount, overdueRemindersList, setOverdueRemindersList, imminentRemindersCount, setOverdueRemindersCount, 
+    setImminentRemindersCount,
     groups, setGroups, updateNoteSync, deleteNoteSync, updateGroupSync, deleteGroupSync,
     setTranslations, setBrainDumps,
     focusedNoteByGroup, setFocusedNoteId,
@@ -173,7 +175,7 @@ function App() {
     if (data) setBrainDumps(data);
   };
 
-  const { setOverdueRemindersCount, setImminentRemindersCount, overdueRemindersList, setOverdueRemindersList } = useUIStore();
+
   useEffect(() => {
     if (!session) return;
     const checkReminders = async () => {
@@ -827,17 +829,17 @@ function App() {
             <div className="w-full bg-[#0F0F12] overflow-hidden shrink-0 border-b border-zinc-800">
               <div className="py-2.5 flex items-center">
                 <div className="flex-1 overflow-hidden relative h-6 flex items-center">
-                  <div className="marquee-content text-[11px] font-medium tracking-[0.1em] text-zinc-200 uppercase">
+                  <div className="marquee-content text-[11px] font-normal tracking-[0.1em] text-[#5E5E66] uppercase">
                     {overdueRemindersList.map((r, idx) => (
                       <span key={r.targetId}>
-                        {r.title} ({r.dueAt ? new Date(r.dueAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''})
+                        {r.title} <span className="text-red-500">({r.dueAt ? new Date(r.dueAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''})</span>
                         {idx < overdueRemindersList.length - 1 ? ' | ' : ''}
                       </span>
                     ))}
                     <span className="inline-block w-20"></span>
                     {overdueRemindersList.map((r, idx) => (
                       <span key={`dup-${r.targetId}`}>
-                        {r.title} ({r.dueAt ? new Date(r.dueAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''})
+                        {r.title} <span className="text-red-500">({r.dueAt ? new Date(r.dueAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''})</span>
                         {idx < overdueRemindersList.length - 1 ? ' | ' : ''}
                       </span>
                     ))}
@@ -936,7 +938,7 @@ function App() {
                              className={`p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
                                isGlobalNoteTrayOpen 
                                  ? 'bg-[#4940D9] border-[#4940D9] text-white shadow-md shadow-[#4940D9]/20' 
-                                 : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 hover:text-indigo-600'
+                                 : 'bg-[#4940D9]/10 dark:bg-[#4940D9]/20 border-[#4940D9]/30 text-[#4940D9] hover:bg-[#4940D9]/20 dark:hover:bg-[#4940D9]/30'
                              }`}
                              title={isGlobalNoteTrayOpen ? "Ocultar bandeja de notas" : "Mostrar bandeja de notas"}
                            >
@@ -950,7 +952,9 @@ function App() {
                              className={`p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
                                showOverdueMarquee 
                                  ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
-                                 : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
+                                 : overdueRemindersCount > 0
+                                   ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
+                                   : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
                              }`}
                              title={showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                            >
@@ -1088,7 +1092,7 @@ function App() {
 
                 {/* 2. FRANJA DE NOTAS (INTEGRADA EN EL ENCABEZADO) */}
                 {isGlobalNoteTrayOpen && activeGroup && (
-                  <div className="pt-4 px-4 pb-0 bg-[#09090B] dark:bg-[#09090B]">
+                  <div className="pt-4 px-4 pb-4 bg-[#09090B] dark:bg-[#09090B]">
                     <div className="flex flex-wrap justify-center gap-2.5">
                       {sortNotesArray(activeGroup.notes, noteSortMode)
                         .map(note => {
@@ -1160,7 +1164,7 @@ function App() {
                 )}
             </div>
 
-            <main ref={mainRef} className="flex-1 overflow-y-auto hidden-scrollbar p-4">
+            <main ref={mainRef} className={`flex-1 overflow-y-auto hidden-scrollbar px-4 pb-4 ${isGlobalNoteTrayOpen && activeGroup ? 'pt-0' : 'pt-4'}`}>
               <div className={`${isMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto pb-20`}>
                 {activeGroup ? (
                   <>

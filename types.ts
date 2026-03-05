@@ -106,6 +106,7 @@ export interface BrainDump {
   id: string;
   title?: string;
   content: string;
+  is_checklist?: boolean;
   status: BrainDumpStatus;
   user_id: string;
   created_at: string;

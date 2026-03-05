@@ -4,7 +4,7 @@ import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { EditorView, ViewPlugin, Decoration, WidgetType, ViewUpdate, keymap } from '@codemirror/view';
-import { RangeSet, StateEffect, Prec } from '@codemirror/state'; 
+import { RangeSet, StateEffect, Prec, StateField } from '@codemirror/state'; 
 import { Highlighter, Languages, Loader2, Link as LinkIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -20,16 +20,61 @@ interface SmartNotesEditorProps {
 
 const ForceRedrawEffect = StateEffect.define<null>();
 
+// Double-click reveal: tracks which line number has been "unlocked" for editing
+const setRevealedLine = StateEffect.define<number | null>();
+
+const revealedLineField = StateField.define<number | null>({
+    create() { return null; },
+    update(value, tr) {
+        for (const e of tr.effects) {
+            if (e.is(setRevealedLine)) return e.value;
+        }
+        // Auto-clear when the cursor moves to a different line
+        if (value !== null && tr.selection) {
+            const cursorLine = tr.newDoc.lineAt(tr.selection.main.head).number;
+            if (cursorLine !== value) return null;
+        }
+        return value;
+    }
+});
+
+// Tracks which line the user is actively typing on (docChanged only).
+// Cleared when cursor moves to a different line without typing.
+const editingLineField = StateField.define<number | null>({
+    create() { return null; },
+    update(value, tr) {
+        // When text is typed/changed, mark the cursor's line as actively editing
+        if (tr.docChanged) {
+            const head = tr.selection
+                ? tr.selection.main.head
+                : tr.changes.mapPos(tr.startState.selection.main.head);
+            return tr.newDoc.lineAt(head).number;
+        }
+        // When cursor moves to a different line without typing, clear the editing state
+        if (value !== null && tr.selection) {
+            const cursorLine = tr.newDoc.lineAt(tr.selection.main.head).number;
+            if (cursorLine !== value) return null;
+        }
+        return value;
+    }
+});
+
+
+
 class RemoveButtonWidget extends WidgetType {
     constructor(readonly from: number, readonly to: number, readonly innerText: string) { super(); }
     eq(other: RemoveButtonWidget) { return other.from === this.from && other.to === this.to && other.innerText === this.innerText; }
     toDOM(view: EditorView) {
+        // Zero-width wrapper: takes no inline space, prevents text shifting
+        const wrapper = document.createElement("span");
+        wrapper.className = "cm-remove-btn-wrapper";
         const btn = document.createElement("span");
         btn.className = "cm-remove-btn";
         btn.innerHTML = "&times;"; 
         btn.title = "Quitar formato";
         btn.onmousedown = (e) => { e.preventDefault(); e.stopPropagation(); view.dispatch({ changes: { from: this.from, to: this.to, insert: this.innerText } }); };
-        return btn;
+        wrapper.appendChild(btn);
+        return wrapper;
     }
 }
 
@@ -69,6 +114,7 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
         const decos: any[] = [];
         const selection = view.state.selection.main;
         const lineAtCursor = view.state.doc.lineAt(selection.head).number;
+        const revealedLine = view.state.field(revealedLineField, false);
 
         const safeReplace = (from: number, to: number) => { if (from < to) decos.push(Decoration.replace({}).range(from, to)); };
         const safeMark = (className: string, from: number, to: number, attrs?: any) => {
@@ -158,7 +204,9 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
                 while ((match = rule.regex.exec(textToSearch)) !== null) {
                     const mFrom = from + match.index; const mTo = from + match.index + match[0].length;
                     if (insideCB(mFrom)) continue;
-                    const isFocused = view.state.doc.lineAt(mFrom).number === lineAtCursor;
+                    const matchLine = view.state.doc.lineAt(mFrom).number;
+                    const editingLine = view.state.field(editingLineField, false);
+                    const isFocused = matchLine === editingLine || matchLine === revealedLine;
 
                     if (rule.type === 'raw-link') safeMark('cm-custom-link', mFrom, mTo, { 'data-url': match[0] });
                     else if (rule.type === 'md-link') {
@@ -208,6 +256,20 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
 }, { decorations: v => v.decorations });
 
 const clickHandlerExtension = EditorView.domEventHandlers({
+    dblclick: (e, view) => {
+        const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
+        if (pos !== null) {
+            const line = view.state.doc.lineAt(pos).number;
+            // Set the revealed line AND force the visual plugin to redraw
+            view.dispatch({
+                effects: [
+                    setRevealedLine.of(line),
+                    ForceRedrawEffect.of(null)
+                ]
+            });
+        }
+        return false;
+    },
     click: (e) => {
         const linkNode = (e.target as HTMLElement).closest('.cm-custom-link');
         if (linkNode) { const url = linkNode.getAttribute('data-url'); if (url) { window.open(url, '_blank', 'noopener,noreferrer'); return true; } }
@@ -217,11 +279,12 @@ const clickHandlerExtension = EditorView.domEventHandlers({
         const target = e.target as HTMLElement;
         if (target.closest('.cm-custom-hl') || target.closest('.cm-custom-tr') || target.closest('.cm-custom-link')) {
             const span = target.closest('.cm-custom-hl, .cm-custom-tr, .cm-custom-link') as HTMLElement;
-            // Walk siblings forward to find the remove button
+            // Walk siblings forward to find the remove button wrapper
             let sibling = span?.nextElementSibling;
             while (sibling) {
-                if (sibling.classList.contains('cm-remove-btn')) {
-                    sibling.classList.add('cm-remove-btn-visible');
+                if (sibling.classList.contains('cm-remove-btn-wrapper')) {
+                    const btn = sibling.querySelector('.cm-remove-btn');
+                    if (btn) btn.classList.add('cm-remove-btn-visible');
                     break;
                 }
                 sibling = sibling.nextElementSibling;
@@ -272,10 +335,10 @@ const createNotesTheme = (font: string, size: string) => {
         ".cm-line": { lineHeight: "1.6" },
         "&.cm-focused": { outline: "none" },
         ".cm-gutters": { display: "none" },
-        ".cm-custom-hl": { backgroundColor: "#A1FB8E", color: "#000 !important", padding: "0 2px", fontWeight: "600" },
-        ".dark .cm-custom-hl": { backgroundColor: "#A1FB8E", color: "#000 !important" },
-        ".cm-custom-tr": { position: "relative", backgroundColor: "#4CC2FF", color: "#000 !important", padding: "0 2px", fontWeight: "600", cursor: "help" },
-        ".dark .cm-custom-tr": { backgroundColor: "#4CC2FF", color: "#000 !important" },
+        ".cm-custom-hl": { backgroundColor: "#3C3C3C", color: "#B4D0D0 !important", padding: "0 2px" },
+        ".dark .cm-custom-hl": { backgroundColor: "#3C3C3C", color: "#B4D0D0 !important" },
+        ".cm-custom-tr": { position: "relative", backgroundColor: "#0539A3", color: "#B4D0D0 !important", padding: "0 2px", cursor: "help" },
+        ".dark .cm-custom-tr": { backgroundColor: "#0539A3", color: "#B4D0D0 !important" },
         ".cm-custom-h1": { fontSize: "1.4em", fontWeight: "bold", color: "inherit", lineHeight: "1.2" },
         ".cm-custom-bold": { fontWeight: "bold", color: "inherit" },
         ".cm-custom-italic": { fontStyle: "italic", color: "inherit" },
@@ -294,9 +357,10 @@ const createNotesTheme = (font: string, size: string) => {
         ".cm-codeblock-copy": { position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "4px", borderRadius: "4px", backgroundColor: "transparent", color: "#a1a1aa", cursor: "pointer", border: "none", transition: "all 0.15s", opacity: "0" },
         ".cm-cb-header:hover .cm-codeblock-copy, .cm-cb-header-dark:hover .cm-codeblock-copy": { opacity: "1" },
         ".cm-codeblock-copy:hover": { backgroundColor: "#d4d4d8", color: "#52525b" },
-        ".cm-remove-btn": { position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", backgroundColor: "#ef4444", border: "2px solid #ffffff", color: "white !important", width: "18px", height: "18px", marginRight: "-18px", top: "-10px", left: "-6px", borderRadius: "50%", fontSize: "14px", fontWeight: "bold", lineHeight: "1", cursor: "pointer !important", zIndex: "100", opacity: "0", transform: "scale(0.8)", transition: "all 0.2s", pointerEvents: "auto" },
-        ".cm-remove-btn-visible": { opacity: "1 !important", transform: "scale(1) !important" },
-        ".cm-remove-btn:hover": { opacity: "1 !important", transform: "scale(1.1) !important" },
+        ".cm-remove-btn-wrapper": { display: "inline-block", width: "0px", overflow: "visible", verticalAlign: "baseline", position: "relative" },
+        ".cm-remove-btn": { position: "absolute", display: "inline-flex", alignItems: "center", justifyContent: "center", backgroundColor: "#ef4444", border: "2px solid #ffffff", color: "white !important", width: "18px", height: "18px", left: "-6px", top: "-14px", borderRadius: "50%", fontSize: "14px", fontWeight: "bold", lineHeight: "1", cursor: "pointer !important", zIndex: "100", opacity: "0", transition: "opacity 0.15s", pointerEvents: "none" },
+        ".cm-remove-btn-visible": { opacity: "1 !important", pointerEvents: "auto !important" },
+        ".cm-remove-btn:hover": { opacity: "1 !important", pointerEvents: "auto !important", transform: "scale(1.1)" },
         ".dark .cm-content": { color: "#A5A7A6 !important" },
         ".dark .cm-line": { color: "#A5A7A6 !important" }
     });
@@ -336,6 +400,11 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
     }), []);
 
     useEffect(() => {
+        // 🚀 FIX: Skip if user has unsaved local edits (debounce pending)
+        // This prevents a race condition where parent re-renders with stale content
+        // overwrite the user's latest typing, causing content loss.
+        if (debounceChangeTimerRef.current) return;
+
         let clean = initialContent || '';
         if (clean.includes('<p>')) {
             clean = clean.replace(/<mark data-type="translation"[^>]*data-translation-text="([^"]+)"[^>]*>([\s\S]*?)<\/mark>/g, '[[tr:$1|$2]]')
@@ -468,7 +537,9 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
                     ),
                     
                     markdown({ base: markdownLanguage, codeLanguages: languages }),
-                    dynamicTheme, 
+                    dynamicTheme,
+                    revealedLineField,
+                    editingLineField,
                     createVisualMarkupPlugin(translationsMapRef, searchQueryRef), 
                     clickHandlerExtension, hoverTooltipExtension, selectionListener, EditorView.lineWrapping, EditorView.editable.of(!readOnly)
                 ]}
