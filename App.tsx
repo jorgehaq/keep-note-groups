@@ -620,7 +620,7 @@ function App() {
   const filteredNotes = activeGroup 
     ? (focusedNoteId 
         ? activeGroup.notes.filter(n => n.id === focusedNoteId)
-        : isGlobalNoteTrayOpen ? [] : activeGroup.notes)
+        : activeGroup.notes)
     : [];
 
   const handleUpdateNoteWrapper = (noteId: string, updates: Partial<Note>) => {
@@ -771,9 +771,13 @@ function App() {
         groups={groups}
         activeGroupId={activeGroupId}
         onSelectGroup={(id) => { 
+          const store = useUIStore.getState();
+          const isReturningToRoot = store.activeGroupId === id && store.globalView === 'notes';
           setActiveGroup(id); 
           setGlobalView('notes');
-          setFocusedNoteId(null);
+          if (isReturningToRoot) {
+            setFocusedNoteId(null);
+          }
         }}
         onAddGroup={() => { addGroup(); setIsGlobalNoteTrayOpen(true); }}
         onOpenSettings={() => setIsSettingsOpen(true)}

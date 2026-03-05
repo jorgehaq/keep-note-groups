@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell, Grid, ChevronsDownUp, MoreVertical, ListTodo } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell, Grid, ChevronsDownUp, MoreVertical, ListTodo, CheckSquare, Square, GripVertical } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { KanbanSemaphore } from './KanbanSemaphore';
 import { supabase } from '../src/lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import { SmartNotesEditor } from '../src/components/editor/SmartNotesEditor';
+import { ChecklistEditor, parseMarkdownToChecklist, serializeChecklistToMarkdown } from '../src/components/editor/ChecklistEditor';
 import { useUIStore } from '../src/lib/store';
 
 // --- TYPES ---
@@ -59,8 +61,52 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
     // Floating sticky banner refs
     const pizarronHeaderRef = useRef<HTMLDivElement>(null);
     const pizarronContentRef = useRef<HTMLDivElement>(null);
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [showStickyPizarronTitle, setShowStickyPizarronTitle] = useState(false);
+
+    const PizarronTitleInput = ({ pizarron, onSave }: { pizarron: BrainDump, onSave: (title: string) => void }) => {
+        const [tempTitle, setTempTitle] = useState(pizarron.title || '');
+        const inputRef = useRef<HTMLInputElement>(null);
+        
+        useEffect(() => {
+            if (document.activeElement !== inputRef.current) {
+                setTempTitle(pizarron.title || '');
+            }
+        }, [pizarron.title]);
+
+        const handleSave = () => {
+            if (tempTitle !== (pizarron.title || '')) {
+                onSave(tempTitle);
+            }
+        };
+
+        return (
+            <input
+                ref={inputRef}
+                type="text"
+                placeholder="Título del pizarrón (opcional)"
+                value={tempTitle}
+                onChange={e => setTempTitle(e.target.value)}
+                onBlur={handleSave}
+                onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                        handleSave();
+                        inputRef.current?.blur();
+                    }
+                    if (e.key === 'Escape') {
+                        setTempTitle(pizarron.title || '');
+                        inputRef.current?.blur();
+                    }
+                }}
+                onClick={e => e.stopPropagation()}
+                className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] outline-none placeholder-zinc-400 transition-colors p-4 pb-3"
+            />
+        );
+    };
+
+
+
+
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     // Determines if the data is actually rendered so the refs exist
     const hasFocusedPizarron = focusedDumpId !== null && dumps.some(d => d.id === focusedDumpId);
@@ -257,15 +303,10 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                     
                                     {/* Pizarron header: title + action buttons */}
                                     <div ref={pizarronHeaderRef} className="flex items-center justify-between pr-3 pt-1">
-                                        <div className="relative inline-flex max-w-full p-4 pb-3 flex-1">
-                                            <span className="invisible whitespace-pre text-xl font-bold px-0.5 min-h-[1.5em]">{pizarron.title || "Título del pizarrón (opcional)"}</span>
-                                            <input 
-                                                type="text" 
-                                                placeholder="Título del pizarrón (opcional)" 
-                                                value={pizarron.title || ''} 
-                                                onChange={e => autoSave(pizarron.id, { title: e.target.value })} 
-                                                className="absolute inset-0 w-full h-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] p-4 pb-3 outline-none placeholder-zinc-400 transition-colors" 
-                                            />
+                                        <div className="flex flex-col min-w-0 justify-center w-full flex-1">
+                                            <div className="relative flex w-full">
+                                                <PizarronTitleInput pizarron={pizarron} onSave={(title) => autoSave(pizarron.id, { title })} />
+                                            </div>
                                         </div>
                                         {/* Action buttons: Kanban always visible, rest in 3-dot */}
                                         <div className="flex items-center gap-1 shrink-0">
@@ -277,7 +318,15 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                                 ><MoreVertical size={16} /></button>
                                                 {openMenuId === pizarron.id && (
                                                     <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-800 shadow-xl rounded-lg border border-zinc-200 dark:border-zinc-700 p-1 flex flex-col gap-0.5 min-w-[180px] animate-fadeIn">
-                                                        <button onClick={() => { autoSave(pizarron.id, { is_checklist: !pizarron.is_checklist }); setOpenMenuId(null); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${pizarron.is_checklist ? 'text-[#1F3760] dark:text-blue-400 bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}><ListTodo size={14} />{pizarron.is_checklist ? 'Quitar Checklist' : 'Hacer Checklist'}</button>
+                                                        <button onClick={() => { 
+                                                            const willBeChecklist = !pizarron.is_checklist;
+                                                            let contentToSave = pizarron.content;
+                                                            if (willBeChecklist) {
+                                                                contentToSave = serializeChecklistToMarkdown(parseMarkdownToChecklist(pizarron.content));
+                                                            }
+                                                            autoSave(pizarron.id, { is_checklist: willBeChecklist, content: contentToSave }); 
+                                                            setOpenMenuId(null); 
+                                                        }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${pizarron.is_checklist ? 'text-[#1F3760] dark:text-blue-400 bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}><ListTodo size={14} />{pizarron.is_checklist ? 'Quitar Checklist' : 'Hacer Checklist'}</button>
                                                         <div className="border-t border-zinc-100 dark:border-zinc-700 my-0.5" />
                                                         <button onClick={() => { changeStatus(pizarron.id, 'history'); setOpenMenuId(null); }} className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><ArchiveIcon size={14} />Archivar</button>
                                                         <button onClick={() => { deleteDump(pizarron.id); setOpenMenuId(null); }} className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"><Trash2 size={14} />Eliminar</button>
@@ -295,9 +344,12 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                             </div>
                                         )}
 
-                                        {/* Editor de Notas */}
                                         <div className="mx-4 mb-4 p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl cursor-text min-h-[150px]">
-                                            <SmartNotesEditor noteId={pizarron.id} initialContent={pizarron.content} onChange={c => autoSave(pizarron.id, { content: c })} noteFont={noteFont} noteFontSize={noteFontSize} />
+                                            {pizarron.is_checklist ? (
+                                                <ChecklistEditor idPrefix={pizarron.id} initialContent={pizarron.content} onUpdate={(c) => autoSave(pizarron.id, { content: c })} />
+                                            ) : (
+                                                <SmartNotesEditor noteId={pizarron.id} initialContent={pizarron.content} onChange={c => autoSave(pizarron.id, { content: c })} noteFont={noteFont} noteFontSize={noteFontSize} />
+                                            )}
                                         </div>
                                     </div>
                                     

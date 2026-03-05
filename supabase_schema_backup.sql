@@ -95,7 +95,8 @@ CREATE TABLE IF NOT EXISTS "public"."brain_dumps" (
     "created_at" timestamp with time zone DEFAULT "now"(),
     "status" character varying DEFAULT 'history'::character varying,
     "updated_at" timestamp with time zone DEFAULT "now"(),
-    "title" "text"
+    "title" "text",
+    "is_checklist" boolean DEFAULT false
 );
 
 

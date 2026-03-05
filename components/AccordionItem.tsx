@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput } from 'lucide-react';
 import { Note, NoteFont } from '../types';
 import { SmartNotesEditor } from '../src/components/editor/SmartNotesEditor';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { ChecklistEditor, parseMarkdownToChecklist, serializeChecklistToMarkdown } from '../src/components/editor/ChecklistEditor';
 import { KanbanSemaphore } from './KanbanSemaphore';
 import { MoveToGroupModal } from './MoveToGroupModal';
 import { Group } from '../types';
@@ -66,6 +66,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   noteFontSize = 'medium',
   isHighlightedBySearch = false,
 }) => {
+
+
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const fontClass = noteFont === 'serif' ? 'font-serif' : noteFont === 'mono' ? 'font-mono text-xs' : 'font-sans';
   const [isEditingTitle, setIsEditingTitle] = useState(!note.title);
@@ -109,28 +111,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
-  const toggleChecklistItem = (index: number) => {
-    const lines = note.content.split('\n');
-    const line = lines[index];
-    if (line.startsWith('[x] ')) lines[index] = '[ ] ' + line.slice(4);
-    else if (line.startsWith('[ ] ')) lines[index] = '[x] ' + line.slice(4);
-    else lines[index] = '[x] ' + line;
-    const pendingLines = lines.filter(l => l.trim() && !l.trim().startsWith('[x] '));
-    const completedLines = lines.filter(l => l.trim() && l.trim().startsWith('[x] '));
-    const emptyLines = lines.filter(l => !l.trim());
-    onUpdate(note.id, { content: [...pendingLines, ...completedLines, ...emptyLines].join('\n') });
-  };
 
-  const handleDragEndChecklist = (result: any) => {
-    if (!result.destination) return;
-    const sourceIndex = result.source.index;
-    const destinationIndex = result.destination.index;
-    if (sourceIndex === destinationIndex) return;
-    const lines = note.content.split('\n');
-    const [reorderedItem] = lines.splice(sourceIndex, 1);
-    lines.splice(destinationIndex, 0, reorderedItem);
-    onUpdate(note.id, { content: lines.join('\n') });
-  };
 
   useEffect(() => {
     if (!isMobileMenuOpen) return;
@@ -237,7 +218,16 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(!isMobileMenuOpen); }} className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"><MoreVertical size={16} /></button>
             {isMobileMenuOpen && (
               <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-800 shadow-xl rounded-lg border border-zinc-200 dark:border-zinc-700 p-1 flex flex-col gap-0.5 min-w-[180px] animate-fadeIn">
-                <button onClick={(e) => { e.stopPropagation(); onUpdate(note.id, { is_checklist: !note.is_checklist }); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_checklist ? 'text-[#1F3760] dark:text-blue-400 bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}><ListTodo size={14} />{note.is_checklist ? 'Quitar Checklist' : 'Hacer Checklist'}</button>
+                <button onClick={(e) => { 
+                  e.stopPropagation(); 
+                  const willBeChecklist = !note.is_checklist;
+                  let newContent = note.content;
+                  if (willBeChecklist) {
+                      newContent = serializeChecklistToMarkdown(parseMarkdownToChecklist(note.content));
+                  }
+                  onUpdate(note.id, { is_checklist: willBeChecklist, content: newContent }); 
+                  setIsMobileMenuOpen(false); 
+                }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_checklist ? 'text-[#1F3760] dark:text-blue-400 bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}><ListTodo size={14} />{note.is_checklist ? 'Quitar Checklist' : 'Hacer Checklist'}</button>
                 <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); onUpdate(note.id, { is_pinned: !note.is_pinned }); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_pinned ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}><Pin size={14} className={note.is_pinned ? "fill-current" : ""} />{note.is_pinned ? 'Desfijar' : 'Fijar Nota'}</button>
                 {onDuplicate && <button onClick={(e) => { e.stopPropagation(); onDuplicate(note.id); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><CopyPlus size={14} />Duplicar Nota</button>}
                 {onMove && <button onClick={(e) => { e.stopPropagation(); setIsMoveModalOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><FolderInput size={14} />Mover de Grupo</button>}
@@ -263,31 +253,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         <div className="px-4 pb-4 pt-2 w-full overflow-hidden">
           {note.is_checklist ? (
             <div className="bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4">
-              <DragDropContext onDragEnd={handleDragEndChecklist}>
-                <Droppable droppableId={`checklist-${note.id}`}>
-                  {(provided) => (
-                    <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-col gap-1">
-                      {note.content.split('\n').map((line, index) => {
-                        if (!line.trim()) return null;
-                        const isChecked = line.startsWith('[x] ');
-                        const cleanText = line.replace(/^\[[x ]\] /, '');
-                        return (
-                          <Draggable draggableId={`checklist-${note.id}-${index}`} index={index} key={`checklist-${note.id}-${index}`}>
-                            {(provided, snapshot) => (
-                              <div ref={provided.innerRef} {...provided.draggableProps} className={`flex items-start gap-1.5 group rounded-md px-1 py-0.5 transition-colors ${snapshot.isDragging ? 'bg-zinc-100 dark:bg-zinc-800 shadow-md ring-1 ring-zinc-200 dark:ring-zinc-700' : ''}`}>
-                                <div {...provided.dragHandleProps} className="mt-0.5 text-zinc-300 hover:text-zinc-500 dark:text-zinc-600 dark:hover:text-zinc-400 cursor-grab active:cursor-grabbing shrink-0"><GripVertical size={14} /></div>
-                                <button onClick={(e) => { e.stopPropagation(); toggleChecklistItem(index); }} className={`mt-0.5 shrink-0 rounded transition-colors ${isChecked ? 'text-emerald-500' : 'text-zinc-400 hover:text-[#1F3760]'}`}>{isChecked ? <CheckSquare size={16} /> : <Square size={16} />}</button>
-                                <span className={`flex-1 text-[15px] font-sans leading-[24px] ${isChecked ? 'line-through text-zinc-400 dark:text-zinc-500' : 'text-zinc-700 dark:text-zinc-300'}`}>{highlightText(cleanText, searchQuery)}</span>
-                              </div>
-                            )}
-                          </Draggable>
-                        );
-                      })}
-                      {provided.placeholder}
-                    </div>
-                  )}
-                </Droppable>
-              </DragDropContext>
+              <ChecklistEditor idPrefix={note.id} initialContent={note.content} onUpdate={handleUpdateContent} />
             </div>
           ) : (
             <div className="bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-text min-h-[120px]">
