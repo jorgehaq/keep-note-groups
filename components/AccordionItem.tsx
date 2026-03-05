@@ -153,10 +153,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       setTempTitle(fallback);
       onUpdate(note.id, { title: fallback });
     }
-    // Note is always open, no toggle needed
   };
 
-  // 🚀 FIX: Estandarización de ring y hover across toda la app, dependiente exclusivamente de pseudo-clases css
   return (
     <div className={`m-1 mb-4 transition-all duration-300 flex flex-col bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border hover:shadow-xl hover:shadow-indigo-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 ${
       isHighlightedBySearch
@@ -171,7 +169,6 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         <div className="flex items-center gap-3 flex-1 overflow-hidden pl-1">
           <div className="flex flex-col min-w-0 justify-center w-full">
             <div className="relative flex w-full">
-              {/* Overlay para resaltado de búsqueda */}
               <div className="absolute inset-0 w-full pointer-events-none text-lg font-bold px-0.5 min-h-[1.5em] flex items-center overflow-hidden whitespace-nowrap">
                 <span className="truncate">
                   {searchQuery ? highlightText(tempTitle, searchQuery) : ""}
@@ -207,22 +204,12 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 title="Haz clic para editar"
               />
             </div>
-
-            <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 truncate">
-              {note.created_at && (<span>Creado: {formatCleanDate(note.created_at)}</span>)}
-              {note.updated_at && note.created_at && (new Date(note.updated_at).getTime() - new Date(note.created_at).getTime() > 60000) && (
-                <><span className="opacity-50">|</span><span>Editado: {formatCleanDate(note.updated_at)}</span></>
-              )}
-              {syncStatus === 'saving' && (<span className="flex items-center gap-1 text-amber-500 animate-pulse ml-1"><Loader2 size={10} className="animate-spin" /> Guardando...</span>)}
-              {syncStatus === 'saved' && (<span className="flex items-center gap-1 text-emerald-500 ml-1"><CloudCheck size={10} /> Sincronizado</span>)}
-            </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
           <KanbanSemaphore sourceId={note.id} sourceTitle={note.title || 'Sin título'} onInteract={() => {}} />
 
-          {/* 3-dot menu (visible on all sizes, contains all secondary actions) */}
           <div className="relative" ref={mobileMenuRef}>
             <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(!isMobileMenuOpen); }} className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"><MoreVertical size={16} /></button>
             {isMobileMenuOpen && (
@@ -252,7 +239,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         </div>
       </div>
 
-      <div ref={contentRef} className="p-0 bg-white dark:bg-zinc-900 relative rounded-b-2xl">
+      <div ref={contentRef} className="p-0 bg-white dark:bg-zinc-900 relative">
         {showStickyTitle && (
           <div className="sticky top-4 left-0 right-0 z-[40] flex justify-center pointer-events-none animate-fadeIn px-4">
             <div onClick={(e) => { e.stopPropagation(); headerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }} className="bg-white/95 dark:bg-zinc-100/95 backdrop-blur-md text-zinc-900 dark:text-zinc-900 px-5 py-1.5 rounded-full shadow-lg shadow-black/10 text-[13px] font-bold flex items-center gap-2 pointer-events-auto cursor-pointer active:scale-95 transition-all border border-zinc-200/50 dark:border-zinc-300 w-auto max-w-[90%] sm:max-w-[400px] hover:shadow-xl"><span className="truncate">{note.title || 'Sin título'}</span><ChevronUp size={14} className="opacity-70 shrink-0" /></div>
@@ -271,6 +258,19 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           )}
         </div>
       </div>
+
+      {/* Footer: Fechas y Estado Sync (Estilo Pizarrón) */}
+      <div className="flex items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800 mt-auto">
+        <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
+          {note.created_at && (<span>Creado: {formatCleanDate(note.created_at)}</span>)}
+          {note.updated_at && note.created_at && (new Date(note.updated_at).getTime() - new Date(note.created_at).getTime() > 60000) && (
+            <><span className="opacity-50">|</span><span>Editado: {formatCleanDate(note.updated_at)}</span></>
+          )}
+          {syncStatus === 'saving' && (<span className="flex items-center gap-1 text-amber-500 animate-pulse ml-1"><Loader2 size={10} className="animate-spin" /> Guardando...</span>)}
+          {syncStatus === 'saved' && (<span className="flex items-center gap-1 text-emerald-500 ml-1"><CloudCheck size={10} /> Sincronizado</span>)}
+        </div>
+      </div>
+
       {isMoveModalOpen && onMove && (
         <MoveToGroupModal 
           note={note} 
