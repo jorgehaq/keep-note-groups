@@ -497,7 +497,7 @@ function App() {
       });
 
       setEditingNoteId(newNote.id);
-      setFocusedNoteId(null);
+      setFocusedNoteId(newNote.id);
 
       // Scroll suave hacia la nueva nota para asegurar visibilidad
       setTimeout(() => {
@@ -615,8 +615,10 @@ function App() {
 
   const activeGroup = groups.find(g => g.id === activeGroupId);
 
-  const filteredNotes = activeGroup && focusedNoteId
-    ? activeGroup.notes.filter(n => n.id === focusedNoteId)
+  const filteredNotes = activeGroup 
+    ? (focusedNoteId 
+        ? activeGroup.notes.filter(n => n.id === focusedNoteId)
+        : isGlobalNoteTrayOpen ? [] : activeGroup.notes)
     : [];
 
   const handleUpdateNoteWrapper = (noteId: string, updates: Partial<Note>) => {
@@ -1159,7 +1161,7 @@ function App() {
             </div>
 
             <main ref={mainRef} className="flex-1 overflow-y-auto hidden-scrollbar p-4">
-              <div className={`${isMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto pb-20`}>
+              <div className={`${isMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto pb-20`}>
                 {activeGroup ? (
                   <>
 

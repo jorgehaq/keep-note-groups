@@ -212,6 +212,31 @@ const clickHandlerExtension = EditorView.domEventHandlers({
         const linkNode = (e.target as HTMLElement).closest('.cm-custom-link');
         if (linkNode) { const url = linkNode.getAttribute('data-url'); if (url) { window.open(url, '_blank', 'noopener,noreferrer'); return true; } }
         return false;
+    },
+    mouseover: (e) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('.cm-custom-hl') || target.closest('.cm-custom-tr') || target.closest('.cm-custom-link')) {
+            const span = target.closest('.cm-custom-hl, .cm-custom-tr, .cm-custom-link') as HTMLElement;
+            // Walk siblings forward to find the remove button
+            let sibling = span?.nextElementSibling;
+            while (sibling) {
+                if (sibling.classList.contains('cm-remove-btn')) {
+                    sibling.classList.add('cm-remove-btn-visible');
+                    break;
+                }
+                sibling = sibling.nextElementSibling;
+            }
+        }
+    },
+    mouseout: (e) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('.cm-custom-hl') || target.closest('.cm-custom-tr') || target.closest('.cm-custom-link')) {
+            // Remove visible class from all remove buttons in this line
+            const line = target.closest('.cm-line');
+            if (line) {
+                line.querySelectorAll('.cm-remove-btn-visible').forEach(btn => btn.classList.remove('cm-remove-btn-visible'));
+            }
+        }
     }
 });
 
@@ -270,7 +295,7 @@ const createNotesTheme = (font: string, size: string) => {
         ".cm-cb-header:hover .cm-codeblock-copy, .cm-cb-header-dark:hover .cm-codeblock-copy": { opacity: "1" },
         ".cm-codeblock-copy:hover": { backgroundColor: "#d4d4d8", color: "#52525b" },
         ".cm-remove-btn": { position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", backgroundColor: "#ef4444", border: "2px solid #ffffff", color: "white !important", width: "18px", height: "18px", marginRight: "-18px", top: "-10px", left: "-6px", borderRadius: "50%", fontSize: "14px", fontWeight: "bold", lineHeight: "1", cursor: "pointer !important", zIndex: "100", opacity: "0", transform: "scale(0.8)", transition: "all 0.2s", pointerEvents: "auto" },
-        ".cm-line:hover .cm-remove-btn": { opacity: "0.4", transform: "scale(0.9)" },
+        ".cm-remove-btn-visible": { opacity: "1 !important", transform: "scale(1) !important" },
         ".cm-remove-btn:hover": { opacity: "1 !important", transform: "scale(1.1) !important" },
         ".dark .cm-content": { color: "#A5A7A6 !important" },
         ".dark .cm-line": { color: "#A5A7A6 !important" }

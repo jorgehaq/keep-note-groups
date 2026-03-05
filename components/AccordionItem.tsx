@@ -239,7 +239,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
         <div className="flex items-center gap-2 shrink-0">
           <KanbanSemaphore sourceId={note.id} sourceTitle={note.title || 'Sin título'} onInteract={() => { if (!note.isOpen) onToggle(note.id); }} />
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden lg:flex items-center gap-1">
             <button onClick={(e) => { e.stopPropagation(); onUpdate(note.id, { is_checklist: !note.is_checklist }); }} className={`p-1.5 rounded-lg transition-all ${note.is_checklist ? 'text-[#1F3760] bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}><ListTodo size={15} /></button>
             <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); onUpdate(note.id, { is_pinned: !note.is_pinned }); }} className={`p-1.5 rounded-lg transition-all ${note.is_pinned ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'text-zinc-400 hover:text-amber-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}><Pin size={15} className={note.is_pinned ? "fill-current" : ""} /></button>
             <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); onUpdate(note.id, { is_docked: !note.is_docked }); }} className={`p-1.5 rounded-lg transition-all ${note.is_docked ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'text-zinc-400 hover:text-indigo-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}><PanelLeft size={15} /></button>
@@ -250,7 +250,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); if (confirm('¿Estás seguro de eliminar esta nota?')) onDelete(note.id); }} className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={15} /></button>
           </div>
 
-          <div className="relative flex md:hidden" ref={mobileMenuRef}>
+          <div className="relative flex lg:hidden" ref={mobileMenuRef}>
             <button onClick={(e) => { e.stopPropagation(); if (!note.isOpen) onToggle(note.id); setIsMobileMenuOpen(!isMobileMenuOpen); }} className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"><MoreVertical size={16} /></button>
             {isMobileMenuOpen && (
               <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-800 shadow-xl rounded-lg border border-zinc-200 dark:border-zinc-700 p-1 flex flex-col gap-0.5 min-w-[160px] animate-fadeIn">

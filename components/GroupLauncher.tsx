@@ -205,7 +205,11 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
                                                 onClose();
                                             }}
                                         >
-                                            <span className="text-sm font-medium leading-none text-zinc-800 dark:text-[#C4C7C5] truncate uppercase">
+                                            <span className={`text-sm font-medium leading-none truncate uppercase ${
+                                                dockedGroupIds.includes(group.id)
+                                                    ? 'text-[#4940D9]'
+                                                    : 'text-zinc-800 dark:text-[#C4C7C5]'
+                                            }`}>
                                                 {highlightMatch(group.title)}
                                             </span>
                                             <span className="text-sm font-medium leading-none text-zinc-800 dark:text-[#C4C7C5] opacity-40 group-hover:opacity-100 transition-opacity shrink-0">
