@@ -368,6 +368,7 @@ export const useUIStore = create<UIStore>()(
                 dockedGroupIds: state.dockedGroupIds,
                 openNotesByGroup: state.openNotesByGroup,
                 activeGroupId: state.activeGroupId,
+                lastLauncherTab: state.lastLauncherTab,
                 noteSortMode: state.noteSortMode,
                 globalTasks: state.globalTasks,
                 isMaximized: state.isMaximized,

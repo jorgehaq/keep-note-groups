@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid, Maximize2, Minimize2, ChevronsDownUp, Bell, Pin } from 'lucide-react';
+import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid, Maximize2, Minimize2, ChevronsDownUp, Bell, Pin, PanelLeft } from 'lucide-react';
 import { Note, Group, Theme, NoteFont, Reminder } from './types';
 import { AccordionItem } from './components/AccordionItem';
 import { Sidebar } from './components/Sidebar';
@@ -772,7 +772,8 @@ function App() {
         activeGroupId={activeGroupId}
         onSelectGroup={(id) => { 
           setActiveGroup(id); 
-          // Per-group state is automatically restored — no forced resets needed
+          setGlobalView('notes');
+          setFocusedNoteId(null);
         }}
         onAddGroup={() => { addGroup(); setIsGlobalNoteTrayOpen(true); }}
         onOpenSettings={() => setIsSettingsOpen(true)}
@@ -804,10 +805,10 @@ function App() {
           }
           
           .marquee-content {
-            display: inline-block;
+            display: flex;
+            width: max-content;
             white-space: nowrap;
             animation: marquee 30s linear infinite;
-            padding-left: 20px;
           }
 
           .marquee-content:hover {
@@ -821,6 +822,20 @@ function App() {
             -ms-overflow-style: none;
             scrollbar-width: none;
           }
+
+          @keyframes slideToUnlock {
+            from { background-position: -300px 0; }
+            to { background-position: 300px 0; }
+          }
+
+          .slide-to-unlock {
+            background: linear-gradient(to right, #71717a 0%, #71717a 40%, #e4e4e7 50%, #71717a 60%, #71717a 100%);
+            background-size: 600px 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: slideToUnlock 2s linear infinite;
+          }
         `}</style>
         <div className="flex flex-col z-50 shrink-0">
           
@@ -830,19 +845,24 @@ function App() {
               <div className="py-2.5 flex items-center">
                 <div className="flex-1 overflow-hidden relative h-6 flex items-center">
                   <div className="marquee-content text-[11px] font-normal tracking-[0.1em] text-[#5E5E66] uppercase">
-                    {overdueRemindersList.map((r, idx) => (
-                      <span key={r.targetId}>
-                        {r.title} <span className="text-red-500">({r.dueAt ? new Date(r.dueAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''})</span>
-                        {idx < overdueRemindersList.length - 1 ? ' | ' : ''}
-                      </span>
-                    ))}
-                    <span className="inline-block w-20"></span>
-                    {overdueRemindersList.map((r, idx) => (
-                      <span key={`dup-${r.targetId}`}>
-                        {r.title} <span className="text-red-500">({r.dueAt ? new Date(r.dueAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''})</span>
-                        {idx < overdueRemindersList.length - 1 ? ' | ' : ''}
-                      </span>
-                    ))}
+                    {/* Set A */}
+                    <div className="flex shrink-0 items-center pr-[100vw]">
+                      {overdueRemindersList.map((r, idx) => (
+                        <span key={`a-${r.targetId}`} className="shrink-0">
+                          {r.title} <span className="text-[#D5D6D8]">({r.dueAt ? new Date(r.dueAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''})</span>
+                          {idx < overdueRemindersList.length - 1 ? <span className="mx-2">|</span> : ''}
+                        </span>
+                      ))}
+                    </div>
+                    {/* Set B (duplicate for seamless loop) */}
+                    <div className="flex shrink-0 items-center pr-[100vw]">
+                      {overdueRemindersList.map((r, idx) => (
+                        <span key={`b-${r.targetId}`} className="shrink-0">
+                          {r.title} <span className="text-[#D5D6D8]">({r.dueAt ? new Date(r.dueAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''})</span>
+                          {idx < overdueRemindersList.length - 1 ? <span className="mx-2">|</span> : ''}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -898,14 +918,14 @@ function App() {
          globalView === 'translator' ? <TranslatorApp session={session!} /> : (
           <>
             <div className={`sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md shrink-0 ${isGlobalNoteTrayOpen ? '' : 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm'}`}>
-               <div className={`flex flex-col xl:flex-row xl:items-center justify-between px-4 md:px-6 py-3 gap-3 ${isGlobalNoteTrayOpen ? 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm' : ''}`}>
+               <div className={`h-[72px] flex flex-col xl:flex-row xl:items-center justify-between px-4 md:px-6 py-3 gap-3 ${isGlobalNoteTrayOpen ? 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm' : ''}`}>
                  {activeGroup ? (
                     <>
                       {/* Lado Izquierdo: Icono, Título Editable y Contador */}
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                           <button
-                            onClick={() => setIsLauncherOpen(true)}
-                            className="p-2 bg-[#4940D9] hover:bg-[#3D35C0] rounded-lg text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 shrink-0 transition-all"
+                          onClick={() => setIsLauncherOpen(true)}
+                            className="h-9 p-2 bg-[#4940D9] hover:bg-[#3D35C0] rounded-lg text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 shrink-0 transition-all"
                             title="Menú de Grupos"
                           >
                               <Grid size={20} />
@@ -933,23 +953,10 @@ function App() {
                             title="Haz clic para editar"
                           />
                           
-                          <button 
-                             onClick={() => setIsGlobalNoteTrayOpen(!isGlobalNoteTrayOpen)}
-                             className={`p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
-                               isGlobalNoteTrayOpen 
-                                 ? 'bg-[#4940D9] border-[#4940D9] text-white shadow-md shadow-[#4940D9]/20' 
-                                 : 'bg-[#4940D9]/10 dark:bg-[#4940D9]/20 border-[#4940D9]/30 text-[#4940D9] hover:bg-[#4940D9]/20 dark:hover:bg-[#4940D9]/30'
-                             }`}
-                             title={isGlobalNoteTrayOpen ? "Ocultar bandeja de notas" : "Mostrar bandeja de notas"}
-                           >
-                              <ChevronsDownUp size={18} className={`transition-transform duration-300 ${isGlobalNoteTrayOpen ? 'rotate-180' : ''}`} />
-                              <span className="text-xs font-bold">{activeGroup.notes.length}</span>
-                           </button>
-
-                           {/* Botón Toggle Reminder */}
+                           {/* Botón Toggle Reminder (siempre primero de izquierda a derecha) */}
                            <button
                              onClick={() => setShowOverdueMarquee(!showOverdueMarquee)}
-                             className={`p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                             className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
                                showOverdueMarquee 
                                  ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
                                  : overdueRemindersCount > 0
@@ -962,10 +969,23 @@ function App() {
                               <span className="text-xs font-bold">{overdueRemindersList.length}</span>
                            </button>
 
+                          <button 
+                             onClick={() => setIsGlobalNoteTrayOpen(!isGlobalNoteTrayOpen)}
+                             className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                               isGlobalNoteTrayOpen 
+                                 ? 'bg-[#4940D9] border-[#4940D9] text-white shadow-md shadow-[#4940D9]/20' 
+                                 : 'bg-[#4940D9]/10 dark:bg-[#4940D9]/20 border-[#4940D9]/30 text-[#4940D9] hover:bg-[#4940D9]/20 dark:hover:bg-[#4940D9]/30'
+                             }`}
+                             title={isGlobalNoteTrayOpen ? "Ocultar bandeja de notas" : "Mostrar bandeja de notas"}
+                           >
+                              <ChevronsDownUp size={18} className={`transition-transform duration-300 ${isGlobalNoteTrayOpen ? 'rotate-180' : ''}`} />
+                              <span className="text-xs font-bold">{activeGroup.notes.length}</span>
+                           </button>
+
                            {/* Botón Maximizar/Minimizar */}
                           <button
                             onClick={() => setIsMaximized(!isMaximized)}
-                            className="p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all active:scale-95 shrink-0"
+                            className="h-9 p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all active:scale-95 shrink-0"
                             title={isMaximized ? "Minimizar" : "Maximizar"}
                           >
                             {isMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
@@ -976,7 +996,7 @@ function App() {
                       <div className="flex items-center gap-2 shrink-0 pb-1 md:pb-0">
                           
                           {/* Controles de Grupo (En una mini-cápsula gris) */}
-                          <div className="flex items-center gap-1 bg-zinc-50 dark:bg-zinc-950 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800 shrink-0">
+                          <div className="h-9 flex items-center gap-1 bg-zinc-50 dark:bg-zinc-950 p-1 rounded-xl border border-[#3F3F46] shrink-0">
                               
                               {/* Buscador */}
                               <div className="relative flex items-center transition-all duration-300 mr-2">
@@ -989,7 +1009,7 @@ function App() {
                                     if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: e.target.value }));
                                     setSearchExemptNoteIds(new Set());
                                   }}
-                                  className={`w-32 md:w-32 lg:w-48 pl-7 pr-8 py-1.5 text-xs rounded-lg border transition-all focus:outline-none ${currentSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50' : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'}`}
+                                  className={`h-[26px] w-32 md:w-32 lg:w-48 pl-7 pr-8 text-xs rounded-lg border transition-all focus:outline-none ${currentSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50' : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'}`}
                                 />
                                 {currentSearchQuery.trim() && (
                                   <button onClick={() => { if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: '' })); setSearchExemptNoteIds(new Set()); }} className="absolute right-2 p-0.5 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 bg-amber-200/50 dark:bg-amber-800/50 hover:bg-amber-300/50 dark:hover:bg-amber-700/50 rounded-full transition-colors" title="Limpiar búsqueda">
@@ -1054,7 +1074,7 @@ function App() {
                           {/* Botón Principal (Nueva Nota) */}
                           <button 
                               onClick={addNote} 
-                              className="bg-[#4940D9] hover:bg-[#3D35C0] text-white p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-[#4940D9]/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
+                              className="h-9 bg-[#4940D9] hover:bg-[#3D35C0] text-white px-4 py-2 rounded-xl shadow-lg shadow-[#4940D9]/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
                           >
                               <Plus size={18} /> 
                               <span className="text-sm font-normal hidden sm:inline pr-1 text-white">Nueva Nota</span>
@@ -1064,26 +1084,40 @@ function App() {
                  ) : (
                     <>
                       <h1 className="text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-3">
-                        <div className="p-2 bg-[#4940D9] hover:bg-[#3D35C0] rounded-lg text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 transition-all cursor-default">
+                        <div className="h-9 p-2 bg-[#4940D9] hover:bg-[#3D35C0] rounded-lg text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 transition-all cursor-default">
                           <StickyNote size={20} />
                         </div>
                         Grupos de notas
                       </h1>
                       <div className="flex items-center gap-2 shrink-0">
+                        {/* Botón Toggle Reminder */}
+                        <button
+                          onClick={() => setShowOverdueMarquee(!showOverdueMarquee)}
+                          className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                            showOverdueMarquee 
+                              ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
+                              : overdueRemindersCount > 0
+                                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
+                                : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
+                          }`}
+                          title={showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
+                        >
+                          <Bell size={18} className={overdueRemindersList.length > 0 ? 'animate-pulse' : ''} />
+                          <span className="text-xs font-bold">{overdueRemindersList.length}</span>
+                        </button>
                         <button
                           onClick={addGroup}
-                          className="bg-[#4940D9] hover:bg-[#3D35C0] hover:shadow-lg hover:shadow-[#4940D9]/30 text-white p-3 rounded-full transition-all flex items-center justify-center shrink-0 shadow-md active:scale-95"
+                          className="h-9 w-9 bg-[#4940D9] hover:bg-[#3D35C0] hover:shadow-lg hover:shadow-[#4940D9]/30 text-white rounded-full transition-all flex items-center justify-center shrink-0 shadow-md active:scale-95"
                           title="Crear Nuevo Grupo"
                         >
                           <Plus size={20} />
                         </button>
                         <button
                           onClick={() => setIsLauncherOpen(true)}
-                          className="bg-[#4940D9] hover:bg-[#3D35C0] hover:shadow-lg hover:shadow-[#4940D9]/30 text-white p-2 md:px-4 md:py-2 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
-                          title="Abrir Menú de Grupos"
+                          className="h-9 w-9 flex items-center justify-center rounded-xl bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 hover:bg-[#4940D9] dark:hover:bg-[#4940D9] hover:text-white dark:hover:text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 transition-all duration-300 hover:scale-105 active:scale-95 shrink-0"
+                          title="Abrir Launcher de Grupos"
                         >
-                          <Grid size={18} />
-                          <span className="text-sm font-normal hidden sm:inline pr-1">Abrir Menú</span>
+                          <Grid size={20} />
                         </button>
                       </div>
                     </>
@@ -1149,7 +1183,12 @@ function App() {
                               }`}
                             >
                               <span className="whitespace-nowrap">{highlightTitle(note.title || 'Sin Título')}</span>
-                              {note.is_pinned && <Pin size={12} className={`ml-1 fill-current ${isFocused ? 'text-white' : 'text-amber-500'}`} />}
+                              {(note.is_docked || note.is_pinned) && (
+                                <span className="flex items-center gap-[3px] ml-1">
+                                  {note.is_docked && <span className={`inline-block w-[8px] h-[8px] rounded-full ${isFocused ? 'bg-white' : 'bg-[#85858C]'}`} />}
+                                  {note.is_pinned && <Pin size={9} className={`fill-current ${isFocused ? 'text-white' : 'text-[#85858C]'}`} />}
+                                </span>
+                              )}
                               {dotColorClass && (
                                 <div 
                                   className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border border-[#9F9FA8]/50 z-10 shadow-sm transition-transform hover:scale-110 ${dotColorClass}`} 
@@ -1220,8 +1259,10 @@ function App() {
                   </div>
                   </>
                 ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-zinc-400">
-                        <p className="mb-4 text-center">Selecciona un grupo desde la barra lateral.</p>
+                  <div className="h-full flex flex-col items-center justify-center">
+                        <p className="mb-4 text-center font-medium slide-to-unlock">
+                          Crea o selecciona un grupo para comenzar.
+                        </p>
                   </div>
                 )}
               </div>

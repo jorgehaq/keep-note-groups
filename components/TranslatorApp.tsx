@@ -178,9 +178,9 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
     <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
         
         <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
-            <div className="flex items-center justify-between px-4 md:px-6 py-4">
+            <div className="h-[72px] flex items-center justify-between px-4 md:px-6 py-4">
                 <h1 className="text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-3">
-                    <div className="p-2 bg-[#8B5CF6] rounded-lg text-white shadow-lg shadow-violet-500/20">
+                    <div className="h-9 p-2 bg-[#8B5CF6] rounded-lg text-white shadow-lg shadow-violet-500/20">
                         <Languages size={20} />
                     </div>
                     Traductor
@@ -189,7 +189,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                     {/* Botón Toggle Reminder */}
                     <button
                       onClick={() => setShowOverdueMarquee(!showOverdueMarquee)}
-                      className={`p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                      className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
                         showOverdueMarquee 
                           ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
                           : overdueRemindersCount > 0
@@ -204,7 +204,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
 
                     <button
                       onClick={() => setIsTranslatorMaximized(!isTranslatorMaximized)}
-                      className="p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 hover:text-violet-600 dark:hover:text-violet-400 transition-all active:scale-95 shrink-0"
+                      className="h-9 p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 hover:text-violet-600 dark:hover:text-violet-400 transition-all active:scale-95 shrink-0"
                       title={isTranslatorMaximized ? "Minimizar" : "Maximizar"}
                     >
                       {isTranslatorMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}

@@ -146,34 +146,18 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
     return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
             <div className={`sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md shrink-0 ${isDumpTrayOpen ? '' : 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm'}`}>
-                <div className={`flex items-center justify-between px-4 md:px-6 py-4 ${isDumpTrayOpen ? 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm' : ''}`}>
+                <div className={`h-[72px] flex items-center justify-between px-4 md:px-6 py-4 ${isDumpTrayOpen ? 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm' : ''}`}>
                     <h1 className="text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-3">
-                        <div className="p-2 bg-[#FFD700] rounded-lg text-amber-900 shadow-lg shadow-amber-500/20">
+                        <div className="h-9 p-2 bg-[#FFD700] rounded-lg text-amber-900 shadow-lg shadow-amber-500/20">
                             <PenTool size={20} />
                         </div>
                         Pizarrón
                     </h1>
                 <div className="flex items-center gap-3">
-                    {/* Botón Toggle Bandeja de Pizarrones */}
-                    {pizarrones.length > 0 && (
-                        <button
-                            onClick={() => setIsDumpTrayOpen(!isDumpTrayOpen)}
-                            className={`p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
-                                isDumpTrayOpen 
-                                  ? 'bg-[#FFD700] border-[#E5C100] text-amber-950 shadow-md shadow-[#FFD700]/20' 
-                                  : 'bg-amber-50 dark:bg-[#FFD700]/10 border-amber-200 dark:border-[#FFD700]/30 text-amber-600 dark:text-[#FFD700] hover:bg-amber-100 dark:hover:bg-[#FFD700]/20'
-                            }`}
-                            title={isDumpTrayOpen ? "Ocultar Pizarrones" : "Mostrar Pizarrones"}
-                        >
-                            <ChevronsDownUp size={18} className={`transition-transform duration-300 ${isDumpTrayOpen ? 'rotate-180' : ''}`} />
-                             <span className={`text-xs font-bold ${isDumpTrayOpen ? '' : 'text-amber-600 dark:text-[#FFD700]'}`}>{pizarrones.length}</span>
-                        </button>
-                    )}
-
-                    {/* Botón Toggle Reminder */}
+                    {/* Botón Toggle Reminder (siempre primero de izquierda a derecha) */}
                     <button
                       onClick={() => setShowOverdueMarquee(!showOverdueMarquee)}
-                      className={`p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                      className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
                         showOverdueMarquee 
                           ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
                           : overdueRemindersCount > 0
@@ -186,14 +170,30 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                       <span className="text-xs font-bold">{overdueRemindersCount}</span>
                     </button>
 
+                    {/* Botón Toggle Bandeja de Pizarrones */}
+                    {pizarrones.length > 0 && (
+                        <button
+                            onClick={() => setIsDumpTrayOpen(!isDumpTrayOpen)}
+                            className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                                isDumpTrayOpen 
+                                  ? 'bg-[#FFD700] border-[#E5C100] text-amber-950 shadow-md shadow-[#FFD700]/20' 
+                                  : 'bg-amber-50 dark:bg-[#FFD700]/10 border-amber-200 dark:border-[#FFD700]/30 text-amber-600 dark:text-[#FFD700] hover:bg-amber-100 dark:hover:bg-[#FFD700]/20'
+                            }`}
+                            title={isDumpTrayOpen ? "Ocultar Pizarrones" : "Mostrar Pizarrones"}
+                        >
+                            <ChevronsDownUp size={18} className={`transition-transform duration-300 ${isDumpTrayOpen ? 'rotate-180' : ''}`} />
+                             <span className={`text-xs font-bold ${isDumpTrayOpen ? '' : 'text-amber-600 dark:text-[#FFD700]'}`}>{pizarrones.length}</span>
+                        </button>
+                    )}
+
                     <button
                       onClick={() => setIsBraindumpMaximized(!isBraindumpMaximized)}
-                      className="p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400 transition-all active:scale-95 shrink-0"
+                      className="h-9 p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400 transition-all active:scale-95 shrink-0"
                       title={isBraindumpMaximized ? "Minimizar" : "Maximizar"}
                     >
                       {isBraindumpMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                     </button>
-                    <button onClick={createNewDraft} className="bg-[#FFD700] hover:bg-[#E5C100] text-amber-950 p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2 active:scale-95 shrink-0">
+                    <button onClick={createNewDraft} className="h-9 bg-[#FFD700] hover:bg-[#E5C100] text-amber-950 px-4 py-2 rounded-xl shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2 active:scale-95 shrink-0">
                         <Plus size={20} /> <span className="text-sm font-bold hidden sm:inline pr-2 text-amber-950">Nuevo Pizarrón</span>
                     </button>
                 </div>
@@ -253,7 +253,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                 const isEdited = (updatedMs - createdMs) > 60000;
 
                                 return (
-                                <div key={pizarron.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 flex flex-col">
+                                <div key={pizarron.id} className="m-1 bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 flex flex-col">
                                     
                                     {/* Pizarron header: title + action buttons */}
                                     <div ref={pizarronHeaderRef} className="flex items-center justify-between pr-3 pt-1">

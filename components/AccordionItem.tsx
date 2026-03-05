@@ -177,7 +177,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
   // 🚀 FIX: Estandarización de ring y hover across toda la app, dependiente exclusivamente de pseudo-clases css
   return (
-    <div className={`mb-4 transition-all duration-300 flex flex-col bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border hover:shadow-xl hover:shadow-indigo-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 ${
+    <div className={`m-1 mb-4 transition-all duration-300 flex flex-col bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border hover:shadow-xl hover:shadow-indigo-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 ${
       isHighlightedBySearch
         ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50/30 dark:bg-amber-900/10'
         : 'border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50'

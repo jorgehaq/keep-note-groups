@@ -335,9 +335,9 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
     return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
             <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
-                <div className="flex items-center justify-between px-4 md:px-6 py-4">
+                <div className="h-[72px] flex items-center justify-between px-4 md:px-6 py-4">
                     <h1 className="text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-3">
-                        <div className="p-2 bg-[#1F3760] rounded-lg text-white shadow-lg shadow-[#1F3760]/20">
+                        <div className="h-9 p-2 bg-[#1F3760] rounded-lg text-white shadow-lg shadow-[#1F3760]/20">
                             <Bell size={20} />
                         </div>
                         Recordatorios
@@ -347,7 +347,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                         {/* Botón Toggle Reminder */}
                         <button
                           onClick={() => setShowOverdueMarquee(!showOverdueMarquee)}
-                          className={`p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                          className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
                             showOverdueMarquee 
                               ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
                               : overdueRemindersCount > 0
@@ -360,7 +360,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                           <span className="text-xs font-bold">{overdueRemindersCount}</span>
                         </button>
 
-                        <button onClick={createNewDraft} className="bg-[#1F3760] hover:bg-[#152643] text-white p-2 md:px-5 md:py-2.5 rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all flex items-center gap-2 active:scale-95 shrink-0">
+                        <button onClick={createNewDraft} className="h-9 bg-[#1F3760] hover:bg-[#152643] text-white px-4 py-2 rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all flex items-center gap-2 active:scale-95 shrink-0">
                             <Plus size={20} /> <span className="text-sm font-bold hidden sm:inline pr-2 text-white">Nuevo</span>
                         </button>
                     </div>

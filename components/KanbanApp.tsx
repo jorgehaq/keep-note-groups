@@ -117,37 +117,19 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
             
             {/* 🚀 FIX: HEADER UNIFICADO (Estilo Enterprise Mental Space) */}
             <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
-                <div className="flex items-center justify-between px-4 md:px-6 py-4">
+                <div className="h-[72px] flex items-center justify-between px-4 md:px-6 py-4">
                     <h1 className="text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-3">
-                        <div className="p-2 bg-[#10B981] rounded-lg text-emerald-950 shadow-lg shadow-emerald-500/20 shrink-0">
+                        <div className="h-9 p-2 bg-[#10B981] rounded-lg text-emerald-950 shadow-lg shadow-emerald-500/20 shrink-0">
                             <KanbanSquare size={20} />
                         </div>
                         Kanban
                     </h1>
 
                     <div className="flex items-center gap-3">
-                        {/* 🚀 FIX: TABS EN EL HEADER (Premium Segmented Control Style) */}
-                        <div className="hidden md:flex bg-zinc-100 dark:bg-black/40 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800 shrink-0">
-                            {TABS.map((tab) => (
-                                <button
-                                    key={tab.key}
-                                    onClick={() => setActiveTab(tab.key)}
-                                    className={`flex items-center justify-center gap-2 px-4 py-1.5 text-[11px] font-medium rounded-lg transition-all ${
-                                        activeTab === tab.key
-                                            ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-[#C4C7C5] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
-                                            : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
-                                    }`}
-                                >
-                                    {tab.icon}
-                                    <span className="hidden lg:inline">{t(tab.labelKey)}</span>
-                                </button>
-                            ))}
-                        </div>
-                        
-                        {/* Botón Toggle Reminder */}
+                        {/* Botón Toggle Reminder (siempre primero de izquierda a derecha) */}
                         <button
                           onClick={() => setShowOverdueMarquee(!showOverdueMarquee)}
-                          className={`p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                          className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
                             showOverdueMarquee 
                               ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
                               : overdueRemindersCount > 0
@@ -160,9 +142,29 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                           <span className="text-xs font-bold">{overdueRemindersCount}</span>
                         </button>
 
+                        {/* TABS EN EL HEADER */}
+                        <div className="h-9 hidden md:flex bg-zinc-100 dark:bg-black/40 p-1 rounded-xl border border-[#3F3F46] shrink-0">
+                            {TABS.map((tab) => (
+                                <button
+                                    key={tab.key}
+                                    onClick={() => setActiveTab(tab.key)}
+                                    className={`flex items-center justify-center gap-2 px-4 py-1.5 text-[11px] font-medium rounded-lg transition-all ${
+                                        activeTab === tab.key
+                                            ? 'max-h-[26px] bg-white dark:bg-zinc-800 text-zinc-900 dark:text-[#C4C7C5] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                                            : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                                    }`}
+                                >
+                                    {tab.icon}
+                                    <span className="hidden lg:inline">{t(tab.labelKey)}</span>
+                                </button>
+                            ))}
+                        </div>
+
+
+                        {/* Botón Nueva Tarea */}
                         <button 
                             onClick={handleAdd} 
-                            className="bg-[#10B981] hover:bg-emerald-600 text-emerald-950 p-2 md:px-5 md:py-2 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
+                            className="h-9 bg-[#10B981] hover:bg-emerald-600 text-emerald-950 px-4 py-2 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
                         >
                             <Plus size={18} /> 
                             <span className="text-sm font-medium hidden sm:inline pr-1">{t('kanban.new_task')}</span>
