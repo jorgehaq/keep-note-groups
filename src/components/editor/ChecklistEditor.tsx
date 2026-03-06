@@ -6,6 +6,9 @@ interface ChecklistEditorProps {
     idPrefix: string;
     initialContent: string;
     onUpdate: (newContent: string) => void;
+    noteLineHeight?: string;
+    noteFont?: string;
+    noteFontSize?: string;
 }
 
 interface ChecklistItem {
@@ -32,13 +35,16 @@ export const serializeChecklistToMarkdown = (items: ChecklistItem[]): string => 
 };
 
 const ChecklistItemRow = ({
-    item, index, idPrefix, onToggle, onUpdateText, onEnter, onDeleteIfEmpty
+    item, index, idPrefix, onToggle, onUpdateText, onEnter, onDeleteIfEmpty, noteLineHeight, noteFont, noteFontSize
 }: {
     item: ChecklistItem; index: number; idPrefix: string;
     onToggle: (id: string) => void;
     onUpdateText: (id: string, text: string) => void;
     onEnter: (id: string) => void;
     onDeleteIfEmpty: (id: string) => void;
+    noteLineHeight?: string;
+    noteFont?: string;
+    noteFontSize?: string;
 }) => {
     const [localText, setLocalText] = useState(item.text);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -94,7 +100,12 @@ const ChecklistItemRow = ({
                         value={localText}
                         onChange={handleChange}
                         onKeyDown={handleKeyDown}
-                        className={`flex-1 bg-transparent outline-none text-[15px] font-sans leading-[24px] w-full ${item.isChecked ? 'line-through text-zinc-400 dark:text-zinc-500' : 'text-zinc-700 dark:text-zinc-300'}`}
+                        className={`flex-1 bg-transparent outline-none w-full ${item.isChecked ? 'line-through text-zinc-400 dark:text-zinc-500' : 'text-zinc-700 dark:text-zinc-300'}`}
+                        style={{ 
+                            lineHeight: noteLineHeight === 'more' ? '2.0' : noteLineHeight === 'large' ? '2.5' : '1.6',
+                            fontFamily: noteFont === 'serif' ? 'var(--font-serif)' : noteFont === 'mono' ? 'var(--font-mono)' : 'var(--font-sans)',
+                            fontSize: noteFontSize === 'small' ? '13px' : noteFontSize === 'large' ? '18px' : '15px'
+                        }}
                     />
                 </div>
             )}
@@ -102,7 +113,7 @@ const ChecklistItemRow = ({
     );
 };
 
-export const ChecklistEditor: React.FC<ChecklistEditorProps> = ({ idPrefix, initialContent, onUpdate }) => {
+export const ChecklistEditor: React.FC<ChecklistEditorProps> = ({ idPrefix, initialContent, onUpdate, noteLineHeight = 'standard', noteFont = 'sans', noteFontSize = 'medium' }) => {
     const [items, setItems] = useState<ChecklistItem[]>(() => parseMarkdownToChecklist(initialContent));
     const prevInitialContent = useRef(initialContent);
 
@@ -213,6 +224,9 @@ export const ChecklistEditor: React.FC<ChecklistEditorProps> = ({ idPrefix, init
                                 onUpdateText={handleUpdateText}
                                 onEnter={handleEnter}
                                 onDeleteIfEmpty={handleDeleteIfEmpty}
+                                noteLineHeight={noteLineHeight}
+                                noteFont={noteFont}
+                                noteFontSize={noteFontSize}
                             />
                         ))}
                         {provided.placeholder}

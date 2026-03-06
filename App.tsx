@@ -69,6 +69,7 @@ function App() {
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('app-theme-preference') as Theme) || 'dark');
   const [noteFont, setNoteFont] = useState<NoteFont>(() => (localStorage.getItem('app-note-font') as NoteFont) || 'sans');
   const [noteFontSize, setNoteFontSize] = useState<string>(() => localStorage.getItem('app-note-font-size') || 'medium');
+  const [noteLineHeight, setNoteLineHeight] = useState<string>(() => localStorage.getItem('app-note-line-height') || 'standard');
   
   // 🚀 NUEVO: Formatos de Fecha y Hora
   const [dateFormat, setDateFormat] = useState<string>(() => localStorage.getItem('app-date-format') || 'dd/mm/yyyy');
@@ -301,6 +302,10 @@ function App() {
     try {
       const { data: groupsData, error: groupsError } = await supabase.from('groups').select('*').order('created_at', { ascending: true });
       if (groupsError) throw groupsError;
+
+      // 📡 Carga inicial de Pizarrones y Traducciones
+      fetchBrainDumps();
+      fetchTranslations();
 
       const { data: notesData, error: notesError } = await supabase.from('notes').select('*').order('position', { ascending: true });
       if (notesError) throw notesError;
@@ -928,7 +933,7 @@ function App() {
         ) :
          globalView === 'timers' ? <TimeTrackerApp session={session!} /> :
          globalView === 'reminders' ? <RemindersApp session={session!} dateFormat={dateFormat} timeFormat={timeFormat} /> :
-         globalView === 'braindump' ? <BrainDumpApp session={session!} noteFont={noteFont} noteFontSize={noteFontSize} /> :
+         globalView === 'braindump' ? <BrainDumpApp session={session!} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} /> :
          globalView === 'translator' ? <TranslatorApp session={session!} /> : (
           <>
             <div className={`sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md shrink-0 ${isGlobalNoteTrayOpen ? '' : 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm'}`}>
@@ -1269,6 +1274,7 @@ function App() {
                               groups={groups}
                               noteFont={noteFont}
                               noteFontSize={noteFontSize}
+                              noteLineHeight={noteLineHeight}
                             />
                           </div>
                         );
@@ -1298,6 +1304,8 @@ function App() {
         onNoteFontChange={(f: NoteFont) => { setNoteFont(f); localStorage.setItem('app-note-font', f); }}
         noteFontSize={noteFontSize}
         onNoteFontSizeChange={(s: string) => { setNoteFontSize(s); localStorage.setItem('app-note-font-size', s); }}
+        noteLineHeight={noteLineHeight}
+        onNoteLineHeightChange={(lh: string) => { setNoteLineHeight(lh); localStorage.setItem('app-note-line-height', lh); }}
         dateFormat={dateFormat}
         onDateFormatChange={(f: string) => { setDateFormat(f); localStorage.setItem('app-date-format', f); }}
         timeFormat={timeFormat}

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { X, Moon, Sun, Monitor, Type, CalendarClock, Palette, TextSelect, Languages } from 'lucide-react';
+import { X, Moon, Sun, Monitor, Type, CalendarClock, Palette, TextSelect, Languages, ArrowUpDown } from 'lucide-react';
 import { Theme, NoteFont } from '../types';
 import { useTranslation } from 'react-i18next';
 
@@ -12,6 +12,8 @@ interface SettingsWindowProps {
   onNoteFontChange: (font: NoteFont) => void;
   noteFontSize: string; 
   onNoteFontSizeChange: (size: string) => void;
+  noteLineHeight: string; 
+  onNoteLineHeightChange: (lh: string) => void;
   dateFormat: string; 
   onDateFormatChange: (f: string) => void;
   timeFormat: string; 
@@ -19,7 +21,7 @@ interface SettingsWindowProps {
 }
 
 export const SettingsWindow: React.FC<SettingsWindowProps> = ({
-  isOpen, onClose, theme, onThemeChange, noteFont, onNoteFontChange, noteFontSize, onNoteFontSizeChange, dateFormat, onDateFormatChange, timeFormat, onTimeFormatChange
+  isOpen, onClose, theme, onThemeChange, noteFont, onNoteFontChange, noteFontSize, onNoteFontSizeChange, noteLineHeight, onNoteLineHeightChange, dateFormat, onDateFormatChange, timeFormat, onTimeFormatChange
 }) => {
   const { t, i18n } = useTranslation();
   const modalRef = useRef<HTMLDivElement>(null);
@@ -153,6 +155,27 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
                       className={`flex-1 py-2 font-normal rounded-lg transition-all ${size.sizeClass} ${noteFontSize === size.id ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#C4C7C5] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
                     >
                       {size.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-normal text-zinc-600 dark:text-zinc-400 mb-2 flex items-center gap-1">
+                  <ArrowUpDown size={12}/> Interlineado
+                </p>
+                <div className="flex bg-zinc-200/50 dark:bg-zinc-900/50 rounded-xl p-1">
+                  {[
+                    { id: 'standard', label: 'Estándar' }, 
+                    { id: 'more', label: 'Más' }, 
+                    { id: 'large', label: 'Gran' }
+                  ].map((lh) => (
+                    <button 
+                      key={lh.id} 
+                      onClick={() => onNoteLineHeightChange(lh.id)} 
+                      className={`flex-1 py-2 text-xs font-normal rounded-lg transition-all ${noteLineHeight === lh.id ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#C4C7C5] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                    >
+                      {lh.label}
                     </button>
                   ))}
                 </div>

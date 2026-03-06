@@ -48,7 +48,7 @@ const parseMarkdownPreview = (text: string) => {
         .replace(/\n/g, '<span class="mx-1 opacity-30 text-[10px]">&para;</span> ');
 };
 
-export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteFontSize?: string }> = ({ session, noteFont, noteFontSize }) => {
+export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteFontSize?: string; noteLineHeight?: string }> = ({ session, noteFont, noteFontSize, noteLineHeight = 'standard' }) => {
     const { isBraindumpMaximized, setIsBraindumpMaximized, brainDumps: dumps, setBrainDumps: setDumps, showOverdueMarquee, setShowOverdueMarquee, overdueRemindersCount, globalTasks, focusedDumpId, setFocusedDumpId, isDumpTrayOpen, setIsDumpTrayOpen } = useUIStore();
     const [loading, setLoading] = useState(false);
     
@@ -181,11 +181,13 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
     };
 
     const changeStatus = async (id: string, newStatus: BrainDumpStatus) => {
+        setDumps(dumps.map(d => d.id === id ? { ...d, status: newStatus, updated_at: new Date().toISOString() } : d));
         await supabase.from('brain_dumps').update({ status: newStatus }).eq('id', id);
     };
 
     const deleteDump = async (id: string) => {
         if (!window.confirm('¿Eliminar permanentemente este pizarrón?')) return;
+        setDumps(dumps.filter(d => d.id !== id));
         await supabase.from('brain_dumps').delete().eq('id', id);
         if (focusedDumpId === id) setFocusedDumpId(null);
     };
@@ -355,9 +357,9 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
 
                                         <div className="mx-4 mb-4 p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl cursor-text min-h-[150px]">
                                             {pizarron.is_checklist ? (
-                                                <ChecklistEditor idPrefix={pizarron.id} initialContent={pizarron.content} onUpdate={(c) => autoSave(pizarron.id, { content: c })} />
+                                                <ChecklistEditor idPrefix={pizarron.id} initialContent={pizarron.content} onUpdate={(c) => autoSave(pizarron.id, { content: c })} noteLineHeight={noteLineHeight} noteFont={noteFont} noteFontSize={noteFontSize} />
                                             ) : (
-                                                <SmartNotesEditor noteId={pizarron.id} initialContent={pizarron.content} onChange={c => autoSave(pizarron.id, { content: c })} noteFont={noteFont} noteFontSize={noteFontSize} />
+                                                <SmartNotesEditor noteId={pizarron.id} initialContent={pizarron.content} onChange={c => autoSave(pizarron.id, { content: c })} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} />
                                             )}
                                         </div>
                                     </div>
