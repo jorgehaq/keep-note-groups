@@ -20,6 +20,7 @@ interface AccordionItemProps {
   searchQuery?: string;
   noteFont?: NoteFont;
   noteFontSize?: string;
+  noteLineHeight?: string;
   isHighlightedBySearch?: boolean;
 }
 
@@ -64,6 +65,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   searchQuery,
   noteFont = 'sans',
   noteFontSize = 'medium',
+  noteLineHeight = 'standard',
   isHighlightedBySearch = false,
 }) => {
 
@@ -253,7 +255,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             </div>
           ) : (
             <div className="bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-text min-h-[120px]">
-              <SmartNotesEditor noteId={note.id} initialContent={note.content} searchQuery={searchQuery} onChange={handleUpdateContent} noteFont={noteFont} noteFontSize={noteFontSize} />
+              <SmartNotesEditor noteId={note.id} initialContent={note.content} searchQuery={searchQuery} onChange={handleUpdateContent} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} />
             </div>
           )}
         </div>

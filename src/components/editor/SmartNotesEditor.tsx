@@ -15,6 +15,7 @@ interface SmartNotesEditorProps {
     onChange: (markdown: string) => void;
     noteFont?: string; 
     noteFontSize?: string; 
+    noteLineHeight?: string;
     readOnly?: boolean;
 }
 
@@ -103,6 +104,40 @@ class CodeBlockCopyWidget extends WidgetType {
 
 const KNOWN_LANGS = new Set(['bash','sh','zsh','javascript','js','typescript','ts','python','py','css','html','json','sql','java','go','rust','c','cpp','jsx','tsx','yaml','yml','xml','ruby','rb','php','swift','kotlin','dart','lua','r','scala','perl','powershell','dockerfile','makefile','graphql','toml','ini','markdown','md','plaintext','text','diff']);
 
+/**
+ * 🧹 Limpiador proactivo de bloques de código:
+ * Quita saltos de línea extras antes del cierre de un bloque ```.
+ */
+const trimCodeBlocks = (text: string) => {
+    // Busca bloques ```lang\nCONTENIDO\n+``` y quita los \n extras del final del contenido
+    return text.replace(/(^|\n)```(\w*)\n([\s\S]*?)(\n+)```/g, (match, prefix, lang, code, newlines) => {
+        // Mantenemos solo un salto de línea antes del ``` de cierre
+        const fence = '```';
+        return prefix + fence + lang + '\n' + code.trimEnd() + '\n' + fence;
+    });
+};
+
+/**
+ * Extension para interceptar el pegado y limpiar bloques de código al instante
+ */
+const pasteCleanerExtension = EditorView.domEventHandlers({
+    paste: (event, view) => {
+        const text = event.clipboardData?.getData('text/plain');
+        if (!text) return false;
+
+        // Si detectamos bloques de código con exceso de enters, aplicamos limpieza
+        if (text.includes('```') && /(\n{2,})```/.test(text)) {
+            const cleaned = trimCodeBlocks(text);
+            if (cleaned !== text) {
+                event.preventDefault();
+                view.dispatch(view.state.replaceSelection(cleaned));
+                return true;
+            }
+        }
+        return false;
+    }
+});
+
 const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Record<string, string>>, searchQueryRef: React.MutableRefObject<string>) => ViewPlugin.fromClass(class {
     decorations;
     constructor(view: EditorView) { this.decorations = this.buildDecorations(view); }
@@ -157,7 +192,7 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
                         for (let cl = openLine + 1; cl < closeLine; cl++) {
                             codeLines.push(view.state.doc.line(cl).text);
                         }
-                        const codeContent = codeLines.join('\n');
+                        const codeContent = codeLines.join('\n').trimEnd();
 
                         // Apply line decorations + hide ``` when not focused
                         const openFocused = lineAtCursor === openLine;
@@ -304,7 +339,7 @@ const clickHandlerExtension = EditorView.domEventHandlers({
 });
 
 // --- EL TEMA AHORA ES UNA FUNCIÓN DINÁMICA ---
-const createNotesTheme = (font: string, size: string) => {
+const createNotesTheme = (font: string, size: string, lineHeight: string = 'standard') => {
     // Mapeo Inteligente de Fuentes
     const fontFamily = font === 'serif' ? 'var(--font-serif) !important' :
                        font === 'mono'  ? 'var(--font-mono) !important' :
@@ -312,6 +347,9 @@ const createNotesTheme = (font: string, size: string) => {
     
     // Mapeo Inteligente de Tamaños
     const fontSize = size === 'small' ? '13px !important' : size === 'large' ? '18px !important' : '15px !important';
+
+    // Mapeo Inteligente de Interlineado
+    const lHeight = lineHeight === 'more' ? '2.0' : lineHeight === 'large' ? '2.5' : '1.6';
 
     return EditorView.theme({
         "&": {
@@ -330,13 +368,13 @@ const createNotesTheme = (font: string, size: string) => {
             fontSize: fontSize,
         },
         "&.cm-focused .cm-cursor": { borderLeftColor: "currentColor !important", borderLeftWidth: "2px !important" },
-        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": { backgroundColor: "rgba(99, 102, 241, 0.3) !important", color: "inherit !important" },
+        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": { backgroundColor: "#6C490F !important", color: "#000000 !important", fontWeight: "normal !important" },
         ".cm-content *": { textDecoration: "none !important", boxShadow: "none !important" },
-        ".cm-line": { lineHeight: "1.6" },
+        ".cm-line": { lineHeight: lHeight },
         "&.cm-focused": { outline: "none" },
         ".cm-gutters": { display: "none" },
-        ".cm-custom-hl": { backgroundColor: "#3C3C3C", color: "#B4D0D0 !important", padding: "0 2px" },
-        ".dark .cm-custom-hl": { backgroundColor: "#3C3C3C", color: "#B4D0D0 !important" },
+        ".cm-custom-hl": { backgroundColor: "#6C490F !important", color: "#000000 !important", padding: "0 2px", fontWeight: "normal !important" },
+        ".dark .cm-custom-hl": { backgroundColor: "#6C490F !important", color: "#000000 !important" },
         ".cm-custom-tr": { position: "relative", backgroundColor: "#0539A3", color: "#B4D0D0 !important", padding: "0 2px", cursor: "help" },
         ".dark .cm-custom-tr": { backgroundColor: "#0539A3", color: "#B4D0D0 !important" },
         ".cm-custom-h1": { fontSize: "1.4em", fontWeight: "bold", color: "inherit", lineHeight: "1.2" },
@@ -348,12 +386,12 @@ const createNotesTheme = (font: string, size: string) => {
         ".dark .cm-custom-hr": { backgroundColor: "#3f3f3f" },
         ".cm-search-match": { backgroundColor: "rgba(245, 158, 11, 0.4) !important", borderBottom: "2px solid #f59e0b", color: "#000 !important" },
         ".cm-selectionMatch": { backgroundColor: "#518141 !important", color: "#000 !important" },
-        ".cm-cb-header": { backgroundColor: "#E4E4E7", borderRadius: "8px 8px 0 0", fontFamily: "var(--font-mono)", fontSize: "0.85em", color: "#71717a", position: "relative", padding: "2px 8px" },
-        ".cm-cb-header-dark": { backgroundColor: "#18181B", borderRadius: "8px 8px 0 0", fontFamily: "var(--font-mono)", fontSize: "0.85em", color: "#a1a1aa", position: "relative", padding: "2px 8px" },
-        ".cm-cb-line": { backgroundColor: "#E4E4E7", fontFamily: "var(--font-mono) !important", fontSize: "0.9em !important", color: "#18181b", padding: "0 8px" },
-        ".cm-cb-line-dark": { backgroundColor: "#18181B", fontFamily: "var(--font-mono) !important", fontSize: "0.9em !important", color: "#A5A7A6", padding: "0 8px" },
-        ".cm-cb-footer": { backgroundColor: "#E4E4E7", borderRadius: "0 0 8px 8px", fontFamily: "var(--font-mono)", fontSize: "0.85em", color: "#71717a", padding: "2px 8px" },
-        ".cm-cb-footer-dark": { backgroundColor: "#18181B", borderRadius: "0 0 8px 8px", fontFamily: "var(--font-mono)", fontSize: "0.85em", color: "#a1a1aa", padding: "2px 8px" },
+        ".cm-cb-header": { backgroundColor: "#E4E4E7", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#71717a", position: "relative", padding: "0 8px", minHeight: "2px" },
+        ".cm-cb-header-dark": { backgroundColor: "#18181B", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#a1a1aa", position: "relative", padding: "0 8px", minHeight: "2px" },
+        ".cm-cb-line": { backgroundColor: "#E4E4E7", fontFamily: fontFamily, fontSize: "0.9em !important", color: "#18181b", padding: "0 8px" },
+        ".cm-cb-line-dark": { backgroundColor: "#18181B", fontFamily: fontFamily, fontSize: "0.9em !important", color: "#A5A7A6", padding: "0 8px" },
+        ".cm-cb-footer": { backgroundColor: "#E4E4E7", borderRadius: "0 0 8px 8px", fontFamily: fontFamily, fontSize: "0.85em", color: "#71717a", padding: "0 8px", minHeight: "2px" },
+        ".cm-cb-footer-dark": { backgroundColor: "#18181B", borderRadius: "0 0 8px 8px", fontFamily: fontFamily, fontSize: "0.85em", color: "#a1a1aa", padding: "0 8px", minHeight: "2px" },
         ".cm-codeblock-copy": { position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "4px", borderRadius: "4px", backgroundColor: "transparent", color: "#a1a1aa", cursor: "pointer", border: "none", transition: "all 0.15s", opacity: "0" },
         ".cm-cb-header:hover .cm-codeblock-copy, .cm-cb-header-dark:hover .cm-codeblock-copy": { opacity: "1" },
         ".cm-codeblock-copy:hover": { backgroundColor: "#d4d4d8", color: "#52525b" },
@@ -368,7 +406,7 @@ const createNotesTheme = (font: string, size: string) => {
 
 
 export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
-    noteId, initialContent, searchQuery, onChange, noteFont = 'sans', noteFontSize = 'medium', readOnly = false
+    noteId, initialContent, searchQuery, onChange, noteFont = 'sans', noteFontSize = 'medium', noteLineHeight = 'standard', readOnly = false
 }) => {
     const [content, setContent] = useState('');
     const editorRef = useRef<ReactCodeMirrorRef>(null);
@@ -381,7 +419,7 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
     const debounceChangeTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Regenera el tema visual solo si cambias la fuente o el tamaño en los ajustes
-    const dynamicTheme = useMemo(() => createNotesTheme(noteFont, noteFontSize), [noteFont, noteFontSize]);
+    const dynamicTheme = useMemo(() => createNotesTheme(noteFont, noteFontSize, noteLineHeight), [noteFont, noteFontSize, noteLineHeight]);
 
     useEffect(() => { searchQueryRef.current = searchQuery || ''; editorRef.current?.view?.dispatch({ effects: ForceRedrawEffect.of(null) }); }, [searchQuery]);
 
@@ -515,7 +553,16 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
     };
 
     const handleBlur = () => {
-        if (debounceChangeTimerRef.current) { clearTimeout(debounceChangeTimerRef.current); onChange(content); }
+        // Limpieza proactiva al salir del editor para corregir bloques editados manualmente
+        const cleaned = trimCodeBlocks(content);
+        if (cleaned !== content) {
+            setContent(cleaned);
+            if (debounceChangeTimerRef.current) clearTimeout(debounceChangeTimerRef.current);
+            onChange(cleaned);
+        } else if (debounceChangeTimerRef.current) {
+            clearTimeout(debounceChangeTimerRef.current);
+            onChange(content);
+        }
     };
 
     return (
@@ -541,7 +588,7 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
                     revealedLineField,
                     editingLineField,
                     createVisualMarkupPlugin(translationsMapRef, searchQueryRef), 
-                    clickHandlerExtension, hoverTooltipExtension, selectionListener, EditorView.lineWrapping, EditorView.editable.of(!readOnly)
+                    clickHandlerExtension, hoverTooltipExtension, selectionListener, pasteCleanerExtension, EditorView.lineWrapping, EditorView.editable.of(!readOnly)
                 ]}
                 basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false, syntaxHighlighting: false }}
                 className="text-zinc-900 dark:text-[#A5A7A6]" 
