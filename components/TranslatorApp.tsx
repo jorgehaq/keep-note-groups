@@ -175,7 +175,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
   if (loading) return <div className="p-10 text-center animate-pulse text-zinc-500">Cargando Traductor...</div>;
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#212424] overflow-hidden">
         
         <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
             <div className="h-[72px] flex items-center justify-between px-4 md:px-6 py-4">

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput } from 'lucide-react';
+import { ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash } from 'lucide-react';
 import { Note, NoteFont } from '../types';
 import { SmartNotesEditor } from '../src/components/editor/SmartNotesEditor';
 import { ChecklistEditor, parseMarkdownToChecklist, serializeChecklistToMarkdown } from '../src/components/editor/ChecklistEditor';
@@ -22,6 +22,8 @@ interface AccordionItemProps {
   noteFontSize?: string;
   noteLineHeight?: string;
   isHighlightedBySearch?: boolean;
+  showLineNumbers?: boolean;
+  onToggleLineNumbers?: () => void;
 }
 
 const formatCleanDate = (isoString?: string) => {
@@ -67,6 +69,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   noteFontSize = 'medium',
   noteLineHeight = 'standard',
   isHighlightedBySearch = false,
+  showLineNumbers = false,
+  onToggleLineNumbers,
 }) => {
 
 
@@ -158,10 +162,14 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   };
 
   return (
-    <div className={`m-1 mb-4 transition-all duration-300 flex flex-col bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border hover:shadow-xl hover:shadow-indigo-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 ${
+    <div className={`transition-all duration-300 flex-1 flex flex-col min-h-0 bg-white dark:bg-zinc-900 overflow-hidden ${
+      note.is_docked 
+        ? 'rounded-none shadow-none border-b border-zinc-200 dark:border-zinc-800' 
+        : 'rounded-2xl shadow-lg border'
+    } ${
       isHighlightedBySearch
         ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50/30 dark:bg-amber-900/10'
-        : 'border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50'
+        : `${note.is_docked ? '' : 'border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/50'}`
     }`}>
       
       <div
@@ -210,6 +218,19 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {onToggleLineNumbers && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleLineNumbers(); }}
+              className={`p-1.5 rounded-lg transition-colors ${
+                showLineNumbers
+                  ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                  : 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              }`}
+              title={showLineNumbers ? 'Ocultar números de línea' : 'Mostrar números de línea'}
+            >
+              <Hash size={14} />
+            </button>
+          )}
           <KanbanSemaphore sourceId={note.id} sourceTitle={note.title || 'Sin título'} onInteract={() => {}} />
 
           <div className="relative" ref={mobileMenuRef}>
@@ -241,21 +262,33 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         </div>
       </div>
 
-      <div ref={contentRef} className="p-0 bg-white dark:bg-zinc-900 relative">
+      <div 
+        ref={contentRef}
+        className="flex-1 flex flex-col overflow-hidden min-h-0 bg-white dark:bg-zinc-900 relative"
+      >
         {showStickyTitle && (
           <div className="sticky top-4 left-0 right-0 z-[40] flex justify-center pointer-events-none animate-fadeIn px-4">
             <div onClick={(e) => { e.stopPropagation(); headerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }} className="bg-white/95 dark:bg-zinc-100/95 backdrop-blur-md text-zinc-900 dark:text-zinc-900 px-5 py-1.5 rounded-full shadow-lg shadow-black/10 text-[13px] font-bold flex items-center gap-2 pointer-events-auto cursor-pointer active:scale-95 transition-all border border-zinc-200/50 dark:border-zinc-300 w-auto max-w-[90%] sm:max-w-[400px] hover:shadow-xl"><span className="truncate">{note.title || 'Sin título'}</span><ChevronUp size={14} className="opacity-70 shrink-0" /></div>
           </div>
         )}
 
-        <div className="px-4 pb-4 pt-2 w-full overflow-hidden">
+        <div className="px-4 pb-4 pt-2 w-full flex-1 flex flex-col min-h-0">
           {note.is_checklist ? (
             <div className="bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4">
               <ChecklistEditor idPrefix={note.id} initialContent={note.content} onUpdate={handleUpdateContent} />
             </div>
           ) : (
-            <div className="bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-text min-h-[120px]">
-              <SmartNotesEditor noteId={note.id} initialContent={note.content} searchQuery={searchQuery} onChange={handleUpdateContent} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} />
+            <div className="note-editor-scroll bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-text flex-1 overflow-y-scroll min-h-0">
+              <SmartNotesEditor 
+                noteId={note.id} 
+                initialContent={note.content} 
+                searchQuery={searchQuery} 
+                onChange={handleUpdateContent} 
+                noteFont={noteFont} 
+                noteFontSize={noteFontSize} 
+                noteLineHeight={noteLineHeight} 
+                showLineNumbers={showLineNumbers}
+              />
             </div>
           )}
         </div>

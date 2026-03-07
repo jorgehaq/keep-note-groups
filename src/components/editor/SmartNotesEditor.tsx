@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
-import { EditorView, ViewPlugin, Decoration, WidgetType, ViewUpdate, keymap } from '@codemirror/view';
+import { EditorView, ViewPlugin, Decoration, WidgetType, ViewUpdate, keymap, lineNumbers } from '@codemirror/view';
 import { RangeSet, StateEffect, Prec, StateField } from '@codemirror/state'; 
 import { Highlighter, Languages, Loader2, Link as LinkIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
@@ -17,6 +17,7 @@ interface SmartNotesEditorProps {
     noteFontSize?: string; 
     noteLineHeight?: string;
     readOnly?: boolean;
+    showLineNumbers?: boolean;
 }
 
 const ForceRedrawEffect = StateEffect.define<null>();
@@ -101,6 +102,23 @@ class CodeBlockCopyWidget extends WidgetType {
         return btn;
     }
 }
+
+const cursorDotPlugin = ViewPlugin.fromClass(class {
+    decorations: RangeSet<Decoration>;
+    constructor(view: EditorView) { this.decorations = this.build(view); }
+    update(update: ViewUpdate) {
+        if (update.selectionSet || update.docChanged) {
+            this.decorations = this.build(update.view);
+        }
+    }
+    build(view: EditorView): RangeSet<Decoration> {
+        const pos = view.state.selection.main.head;
+        const line = view.state.doc.lineAt(pos);
+        return Decoration.set([
+            Decoration.line({ class: 'cm-cursor-indicator-line' }).range(line.from)
+        ]);
+    }
+}, { decorations: v => v.decorations });
 
 const KNOWN_LANGS = new Set(['bash','sh','zsh','javascript','js','typescript','ts','python','py','css','html','json','sql','java','go','rust','c','cpp','jsx','tsx','yaml','yml','xml','ruby','rb','php','swift','kotlin','dart','lua','r','scala','perl','powershell','dockerfile','makefile','graphql','toml','ini','markdown','md','plaintext','text','diff']);
 
@@ -368,13 +386,21 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             fontSize: fontSize,
         },
         "&.cm-focused .cm-cursor": { borderLeftColor: "currentColor !important", borderLeftWidth: "2px !important" },
-        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": { backgroundColor: "#6C490F !important", color: "#000000 !important", fontWeight: "normal !important" },
+        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": { backgroundColor: "#6C490F !important", color: "white !important", fontWeight: "normal !important" },
         ".cm-content *": { textDecoration: "none !important", boxShadow: "none !important" },
         ".cm-line": { lineHeight: lHeight },
         "&.cm-focused": { outline: "none" },
-        ".cm-gutters": { display: "none" },
-        ".cm-custom-hl": { backgroundColor: "#6C490F !important", color: "#000000 !important", padding: "0 2px", fontWeight: "normal !important" },
-        ".dark .cm-custom-hl": { backgroundColor: "#6C490F !important", color: "#000000 !important" },
+        ".cm-gutters": { backgroundColor: "transparent !important", border: "none !important", color: "#71717a" },
+        ".dark .cm-gutters": { color: "#52525b" },
+        ".cm-activeLineGutter": { backgroundColor: "transparent !important" },
+        ".cm-lineNumbers .cm-gutterElement": { paddingRight: "10px !important", paddingLeft: "4px !important" },
+        ".cm-cursor-indicator-line": { 
+            borderLeft: "3px solid #6366f1 !important",
+            paddingLeft: "4px !important",
+            boxSizing: "border-box"
+        },
+        ".cm-custom-hl": { backgroundColor: "#6C490F !important", color: "white !important", padding: "0 2px", fontWeight: "normal !important" },
+        ".dark .cm-custom-hl": { backgroundColor: "#6C490F !important", color: "white !important" },
         ".cm-custom-tr": { position: "relative", backgroundColor: "#0539A3", color: "#B4D0D0 !important", padding: "0 2px", cursor: "help" },
         ".dark .cm-custom-tr": { backgroundColor: "#0539A3", color: "#B4D0D0 !important" },
         ".cm-custom-h1": { fontSize: "1.4em", fontWeight: "bold", color: "inherit", lineHeight: "1.2" },
@@ -406,7 +432,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
 
 
 export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
-    noteId, initialContent, searchQuery, onChange, noteFont = 'sans', noteFontSize = 'medium', noteLineHeight = 'standard', readOnly = false
+    noteId, initialContent, searchQuery, onChange, noteFont = 'sans', noteFontSize = 'medium', noteLineHeight = 'standard', readOnly = false, showLineNumbers = false
 }) => {
     const [content, setContent] = useState('');
     const editorRef = useRef<ReactCodeMirrorRef>(null);
@@ -453,9 +479,76 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
         setContent(prev => prev !== clean ? clean : prev);
     }, [initialContent, noteId]);
 
-    const selectionListener = EditorView.updateListener.of((update) => {
+    // Restaurar cursor Y scroll al montar/cambiar nota
+    useEffect(() => {
+        const savedPos = localStorage.getItem(`cursor-pos-${noteId}`);
+        const savedScroll = localStorage.getItem(`scroll-pos-${noteId}`);
+
+        const timer = requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const view = editorRef.current?.view;
+                if (!view) return;
+
+                // 1. Cursor: sin scrollIntoView para que no compita con el scroll
+                if (savedPos) {
+                    const pos = Math.min(parseInt(savedPos, 10), view.state.doc.length);
+                    view.dispatch({ selection: { anchor: pos, head: pos } });
+                }
+
+                // 2. Scroll: siempre al final, sobreescribe cualquier scroll que haya hecho el cursor
+                if (savedScroll) {
+                    // Buscar el contenedor por clase directamente en el DOM
+                    const scrollEl = document.querySelector(`.note-editor-scroll`) as HTMLElement;
+                    if (scrollEl) scrollEl.scrollTop = parseInt(savedScroll, 10);
+                }
+            });
+        });
+        return () => cancelAnimationFrame(timer);
+    }, [noteId]);
+
+    // Escuchar scroll con retraso para asegurar que CodeMirror montó
+    useEffect(() => {
+        // Esperar a que CodeMirror monte
+        const setup = setTimeout(() => {
+            const view = editorRef.current?.view;
+            // Buscar el contenedor por clase directamente — no depende de view
+            const scrollEl = document.querySelector('.note-editor-scroll') as HTMLElement;
+            if (!scrollEl) return;
+
+            let scrollTimer: NodeJS.Timeout | null = null;
+            const handleScroll = () => {
+                if (scrollTimer) clearTimeout(scrollTimer);
+                scrollTimer = setTimeout(() => {
+                    localStorage.setItem(`scroll-pos-${noteId}`, String(scrollEl.scrollTop));
+                }, 250);
+            };
+
+            scrollEl.addEventListener('scroll', handleScroll, { passive: true });
+
+            // Guardar cleanup en ref para poder limpiar al desmontar
+            (window as any)[`__scrollCleanup_${noteId}`] = () => {
+                scrollEl.removeEventListener('scroll', handleScroll);
+                if (scrollTimer) clearTimeout(scrollTimer);
+            };
+        }, 100);
+
+        return () => {
+            clearTimeout(setup);
+            const cleanup = (window as any)[`__scrollCleanup_${noteId}`];
+            if (cleanup) { cleanup(); delete (window as any)[`__scrollCleanup_${noteId}`]; }
+        };
+    }, [noteId]);
+
+    const selectionListener = useMemo(() => EditorView.updateListener.of((update) => {
         if (update.viewportChanged || update.docChanged) setTooltipState(null);
         if (update.selectionSet) {
+            // Guardar posición del cursor en localStorage (debounced)
+            const pos = update.state.selection.main.head;
+            clearTimeout((window as any)[`__cur_${noteId}`]);
+            (window as any)[`__cur_${noteId}`] = setTimeout(() => {
+                localStorage.setItem(`cursor-pos-${noteId}`, String(pos));
+            }, 400);
+
             const { main } = update.state.selection;
             if (!main.empty) {
                 const rect = update.view.coordsAtPos(main.from);
@@ -472,7 +565,7 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
                 }
             } else setMenuState(null);
         }
-    });
+    }), [noteId]);
 
     const doHighlight = () => {
         if (!menuState || !editorRef.current?.view) return;
@@ -568,7 +661,15 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
     return (
         <div className={`relative group/editor w-full bg-transparent ${readOnly ? 'pointer-events-none' : ''}`}>
             <CodeMirror
-                ref={editorRef} value={content} onChange={handleChange} onBlur={handleBlur} theme="none" readOnly={readOnly} 
+                key={String(showLineNumbers)}
+                ref={editorRef} 
+                value={content} 
+                onChange={handleChange} 
+                onBlur={handleBlur} 
+                theme="none" 
+                readOnly={readOnly} 
+                height="auto"
+                className="w-full text-zinc-900 dark:text-[#A5A7A6]" 
                 extensions={[
                     // 🚀 MAGIA ANTI-HIJACKING: Prec.highest toma el control absoluto del evento
                     Prec.highest(
@@ -583,6 +684,8 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
                         }])
                     ),
                     
+                    ...(showLineNumbers ? [lineNumbers()] : []),
+                    cursorDotPlugin,
                     markdown({ base: markdownLanguage, codeLanguages: languages }),
                     dynamicTheme,
                     revealedLineField,
@@ -590,8 +693,7 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
                     createVisualMarkupPlugin(translationsMapRef, searchQueryRef), 
                     clickHandlerExtension, hoverTooltipExtension, selectionListener, pasteCleanerExtension, EditorView.lineWrapping, EditorView.editable.of(!readOnly)
                 ]}
-                basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false, syntaxHighlighting: false }}
-                className="text-zinc-900 dark:text-[#A5A7A6]" 
+                basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false, highlightActiveLineGutter: false, syntaxHighlighting: false }}
             />
              {tooltipState && (
                 <div

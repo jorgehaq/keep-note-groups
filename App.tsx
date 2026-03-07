@@ -60,8 +60,22 @@ function App() {
     noteTrayOpenByGroup, setIsGlobalNoteTrayOpen
   } = useUIStore();
 
+  const [showLineNumbers, setShowLineNumbers] = useState<boolean>(
+    () => localStorage.getItem('app-show-line-numbers') === 'true'
+  );
+  const [mountedNoteIds, setMountedNoteIds] = useState<Set<string>>(new Set());
+
   // Derive per-group values for the active group
+  const activeGroup = groups.find(g => g.id === activeGroupId);
   const focusedNoteId = activeGroupId ? (focusedNoteByGroup[activeGroupId] ?? null) : null;
+
+  // Preservar estado de las notas una vez montadas
+  useEffect(() => {
+    if (focusedNoteId) {
+      setMountedNoteIds(prev => new Set([...prev, focusedNoteId]));
+    }
+  }, [focusedNoteId]);
+
   const isGlobalNoteTrayOpen = activeGroupId ? (noteTrayOpenByGroup[activeGroupId] ?? true) : false;
   const [searchQueries, setSearchQueries] = useState<Record<string, string>>({});
   const currentSearchQuery = activeGroupId ? (searchQueries[activeGroupId] || '') : '';
@@ -620,7 +634,6 @@ function App() {
 
   if (!session) return <Auth />;
 
-  const activeGroup = groups.find(g => g.id === activeGroupId);
 
   const filteredNotes = activeGroup 
     ? (focusedNoteId 
@@ -771,7 +784,7 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen bg-zinc-50 dark:bg-zinc-950 overflow-hidden transition-colors duration-300">
+    <div className="flex h-screen bg-zinc-50 dark:bg-[#111113] overflow-hidden transition-colors duration-300">
       <Sidebar
         groups={groups}
         activeGroupId={activeGroupId}
@@ -855,6 +868,31 @@ function App() {
             -webkit-text-fill-color: transparent;
             animation: slideToUnlock 2s linear infinite;
           }
+
+          .note-editor-scroll::-webkit-scrollbar { width: 8px; }
+          .note-editor-scroll::-webkit-scrollbar-track { background: transparent; }
+          .note-editor-scroll::-webkit-scrollbar-thumb { background-color: #d4d4d8; border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
+          .note-editor-scroll::-webkit-scrollbar-thumb:hover { background-color: #a1a1aa; }
+          .dark .note-editor-scroll::-webkit-scrollbar-thumb { background-color: #3f3f46; }
+          .dark .note-editor-scroll::-webkit-scrollbar-thumb:hover { background-color: #52525b; }
+          .note-editor-scroll { scrollbar-width: thin; scrollbar-color: #3f3f46 transparent; }
+
+          .cm-lineNumbers .cm-gutterElement {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            padding-left: 6px;
+            font-size: 11px;
+            color: #a1a1aa;
+            min-width: 32px;
+            line-height: inherit;
+          }
+          .dark .cm-lineNumbers .cm-gutterElement { color: #52525b; }
+          .cm-gutter.cm-lineNumbers { border-right: 1px solid #e4e4e7; margin-right: 8px; }
+          .dark .cm-gutter.cm-lineNumbers { border-right-color: #27272a; }
+          .cm-activeLineGutter { background-color: transparent !important; }
+
         `}</style>
         <div className="flex flex-col z-50 shrink-0">
           
@@ -949,73 +987,83 @@ function App() {
                           >
                               <Grid size={20} />
                           </button>
-                          <input
-                            type="text"
-                            value={tempGroupName !== null ? tempGroupName : (activeGroup.title || '')}
-                            onChange={(e) => setTempGroupName(e.target.value)}
-                            onBlur={() => {
-                              if (tempGroupName !== null && tempGroupName.trim() && tempGroupName !== activeGroup.title) {
-                                updateGroupTitle(activeGroup.id, tempGroupName.trim());
-                              }
-                              setTempGroupName(null);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.currentTarget.blur();
-                              } else if (e.key === 'Escape') {
-                                setTempGroupName(null);
-                                e.currentTarget.blur();
-                              }
-                            }}
-                            className="flex-1 bg-transparent text-xl md:text-2xl font-bold text-zinc-800 dark:text-[#C4C7C5] outline-none px-2 w-full min-w-[150px] cursor-text truncate placeholder-zinc-400"
-                            placeholder="Nombre del grupo de notas ..."
-                            title="Haz clic para editar"
-                          />
                           
-                           {/* Botón Toggle Reminder (siempre primero de izquierda a derecha) */}
-                           <button
-                             onClick={() => setShowOverdueMarquee(!showOverdueMarquee)}
-                             className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
-                               showOverdueMarquee 
-                                 ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
-                                 : overdueRemindersCount > 0
-                                   ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
-                                   : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
-                             }`}
-                             title={showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
-                           >
-                              <Bell size={18} className={overdueRemindersList.length > 0 ? 'animate-pulse' : ''} />
-                              <span className="text-xs font-bold">{overdueRemindersList.length}</span>
-                           </button>
-
-                          <button 
-                             onClick={() => setIsGlobalNoteTrayOpen(!isGlobalNoteTrayOpen)}
-                             className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
-                               isGlobalNoteTrayOpen 
-                                 ? 'bg-[#4940D9] border-[#4940D9] text-white shadow-md shadow-[#4940D9]/20' 
-                                 : 'bg-[#4940D9]/10 dark:bg-[#4940D9]/20 border-[#4940D9]/30 text-[#4940D9] hover:bg-[#4940D9]/20 dark:hover:bg-[#4940D9]/30'
-                             }`}
-                             title={isGlobalNoteTrayOpen ? "Ocultar bandeja de notas" : "Mostrar bandeja de notas"}
-                           >
-                              <ChevronsDownUp size={18} className={`transition-transform duration-300 ${isGlobalNoteTrayOpen ? 'rotate-180' : ''}`} />
-                              <span className="text-xs font-bold">{activeGroup.notes.length}</span>
-                           </button>
-
-                           {/* Botón Maximizar/Minimizar */}
-                          <button
-                            onClick={() => setIsMaximized(!isMaximized)}
-                            className="h-9 p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all active:scale-95 shrink-0"
-                            title={isMaximized ? "Minimizar" : "Maximizar"}
-                          >
-                            {isMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-                          </button>
+                          <div className="flex-1 relative flex items-center min-w-0">
+                            <div className="absolute inset-0 w-full pointer-events-none text-xl md:text-2xl font-bold px-2 flex items-center overflow-hidden whitespace-nowrap">
+                              <span className="truncate opacity-0">.</span> {/* Spacer for alignment if needed, but we'll use same style as AccordionItem */}
+                            </div>
+                            
+                            <input
+                              type="text"
+                              value={tempGroupName !== null ? tempGroupName : (activeGroup.title || '')}
+                              onChange={(e) => setTempGroupName(e.target.value)}
+                              onBlur={() => {
+                                if (tempGroupName !== null && tempGroupName.trim() && tempGroupName !== activeGroup.title) {
+                                  updateGroupTitle(activeGroup.id, tempGroupName.trim());
+                                }
+                                setTempGroupName(null);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.currentTarget.blur();
+                                } else if (e.key === 'Escape') {
+                                  setTempGroupName(null);
+                                  e.currentTarget.blur();
+                                }
+                              }}
+                              className="w-full bg-transparent text-xl md:text-2xl font-bold text-zinc-800 dark:text-[#C4C7C5] outline-none px-2 cursor-text truncate placeholder-zinc-400"
+                              placeholder="Nombre del grupo de notas ..."
+                              title="Haz clic para editar"
+                            />
+                          </div>
                       </div>
 
-                      {/* Lado Derecho: Opciones de Grupo y Botón Nueva Nota */}
+                      {/* Lado Derecho: Controles de Grupo y Acciones */}
                       <div className="flex flex-wrap items-center gap-2 shrink-0 pb-1 md:pb-0">
                           
+                          {/* Botones de Estado/Vista (Bell, Tray, Maximize) */}
+                          <div className="flex items-center gap-1.5 mr-1">
+                             {/* Botón Toggle Reminder */}
+                             <button
+                               onClick={() => setShowOverdueMarquee(!showOverdueMarquee)}
+                               className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                                 showOverdueMarquee 
+                                   ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
+                                   : overdueRemindersCount > 0
+                                     ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
+                                     : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
+                               }`}
+                               title={showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
+                             >
+                                <Bell size={18} className={overdueRemindersList.length > 0 ? 'animate-pulse' : ''} />
+                                <span className="text-xs font-bold">{overdueRemindersList.length}</span>
+                             </button>
+
+                             <button 
+                                onClick={() => setIsGlobalNoteTrayOpen(!isGlobalNoteTrayOpen)}
+                                className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                                  isGlobalNoteTrayOpen 
+                                    ? 'bg-[#4940D9] border-[#4940D9] text-white shadow-md shadow-[#4940D9]/20' 
+                                    : 'bg-[#4940D9]/10 dark:bg-[#4940D9]/20 border-[#4940D9]/30 text-[#4940D9] hover:bg-[#4940D9]/20 dark:hover:bg-[#4940D9]/30'
+                                }`}
+                                title={isGlobalNoteTrayOpen ? "Ocultar bandeja de notas" : "Mostrar bandeja de notas"}
+                              >
+                                 <ChevronsDownUp size={18} className={`transition-transform duration-300 ${isGlobalNoteTrayOpen ? 'rotate-180' : ''}`} />
+                                 <span className="text-xs font-bold">{activeGroup.notes.length}</span>
+                              </button>
+
+                              {/* Botón Maximizar/Minimizar */}
+                             <button
+                               onClick={() => setIsMaximized(!isMaximized)}
+                               className="h-9 p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all active:scale-95 shrink-0"
+                               title={isMaximized ? "Minimizar" : "Maximizar"}
+                             >
+                               {isMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                             </button>
+                          </div>
+
                           {/* Controles de Grupo (En una mini-cápsula gris) */}
-                          <div className="h-9 flex items-center gap-1 bg-zinc-50 dark:bg-zinc-950 p-1 rounded-xl border border-[#3F3F46] shrink-0">
+                          <div className="h-9 flex items-center gap-1 bg-zinc-50 dark:bg-zinc-950 p-1 rounded-xl border border-[#111113] shrink-0">
                               
                               {/* Buscador */}
                               <div className="relative flex items-center transition-all duration-300 mr-2">
@@ -1028,7 +1076,7 @@ function App() {
                                     if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: e.target.value }));
                                     setSearchExemptNoteIds(new Set());
                                   }}
-                                  className={`h-[26px] w-32 md:w-32 lg:w-48 pl-7 pr-8 text-xs rounded-lg border transition-all focus:outline-none ${currentSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50' : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'}`}
+                                  className={`h-[26px] w-32 md:w-32 lg:w-40 pl-7 pr-8 text-xs rounded-lg border transition-all focus:outline-none ${currentSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50' : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'}`}
                                 />
                                 {currentSearchQuery.trim() && (
                                   <button onClick={() => { if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: '' })); setSearchExemptNoteIds(new Set()); }} className="absolute right-2 p-0.5 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 bg-amber-200/50 dark:bg-amber-800/50 hover:bg-amber-300/50 dark:hover:bg-amber-700/50 rounded-full transition-colors" title="Limpiar búsqueda">
@@ -1145,7 +1193,7 @@ function App() {
 
                 {/* 2. FRANJA DE NOTAS (INTEGRADA EN EL ENCABEZADO) */}
                 {isGlobalNoteTrayOpen && activeGroup && (
-                  <div className="pt-4 px-4 pb-4 bg-[#09090B] dark:bg-[#09090B]">
+                  <div className="pt-4 px-4 pb-4 bg-[#111113] dark:bg-[#111113]">
                     <div className="flex flex-wrap justify-center gap-2.5">
                       {sortNotesArray(activeGroup.notes, noteSortMode)
                         .map(note => {
@@ -1197,12 +1245,16 @@ function App() {
                                   if (isOpen) toggleNote(activeGroup.id, note.id);
                                 }
                               }}
-                              className={`relative flex items-center justify-center gap-2 px-3 py-2 text-[11px] font-medium rounded-xl transition-all shrink-0 ${
+                              className={`relative flex items-center justify-center gap-2 px-3 py-2 text-[11px] font-medium rounded-xl transition-all shrink-0 border ${
                                 isFocused
                                   ? 'bg-[#4940D9] text-white shadow-md shadow-[#4940D9]/20 scale-[1.02]'
                                   : isSearchActive
-                                    ? 'bg-amber-50 dark:bg-amber-900/30 border border-amber-500 text-amber-900 dark:text-amber-100 shadow-sm ring-1 ring-amber-500/50'
+                                    ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 shadow-sm'
                                     : 'bg-white/10 dark:bg-white/10 text-[#A1A1AA] hover:text-white hover:bg-white/20'
+                              } ${
+                                isSearchActive
+                                  ? 'border-amber-500 ring-1 ring-amber-500/50'
+                                  : 'border-transparent'
                               }`}
                             >
                               <span className="whitespace-nowrap">{highlightTitle(note.title || 'Sin Título')}</span>
@@ -1212,88 +1264,85 @@ function App() {
                                   {note.is_pinned && <Pin size={9} className={`fill-current ${isFocused ? 'text-white' : 'text-[#85858C]'}`} />}
                                 </span>
                               )}
-                              {dotColorClass && (
-                                <div 
-                                  className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border border-[#9F9FA8]/50 z-10 shadow-sm transition-transform hover:scale-110 ${dotColorClass}`} 
-                                  title={`Estado Kanban`}
-                                />
-                              )}
                             </button>
                           );
                       })}
                     </div>
                   </div>
                 )}
-            </div>
-
-            <main ref={mainRef} className={`flex-1 overflow-y-auto hidden-scrollbar px-4 pb-4 ${isGlobalNoteTrayOpen && activeGroup ? 'pt-0' : 'pt-4'}`}>
-              <div className={`${isMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto pb-20`}>
-                {activeGroup ? (
-                  <>
-
-                    <div className="space-y-4">
-                      {activeGroup.notes.length === 0 ? (
-                      <div className="text-center py-20 opacity-60">
-                        <div className="inline-block p-4 rounded-full bg-zinc-200 dark:bg-zinc-800 mb-4">
-                          <Search size={32} className="text-zinc-500 dark:text-zinc-400" />
-                        </div>
-                        <p className="text-lg text-zinc-600 dark:text-zinc-400">Este grupo no tiene notas aún.</p>
-                      </div>
-                    ) : (
-                      filteredNotes
-                        .map(note => {
-                          const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
-                          const query = currentSearchQuery.trim().toLowerCase();
-                          const matchesSearch = query && (
-                            (note.title || '').toLowerCase().includes(query) ||
-                            (note.content || '').toLowerCase().includes(query)
-                          );
-
-                          return (
-                            <div key={note.id} id={`note-${note.id}`}>
-                              <AccordionItem
-                                note={{ ...note, isOpen }}
-                                searchQuery={currentSearchQuery}
-                                isHighlightedBySearch={!!matchesSearch}
-                              onToggle={() => {
-                                const store = useUIStore.getState();
-                                const currentOpen = store.openNotesByGroup[activeGroup.id] || [];
-                                const wasOpen = currentOpen.includes(note.id);
-                                toggleNote(activeGroup.id, note.id);
-                                
-                                if (wasOpen && store.noteSortMode) {
-                                  applyManualSort(store.noteSortMode);
-                                }
-                              }}
-                              onUpdate={(id, updates) => handleUpdateNoteWrapper(id, updates)}
-                              onDelete={deleteNote}
-                              onExportNote={downloadNoteAsMarkdown}
-                              onCopyNote={copyNoteToClipboard}
-                              onDuplicate={duplicateNote}
-                              onMove={moveNoteToGroup}
-                              groups={groups}
-                              noteFont={noteFont}
-                              noteFontSize={noteFontSize}
-                              noteLineHeight={noteLineHeight}
-                            />
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                  </>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center">
-                        <p className="mb-4 text-center font-medium slide-to-unlock">
-                          Crea o selecciona un grupo para comenzar.
-                        </p>
-                  </div>
-                )}
               </div>
-            </main>
-          </>
-        )}
-      </div>
+
+              {/* AREA DE LA NOTA - OCUPA EL RESTO DEL ESPACIO */}
+              <main ref={mainRef} className={`flex-1 flex flex-col overflow-hidden px-4 pb-4 ${isGlobalNoteTrayOpen && activeGroup ? 'pt-[3px]' : 'pt-4'}`}>
+                <div className={`flex-1 flex flex-col min-h-0 ${isMaximized ? 'max-w-full' : 'max-w-6xl'} w-full mx-auto`}>
+                  {activeGroup ? (
+                     <div className="flex-1 flex flex-col min-h-0">
+                        {activeGroup.notes.length === 0 ? (
+                          <div className="flex-1 flex flex-col items-center justify-center opacity-60">
+                             <StickyNote size={48} className="text-zinc-300 mb-4" />
+                             <p className="text-sm font-medium">Este grupo no tiene notas aún.</p>
+                          </div>
+                        ) : (
+                          <div className="flex-1 flex flex-col min-h-0">
+                            {activeGroup.notes
+                              .filter(n => mountedNoteIds.has(n.id) || n.id === focusedNoteId)
+                              .map(note => {
+                                const isVisible = note.id === focusedNoteId;
+                                const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
+                                return (
+                                  <div
+                                    key={note.id}
+                                    id={`note-${note.id}`}
+                                    className="flex-1 flex flex-col min-h-0"
+                                    style={{ display: isVisible ? 'flex' : 'none' }}
+                                  >
+                                    <AccordionItem
+                                      note={{ ...note, isOpen }}
+                                      searchQuery={currentSearchQuery}
+                                      isHighlightedBySearch={!!(currentSearchQuery.trim() && (note.title?.toLowerCase().includes(currentSearchQuery.toLowerCase()) || note.content?.toLowerCase().includes(currentSearchQuery.toLowerCase())))}
+                                      showLineNumbers={showLineNumbers}
+                                      onToggleLineNumbers={() => {
+                                        const next = !showLineNumbers;
+                                        setShowLineNumbers(next);
+                                        localStorage.setItem('app-show-line-numbers', String(next));
+                                      }}
+                                      onToggle={() => {
+                                        const store = useUIStore.getState();
+                                        const currentOpen = store.openNotesByGroup[activeGroup.id] || [];
+                                        const wasOpen = currentOpen.includes(note.id);
+                                        toggleNote(activeGroup.id, note.id);
+                                        if (wasOpen && store.noteSortMode) {
+                                          applyManualSort(store.noteSortMode);
+                                        }
+                                      }}
+                                      onUpdate={(id, updates) => handleUpdateNoteWrapper(id, updates)}
+                                      onDelete={deleteNote}
+                                      onExportNote={downloadNoteAsMarkdown}
+                                      onCopyNote={copyNoteToClipboard}
+                                      onDuplicate={duplicateNote}
+                                      onMove={moveNoteToGroup}
+                                      groups={groups}
+                                      noteFont={noteFont}
+                                      noteFontSize={noteFontSize}
+                                      noteLineHeight={noteLineHeight}
+                                    />
+                                  </div>
+                                );
+                              })
+                            }
+                          </div>
+                        )}
+                     </div>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center">
+                      <p className="font-medium slide-to-unlock">Crea o selecciona un grupo para comenzar.</p>
+                    </div>
+                  )}
+                </div>
+              </main>
+            </>
+          )}
+        </div>
 
       <SettingsWindow
         isOpen={isSettingsOpen}

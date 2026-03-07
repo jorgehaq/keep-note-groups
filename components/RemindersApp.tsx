@@ -333,7 +333,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
     const history = sortAlpha(reminders.filter(r => r.status === 'history'));
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
+        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#111113] overflow-hidden">
             <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
                 <div className="h-[72px] flex items-center justify-between px-4 md:px-6 py-4">
                     <h1 className="text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-3">
@@ -367,7 +367,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-950 p-4 hidden-scrollbar">
+            <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#111113] p-4 hidden-scrollbar">
                 <div className="max-w-4xl mx-auto flex flex-col gap-12 pb-20">
                     
                     {/* 1. CREACIÓN */}
