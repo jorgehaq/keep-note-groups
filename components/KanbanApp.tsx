@@ -113,7 +113,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
     }
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
+        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#111113] overflow-hidden">
             
             {/* 🚀 FIX: HEADER UNIFICADO (Estilo Enterprise Mental Space) */}
             <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
@@ -143,7 +143,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                         </button>
 
                         {/* TABS EN EL HEADER */}
-                        <div className="h-9 hidden md:flex bg-zinc-100 dark:bg-black/40 p-1 rounded-xl border border-[#3F3F46] shrink-0">
+                        <div className="h-9 hidden md:flex bg-zinc-100 dark:bg-black/40 p-1 rounded-xl border border-[#111113] shrink-0">
                             {TABS.map((tab) => (
                                 <button
                                     key={tab.key}

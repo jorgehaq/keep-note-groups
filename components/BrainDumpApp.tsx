@@ -201,7 +201,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
     const archivo = dumps.filter(d => d.status === 'history');
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
+        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#111113] overflow-hidden">
             <div className={`sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md shrink-0 ${isDumpTrayOpen ? '' : 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm'}`}>
                 <div className={`h-[72px] flex items-center justify-between px-4 md:px-6 py-4 ${isDumpTrayOpen ? 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm' : ''}`}>
                     <h1 className="text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-3">
@@ -258,7 +258,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
 
                 {/* FRANJA DE PIZARRONES (ACCESOS DIRECTOS) */}
                 {isDumpTrayOpen && pizarrones.length > 0 && (
-                    <div className="pt-4 px-4 pb-4 bg-[#09090B] dark:bg-[#09090B]">
+                    <div className="pt-4 px-4 pb-4 bg-[#111113] dark:bg-[#111113]">
                         <div className="flex flex-wrap justify-center gap-2.5">
                              {pizarrones.map(p => {
                                  const isFocused = focusedDumpId === p.id;
@@ -298,7 +298,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                 )}
             </div>
 
-            <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-950 px-4 pb-4 ${isDumpTrayOpen && pizarrones.length > 0 ? 'pt-0' : 'pt-4'} hidden-scrollbar`}>
+            <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#111113] px-4 pb-4 ${isDumpTrayOpen && pizarrones.length > 0 ? 'pt-0' : 'pt-4'} hidden-scrollbar`}>
                 <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto flex flex-col gap-12 pb-20`}>
                     
                     {/* 1. PIZARRONES (PERSISTENTES - FILTRADO POR FOCO) */}
