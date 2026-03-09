@@ -1328,7 +1328,7 @@ function App() {
                                       }}
                                       onUpdate={(id, updates) => handleUpdateNoteWrapper(id, updates)}
                                       onDelete={deleteNote}
-                                      onExportNote={downloadNoteAsMarkdown}
+                              onExportNote={downloadNoteAsMarkdown}
                                       onCopyNote={copyNoteToClipboard}
                                       onDuplicate={duplicateNote}
                                       onMove={moveNoteToGroup}
@@ -1336,6 +1336,7 @@ function App() {
                                       noteFont={noteFont}
                                       noteFontSize={noteFontSize}
                                       noteLineHeight={noteLineHeight}
+                                      session={session}
                                     />
                                   </div>
                                 );

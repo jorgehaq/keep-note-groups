@@ -6,6 +6,10 @@ import { ChecklistEditor, parseMarkdownToChecklist, serializeChecklistToMarkdown
 import { KanbanSemaphore } from './KanbanSemaphore';
 import { MoveToGroupModal } from './MoveToGroupModal';
 import { Group } from '../types';
+import { Session } from '@supabase/supabase-js';
+import { NoteAIPanel } from './NoteAIPanel';
+import { NoteBreadcrumb } from './NoteBreadcrumb';
+import { useNoteTree } from '../src/lib/useNoteTree';
 
 interface AccordionItemProps {
   note: Note;
@@ -24,6 +28,7 @@ interface AccordionItemProps {
   isHighlightedBySearch?: boolean;
   showLineNumbers?: boolean;
   onToggleLineNumbers?: () => void;
+  session?: Session | null;
 }
 
 const formatCleanDate = (isoString?: string) => {
@@ -71,6 +76,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   isHighlightedBySearch = false,
   showLineNumbers = false,
   onToggleLineNumbers,
+  session,
 }) => {
 
 
@@ -79,6 +85,11 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(!note.title);
   const [tempTitle, setTempTitle] = useState(note.title);
   const titleInputRef = useRef<HTMLInputElement>(null);
+
+  // --- AI Summary State ---
+  const { activeNoteId, activeNote, breadcrumbPath, navigate } = useNoteTree(note.id);
+  const displayContent = activeNote?.content ?? note.content;
+  const displayNoteId = activeNoteId ?? note.id;
 
   // 🚀 NUEVO: Sincronización Realtime UI
   // Fuerza la actualización del input local si el título cambia en otro dispositivo
@@ -140,7 +151,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   const handleUpdateContent = (newMarkdown: string) => {
     if (newMarkdown === note.content) return;
     setSyncStatus('saving');
-    onUpdate(note.id, { content: newMarkdown });
+    onUpdate(displayNoteId, { content: newMarkdown });
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     syncTimeoutRef.current = setTimeout(() => {
       setSyncStatus('saved');
@@ -274,15 +285,21 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         )}
 
         <div className="px-4 pb-4 pt-2 w-full flex-1 flex flex-col min-h-0">
+          <NoteBreadcrumb 
+            path={breadcrumbPath}
+            activeNoteId={activeNoteId || note.id}
+            onNavigate={navigate}
+          />
+
           {note.is_checklist ? (
             <div className="bg-zinc-50 dark:bg-[#181818] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4">
-              <ChecklistEditor idPrefix={note.id} initialContent={note.content} onUpdate={handleUpdateContent} />
+              <ChecklistEditor idPrefix={displayNoteId} initialContent={displayContent} onUpdate={handleUpdateContent} />
             </div>
           ) : (
             <div className="note-editor-scroll bg-zinc-50 dark:bg-[#181818] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-text flex-1 overflow-y-scroll min-h-0">
               <SmartNotesEditor 
-                noteId={note.id} 
-                initialContent={note.content} 
+                noteId={displayNoteId} 
+                initialContent={displayContent} 
                 searchQuery={searchQuery} 
                 onChange={handleUpdateContent} 
                 noteFont={noteFont} 
@@ -291,6 +308,16 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 showLineNumbers={showLineNumbers}
               />
             </div>
+          )}
+
+          {session?.user && (
+            <NoteAIPanel 
+              rootNoteId={note.id}
+              activeNoteId={displayNoteId}
+              onNavigate={navigate}
+              userId={session.user.id}
+              groupId={note.group_id}
+            />
           )}
         </div>
       </div>
