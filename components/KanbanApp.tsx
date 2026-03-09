@@ -113,12 +113,12 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
     }
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#111113] overflow-hidden">
+        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#1B1B1E] overflow-hidden">
             
             {/* 🚀 FIX: HEADER UNIFICADO (Estilo Enterprise Mental Space) */}
             <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
                 <div className="h-[72px] flex items-center justify-between px-4 md:px-6 py-4">
-                    <h1 className="text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-3">
+                    <h1 className="text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] flex items-center gap-3">
                         <div className="h-9 p-2 bg-[#10B981] rounded-lg text-emerald-950 shadow-lg shadow-emerald-500/20 shrink-0">
                             <KanbanSquare size={20} />
                         </div>
@@ -143,14 +143,14 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                         </button>
 
                         {/* TABS EN EL HEADER */}
-                        <div className="h-9 hidden md:flex bg-zinc-100 dark:bg-black/40 p-1 rounded-xl border border-[#111113] shrink-0">
+                        <div className="h-9 hidden md:flex bg-zinc-100 dark:bg-black/40 p-1 rounded-xl border border-[#1B1B1E] shrink-0">
                             {TABS.map((tab) => (
                                 <button
                                     key={tab.key}
                                     onClick={() => setActiveTab(tab.key)}
                                     className={`flex items-center justify-center gap-2 px-4 py-1.5 text-[11px] font-medium rounded-lg transition-all ${
                                         activeTab === tab.key
-                                            ? 'max-h-[26px] bg-white dark:bg-zinc-800 text-zinc-900 dark:text-[#C4C7C5] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                                            ? 'max-h-[26px] bg-white dark:bg-zinc-800 text-zinc-900 dark:text-[#CCCCCC] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
                                             : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
                                     }`}
                                 >
@@ -181,7 +181,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                                 onClick={() => setActiveTab(tab.key)}
                                 className={`flex-1 flex items-center justify-center gap-2 py-2 text-[11px] font-medium rounded-lg transition-all ${
                                     activeTab === tab.key
-                                        ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-[#C4C7C5] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                                        ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-[#CCCCCC] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
                                         : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
                                 }`}
                             >

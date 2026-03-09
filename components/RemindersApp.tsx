@@ -91,7 +91,8 @@ const parseMarkdownPreview = (text: string) => {
         .replace(/\*([^*]+)\*/g, '<em>$1</em>').replace(/_([^_]+)_/g, '<em>$1</em>')
         .replace(/~~([^~]+)~~/g, '<del class="opacity-70">$1</del>')
         .replace(/^&gt;\s+(.*)$/gm, '<span class="border-l-2 border-indigo-400 dark:border-indigo-600 pl-2 ml-1 italic opacity-90 block my-1">$1</span>')
-        .replace(/\[\[tr:([^|]+)\|([^\]]+)\]\]/g, '<span class="text-indigo-600 dark:text-indigo-400 font-bold border-b border-indigo-400/50 border-dashed cursor-help" title="$1">$2</span>')
+        .replace(/\[\[tr:([^|]+)\|([^\]]+)\]\]/g, '<span class="text-amber-600 dark:text-amber-400 font-bold border-b border-amber-400/50 border-dashed cursor-help" title="$1">$2</span>')
+        .replace(/\[\[(ins|idea|op|duda|wow|pat|yo|ruido):[^\|]+\|([^\]]+)\]\]/g, '<span class="font-bold border-b border-zinc-400/50 border-dashed cursor-help">$2</span>')
         .replace(/\n/g, '<span class="mx-1 opacity-30 text-[10px]">&para;</span> ');
 };
 
@@ -333,10 +334,10 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
     const history = sortAlpha(reminders.filter(r => r.status === 'history'));
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#111113] overflow-hidden">
+        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#1B1B1E] overflow-hidden">
             <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
                 <div className="h-[72px] flex items-center justify-between px-4 md:px-6 py-4">
-                    <h1 className="text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-3">
+                    <h1 className="text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] flex items-center gap-3">
                         <div className="h-9 p-2 bg-[#1F3760] rounded-lg text-white shadow-lg shadow-[#1F3760]/20">
                             <Bell size={20} />
                         </div>
@@ -367,7 +368,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#111113] p-4 hidden-scrollbar">
+            <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#1B1B1E] p-4 hidden-scrollbar">
                 <div className="max-w-4xl mx-auto flex flex-col gap-12 pb-20">
                     
                     {/* 1. CREACIÓN */}
@@ -381,11 +382,11 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                 /* 🚀 FIX: focus-within:ring-2 para iluminación exterior */
                                 <div key={draft.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 flex flex-col overflow-hidden">
                                     <div className="flex items-center justify-between pr-4">
-                                        <input type="text" placeholder="Título general (ej. Servicios Públicos)" value={draft.title} onChange={e => autoSave(draft.id, { title: e.target.value })} className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] p-4 pb-3 outline-none placeholder-zinc-400" />
+                                        <input type="text" placeholder="Título general (ej. Servicios Públicos)" value={draft.title} onChange={e => autoSave(draft.id, { title: e.target.value })} className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] p-4 pb-3 outline-none placeholder-zinc-400" />
                                     </div>
 
 
-                                    <div className="mb-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-text min-h-[120px] mx-4">
+                                    <div className="mb-4 bg-zinc-50 dark:bg-[#181818] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-text min-h-[120px] mx-4">
                                         <SmartNotesEditor noteId={draft.id} initialContent={draft.content} onChange={c => autoSave(draft.id, { content: c })} />
                                     </div>
 
@@ -407,7 +408,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                             value={target.title}
                                                             onChange={e => { const newT = draft.targets.map((t, i) => i === idx ? { ...t, title: e.target.value } : t); autoSave(draft.id, { targets: newT }); }}
                                                             placeholder="Título del recordatorio"
-                                                            className="flex-1 bg-transparent text-sm font-bold text-zinc-800 dark:text-[#C4C7C5] outline-none placeholder-zinc-400 dark:placeholder-zinc-600"
+                                                            className="flex-1 bg-transparent text-sm font-bold text-zinc-800 dark:text-[#CCCCCC] outline-none placeholder-zinc-400 dark:placeholder-zinc-600"
                                                         />
                                                         <div className="flex items-center gap-3 shrink-0 ml-auto">
                                                             <div className="text-[11px] font-bold text-[#7E7E85] flex items-center">
@@ -417,9 +418,9 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-2 text-[11px] flex-wrap mt-1.5">
-                                                        <input type="datetime-local" value={toLocalDateTimeLocal(target.due_at)} onChange={e => { const newT = draft.targets.map((t, i) => i === idx ? { ...t, due_at: new Date(e.target.value).toISOString() } : t); autoSave(draft.id, { targets: newT }); }} className="w-full sm:w-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded py-1 px-2 text-zinc-800 dark:text-[#C4C7C5] font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all" />
+                                                        <input type="datetime-local" value={toLocalDateTimeLocal(target.due_at)} onChange={e => { const newT = draft.targets.map((t, i) => i === idx ? { ...t, due_at: new Date(e.target.value).toISOString() } : t); autoSave(draft.id, { targets: newT }); }} className="w-full sm:w-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded py-1 px-2 text-zinc-800 dark:text-[#CCCCCC] font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all" />
                                                         <span className="text-zinc-300 dark:text-zinc-700 font-bold">|</span>
-                                                        <select value={target.recurrence || 'none'} onChange={e => { const newT = draft.targets.map((t, i) => i === idx ? { ...t, recurrence: e.target.value as RecurrenceType } : t); autoSave(draft.id, { targets: newT }); }} className="w-full sm:w-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded py-1 px-2 text-zinc-800 dark:text-[#C4C7C5] font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer">
+                                                        <select value={target.recurrence || 'none'} onChange={e => { const newT = draft.targets.map((t, i) => i === idx ? { ...t, recurrence: e.target.value as RecurrenceType } : t); autoSave(draft.id, { targets: newT }); }} className="w-full sm:w-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded py-1 px-2 text-zinc-800 dark:text-[#CCCCCC] font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer">
                                                             {Object.entries(recurrenceLabels).map(([val, label]) => <option key={val} value={val}>{label}</option>)}
                                                         </select>
                                                     </div>
@@ -484,10 +485,10 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                                 placeholder="Título del recordatorio"
                                                                 value={r.title}
                                                                 onChange={e => autoSave(r.id, { title: e.target.value })}
-                                                                className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] p-0 outline-none placeholder-zinc-400"
+                                                                className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] p-0 outline-none placeholder-zinc-400"
                                                             />
                                                         ) : (
-                                                            <h3 className={`font-bold text-lg transition-colors duration-300 ${isExpanded ? 'text-zinc-800 dark:text-[#C4C7C5]' : 'text-[#4D4D54]'}`}>{r.title || 'Recordatorio Activo'}</h3>
+                                                            <h3 className={`font-bold text-lg transition-colors duration-300 ${isExpanded ? 'text-zinc-800 dark:text-[#CCCCCC]' : 'text-[#4D4D54]'}`}>{r.title || 'Recordatorio Activo'}</h3>
                                                         )}
                                                     </div>
                                                     <button onClick={() => toggleEditActive(r.id)} className={`transition-all flex items-center shrink-0 ${isEditing ? 'gap-2 px-3 py-1.5 rounded-lg text-xs font-normal bg-[#1F3760] text-white hover:bg-[#152643] active:scale-95 shadow-lg shadow-[#1F3760]/20' : 'p-2 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800'}`} title={isEditing ? 'Cerrar Edición' : 'Ajustar'}>
@@ -515,7 +516,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                                 {r.targets.map((target, idx) => (
                                                                     <div key={target.id} className="flex flex-col group p-3 bg-zinc-50 dark:bg-zinc-800/30 rounded-xl border border-zinc-200 dark:border-zinc-800/80 hover:border-zinc-200 transition-colors">
                                                                         <div className="flex flex-wrap justify-between items-start w-full gap-2">
-                                                                            <input value={target.title} onChange={e => { const newT = r.targets.map((t, i) => i === idx ? { ...t, title: e.target.value } : t); autoSave(r.id, { targets: newT }); }} placeholder="Título del recordatorio" className="flex-1 bg-transparent text-sm font-bold text-zinc-800 dark:text-[#C4C7C5] outline-none placeholder-zinc-400 dark:placeholder-zinc-600" />
+                                                                            <input value={target.title} onChange={e => { const newT = r.targets.map((t, i) => i === idx ? { ...t, title: e.target.value } : t); autoSave(r.id, { targets: newT }); }} placeholder="Título del recordatorio" className="flex-1 bg-transparent text-sm font-bold text-zinc-800 dark:text-[#CCCCCC] outline-none placeholder-zinc-400 dark:placeholder-zinc-600" />
                                                                             <div className="flex items-center gap-3 shrink-0 ml-auto">
                                                                                 <div className="text-[11px] font-bold text-[#7E7E85] flex items-center">
                                                                                     <LiveCountdown dueAt={target.due_at} isSaved={true} isCompleted={target.is_completed} recurrence={target.recurrence} />
@@ -524,9 +525,9 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                                             </div>
                                                                         </div>
                                                                         <div className="flex items-center gap-2 text-[11px] flex-wrap mt-1.5">
-                                                                            <input type="datetime-local" value={toLocalDateTimeLocal(target.due_at)} onChange={e => { const newT = r.targets.map((t, i) => i === idx ? { ...t, due_at: new Date(e.target.value).toISOString() } : t); autoSave(r.id, { targets: newT }); }} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded py-1 px-2 text-zinc-800 dark:text-[#C4C7C5] font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all" />
+                                                                            <input type="datetime-local" value={toLocalDateTimeLocal(target.due_at)} onChange={e => { const newT = r.targets.map((t, i) => i === idx ? { ...t, due_at: new Date(e.target.value).toISOString() } : t); autoSave(r.id, { targets: newT }); }} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded py-1 px-2 text-zinc-800 dark:text-[#CCCCCC] font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all" />
                                                                             <span className="text-zinc-300 dark:text-zinc-700 font-bold">|</span>
-                                                                            <select value={target.recurrence || 'none'} onChange={e => { const newT = r.targets.map((t, i) => i === idx ? { ...t, recurrence: e.target.value as RecurrenceType } : t); autoSave(r.id, { targets: newT }); }} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded py-1 px-2 text-zinc-800 dark:text-[#C4C7C5] font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer">
+                                                                            <select value={target.recurrence || 'none'} onChange={e => { const newT = r.targets.map((t, i) => i === idx ? { ...t, recurrence: e.target.value as RecurrenceType } : t); autoSave(r.id, { targets: newT }); }} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded py-1 px-2 text-zinc-800 dark:text-[#CCCCCC] font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer">
                                                                                 {Object.entries(recurrenceLabels).map(([val, label]) => <option key={val} value={val}>{label}</option>)}
                                                                             </select>
                                                                         </div>
@@ -555,13 +556,13 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                                 const relTime = getRelativeTimeLeft(t.due_at);
 
                                                                 return (
-                                                                <div key={t.id} className={`flex flex-col group p-3 bg-zinc-50 dark:bg-zinc-800/30 rounded-xl border border-zinc-200 dark:border-zinc-800/80 hover:border-zinc-200 transition-all ${isSleeping ? 'opacity-60' : 'opacity-100'}`}>
+                                                                <div key={t.id} className={`flex flex-col group p-3 bg-zinc-50 dark:bg-[#181818] rounded-xl border border-zinc-200 dark:border-zinc-800/80 hover:border-zinc-200 transition-all ${isSleeping ? 'opacity-60' : 'opacity-100'}`}>
                                                                     <div className="flex justify-between items-start w-full">
                                                                         <div className="flex items-center gap-2">
                                                                             <button onClick={() => toggleTargetComplete(r.id, t.id)} className={`transition-all group/btn flex items-center justify-center w-5 h-5 rounded-full border ${isSleeping ? 'bg-[#1E4037] border-[#1E4037] text-white' : 'border-zinc-300 dark:border-zinc-700 text-zinc-400 hover:border-[#225B49] hover:text-[#225B49]'}`} title={isSleeping ? 'Deshacer completado' : 'Completar'}>
                                                                                 {isSleeping ? <Check size={12} strokeWidth={4} /> : <Circle size={14} />}
                                                                             </button>
-                                                                            <span className={`font-bold text-sm ${isSleeping ? 'text-zinc-500 line-through' : 'text-zinc-800 dark:text-[#C4C7C5]'}`}>{t.title || 'Sin nombre'}</span>
+                                                                            <span className={`font-bold text-sm ${isSleeping ? 'text-zinc-500 line-through' : 'text-zinc-800 dark:text-[#CCCCCC]'}`}>{t.title || 'Sin nombre'}</span>
                                                                         </div>
                                                                         <div className="flex items-center text-[11px] font-bold text-[#7E7E85]">
                                                                             {isRecurrent ? <span className="flex items-center gap-1"><Repeat size={10} /> Ciclo: {recurrenceLabels[t.recurrence!]}</span> : <span>Único</span>}
@@ -659,7 +660,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                         {isExpanded && (
                                             <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800 animate-fadeIn space-y-4">
                                                 {r.content && (
-                                                    <div className="bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 opacity-70">
+                                                    <div className="bg-zinc-100/50 dark:bg-[#181818] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 opacity-70">
                                                         <div className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed" dangerouslySetInnerHTML={{__html: parseMarkdownPreview(r.content)}} />
                                                     </div>
                                                 )}

@@ -71,6 +71,7 @@ const parseMarkdownPreview = (text: string) => {
         .replace(/~~([^~]+)~~/g, '<del class="opacity-70">$1</del>')
         .replace(/^&gt;\s+(.*)$/gm, '<span class="border-l-2 border-indigo-400 dark:border-indigo-600 pl-2 ml-1 italic opacity-90 block my-1">$1</span>')
         .replace(/\[\[tr:([^|]+)\|([^\]]+)\]\]/g, '<span class="text-indigo-600 dark:text-indigo-400 font-bold border-b border-indigo-400/50 border-dashed cursor-help" title="$1">$2</span>')
+        .replace(/\[\[(ins|idea|op|duda|wow|pat|yo|ruido):[^\|]+\|([^\]]+)\]\]/g, '<span class="font-bold border-b border-zinc-400/50 border-dashed cursor-help">$2</span>')
         .replace(/\n/g, '<span class="mx-1 opacity-30 text-[10px]">&para;</span> ');
 };
 
@@ -241,11 +242,11 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
     const history = timers.filter(t => t.status === 'history');
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#111113] overflow-hidden">
+        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#1B1B1E] overflow-hidden">
             {/* HEADER */}
             <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
                 <div className="h-[72px] flex items-center justify-between px-4 md:px-6 py-4">
-                    <h1 className="text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-3">
+                    <h1 className="text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] flex items-center gap-3">
                         <div className="h-9 p-2 bg-[#2563EB] rounded-lg text-white shadow-lg shadow-blue-500/20">
                             <Clock size={20} />
                         </div>
@@ -276,7 +277,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#111113] p-4 hidden-scrollbar">
+            <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#1B1B1E] p-4 hidden-scrollbar">
                 <div className="max-w-4xl mx-auto flex flex-col gap-12 pb-20">
                     
                     {/* 1. BORRADORES (EN CONSTRUCCIÓN) */}
@@ -292,12 +293,12 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                         <input 
                                             type="text" placeholder="¿Qué vamos a medir? (ej. Sprint Programación)" 
                                             value={draft.title || ''} onChange={e => autoSave(draft.id, { title: e.target.value })} 
-                                            className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] p-4 pb-3 outline-none placeholder-zinc-400" 
+                                            className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] p-4 pb-3 outline-none placeholder-zinc-400" 
                                         />
                                     </div>
 
                                     
-                                    <div className="mx-4 mb-4 p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl cursor-text min-h-[100px]">
+                                    <div className="mx-4 mb-4 p-4 bg-zinc-50 dark:bg-[#181818] border border-zinc-200 dark:border-zinc-800 rounded-xl cursor-text min-h-[100px]">
                                         <SmartNotesEditor noteId={draft.id} initialContent={draft.content} onChange={c => autoSave(draft.id, { content: c })} noteFont={noteFont} noteFontSize={noteFontSize} />
                                     </div>
                                     
@@ -307,7 +308,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                         <select 
                                             value={draft.type} 
                                             onChange={e => autoSave(draft.id, { type: e.target.value as TimerType })}
-                                            className="w-full p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm font-normal outline-none focus:ring-2 focus:ring-indigo-500 dark:text-[#C4C7C5]"
+                                            className="w-full p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm font-normal outline-none focus:ring-2 focus:ring-indigo-500 dark:text-[#CCCCCC]"
                                         >
                                             <option value="cycle">🔄 Modo Ciclo (Pausar crea un Lap y detiene el reloj)</option>
                                             <option value="racing">🏁 Modo Carrera (Marcar Hitos sin detener el reloj principal)</option>
@@ -350,7 +351,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                                 <div className="flex justify-between items-start mb-4">
                                                     <div className="flex items-center gap-3 flex-1 min-w-0">
                                                     <div className="flex flex-col min-w-0 pl-1">
-                                                        <input type="text" value={timer.title} onChange={e => autoSave(timer.id, { title: e.target.value })} className="font-bold text-lg text-zinc-800 dark:text-[#C4C7C5] truncate bg-transparent outline-none w-full placeholder-zinc-400" placeholder="Cronómetro" />
+                                                        <input type="text" value={timer.title} onChange={e => autoSave(timer.id, { title: e.target.value })} className="font-bold text-lg text-zinc-800 dark:text-[#CCCCCC] truncate bg-transparent outline-none w-full placeholder-zinc-400" placeholder="Cronómetro" />
                                                         <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
                                                             {timer.type === 'cycle' ? <><RotateCcw size={10}/> Modo Ciclo</> : <><Flag size={10}/> Modo Carrera</>}
                                                         </span>
@@ -361,7 +362,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                             {/* ÁREA EXPANDIDA */}
                                             <div className="animate-fadeIn space-y-4">
                                                     
-                                                    <div className="bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-text min-h-[100px]">
+                                                    <div className="bg-zinc-50 dark:bg-[#181818] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-text min-h-[100px]">
                                                         <SmartNotesEditor noteId={timer.id} initialContent={timer.content} onChange={c => autoSave(timer.id, { content: c })} noteFont={noteFont} noteFontSize={noteFontSize} />
                                                     </div>
 
@@ -488,7 +489,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                         {isExpanded && (
                                             <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800 animate-fadeIn space-y-4">
                                                 {t.content && (
-                                                    <div className="bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 opacity-70">
+                                                    <div className="bg-zinc-100/50 dark:bg-[#181818] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 opacity-70">
                                                         <div className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed" dangerouslySetInnerHTML={{__html: parseMarkdownPreview(t.content)}} />
                                                     </div>
                                                 )}

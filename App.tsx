@@ -653,7 +653,18 @@ function App() {
   const cleanMarkdownForExport = (text: string) =>
     text
       .replace(/\{=|=\}/g, '')                           // Strip highlights
+      .replace(/\[\[(ins|idea|op|duda|wow|pat|yo|ruido):[^\|]+\|([^\]]+)\]\]/g, '$2') // Strip markers
       .replace(/\[\[tr:[^|]*\|([^\]]*)\]\]/g, '$1');     // Strip translation marks, keep original text
+
+  const extractMarkersFromContent = (text: string) => {
+    const markers: { type: string; timestamp: string; content: string }[] = [];
+    const regex = /\[\[(ins|idea|op|duda|wow|pat|yo|ruido):([^\|]+)\|([^\]]+)\]\]/g;
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      markers.push({ type: match[1], timestamp: match[2], content: match[3] });
+    }
+    return markers;
+  };
 
   const downloadGroupAsMarkdown = () => {
     if (!activeGroup) return;
@@ -784,7 +795,7 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen bg-zinc-50 dark:bg-[#111113] overflow-hidden transition-colors duration-300">
+    <div className="flex h-screen bg-zinc-50 dark:bg-[#1B1B1E] overflow-hidden transition-colors duration-300">
       <Sidebar
         groups={groups}
         activeGroupId={activeGroupId}
@@ -901,7 +912,7 @@ function App() {
             <div className="w-full bg-[#0F0F12] overflow-hidden shrink-0 border-b border-zinc-800">
               <div className="py-2.5 flex items-center">
                 <div className="flex-1 overflow-hidden relative h-6 flex items-center">
-                  <div className="marquee-content text-[11px] font-normal tracking-[0.1em] text-[#5E5E66] uppercase">
+                  <div className="marquee-content text-[11px] font-normal tracking-[0.1em] text-[#D5D6D8] uppercase">
                     {/* Set A */}
                     <div className="flex shrink-0 items-center pr-[100vw]">
                       {overdueRemindersList.map((r, idx) => (
@@ -1011,7 +1022,7 @@ function App() {
                                   e.currentTarget.blur();
                                 }
                               }}
-                              className="w-full bg-transparent text-xl md:text-2xl font-bold text-zinc-800 dark:text-[#C4C7C5] outline-none px-2 cursor-text truncate placeholder-zinc-400"
+                              className="w-full bg-transparent text-xl md:text-2xl font-bold text-zinc-800 dark:text-[#CCCCCC] outline-none px-2 cursor-text truncate placeholder-zinc-400"
                               placeholder="Nombre del grupo de notas ..."
                               title="Haz clic para editar"
                             />
@@ -1063,7 +1074,7 @@ function App() {
                           </div>
 
                           {/* Controles de Grupo (En una mini-cápsula gris) */}
-                          <div className="h-9 flex items-center gap-1 bg-zinc-50 dark:bg-zinc-950 p-1 rounded-xl border border-[#111113] shrink-0">
+                          <div className="h-9 flex items-center gap-1 bg-zinc-50 dark:bg-zinc-950 p-1 rounded-xl border border-[#1B1B1E] shrink-0">
                               
                               {/* Buscador */}
                               <div className="relative flex items-center transition-all duration-300 mr-2">
@@ -1150,7 +1161,7 @@ function App() {
                     </>
                  ) : (
                     <>
-                      <h1 className="text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-3">
+                      <h1 className="text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] flex items-center gap-3">
                         <div className="h-9 p-2 bg-[#4940D9] hover:bg-[#3D35C0] rounded-lg text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 transition-all cursor-default">
                           <StickyNote size={20} />
                         </div>
@@ -1193,7 +1204,7 @@ function App() {
 
                 {/* 2. FRANJA DE NOTAS (INTEGRADA EN EL ENCABEZADO) */}
                 {isGlobalNoteTrayOpen && activeGroup && (
-                  <div className="pt-4 px-4 pb-4 bg-[#111113] dark:bg-[#111113]">
+                  <div className="pt-4 px-4 pb-4 bg-[#1B1B1E] dark:bg-[#1B1B1E]">
                     <div className="flex flex-wrap justify-center gap-2.5">
                       {sortNotesArray(activeGroup.notes, noteSortMode)
                         .map(note => {

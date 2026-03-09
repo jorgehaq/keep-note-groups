@@ -225,7 +225,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
                                     }
                                 }}
                                 autoFocus
-                                className="w-full text-zinc-800 dark:text-[#C4C7C5] text-sm font-medium leading-tight bg-transparent outline-none placeholder-zinc-400"
+                                className="w-full text-zinc-800 dark:text-[#CCCCCC] text-sm font-medium leading-tight bg-transparent outline-none placeholder-zinc-400"
                                 placeholder="Nueva tarea..."
                             />
                         ) : (
@@ -237,7 +237,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
                                     setIsEditing(true);
                                 }}
                                 readOnly
-                                className="w-full text-zinc-800 dark:text-[#C4C7C5] text-sm font-medium leading-tight bg-transparent outline-none cursor-text placeholder-zinc-400"
+                                className="w-full text-zinc-800 dark:text-[#CCCCCC] text-sm font-medium leading-tight bg-transparent outline-none cursor-text placeholder-zinc-400"
                                 placeholder="Nueva tarea..."
                             />
                         )}

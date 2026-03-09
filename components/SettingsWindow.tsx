@@ -58,7 +58,7 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
         
         {/* HEADER */}
         <div className="sticky top-0 px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md z-10">
-          <h2 className="text-lg font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-2">
+          <h2 className="text-lg font-bold text-zinc-800 dark:text-[#CCCCCC] flex items-center gap-2">
               {t('settings.title')}
           </h2>
           <button onClick={onClose} className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-full text-zinc-500 transition-colors">
@@ -76,13 +76,13 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
             <div className="flex bg-zinc-200/50 dark:bg-zinc-900/50 rounded-xl p-1">
               <button 
                 onClick={() => changeLanguage('es')}
-                className={`flex-1 py-2 text-xs font-normal rounded-lg transition-all ${i18n.language?.startsWith('es') ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#C4C7C5] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                className={`flex-1 py-2 text-xs font-normal rounded-lg transition-all ${i18n.language?.startsWith('es') ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#CCCCCC] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
               >
                 Español
               </button>
               <button 
                 onClick={() => changeLanguage('en')}
-                className={`flex-1 py-2 text-xs font-normal rounded-lg transition-all ${i18n.language?.startsWith('en') ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#C4C7C5] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                className={`flex-1 py-2 text-xs font-normal rounded-lg transition-all ${i18n.language?.startsWith('en') ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#CCCCCC] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
               >
                 English
               </button>
@@ -130,7 +130,7 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
                     <button 
                       key={font.id} 
                       onClick={() => onNoteFontChange(font.id as NoteFont)} 
-                      className={`flex-1 py-2 text-xs font-normal rounded-lg transition-all ${noteFont === font.id ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#C4C7C5] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                      className={`flex-1 py-2 text-xs font-normal rounded-lg transition-all ${noteFont === font.id ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#CCCCCC] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
                       style={{ fontFamily: font.id === 'serif' ? 'serif' : font.id === 'mono' ? 'monospace' : 'sans-serif' }}
                     >
                       {font.label}
@@ -152,7 +152,7 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
                     <button 
                       key={size.id} 
                       onClick={() => onNoteFontSizeChange(size.id)} 
-                      className={`flex-1 py-2 font-normal rounded-lg transition-all ${size.sizeClass} ${noteFontSize === size.id ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#C4C7C5] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                      className={`flex-1 py-2 font-normal rounded-lg transition-all ${size.sizeClass} ${noteFontSize === size.id ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#CCCCCC] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
                     >
                       {size.label}
                     </button>
@@ -173,7 +173,7 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
                     <button 
                       key={lh.id} 
                       onClick={() => onNoteLineHeightChange(lh.id)} 
-                      className={`flex-1 py-2 text-xs font-normal rounded-lg transition-all ${noteLineHeight === lh.id ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#C4C7C5] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                      className={`flex-1 py-2 text-xs font-normal rounded-lg transition-all ${noteLineHeight === lh.id ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#CCCCCC] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
                     >
                       {lh.label}
                     </button>
@@ -193,15 +193,15 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
               <div>
                 <p className="text-xs font-normal text-zinc-600 dark:text-zinc-400 mb-2">{t('settings.date_format')}</p>
                 <div className="flex bg-zinc-200/50 dark:bg-zinc-900/50 rounded-xl p-1">
-                  <button onClick={() => onDateFormatChange('dd/mm/yyyy')} className={`flex-1 py-2 text-xs font-normal rounded-lg transition-all ${dateFormat === 'dd/mm/yyyy' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#C4C7C5] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>{t('settings.day_month_year')}</button>
-                  <button onClick={() => onDateFormatChange('mm/dd/yyyy')} className={`flex-1 py-2 text-xs font-normal rounded-lg transition-all ${dateFormat === 'mm/dd/yyyy' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#C4C7C5] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>{t('settings.month_day_year')}</button>
+                  <button onClick={() => onDateFormatChange('dd/mm/yyyy')} className={`flex-1 py-2 text-xs font-normal rounded-lg transition-all ${dateFormat === 'dd/mm/yyyy' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#CCCCCC] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>{t('settings.day_month_year')}</button>
+                  <button onClick={() => onDateFormatChange('mm/dd/yyyy')} className={`flex-1 py-2 text-xs font-normal rounded-lg transition-all ${dateFormat === 'mm/dd/yyyy' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#CCCCCC] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>{t('settings.month_day_year')}</button>
                 </div>
               </div>
               <div>
                 <p className="text-xs font-normal text-zinc-600 dark:text-zinc-400 mb-2">{t('settings.time_format')}</p>
                 <div className="flex bg-zinc-200/50 dark:bg-zinc-900/50 rounded-xl p-1">
-                  <button onClick={() => onTimeFormatChange('12h')} className={`flex-1 py-2 text-xs font-normal rounded-lg transition-all ${timeFormat === '12h' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#C4C7C5] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>12h (AM/PM)</button>
-                  <button onClick={() => onTimeFormatChange('24h')} className={`flex-1 py-2 text-xs font-normal rounded-lg transition-all ${timeFormat === '24h' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#C4C7C5] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>{t('settings.military')}</button>
+                  <button onClick={() => onTimeFormatChange('12h')} className={`flex-1 py-2 text-xs font-normal rounded-lg transition-all ${timeFormat === '12h' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#CCCCCC] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>12h (AM/PM)</button>
+                  <button onClick={() => onTimeFormatChange('24h')} className={`flex-1 py-2 text-xs font-normal rounded-lg transition-all ${timeFormat === '24h' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-[#CCCCCC] shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>{t('settings.military')}</button>
                 </div>
               </div>
             </div>
@@ -210,7 +210,7 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
         </div>
 
         {/* Footer Hint - Matching Group Launcher Style */}
-        <div className="sticky bottom-0 bg-zinc-50 dark:bg-[#202022] p-2 text-center text-[11px] text-zinc-400 border-t border-zinc-100 dark:border-zinc-800 z-10">
+        <div className="sticky bottom-0 bg-zinc-50 dark:bg-[#1B1B1E] p-2 text-center text-[11px] text-zinc-400 border-t border-zinc-100 dark:border-zinc-800 z-10">
             Presiona <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded border border-zinc-200 dark:border-zinc-700">Esc</code> para cerrar
         </div>
 
