@@ -10,6 +10,58 @@ interface LinkifiedTextProps {
     onUpdate: (id: string, updates: any) => void;
 }
 
+interface Segment {
+  type: 'text' | 'link' | 'highlight' | 'translation' | 'bold' | 'italic' | 'marker';
+  content: string;
+  raw?: string;
+  id?: string; // used for translation id
+  meta?: string; // used for marker type or translation legacy
+  timestamp?: string; // for marker
+}
+
+const MARKER_TYPES = {
+  ins:   { label: 'Insight',   color: '#7C3AED', emoji: '💡' },
+  idea:  { label: 'Idea',      color: '#DC2626', emoji: '🔥' },
+  op:    { label: 'Opinión',   color: '#65A30D', emoji: '🌱' },
+  duda:  { label: 'Duda',      color: '#0EA5E9', emoji: '💧' },
+  wow:   { label: 'Sorpresa',  color: '#DB2777', emoji: '✨' },
+  pat:   { label: 'Patrón',    color: '#6D28D9', emoji: '🌀' },
+  yo:    { label: 'Yo',        color: '#F59E0B', emoji: '⭐' },
+  ruido: { label: 'Ruido',     color: '#6B7280', emoji: '🔇' },
+} as const;
+
+type MarkerType = keyof typeof MARKER_TYPES;
+
+const generateMarkerTimestamp = (): string => {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm   = String(now.getMonth() + 1).padStart(2, '0');
+  const dd   = String(now.getDate()).padStart(2, '0');
+  const hh   = String(now.getHours()).padStart(2, '0');
+  const min  = String(now.getMinutes()).padStart(2, '0');
+  return `${yyyy}${mm}${dd}_${hh}${min}`;
+};
+
+const formatMarkerTimestamp = (ts: string): string => {
+  if (!ts || ts.length < 13) return ts;
+  return `${ts.slice(6,8)}/${ts.slice(4,6)}/${ts.slice(0,4)} ${ts.slice(9,11)}:${ts.slice(11,13)}`;
+};
+
+export const extractMarkersFromContent = (content: string) => {
+  const regex = /\[\[(ins|idea|op|duda|wow|pat|yo|ruido|idioma):([^\|]+)\|([^\]]+)\]\]/g;
+  const markers = [];
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    markers.push({
+      tipo:      match[1],
+      timestamp: match[2],
+      texto:     match[3],
+      posicion:  match.index,
+    });
+  }
+  return markers;
+};
+
 // OBJETO MAESTRO: Obliga a que la lectura y el editor midan EXACTAMENTE lo mismo (Cero Saltos)
 const EXACT_STYLES: React.CSSProperties = {
     fontFamily: 'inherit',
@@ -43,8 +95,8 @@ const highlightSegment = (text: string, highlight?: string): React.ReactNode => 
     );
 };
 
-const parseAugmentedText = (text: string) => {
-    const regex = /(https?:\/\/[^\s]+)|\{=(.+?)=\}|\[\[tr:([^|]+)\|(.+?)\]\]|\*\*([^*]+)\*\*|\*([^*]+)\*/g;
+const parseAugmentedText = (text: string): Segment[] => {
+    const regex = /(https?:\/\/[^\s]+)|\{=(.+?)=\}|\[\[tr:([^|]+)\|(.+?)\]\]|\[\[(ins|idea|op|duda|wow|pat|yo|ruido):([^|]+)\|([^\]]+)\]\]|\*\*([^*]+)\*\*|\*([^*]+)\*/g;
     const parts = [];
     let lastIndex = 0;
     let match;
@@ -56,8 +108,9 @@ const parseAugmentedText = (text: string) => {
         if (match[1]) parts.push({ type: 'link', content: match[1], raw: match[0] });
         else if (match[2]) parts.push({ type: 'highlight', content: match[2], raw: match[0] });
         else if (match[3] && match[4]) parts.push({ type: 'translation', id: match[3], content: match[4], raw: match[0] });
-        else if (match[5]) parts.push({ type: 'bold', content: match[5], raw: match[0] });
-        else if (match[6]) parts.push({ type: 'italic', content: match[6], raw: match[0] });
+        else if (match[5]) parts.push({ type: 'marker', meta: match[5], timestamp: match[6], content: match[7], raw: match[0] });
+        else if (match[8]) parts.push({ type: 'bold', content: match[8], raw: match[0] });
+        else if (match[9]) parts.push({ type: 'italic', content: match[9], raw: match[0] });
         lastIndex = regex.lastIndex;
     }
     if (lastIndex < text.length) {
@@ -189,6 +242,7 @@ const InlineEditor = ({
 export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, searchQuery, onUpdate }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [selectionMenu, setSelectionMenu] = useState<{ text: string; top: number; left: number; selectionState?: { startOffset: number, endOffset: number } } | null>(null);
+    const [showMarkerMenu, setShowMarkerMenu] = useState(false);
     const [isTranslating, setIsTranslating] = useState(false);
     const [translationsMap, setTranslationsMap] = useState<Record<string, string>>({});
     const [hasFetchedTranslations, setHasFetchedTranslations] = useState(false);
@@ -421,7 +475,7 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
         executeDelete();
     };
 
-    const doFormat = (type: 'highlight' | 'bold' | 'h1') => {
+    const doFormat = (type: 'highlight' | 'bold' | 'h1' | MarkerType) => {
         if (!selectionMenu) return;
         let newContent = content;
 
@@ -431,13 +485,11 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
         let targetTextToReplace = textToReplace;
         let exactMatch = content.includes(textToReplace);
 
-        // Si la constante literal sin saltos no hace coincidencia (pasa usando el ratón en múltiples renglones)
-        // Buscamos cuál es la sub-cadena original con sus saltos \n que el usuario refería
         if (!exactMatch) {
             const words = textToReplace.split(/\s+/).filter(w => w.trim().length > 0);
             if (words.length > 0) {
                 const regexFriendly = words.map(escapeRegExp).join('([\\s\\n]*)');
-                const regex = new RegExp(`(${regexFriendly})`, ''); // match only first
+                const regex = new RegExp(`(${regexFriendly})`, '');
                 const match = newContent.match(regex);
                 if (match) {
                     targetTextToReplace = match[0];
@@ -445,16 +497,31 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
             }
         }
 
+        // Anti-mescolanza: si el texto seleccionado ya está dentro de un marcador,
+        // buscar el marcador completo en el raw y reemplazarlo (no anidar)
+        const markerWrapRegex = /\[\[(ins|idea|op|duda|wow|pat|yo|ruido):[^\|]+\|([^\]]+)\]\]/g;
+        let markerMatch;
+        while ((markerMatch = markerWrapRegex.exec(content)) !== null) {
+            if (markerMatch[2] === targetTextToReplace || markerMatch[0].includes(targetTextToReplace)) {
+                targetTextToReplace = markerMatch[0]; // reemplazar el marcador completo
+                break;
+            }
+        }
+        // El innerText limpio para usar como contenido del nuevo marcador
+        const innerClean = targetTextToReplace.replace(/\[\[(ins|idea|op|duda|wow|pat|yo|ruido):[^\|]+\|([^\]]+)\]\]/g, '$2');
+
         if (type === 'highlight') {
-            // Para abarcar un bloque multimedias, inyectamos {= al principio y =} al fin de su match crudo
-            newContent = newContent.replace(targetTextToReplace, `{=${targetTextToReplace}=}`);
+            newContent = newContent.replace(targetTextToReplace, `{=${innerClean}=}`);
         }
         else if (type === 'bold') {
-            newContent = newContent.replace(targetTextToReplace, `**${targetTextToReplace}**`);
+            newContent = newContent.replace(targetTextToReplace, `**${innerClean}**`);
+        }
+        else if (type in MARKER_TYPES) {
+            const ts = generateMarkerTimestamp();
+            newContent = newContent.replace(targetTextToReplace, `[[${type}:${ts}|${innerClean}]]`);
         }
         else if (type === 'h1') {
             const lines = content.split('\n');
-            // Mapeamos los sub strings para ver si alguna línea los contiene
             const newLines = lines.map(line => {
                 if (targetTextToReplace.includes(line.trim()) || line.includes(targetTextToReplace.trim())) {
                     return !line.startsWith('#') && line.trim() !== '' ? `# ${line}` : line;
@@ -608,7 +675,7 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
             // MARCAS ESTABLES (Sin Padding vertical que rompa la altura)
             if (segment.type === 'highlight') {
                 return (
-                    <mark key={idx} className="relative bg-[#ccff00] dark:bg-[#ccff00]/30 text-black dark:text-inherit rounded px-0.5 font-bold group/hl cursor-pointer transition-colors mx-0.5">
+                    <mark key={idx} className="relative bg-[#FACC15] dark:bg-[#FACC15]/80 text-black rounded px-0.5 font-semibold group/hl cursor-pointer transition-colors mx-0.5">
                         {highlightSegment(segment.content, searchQuery)}
                         <button onClick={(e) => { e.stopPropagation(); removeMarkup(segment.raw!, segment.content); }} className="absolute -top-2.5 -right-2 bg-zinc-900 text-white rounded-full w-[16px] h-[16px] flex items-center justify-center opacity-0 group-hover/hl:opacity-100 transition-opacity shadow-lg active:scale-90" title="Quitar resaltado">
                             <X size={10} strokeWidth={3} />
@@ -623,7 +690,7 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
                 if (isMissing) return <span key={idx}>{highlightSegment(segment.content, searchQuery)}</span>;
 
                 return (
-                    <mark key={idx} className="relative bg-[#60A5FA] dark:bg-[#60A5FA]/35 text-black dark:text-inherit rounded px-0.5 font-bold group/tr cursor-help transition-colors mx-0.5">
+                    <mark key={idx} className="relative bg-[#10B981] dark:bg-[#10B981]/80 text-white rounded px-0.5 font-semibold group/tr cursor-help transition-colors mx-0.5 leading-none">
                         {highlightSegment(segment.content, searchQuery)}
                         <button onClick={(e) => { e.stopPropagation(); removeMarkup(segment.raw!, segment.content); }} className="absolute -top-2.5 -right-2 bg-zinc-900 text-white rounded-full w-[16px] h-[16px] flex items-center justify-center opacity-0 group-hover/tr:opacity-100 transition-opacity shadow-lg active:scale-90" title="Quitar traducción">
                             <X size={10} strokeWidth={3} />
@@ -633,6 +700,33 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
                             <svg className="absolute text-zinc-900 h-2 w-full left-0 top-full" x="0px" y="0px" viewBox="0 0 255 255"><polygon className="fill-current" points="0,0 127.5,127.5 255,0" /></svg>
                         </span>
                     </mark>
+                );
+            }
+
+            if (segment.type === 'marker') {
+                const mType = segment.meta as MarkerType;
+                const cfg   = MARKER_TYPES[mType] ?? { label: mType, color: '#6B7280', emoji: '?' };
+                const ts    = formatMarkerTimestamp(segment.timestamp ?? '');
+                return (
+                  <mark
+                    key={idx}
+                    className="relative rounded px-0.5 font-bold group/mk cursor-default transition-colors mx-0.5 inline-block"
+                    style={{ backgroundColor: cfg.color + '33', color: cfg.color, border: `1px solid ${cfg.color}55` }}
+                  >
+                    {highlightSegment(segment.content, searchQuery)}
+                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[220px] bg-zinc-900 text-white font-sans text-xs p-2 rounded-xl shadow-2xl opacity-0 group-hover/mk:opacity-100 transition-all z-50 pointer-events-none whitespace-pre-wrap leading-relaxed ring-1 ring-white/10">
+                      <span style={{ color: cfg.color }}>{cfg.emoji} {cfg.label}</span>
+                      {ts && <><br/><span className="text-zinc-400 text-[10px]">{ts}</span></>}
+                      <svg className="absolute text-zinc-900 h-2 w-full left-0 top-full" x="0px" y="0px" viewBox="0 0 255 255"><polygon className="fill-current" points="0,0 127.5,127.5 255,0" /></svg>
+                    </span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removeMarkup(segment.raw!, segment.content); }}
+                      className="absolute -top-2.5 -right-2 bg-zinc-900 text-white rounded-full w-[16px] h-[16px] flex items-center justify-center opacity-0 group-hover/mk:opacity-100 transition-opacity shadow-lg active:scale-90"
+                      title={`Quitar ${cfg.label}`}
+                    >
+                      <X size={9} />
+                    </button>
+                  </mark>
                 );
             }
             return <span key={idx}>{highlightSegment(segment.content, searchQuery)}</span>;
@@ -732,9 +826,36 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
 
                             <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
 
-                            <button onClick={() => doFormat('highlight')} className="flex items-center gap-1.5 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-black rounded-lg text-xs font-bold transition-colors text-zinc-800 dark:text-white active:scale-95" title="Resaltar">
-                                <Highlighter size={14} className="text-[#6B8E23] dark:text-[#ccff00]" /> Resaltar
+                            {/* Resaltar simple */}
+                            <button onClick={() => doFormat('highlight')} className="p-2 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Resaltar">
+                                <Highlighter size={16} className="text-[#6B8E23] dark:text-[#ccff00]" />
                             </button>
+
+                            {/* Botón marcador → abre sub-menú compacto */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowMarkerMenu(p => !p)}
+                                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold transition-colors active:scale-95 ${showMarkerMenu ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-white' : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                                    title="Etiquetar"
+                                >
+                                    <span>🏷️</span>
+                                </button>
+                                {showMarkerMenu && (
+                                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-1.5 grid grid-cols-2 gap-0.5 w-[160px] z-[110]">
+                                        {(Object.entries(MARKER_TYPES) as [MarkerType, typeof MARKER_TYPES[MarkerType]][]).map(([key, cfg]) => (
+                                            <button
+                                                key={key}
+                                                onClick={() => { doFormat(key); setShowMarkerMenu(false); }}
+                                                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left whitespace-nowrap"
+                                                style={{ color: cfg.color }}
+                                            >
+                                                <span>{cfg.emoji}</span>
+                                                <span>{cfg.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
 
                             <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
 

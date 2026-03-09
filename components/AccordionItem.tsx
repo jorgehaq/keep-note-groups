@@ -83,10 +83,11 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   // 🚀 NUEVO: Sincronización Realtime UI
   // Fuerza la actualización del input local si el título cambia en otro dispositivo
   useEffect(() => {
-    if (note.title !== undefined && note.title !== tempTitle) {
+    // Solo sincronizar si NO está en modo edición activa
+    if (!isEditingTitle && note.title !== undefined && note.title !== tempTitle) {
       setTempTitle(note.title);
     }
-  }, [note.title]);
+  }, [note.title, isEditingTitle]);
 
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -208,8 +209,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 placeholder="Título de la nota..."
                 className={`w-full bg-transparent text-lg font-bold outline-none placeholder-zinc-400 transition-colors cursor-text pr-2 ${
                   searchQuery && tempTitle.toLowerCase().includes(searchQuery.toLowerCase())
-                    ? "text-transparent caret-zinc-800 dark:caret-[#C4C7C5]"
-                    : "text-zinc-800 dark:text-[#C4C7C5]"
+                    ? "text-transparent caret-zinc-800 dark:caret-[#CCCCCC]"
+                    : "text-zinc-800 dark:text-[#CCCCCC]"
                 }`}
                 title="Haz clic para editar"
               />
@@ -274,11 +275,11 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
         <div className="px-4 pb-4 pt-2 w-full flex-1 flex flex-col min-h-0">
           {note.is_checklist ? (
-            <div className="bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4">
+            <div className="bg-zinc-50 dark:bg-[#181818] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4">
               <ChecklistEditor idPrefix={note.id} initialContent={note.content} onUpdate={handleUpdateContent} />
             </div>
           ) : (
-            <div className="note-editor-scroll bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-text flex-1 overflow-y-scroll min-h-0">
+            <div className="note-editor-scroll bg-zinc-50 dark:bg-[#181818] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-text flex-1 overflow-y-scroll min-h-0">
               <SmartNotesEditor 
                 noteId={note.id} 
                 initialContent={note.content} 

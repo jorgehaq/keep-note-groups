@@ -20,6 +20,29 @@ interface SmartNotesEditorProps {
     showLineNumbers?: boolean;
 }
 
+const MARKER_TYPES = {
+  ins:   { label: 'Insight',   color: '#7C3AED', emoji: '💡' },
+  idea:  { label: 'Idea',      color: '#DC2626', emoji: '🔥' },
+  op:    { label: 'Opinión',   color: '#65A30D', emoji: '🌱' },
+  duda:  { label: 'Duda',      color: '#0EA5E9', emoji: '💧' },
+  wow:   { label: 'Sorpresa',  color: '#DB2777', emoji: '✨' },
+  pat:   { label: 'Patrón',    color: '#6D28D9', emoji: '🌀' },
+  yo:    { label: 'Yo',        color: '#F59E0B', emoji: '⭐' },
+  ruido: { label: 'Ruido',     color: '#6B7280', emoji: '🔇' },
+} as const;
+
+type MarkerType = keyof typeof MARKER_TYPES;
+
+const generateMarkerTimestamp = (): string => {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm   = String(now.getMonth() + 1).padStart(2, '0');
+  const dd   = String(now.getDate()).padStart(2, '0');
+  const hh   = String(now.getHours()).padStart(2, '0');
+  const min  = String(now.getMinutes()).padStart(2, '0');
+  return `${yyyy}${mm}${dd}_${hh}${min}`;
+};
+
 const ForceRedrawEffect = StateEffect.define<null>();
 
 // Double-click reveal: tracks which line number has been "unlocked" for editing
@@ -143,6 +166,14 @@ const pasteCleanerExtension = EditorView.domEventHandlers({
         const text = event.clipboardData?.getData('text/plain');
         if (!text) return false;
 
+        // Para pastes muy grandes, diferir el procesamiento
+        if (text.length > 10000) {
+            event.preventDefault();
+            // Insertar directo sin procesar para no bloquear
+            view.dispatch(view.state.replaceSelection(text));
+            return true;
+        }
+
         // Si detectamos bloques de código con exceso de enters, aplicamos limpieza
         if (text.includes('```') && /(\n{2,})```/.test(text)) {
             const cleaned = trimCodeBlocks(text);
@@ -183,9 +214,14 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
             const cbHeaderClass = isDark ? 'cm-cb-header-dark' : 'cm-cb-header';
             const cbLineClass = isDark ? 'cm-cb-line-dark' : 'cm-cb-line';
             const cbFooterClass = isDark ? 'cm-cb-footer-dark' : 'cm-cb-footer';
+            // Solo escanear líneas visibles + buffer de contexto para detectar bloques abiertos
+            const firstVisibleLine = view.state.doc.lineAt(view.visibleRanges[0]?.from ?? 0).number;
+            const lastVisibleLine = view.state.doc.lineAt(view.visibleRanges[view.visibleRanges.length - 1]?.to ?? 0).number;
+            const scanStart = Math.max(1, firstVisibleLine - 50);
+            const scanEnd = Math.min(view.state.doc.lines, lastVisibleLine + 10);
             const totalLines = view.state.doc.lines;
-            let scanLine = 1;
-            while (scanLine <= totalLines) {
+            let scanLine = scanStart;
+            while (scanLine <= scanEnd) {
                 const line = view.state.doc.line(scanLine);
                 const lineText = line.text;
                 // Check if line starts with ``` (opening fence)
@@ -246,6 +282,14 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
             // --- STEP 2: Inline formatting (skip inside code blocks) ---
             const rules = [
                 { type: 'hl', regex: /\{=([\s\S]*?)=\}/g }, { type: 'tr', regex: /\[\[tr:([^|\]]+)\|([\s\S]*?)\]\]/g },
+                { type: 'mk-ins',    regex: /\[\[ins:[^\|]+\|([^\]]+)\]\]/g },
+                { type: 'mk-idea',   regex: /\[\[idea:[^\|]+\|([^\]]+)\]\]/g },
+                { type: 'mk-op',     regex: /\[\[op:[^\|]+\|([^\]]+)\]\]/g },
+                { type: 'mk-duda',   regex: /\[\[duda:[^\|]+\|([^\]]+)\]\]/g },
+                { type: 'mk-wow',    regex: /\[\[wow:[^\|]+\|([^\]]+)\]\]/g },
+                { type: 'mk-pat',    regex: /\[\[pat:[^\|]+\|([^\]]+)\]\]/g },
+                { type: 'mk-yo',     regex: /\[\[yo:[^\|]+\|([^\]]+)\]\]/g },
+                { type: 'mk-ruido',  regex: /\[\[ruido:[^\|]+\|([^\]]+)\]\]/g },
                 { type: 'h1', regex: /^(#{1,6})\s+(.*)/gm }, { type: 'bold', regex: /\*\*([\s\S]*?)\*\*/g }, 
                 { type: 'italic_under', regex: /(?<!_)_([^_]+)_(?!_)/g }, { type: 'italic_star', regex: /(?<!\*)\*([^*]+)\*(?!\*)/g }, 
                 { type: 'hr', regex: /^---+$/gm }, { type: 'md-link', regex: /\[([^\]]*)\]\(([^)\n]*)\)/g },
@@ -275,6 +319,15 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
                     else if (rule.type === 'hl') {
                         safeReplace(mFrom, mFrom + 2); safeMark('cm-custom-hl', mFrom + 2, mTo - 2);
                         safeReplace(mTo - 2, mTo); decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, match[1]), side: 1 }).range(mTo, mTo));
+                    }
+                    else if (rule.type.startsWith('mk-')) {
+                      const mType = rule.type.replace('mk-', '');
+                      // Calcular longitud del prefijo [[tipo:timestamp|  y ocultar prefijo + sufijo ]]
+                      const prefixLen = mTo - mFrom - match[1].length - 2; // 2 = ]]
+                      safeReplace(mFrom, mFrom + prefixLen);                // ocultar [[tipo:timestamp|
+                      safeMark(`cm-custom-mk-${mType}`, mFrom + prefixLen, mTo - 2); // marcar solo el texto
+                      safeReplace(mTo - 2, mTo);                            // ocultar ]]
+                      decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, match[1]), side: 1 }).range(mTo, mTo));
                     }
                     else if (rule.type === 'hr') {
                         safeReplace(mFrom, mTo); decos.push(Decoration.widget({ widget: new HrWidget(), side: 0 }).range(mFrom, mFrom));
@@ -373,7 +426,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         "&": {
             fontSize: fontSize,
             fontFamily: fontFamily,
-            backgroundColor: "transparent !important", 
+            backgroundColor: "#181818 !important", 
             color: "inherit !important",               
             transition: "font-size 0.2s ease, font-family 0.2s ease" // Animación suave al cambiar ajustes
         },
@@ -386,11 +439,11 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             fontSize: fontSize,
         },
         "&.cm-focused .cm-cursor": { borderLeftColor: "currentColor !important", borderLeftWidth: "2px !important" },
-        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": { backgroundColor: "#6C490F !important", color: "white !important", fontWeight: "normal !important" },
+        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": { backgroundColor: "#C4944A !important", color: "white !important", fontWeight: "normal !important" },
         ".cm-content *": { textDecoration: "none !important", boxShadow: "none !important" },
         ".cm-line": { lineHeight: lHeight },
         "&.cm-focused": { outline: "none" },
-        ".cm-gutters": { backgroundColor: "transparent !important", border: "none !important", color: "#71717a" },
+        ".cm-gutters": { backgroundColor: "#181818 !important", border: "none !important", color: "#71717a" },
         ".dark .cm-gutters": { color: "#52525b" },
         ".cm-activeLineGutter": { backgroundColor: "transparent !important" },
         ".cm-lineNumbers .cm-gutterElement": { paddingRight: "10px !important", paddingLeft: "4px !important" },
@@ -399,25 +452,33 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             paddingLeft: "4px !important",
             boxSizing: "border-box"
         },
-        ".cm-custom-hl": { backgroundColor: "#6C490F !important", color: "white !important", padding: "0 2px", fontWeight: "normal !important" },
-        ".dark .cm-custom-hl": { backgroundColor: "#6C490F !important", color: "white !important" },
-        ".cm-custom-tr": { position: "relative", backgroundColor: "#0539A3", color: "#B4D0D0 !important", padding: "0 2px", cursor: "help" },
-        ".dark .cm-custom-tr": { backgroundColor: "#0539A3", color: "#B4D0D0 !important" },
+        ".cm-custom-hl": { backgroundColor: "#FACC15 !important", color: "#000000 !important", padding: "0 2px", fontWeight: "600 !important", borderRadius: "4px !important" },
+        ".dark .cm-custom-hl": { backgroundColor: "#FACC15 !important", color: "#000000 !important", borderRadius: "4px !important" },
+        ".cm-custom-tr": { position: "relative", backgroundColor: "#10B981 !important", color: "white !important", padding: "0 2px", cursor: "help", borderRadius: "4px !important" },
+        ".dark .cm-custom-tr": { backgroundColor: "#10B981 !important", color: "white !important", borderRadius: "4px !important" },
         ".cm-custom-h1": { fontSize: "1.4em", fontWeight: "bold", color: "inherit", lineHeight: "1.2" },
         ".cm-custom-bold": { fontWeight: "bold", color: "inherit" },
         ".cm-custom-italic": { fontStyle: "italic", color: "inherit" },
         ".cm-url, .cm-link, .cm-custom-link, .cm-custom-link *": { color: "#60A5FA !important", textDecoration: "underline !important", cursor: "pointer !important", transition: "opacity 0.2s", opacity: "1 !important" },
         ".cm-custom-link:hover": { opacity: "0.8 !important" },
+        ".cm-custom-mk-ins":    { backgroundColor: "#7C3AED33 !important", color: "#7C3AED !important", border: "1px solid #7C3AED55", padding: "0 2px", borderRadius: "4px !important" },
+        ".cm-custom-mk-idea":   { backgroundColor: "#DC262633 !important", color: "#DC2626 !important", border: "1px solid #DC262655", padding: "0 2px", borderRadius: "4px !important" },
+        ".cm-custom-mk-op":     { backgroundColor: "#65A30D33 !important", color: "#65A30D !important", border: "1px solid #65A30D55", padding: "0 2px", borderRadius: "4px !important" },
+        ".cm-custom-mk-duda":   { backgroundColor: "#0EA5E933 !important", color: "#0EA5E9 !important", border: "1px solid #0EA5E955", padding: "0 2px", borderRadius: "4px !important" },
+        ".cm-custom-mk-wow":    { backgroundColor: "#DB277733 !important", color: "#DB2777 !important", border: "1px solid #DB277755", padding: "0 2px", borderRadius: "4px !important" },
+        ".cm-custom-mk-pat":    { backgroundColor: "#6D28D933 !important", color: "#6D28D9 !important", border: "1px solid #6D28D955", padding: "0 2px", borderRadius: "4px !important" },
+        ".cm-custom-mk-yo":     { backgroundColor: "#F59E0B33 !important", color: "#F59E0B !important", border: "1px solid #F59E0B55", padding: "0 2px", borderRadius: "4px !important" },
+        ".cm-custom-mk-ruido":  { backgroundColor: "#6B728033 !important", color: "#6B7280 !important", border: "1px solid #6B728055", padding: "0 2px", borderRadius: "4px !important" },
         ".cm-custom-hr": { display: "inline-block", verticalAlign: "middle", width: "calc(100% - 30px)", height: "2px", backgroundColor: "#d4d4d8", margin: "12px 0", borderRadius: "2px" },
         ".dark .cm-custom-hr": { backgroundColor: "#3f3f3f" },
         ".cm-search-match": { backgroundColor: "rgba(245, 158, 11, 0.4) !important", borderBottom: "2px solid #f59e0b", color: "#000 !important" },
         ".cm-selectionMatch": { backgroundColor: "#518141 !important", color: "#000 !important" },
-        ".cm-cb-header": { backgroundColor: "#E4E4E7", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#71717a", position: "relative", padding: "0 8px", minHeight: "2px" },
-        ".cm-cb-header-dark": { backgroundColor: "#18181B", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#a1a1aa", position: "relative", padding: "0 8px", minHeight: "2px" },
-        ".cm-cb-line": { backgroundColor: "#E4E4E7", fontFamily: fontFamily, fontSize: "0.9em !important", color: "#18181b", padding: "0 8px" },
-        ".cm-cb-line-dark": { backgroundColor: "#18181B", fontFamily: fontFamily, fontSize: "0.9em !important", color: "#A5A7A6", padding: "0 8px" },
-        ".cm-cb-footer": { backgroundColor: "#E4E4E7", borderRadius: "0 0 8px 8px", fontFamily: fontFamily, fontSize: "0.85em", color: "#71717a", padding: "0 8px", minHeight: "2px" },
-        ".cm-cb-footer-dark": { backgroundColor: "#18181B", borderRadius: "0 0 8px 8px", fontFamily: fontFamily, fontSize: "0.85em", color: "#a1a1aa", padding: "0 8px", minHeight: "2px" },
+        ".cm-cb-header": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderBottom: "none", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#71717a", position: "relative", padding: "0 8px", minHeight: "2px" },
+        ".cm-cb-header-dark": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderBottom: "none", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#a1a1aa", position: "relative", padding: "0 8px", minHeight: "2px" },
+        ".cm-cb-line": { backgroundColor: "#0D0D0F", borderLeft: "1px solid #3F3F46", borderRight: "1px solid #3F3F46", fontFamily: fontFamily, fontSize: "0.9em !important", color: "#A78BFA !important", padding: "0 8px" },
+        ".cm-cb-line-dark": { backgroundColor: "#0D0D0F", borderLeft: "1px solid #3F3F46", borderRight: "1px solid #3F3F46", fontFamily: fontFamily, fontSize: "0.9em !important", color: "#A78BFA !important", padding: "0 8px" },
+        ".cm-cb-footer": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderTop: "none", borderRadius: "0 0 8px 8px", fontFamily: fontFamily, fontSize: "0.85em", color: "#71717a", padding: "0 8px", minHeight: "2px" },
+        ".cm-cb-footer-dark": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderTop: "none", borderRadius: "0 0 8px 8px", fontFamily: fontFamily, fontSize: "0.85em", color: "#a1a1aa", padding: "0 8px", minHeight: "2px" },
         ".cm-codeblock-copy": { position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "4px", borderRadius: "4px", backgroundColor: "transparent", color: "#a1a1aa", cursor: "pointer", border: "none", transition: "all 0.15s", opacity: "0" },
         ".cm-cb-header:hover .cm-codeblock-copy, .cm-cb-header-dark:hover .cm-codeblock-copy": { opacity: "1" },
         ".cm-codeblock-copy:hover": { backgroundColor: "#d4d4d8", color: "#52525b" },
@@ -425,8 +486,8 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-remove-btn": { position: "absolute", display: "inline-flex", alignItems: "center", justifyContent: "center", backgroundColor: "#ef4444", border: "2px solid #ffffff", color: "white !important", width: "18px", height: "18px", left: "-6px", top: "-14px", borderRadius: "50%", fontSize: "14px", fontWeight: "bold", lineHeight: "1", cursor: "pointer !important", zIndex: "100", opacity: "0", transition: "opacity 0.15s", pointerEvents: "none" },
         ".cm-remove-btn-visible": { opacity: "1 !important", pointerEvents: "auto !important" },
         ".cm-remove-btn:hover": { opacity: "1 !important", pointerEvents: "auto !important", transform: "scale(1.1)" },
-        ".dark .cm-content": { color: "#A5A7A6 !important" },
-        ".dark .cm-line": { color: "#A5A7A6 !important" }
+        ".dark .cm-content": { color: "#CCCCCC !important" },
+        ".dark .cm-line": { color: "#CCCCCC !important" }
     });
 };
 
@@ -439,6 +500,7 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
     const [menuState, setMenuState] = useState<{top: number, left: number, from: number, to: number, text: string, isMobile?: boolean} | null>(null);
     const [tooltipState, setTooltipState] = useState<{text: string, top: number, left: number} | null>(null);
     const [isTranslating, setIsTranslating] = useState(false);
+    const [showMarkerMenu, setShowMarkerMenu] = useState(false);
     
     const translationsMapRef = useRef<Record<string, string>>({});
     const searchQueryRef = useRef<string>(searchQuery || ''); 
@@ -567,57 +629,74 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
         }
     }), [noteId]);
 
-    const doHighlight = () => {
+    const doFormat = (type: 'highlight' | 'link' | MarkerType) => {
         if (!menuState || !editorRef.current?.view) return;
-        const r = `{=${menuState.text}=}`;
-        editorRef.current.view.dispatch({ changes: { from: menuState.from, to: menuState.to, insert: r }, selection: { anchor: menuState.from + r.length } });
-        setMenuState(null);
-    };
 
-    const doLink = () => {
-        if (!menuState || !editorRef.current?.view) return;
-        const text = menuState.text.trim();
-        const urlMatch = text.match(/(https?:\/\/[^\s]+)/);
+        // Anti-mescolanza: si el texto seleccionado es el interior de un marcador existente,
+        // usar el texto limpio (sin sintaxis anidada)
+        const rawSelected = menuState.text;
+        const innerClean = rawSelected.replace(/\[\[(ins|idea|op|duda|wow|pat|yo|ruido):[^\|]+\|([^\]]+)\]\]/g, '$2');
+
         let replacement = '';
-        if (urlMatch) {
-            const url = urlMatch[1];
-            let title = text.replace(url, '').replace(/^[-\s]+/, '').trim();
-            replacement = `[${title || url}](${url})`;
-        } else replacement = `[${text}]()`;
+        if (type === 'highlight') {
+            replacement = `{=${innerClean}=}`;
+        } else if (type === 'link') {
+            const text = innerClean.trim();
+            const urlMatch = text.match(/(https?:\/\/[^\s]+)/);
+            if (urlMatch) {
+                const url = urlMatch[1];
+                let title = text.replace(url, '').replace(/^[-\s]+/, '').trim();
+                replacement = `[${title || url}](${url})`;
+            } else replacement = `[${text}]()`;
+        } else if (type in MARKER_TYPES) {
+            const ts = generateMarkerTimestamp();
+            replacement = `[[${type}:${ts}|${innerClean}]]`;
+        }
+
         editorRef.current.view.dispatch({ changes: { from: menuState.from, to: menuState.to, insert: replacement }, selection: { anchor: menuState.from + replacement.length } });
         setMenuState(null);
+        setShowMarkerMenu(false);
     };
+
+    const doHighlight = () => doFormat('highlight');
+    const doLink = () => doFormat('link');
 
     const doTranslate = async (targetLang: 'en' | 'es') => {
         if (!menuState || !editorRef.current?.view) return;
         const textToTranslate = menuState.text.trim();
         if (!textToTranslate) return;
 
+        console.log("🚀 Iniciando traducción a través de Edge Function...");
         setIsTranslating(true);
+        
         try {
+            // 1. Obtener sesión para el historial
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("Debes iniciar sesión para traducir.");
 
             const sourceLang = targetLang === 'en' ? 'es' : 'en';
 
+            // 2. Llamada nativa a Supabase (Maneja CORS y JWT automáticamente)
             const { data, error } = await supabase.functions.invoke('translateMyAppNotes', {
-                body: { sourceLang, targetLang, text: textToTranslate },
-                headers: { Authorization: `Bearer ${session.access_token}` }
+                body: {
+                    sourceLang,
+                    targetLang,
+                    text: textToTranslate
+                },
             });
 
+            // 3. Manejo de errores de la función
             if (error) {
-                let eMsg = error.message;
-                try {
-                    const eRes = await error.context.json();
-                    if (eRes && eRes.error) eMsg = eRes.error;
-                } catch(e) {}
-                throw new Error(eMsg);
+                console.error("🚨 Error capturado por Supabase/Deno:", error);
+                throw new Error(error.message);
             }
 
+            // 4. Éxito: Procesar traducción
+            console.log("✅ Traducción recibida:", data.translation);
             const translatedText = data.translation;
             const replacement = `[[tr:${translatedText}|${textToTranslate}]]`;
             
-            // Guardar en el historial de traducciones
+            // 5. Guardar en el historial de traducciones
             await supabase.from('translations').insert([{
                 user_id: session.user.id,
                 source_text: textToTranslate,
@@ -626,14 +705,16 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
                 target_lang: targetLang
             }]);
 
+            // 6. Actualizar editor
             editorRef.current.view.dispatch({ 
                 changes: { from: menuState.from, to: menuState.to, insert: replacement }, 
                 selection: { anchor: menuState.from + replacement.length } 
             });
             setMenuState(null);
-        } catch (error: any) {
-            console.error("Translation error:", error);
-            alert("Error al traducir: " + error.message);
+
+        } catch (err: any) {
+            console.error("❌ Error fatal en traducción:", err);
+            alert(`Error al traducir: ${err.message}`);
         } finally {
             setIsTranslating(false);
         }
@@ -669,7 +750,7 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
                 theme="none" 
                 readOnly={readOnly} 
                 height="auto"
-                className="w-full text-zinc-900 dark:text-[#A5A7A6]" 
+                className="w-full text-zinc-900 dark:text-[#CCCCCC]" 
                 extensions={[
                     // 🚀 MAGIA ANTI-HIJACKING: Prec.highest toma el control absoluto del evento
                     Prec.highest(
@@ -716,7 +797,34 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
                     onMouseDown={(e) => e.preventDefault()} 
                 >
                     {isTranslating ? ( <div className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-blue-500"><Loader2 size={16} className="animate-spin" /> Traduciendo...</div> ) : (
-                        <><button onClick={doHighlight} className="flex items-center gap-1.5 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-black rounded-lg text-xs font-bold transition-colors text-zinc-800 dark:text-white active:scale-95" title="Resaltar"><Highlighter size={14} className="text-[#6B8E23] dark:text-[#ccff00]" /></button>
+                        <><button onClick={doHighlight} className="p-2 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Resaltar"><Highlighter size={16} className="text-[#6B8E23] dark:text-[#ccff00]" /></button>
+                        
+                        {/* Botón marcador → sub-menú compacto */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowMarkerMenu(p => !p)}
+                                className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold transition-colors active:scale-95 ${showMarkerMenu ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-white' : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                                title="Etiquetar"
+                            >
+                                <span>🏷️</span>
+                            </button>
+                            {showMarkerMenu && (
+                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-1.5 grid grid-cols-2 gap-0.5 w-[160px] z-[110]">
+                                    {(Object.entries(MARKER_TYPES) as [MarkerType, typeof MARKER_TYPES[MarkerType]][]).map(([key, cfg]) => (
+                                        <button
+                                            key={key}
+                                            onClick={() => doFormat(key)}
+                                            className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left whitespace-nowrap"
+                                            style={{ color: cfg.color }}
+                                        >
+                                            <span>{cfg.emoji}</span>
+                                            <span>{cfg.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
                         <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
                         <button onClick={doLink} className="flex items-center gap-1.5 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-black rounded-lg transition-colors text-zinc-400 hover:text-blue-500 active:scale-95" title="Convertir a Link"><LinkIcon size={16} /></button>
                         <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>

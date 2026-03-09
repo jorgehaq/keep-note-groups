@@ -154,7 +154,7 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
                             <button
                                 onClick={() => handleTabChange('alpha')}
                                 className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-medium rounded-lg transition-all ${activeTab === 'alpha'
-                                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-[#C4C7C5] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-[#CCCCCC] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
                                     : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
                                     }`}
                             >
@@ -163,7 +163,7 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
                             <button
                                 onClick={() => handleTabChange('recent')}
                                 className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-medium rounded-lg transition-all ${activeTab === 'recent'
-                                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-[#C4C7C5] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-[#CCCCCC] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
                                     : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
                                     }`}
                             >
@@ -172,7 +172,7 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
                             <button
                                 onClick={() => handleTabChange('pinned')}
                                 className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-medium rounded-lg transition-all ${activeTab === 'pinned'
-                                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-[#C4C7C5] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-[#CCCCCC] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
                                     : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
                                     }`}
                             >
@@ -208,11 +208,11 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
                                             <span className={`text-sm font-medium leading-none truncate uppercase ${
                                                 dockedGroupIds.includes(group.id)
                                                     ? 'text-[#4940D9]'
-                                                    : 'text-zinc-800 dark:text-[#C4C7C5]'
+                                                    : 'text-zinc-800 dark:text-[#CCCCCC]'
                                             }`}>
                                                 {highlightMatch(group.title)}
                                             </span>
-                                            <span className="text-sm font-medium leading-none text-zinc-800 dark:text-[#C4C7C5] opacity-40 group-hover:opacity-100 transition-opacity shrink-0">
+                                            <span className="text-sm font-medium leading-none text-zinc-800 dark:text-[#CCCCCC] opacity-40 group-hover:opacity-100 transition-opacity shrink-0">
                                                 ({group.notes.length})
                                             </span>
                                         </div>
@@ -254,7 +254,7 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
 
                 {/* Footer Hint */}
                 {searchQuery.trim() === '' && (
-                    <div className="bg-zinc-50 dark:bg-[#202022] p-2 text-center text-xs text-zinc-400 border-t border-zinc-100 dark:border-zinc-800">
+                    <div className="bg-zinc-50 dark:bg-[#1B1B1E] p-2 text-center text-xs text-zinc-400 border-t border-zinc-100 dark:border-zinc-800">
                         Presiona <code>Esc</code> para cerrar
                     </div>
                 )}

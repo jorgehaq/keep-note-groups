@@ -45,6 +45,7 @@ const parseMarkdownPreview = (text: string) => {
         .replace(/~~([^~]+)~~/g, '<del class="opacity-70">$1</del>')
         .replace(/^&gt;\s+(.*)$/gm, '<span class="border-l-2 border-indigo-400 dark:border-indigo-600 pl-2 ml-1 italic opacity-90 block my-1">$1</span>')
         .replace(/\[\[tr:([^|]+)\|([^\]]+)\]\]/g, '<span class="text-indigo-600 dark:text-indigo-400 font-bold border-b border-indigo-400/50 border-dashed cursor-help" title="$1">$2</span>')
+        .replace(/\[\[(ins|idea|op|duda|wow|pat|yo|ruido):[^\|]+\|([^\]]+)\]\]/g, '<span class="font-bold border-b border-zinc-400/50 border-dashed cursor-help">$2</span>')
         .replace(/\n/g, '<span class="mx-1 opacity-30 text-[10px]">&para;</span> ');
 };
 
@@ -107,7 +108,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                     }
                 }}
                 onClick={e => e.stopPropagation()}
-                className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] outline-none placeholder-zinc-400 transition-colors p-4 pb-3"
+                className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] outline-none placeholder-zinc-400 transition-colors p-4 pb-3"
             />
         );
     };
@@ -201,10 +202,10 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
     const archivo = dumps.filter(d => d.status === 'history');
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#111113] overflow-hidden">
+        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#1B1B1E] overflow-hidden">
             <div className={`sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md shrink-0 ${isDumpTrayOpen ? '' : 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm'}`}>
                 <div className={`h-[72px] flex items-center justify-between px-4 md:px-6 py-4 ${isDumpTrayOpen ? 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm' : ''}`}>
-                    <h1 className="text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-3">
+                    <h1 className="text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] flex items-center gap-3">
                         <div className="h-9 p-2 bg-[#FFD700] rounded-lg text-amber-900 shadow-lg shadow-amber-500/20">
                             <PenTool size={20} />
                         </div>
@@ -258,7 +259,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
 
                 {/* FRANJA DE PIZARRONES (ACCESOS DIRECTOS) */}
                 {isDumpTrayOpen && pizarrones.length > 0 && (
-                    <div className="pt-4 px-4 pb-4 bg-[#111113] dark:bg-[#111113]">
+                    <div className="pt-4 px-4 pb-4 bg-[#1B1B1E] dark:bg-[#1B1B1E]">
                         <div className="flex flex-wrap justify-center gap-2.5">
                              {pizarrones.map(p => {
                                  const isFocused = focusedDumpId === p.id;
@@ -298,7 +299,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                 )}
             </div>
 
-            <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#111113] px-4 pb-4 ${isDumpTrayOpen && pizarrones.length > 0 ? 'pt-0' : 'pt-4'} hidden-scrollbar`}>
+            <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#1B1B1E] px-4 pb-4 ${isDumpTrayOpen && pizarrones.length > 0 ? 'pt-0' : 'pt-4'} hidden-scrollbar`}>
                 <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto flex flex-col gap-12 pb-20`}>
                     
                     {/* 1. PIZARRONES (PERSISTENTES - FILTRADO POR FOCO) */}
@@ -355,7 +356,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                             </div>
                                         )}
 
-                                        <div className="mx-4 mb-4 p-4 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl cursor-text min-h-[150px]">
+                                        <div className="mx-4 mb-4 p-4 bg-zinc-50 dark:bg-[#181818] border border-zinc-200 dark:border-zinc-800 rounded-xl cursor-text min-h-[150px]">
                                             {pizarron.is_checklist ? (
                                                 <ChecklistEditor idPrefix={pizarron.id} initialContent={pizarron.content} onUpdate={(c) => autoSave(pizarron.id, { content: c })} noteLineHeight={noteLineHeight} noteFont={noteFont} noteFontSize={noteFontSize} />
                                             ) : (

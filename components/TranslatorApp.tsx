@@ -175,11 +175,11 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
   if (loading) return <div className="p-10 text-center animate-pulse text-zinc-500">Cargando Traductor...</div>;
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#212424] overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#1B1B1E] overflow-hidden">
         
         <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
             <div className="h-[72px] flex items-center justify-between px-4 md:px-6 py-4">
-                <h1 className="text-xl font-bold text-zinc-800 dark:text-[#C4C7C5] flex items-center gap-3">
+                <h1 className="text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] flex items-center gap-3">
                     <div className="h-9 p-2 bg-[#8B5CF6] rounded-lg text-white shadow-lg shadow-violet-500/20">
                         <Languages size={20} />
                     </div>
@@ -225,7 +225,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                             <select 
                                 value={sourceLang} 
                                 onChange={(e) => setSourceLang(e.target.value)}
-                                className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-[#C4C7C5] text-sm font-normal rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer transition-all"
+                                className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-[#CCCCCC] text-sm font-normal rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer transition-all"
                             >
                                 {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
                             </select>
@@ -237,7 +237,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                             <select 
                                 value={targetLang} 
                                 onChange={(e) => setTargetLang(e.target.value)}
-                                className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-[#C4C7C5] text-sm font-normal rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer transition-all"
+                                className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-[#CCCCCC] text-sm font-normal rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer transition-all"
                             >
                                 {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
                             </select>
@@ -250,7 +250,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                                     value={originalText}
                                     onChange={(e) => setOriginalText(e.target.value)}
                                     placeholder="Escribe el texto a traducir..."
-                                    className="w-full h-40 bg-transparent p-4 outline-none resize-none text-zinc-800 dark:text-[#C4C7C5] placeholder-zinc-400"
+                                    className="w-full h-40 bg-transparent p-4 outline-none resize-none text-zinc-800 dark:text-[#CCCCCC] placeholder-zinc-400"
                                 />
                                 {originalText && (
                                     <button onClick={() => playAudio(originalText, sourceLang)} className="absolute bottom-3 right-3 p-2 text-zinc-400 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg transition-colors">
@@ -269,7 +269,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                                     value={translatedText}
                                     readOnly
                                     placeholder="La traducción aparecerá aquí..."
-                                    className="w-full h-40 bg-transparent p-4 outline-none resize-none text-zinc-800 dark:text-[#C4C7C5] placeholder-zinc-400 opacity-90"
+                                    className="w-full h-40 bg-transparent p-4 outline-none resize-none text-zinc-800 dark:text-[#CCCCCC] placeholder-zinc-400 opacity-90"
                                 />
                                 <div className="absolute bottom-3 right-3 flex items-center gap-1">
                                     {translatedText && !isTranslating && (
@@ -310,7 +310,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                                 <button 
                                     onClick={saveTranslation} 
                                     disabled={!originalText.trim() || !translatedText.trim() || isTranslating || isSaving}
-                                    className="flex items-center gap-2 px-5 py-2 text-xs font-normal text-white dark:text-[#C4C7C5] bg-[#8B5CF6] hover:bg-violet-600 rounded-xl shadow-lg shadow-violet-500/20 transition-all disabled:opacity-50"
+                                    className="flex items-center gap-2 px-5 py-2 text-xs font-normal text-white dark:text-[#CCCCCC] bg-[#8B5CF6] hover:bg-violet-600 rounded-xl shadow-lg shadow-violet-500/20 transition-all disabled:opacity-50"
                                 >
                                     {isSaving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                                     Guardar Traducción
@@ -349,7 +349,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                                         <div className="flex flex-1 items-center gap-2 min-w-0 overflow-hidden text-sm">
                                             <span className="text-zinc-500 dark:text-zinc-500 truncate max-w-[40%]">{t.source_text}</span>
                                             <span className="text-zinc-300 dark:text-zinc-700 shrink-0">|</span>
-                                            <span className="text-zinc-700 dark:text-[#C4C7C5] font-medium truncate flex-1">{t.translated_text}</span>
+                                            <span className="text-zinc-700 dark:text-[#CCCCCC] font-medium truncate flex-1">{t.translated_text}</span>
                                         </div>
                                     </div>
 
@@ -376,7 +376,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                                                     <Volume2 size={14} />
                                                 </button>
                                             </div>
-                                            <div className="relative group text-sm text-zinc-800 dark:text-[#C4C7C5] leading-relaxed font-medium">
+                                            <div className="relative group text-sm text-zinc-800 dark:text-[#CCCCCC] leading-relaxed font-medium">
                                                 <div className="mb-1 text-[10px] font-bold text-violet-500/70 uppercase tracking-wider">{getLangName(t.target_lang)}</div>
                                                 {t.translated_text}
                                                 <button onClick={() => playAudio(t.translated_text, t.target_lang)} className="absolute top-0 right-0 p-1.5 opacity-0 group-hover:opacity-100 bg-white dark:bg-zinc-800 text-zinc-400 hover:text-emerald-500 rounded-md transition-all shadow-sm">
