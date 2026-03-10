@@ -8,6 +8,7 @@ export interface Summary {
     note_id: string;
     target_objective: string | null;
     content: string | null;
+    scratchpad: string | null;
     status: SummaryStatus;
     created_at: string;
 }
@@ -122,11 +123,20 @@ export const useSummaries = (noteId: string | null) => {
         if (error) console.error("Error deleting summary:", error);
     };
 
+    const updateScratchpad = async (summaryId: string, text: string) => {
+        const { error } = await supabase
+            .from("summaries")
+            .update({ scratchpad: text })
+            .eq("id", summaryId);
+        if (error) console.error("Error updating scratchpad:", error);
+    };
+
     return {
         summaries,
         loading,
         generateSummary,
         deleteSummary,
+        updateScratchpad,
         refresh: fetchSummaries,
     };
 };

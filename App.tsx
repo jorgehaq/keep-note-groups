@@ -152,7 +152,12 @@ function App() {
       .channel('global-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, (payload) => {
         if (payload.eventType === 'INSERT') {
-          fetchData(); 
+          // 🚀 OPTIMIZATION: Inserción granular para evitar recarga completa
+          setGroups(prev => prev.map(g => 
+            g.id === payload.new.group_id 
+              ? { ...g, notes: sortNotesArray([...(g.notes || []), payload.new as Note], noteSortMode) } 
+              : g
+          ));
         } else if (payload.eventType === 'UPDATE') {
           // 🚀 OPTIMIZATION: Actualización granular para no colapsar notas ni recargar todo
           updateNoteSync(payload.new.id, payload.new as Partial<Note>);
@@ -161,7 +166,25 @@ function App() {
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'groups' }, (payload) => {
-        fetchData(); 
+        if (payload.eventType === 'INSERT') {
+          // 🚀 OPTIMIZATION: Evitar recarga si nosotros ya lo agregamos localmente
+          setGroups(prev => {
+            if (prev.find(g => g.id === payload.new.id)) return prev;
+            const newGroup: Group = {
+              id: payload.new.id,
+              title: payload.new.name,
+              user_id: payload.new.user_id,
+              is_pinned: payload.new.is_pinned,
+              last_accessed_at: payload.new.last_accessed_at,
+              notes: []
+            };
+            return [...prev, newGroup];
+          });
+        } else if (payload.eventType === 'UPDATE') {
+          updateGroupSync(payload.new.id, { title: payload.new.name, is_pinned: payload.new.is_pinned });
+        } else {
+          fetchData(); 
+        }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, (payload) => {
         // Trigger de recarga para Kanban
@@ -359,8 +382,10 @@ function App() {
       setGroups(mergedGroups);
       hasLoadedOnce.current = true;
 
-      if (activeGroupId && !mergedGroups.find(g => g.id === activeGroupId)) {
-        setActiveGroup(null);
+      // FIX: No resetear el activeGroupId agresivamente si hay una carga de Realtime en curso
+      // Solo si el grupo REALMENTE ya no existe en la base de datos tras un periodo de gracia
+      if (activeGroupId && mergedGroups.length > 0 && !mergedGroups.find(g => g.id === activeGroupId)) {
+        // console.log("Active group not found in sync, but skipping force reset to avoid flicker during inserts");
       }
     } catch (error: any) {
       console.error('Error fetching data:', error.message);
@@ -416,20 +441,23 @@ function App() {
       const newNote: Note = { id: noteData.id, title: noteData.title, content: noteData.content || '', isOpen: true, created_at: noteData.created_at, group_id: noteData.group_id, position: noteData.position };
       const newGroup: Group = { id: groupData.id, title: groupData.name, notes: [newNote], user_id: groupData.user_id, is_pinned: false, last_accessed_at: new Date().toISOString() };
       
-      setGroups([...groups, newGroup]);
-      openGroup(newGroup.id);
+      // 🚀 ATOMIC STATE UPDATE
+      setGroups(prev => [...prev, newGroup]);
       
-      setGlobalView('notes');
-      
-      // Explicitly set the initial note as open in the store
       useUIStore.setState((state) => ({
+        activeGroupId: newGroup.id,
+        dockedGroupIds: state.dockedGroupIds.includes(newGroup.id) ? state.dockedGroupIds : [...state.dockedGroupIds, newGroup.id],
+        globalView: 'notes',
         openNotesByGroup: {
           ...state.openNotesByGroup,
           [newGroup.id]: [newNote.id]
+        },
+        focusedNoteByGroup: {
+          ...state.focusedNoteByGroup,
+          [newGroup.id]: newNote.id
         }
       }));
 
-      setFocusedNoteId(newNote.id);
       setEditingNoteId(newNote.id);
     } catch (error: any) {
       alert('Error al crear grupo: ' + error.message);
@@ -543,6 +571,55 @@ function App() {
       }
     } catch (error: any) {
       alert('Error al crear nota: ' + error.message);
+    }
+  };
+
+  const createNoteFromAI = async (content: string, title: string, groupId?: string) => {
+    if (!session) return;
+    try {
+      const targetGroupId = groupId || activeGroupId;
+      if (!targetGroupId) return;
+
+      const currentGroup = groups.find(g => g.id === targetGroupId);
+      const position = currentGroup ? currentGroup.notes.length : 0;
+
+      const { data, error } = await supabase.from('notes').insert([
+        { title, content: content || '', group_id: targetGroupId, user_id: session.user.id, position }
+      ]).select().single();
+
+      if (error) throw error;
+
+      const newNote: Note = {
+        id: data.id,
+        title: data.title,
+        content: data.content || '',
+        isOpen: true,
+        created_at: data.created_at,
+        group_id: data.group_id,
+        position: data.position
+      };
+
+      setGroups(groups.map(g => {
+        if (g.id === targetGroupId) {
+          return { ...g, notes: [newNote, ...g.notes] };
+        }
+        return g;
+      }));
+
+      // Enfocar la nueva nota generada por AI
+      setEditingNoteId(newNote.id);
+      setFocusedNoteId(newNote.id);
+
+      // Scroll suave hacia la nueva nota
+      setTimeout(() => {
+        const noteElement = document.getElementById(`note-${newNote.id}`);
+        if (noteElement) {
+          noteElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 200);
+
+    } catch (error: any) {
+      alert('Error al crear nota desde AI: ' + error.message);
     }
   };
 
@@ -1400,6 +1477,7 @@ function App() {
                                       noteFont={noteFont}
                                       noteFontSize={noteFontSize}
                                       noteLineHeight={noteLineHeight}
+                                      onCreateNote={createNoteFromAI}
                                       session={session}
                                     />
                                   </div>

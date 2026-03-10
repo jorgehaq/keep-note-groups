@@ -1,139 +1,175 @@
 import React, { useState } from 'react';
-import { Loader2, Sparkles, X, RotateCcw, AlertCircle, MessageSquare } from 'lucide-react';
-import { useSummaries, SummaryStatus } from '../src/lib/useSummaries';
+import { Loader2, Sparkles, X, ChevronDown, ArrowUpRight, RefreshCw } from 'lucide-react';
+import { useSummaries } from '../src/lib/useSummaries';
 
 interface NoteAIPanelProps {
   noteId: string;
   userId: string;
   noteStatus: string;
+  onPromoteToNote?: (content: string, title: string) => void;
 }
 
-const STATUS_CONFIG: Record<SummaryStatus, { label: string; color: string; spinner: boolean }> = {
-  pending:    { label: '⏳ En cola...',    color: 'text-amber-500',  spinner: true  },
-  processing: { label: '⚙️ Procesando...', color: 'text-violet-400', spinner: true  },
-  completed:  { label: '✨ Completado',     color: 'text-emerald-400', spinner: false },
-  failed:     { label: '⚠️ Error',          color: 'text-red-400',     spinner: false },
-};
-
-/**
- * Función utilitaria para romper la regla de bloques de código en el renderizado.
- */
-const neutralizeCodeBlocks = (text: string) => {
-  if (!text) return '';
-  return text.replace(/```/g, '`\u200B`\u200B`');
-};
-
-export const NoteAIPanel: React.FC<NoteAIPanelProps> = ({ noteId, userId, noteStatus }) => {
+export const NoteAIPanel: React.FC<NoteAIPanelProps> = ({
+  noteId,
+  userId,
+  noteStatus,
+  onPromoteToNote,
+}) => {
   const [objectiveInput, setObjectiveInput] = useState('');
-  const { summaries, loading, generateSummary, deleteSummary } = useSummaries(noteId);
   const [isCreating, setIsCreating] = useState(false);
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const { summaries, generateSummary, deleteSummary } = useSummaries(noteId);
+
+  const completed = summaries.filter(s => s.status === 'completed');
+  const pending = summaries.filter(s => s.status === 'pending' || s.status === 'processing');
+  const selected = completed[selectedIdx] ?? null;
 
   const handleGenerate = async () => {
     if (isCreating) return;
     setIsCreating(true);
     await generateSummary(objectiveInput.trim());
     setObjectiveInput('');
+    setSelectedIdx(0);
     setIsCreating(false);
   };
 
+  const handleDelete = (id: string) => {
+    deleteSummary(id);
+    setSelectedIdx(0);
+  };
+
+  const handlePromote = () => {
+    if (!selected || !onPromoteToNote) return;
+    const title = selected.target_objective
+      ? `✨ ${selected.target_objective.slice(0, 50)}`
+      : `✨ Nota AI`;
+    onPromoteToNote(selected.content, title);
+  };
+
   return (
-    <div className="border-t border-zinc-200 dark:border-zinc-800 mt-4 pt-4 space-y-4">
-      {/* Badge estado de la nota */}
+    <div className="flex flex-col gap-3">
+
+      {/* Estado motor */}
       {noteStatus === 'queued' && (
         <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl">
           <Loader2 size={12} className="animate-spin text-amber-400" />
-          <span className="text-xs font-bold text-amber-400">Nota en cola — esperando motor AI</span>
+          <span className="text-xs font-bold text-amber-400">En cola — esperando motor AI</span>
         </div>
       )}
       {noteStatus === 'processing' && (
         <div className="flex items-center gap-2 px-3 py-2 bg-violet-500/10 border border-violet-500/20 rounded-xl">
           <Loader2 size={12} className="animate-spin text-violet-400" />
-          <span className="text-xs font-bold text-violet-400">Motor AI procesando esta nota...</span>
+          <span className="text-xs font-bold text-violet-400">Motor AI procesando...</span>
         </div>
       )}
 
-      {/* Input de Objetivo + Botón Generar */}
-      <div className="flex flex-col gap-2">
-        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">
-          <Sparkles size={10} className="text-violet-500" />
-          Enfoque del Resumen AI
-        </label>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <input
-            type="text"
-            value={objectiveInput}
-            onChange={e => setObjectiveInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleGenerate(); }}
-            placeholder="¿Qué quieres resumir?"
-            className="flex-1 min-w-0 bg-zinc-800/40 border border-zinc-700/50 rounded-xl px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 outline-none focus:border-violet-500/50 focus:ring-4 focus:ring-violet-500/10 transition-all"
-          />
-          <button
-            onClick={handleGenerate}
-            disabled={isCreating}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white rounded-xl text-sm font-bold transition-all active:scale-95 shadow-lg shadow-violet-900/20 whitespace-nowrap"
-          >
-            {isCreating ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-            <span>Generar Resumen</span>
-          </button>
-        </div>
+      {/* Input + Generar */}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={objectiveInput}
+          onChange={e => setObjectiveInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleGenerate(); }}
+          placeholder="¿Qué quieres analizar de esta nota?"
+          className="flex-1 min-w-0 bg-zinc-100 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700/50 rounded-xl px-4 py-2.5 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/10 transition-all"
+        />
+        <button
+          onClick={handleGenerate}
+          disabled={isCreating}
+          className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-all active:scale-95 whitespace-nowrap"
+        >
+          {isCreating
+            ? <Loader2 size={15} className="animate-spin" />
+            : <Sparkles size={15} />}
+          Generar
+        </button>
       </div>
 
-      {/* Lista de Resúmenes */}
-      <div className="space-y-3">
-        {loading && summaries.length === 0 && (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 size={24} className="animate-spin text-zinc-700" />
+      {/* Jobs en curso */}
+      {pending.map(s => (
+        <div key={s.id} className="flex items-center gap-3 px-4 py-3 bg-violet-500/10 border border-violet-500/20 rounded-xl">
+          <Loader2 size={13} className="animate-spin text-violet-400 shrink-0" />
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs font-bold text-violet-400">
+              {s.status === 'processing' ? '⚙️ Procesando...' : '⏳ En cola...'}
+            </span>
+            {s.target_objective && (
+              <span className="text-[11px] text-zinc-500 truncate">{s.target_objective}</span>
+            )}
           </div>
-        )}
+        </div>
+      ))}
 
-        {summaries.map(summary => {
-          const cfg = STATUS_CONFIG[summary.status];
-          return (
-            <div
-              key={summary.id}
-              className="group bg-zinc-800/30 border border-zinc-700/30 rounded-2xl p-4 transition-all hover:bg-zinc-800/40"
+      {/* Chips de acceso rápido */}
+      {completed.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {completed.map((s, idx) => (
+            <button
+              key={s.id}
+              onClick={() => setSelectedIdx(idx)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all border ${
+                selectedIdx === idx
+                  ? 'bg-violet-600 text-white border-violet-500 shadow-md shadow-violet-500/20'
+                  : 'bg-zinc-100 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/50 hover:text-violet-400'
+              }`}
             >
-              <div className="flex flex-col sm:flex-row items-start justify-between gap-3 mb-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className={`flex items-center gap-1.5 text-[10px] b-fit font-bold px-2 py-1 rounded-full bg-zinc-900/50 ${cfg.color} border border-white/5 whitespace-nowrap`}>
-                    {cfg.spinner && <Loader2 size={10} className="animate-spin" />}
-                    {cfg.label}
-                  </div>
-                  {summary.target_objective && (
-                    <span className="text-[11px] text-zinc-500 font-medium flex items-center gap-1 bg-zinc-900/30 px-2 py-1 rounded-md">
-                      <MessageSquare size={10} />
-                      {summary.target_objective}
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={() => deleteSummary(summary.id)}
-                  className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all sm:opacity-0 sm:group-hover:opacity-100"
-                >
-                  <X size={16} />
-                </button>
-              </div>
+              <Sparkles size={10} />
+              <span className="max-w-[120px] truncate">
+                {s.target_objective || `Análisis ${completed.length - idx}`}
+              </span>
+              <span className="opacity-50 font-normal">
+                {new Date(s.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
-              {summary.status === 'completed' && summary.content ? (
-                <div className="raw-note-content text-zinc-300 text-sm leading-relaxed">
-                  {neutralizeCodeBlocks(summary.content)}
-                </div>
-              ) : summary.status === 'pending' || summary.status === 'processing' ? (
-                <div className="h-20 flex flex-col items-center justify-center gap-3 bg-zinc-900/20 rounded-xl border border-dashed border-zinc-700/50">
-                   <div className="w-48 h-1 bg-zinc-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-violet-600 to-indigo-500 animate-loading-bar" />
-                   </div>
-                   <span className="text-[11px] text-zinc-500 animate-pulse font-medium">Escaneando contenido y extrayendo ideas clave...</span>
-                </div>
-              ) : (
-                <div className="text-zinc-500 text-xs italic py-2">
-                  {summary.status === 'failed' ? 'Hubo un problema al generar este resumen. Por favor, intenta de nuevo.' : 'Esperando contenido...'}
-                </div>
-              )}
+      {/* Resumen protagonista */}
+      {selected && (
+        <div className="group bg-zinc-50 dark:bg-[#1A1A2E] border border-violet-500/20 rounded-2xl overflow-hidden">
+
+          {/* Barra de acciones */}
+          <div className="flex items-center justify-between px-4 py-2.5 bg-violet-500/5 border-b border-violet-500/10">
+            <div className="flex items-center gap-2">
+              <Sparkles size={12} className="text-violet-400" />
+              <span className="text-[11px] font-bold text-violet-400">
+                {selected.target_objective || 'Análisis AI'}
+              </span>
+              <span className="text-[10px] text-zinc-500">
+                {new Date(selected.created_at).toLocaleDateString('es-ES', {
+                  day: '2-digit', month: 'short', year: 'numeric',
+                  hour: '2-digit', minute: '2-digit'
+                })}
+              </span>
             </div>
-          );
-        })}
-      </div>
+            <div className="flex items-center gap-1">
+              {onPromoteToNote && (
+                <button
+                  onClick={handlePromote}
+                  title="Convertir en nueva nota"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-all"
+                >
+                  <ArrowUpRight size={13} />
+                  Nueva nota
+                </button>
+              )}
+              <button
+                onClick={() => handleDelete(selected.id)}
+                title="Eliminar este análisis"
+                className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+              >
+                <X size={13} />
+              </button>
+            </div>
+          </div>
+
+          {/* Contenido */}
+          <div className="px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
+            {selected.content}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

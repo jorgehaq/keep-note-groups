@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash } from 'lucide-react';
+import { ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash, Sparkles, FileText, PenLine, ArrowUpRight } from 'lucide-react';
 import { Note, NoteFont } from '../types';
 import { SmartNotesEditor, SmartNotesEditorRef } from '../src/components/editor/SmartNotesEditor';
 import { ChecklistEditor, parseMarkdownToChecklist, serializeChecklistToMarkdown } from '../src/components/editor/ChecklistEditor';
@@ -10,6 +10,7 @@ import { Session } from '@supabase/supabase-js';
 import { NoteAIPanel } from './NoteAIPanel';
 import { NoteBreadcrumb } from './NoteBreadcrumb';
 import { useNoteTree } from '../src/lib/useNoteTree';
+import { useSummaries, Summary } from '../src/lib/useSummaries';
 
 interface AccordionItemProps {
   note: Note;
@@ -20,6 +21,7 @@ interface AccordionItemProps {
   onCopyNote?: (note: Note) => void;
   onDuplicate?: (noteId: string) => void;
   onMove?: (noteId: string, targetGroupId: string) => Promise<void>;
+  onCreateNote?: (content: string, title: string, groupId?: string) => Promise<void>;
   groups?: Group[];
   searchQuery?: string;
   noteFont?: NoteFont;
@@ -59,6 +61,108 @@ const highlightText = (text: string, highlight?: string): React.ReactNode => {
   );
 };
 
+// Badge con conteo de summaries para el botón AI del header
+const AIBadge: React.FC<{ noteId: string; active: boolean; onClick: () => void }> = ({ noteId, active, onClick }) => {
+  const { summaries } = useSummaries(noteId);
+  const count = summaries.filter(s => s.status === 'completed').length;
+  const hasPending = summaries.some(s => s.status === 'pending' || s.status === 'processing');
+
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      title={active ? 'Ocultar panel AI' : 'Abrir panel AI'}
+      className={`relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+        active
+          ? 'bg-violet-600 text-white border-violet-500 shadow-md shadow-violet-500/20'
+          : 'text-violet-400 border-violet-500/30 bg-violet-500/5 hover:bg-violet-500/10'
+      }`}
+    >
+      {hasPending
+        ? <Loader2 size={13} className="animate-spin" />
+        : <Sparkles size={13} />}
+      {count > 0 && (
+        <span className={`text-[10px] font-black ${active ? 'text-white/80' : 'text-violet-300'}`}>
+          {count}
+        </span>
+      )}
+    </button>
+  );
+};
+
+const SummaryTabContent: React.FC<{
+  summary: Summary;
+  noteFont?: NoteFont;
+  noteFontSize?: string;
+  noteLineHeight?: string;
+  showLineNumbers?: boolean;
+  onDelete: (id: string) => void;
+  onPromote?: (content: string, title: string) => void;
+  updateScratchpad: (id: string, text: string) => void;
+}> = ({ summary, noteFont, noteFontSize, noteLineHeight, showLineNumbers, onDelete, onPromote, updateScratchpad }) => {
+  const scratchRef = useRef<SmartNotesEditorRef>(null);
+  const [localScratch, setLocalScratch] = useState(summary.scratchpad || '');
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleScratchChange = (text: string) => {
+    setLocalScratch(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => updateScratchpad(summary.id, text), 1200);
+  };
+
+  return (
+    <div className="flex flex-col gap-3 flex-1 min-h-0">
+      <div className="bg-[#1A1A2E] border border-violet-500/20 rounded-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-violet-500/5 border-b border-violet-500/10">
+          <div className="flex items-center gap-2 min-w-0">
+            <Sparkles size={12} className="text-violet-400 shrink-0" />
+            <span className="text-[11px] font-bold text-violet-300 truncate">
+              {summary.target_objective || 'Análisis AI'}
+            </span>
+            <span className="text-[10px] text-zinc-600 shrink-0">
+              {new Date(summary.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {onPromote && (
+              <button onClick={() => onPromote(summary.content || '', summary.target_objective ? `✨ ${summary.target_objective.slice(0,50)}` : '✨ Nota AI')}
+                className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-all">
+                <ArrowUpRight size={12} /> Nueva nota
+              </button>
+            )}
+            <button onClick={() => onDelete(summary.id)}
+              className="p-1.5 text-zinc-600 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all">
+              <X size={12} />
+            </button>
+          </div>
+        </div>
+        <div className="px-4 py-3 text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
+          {summary.content || ''}
+        </div>
+      </div>
+
+      <div className="flex flex-col flex-1 min-h-0">
+        <div className="flex items-center gap-1.5 mb-1.5 px-1">
+          <PenLine size={11} className="text-zinc-500" />
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Pizarrón</span>
+        </div>
+        <div onClick={() => scratchRef.current?.focus()}
+          className="note-editor-scroll bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4 cursor-text flex-1 overflow-y-scroll min-h-[120px]">
+          <SmartNotesEditor
+            ref={scratchRef}
+            noteId={`scratch_${summary.id}`}
+            initialContent={localScratch}
+            onChange={handleScratchChange}
+            noteFont={noteFont}
+            noteFontSize={noteFontSize}
+            noteLineHeight={noteLineHeight}
+            showLineNumbers={showLineNumbers}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const AccordionItem: React.FC<AccordionItemProps> = ({
   note,
   onToggle,
@@ -68,6 +172,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   onCopyNote,
   onDuplicate,
   onMove,
+  onCreateNote,
   groups = [],
   searchQuery,
   noteFont = 'sans',
@@ -79,23 +184,35 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   session,
 }) => {
 
-
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
-  const fontClass = noteFont === 'serif' ? 'font-serif' : noteFont === 'mono' ? 'font-mono text-xs' : 'font-sans';
+  const [showAIPanel, setShowAIPanel] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(!note.title);
   const [tempTitle, setTempTitle] = useState(note.title);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<SmartNotesEditorRef>(null);
+  const fontClass = noteFont === 'serif' ? 'font-serif' : noteFont === 'mono' ? 'font-mono text-xs' : 'font-sans';
 
-  // --- AI Summary State ---
   const { activeNoteId, activeNote, breadcrumbPath, navigate } = useNoteTree(note.id);
   const displayContent = activeNote?.content ?? note.content;
   const displayNoteId = activeNoteId ?? note.id;
 
-  // 🚀 NUEVO: Sincronización Realtime UI
-  // Fuerza la actualización del input local si el título cambia en otro dispositivo
+  const [activeTab, setActiveTab] = useState<string>('original');
+  const { summaries: aiSummaries, deleteSummary, updateScratchpad } = useSummaries(displayNoteId);
+  const completedSummaries = aiSummaries.filter(s => s.status === 'completed');
+
   useEffect(() => {
-    // Solo sincronizar si NO está en modo edición activa (local state o foco real)
+    if (activeTab !== 'original' && !completedSummaries.find(s => s.id === activeTab)) {
+      setActiveTab('original');
+    }
+  }, [completedSummaries.length]);
+
+  useEffect(() => {
+    if (completedSummaries.length > 0 && showAIPanel) {
+      setActiveTab(completedSummaries[completedSummaries.length - 1].id);
+    }
+  }, [completedSummaries.length, showAIPanel]);
+
+  useEffect(() => {
     const isActuallyFocused = document.activeElement === titleInputRef.current;
     if (!isEditingTitle && !isActuallyFocused && note.title !== undefined && note.title !== tempTitle) {
       setTempTitle(note.title);
@@ -131,8 +248,6 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
-
-
   useEffect(() => {
     if (!isMobileMenuOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
@@ -158,7 +273,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
     syncTimeoutRef.current = setTimeout(() => {
       setSyncStatus('saved');
       setTimeout(() => setSyncStatus('idle'), 2000);
-    }, 5000); 
+    }, 5000);
   };
 
   const handleCancelTitle = () => {
@@ -171,17 +286,23 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
     onUpdate(note.id, { title: tempTitle.trim() });
   };
 
+  const handlePromoteToNote = async (content: string, title: string) => {
+    if (!onCreateNote) return;
+    await onCreateNote(content, title, note.group_id);
+  };
+
   return (
     <div className={`transition-all duration-300 flex-1 flex flex-col min-h-0 bg-white dark:bg-[#1A1A24] overflow-hidden ${
-      note.is_docked 
-        ? 'rounded-none shadow-none border-b border-zinc-200 dark:border-[#2D2D42]' 
+      note.is_docked
+        ? 'rounded-none shadow-none border-b border-zinc-200 dark:border-[#2D2D42]'
         : 'rounded-2xl shadow-lg border'
     } ${
       isHighlightedBySearch
         ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50/30 dark:bg-amber-900/10'
         : `${note.is_docked ? '' : 'border-zinc-200 dark:border-[#2D2D42] hover:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/50'}`
     }`}>
-      
+
+      {/* HEADER */}
       <div
         ref={headerRef}
         className="flex flex-wrap items-start sm:items-center justify-between px-4 pt-4 pb-2 transition-colors gap-2"
@@ -194,7 +315,6 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                   {searchQuery ? highlightText(tempTitle, searchQuery) : ""}
                 </span>
               </div>
-              
               <input
                 ref={titleInputRef}
                 type="text"
@@ -207,7 +327,6 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                   if (e.key === 'Escape') { e.stopPropagation(); handleCancelTitle(); }
                   if (e.key === 'Tab') {
                     e.preventDefault();
-                    // Focus directly into the editor area
                     const editorContainer = contentRef.current;
                     if (editorContainer) {
                       const focusable = editorContainer.querySelector('input, .cm-content') as HTMLElement;
@@ -229,6 +348,15 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {/* Botón AI con badge */}
+          {session?.user && (
+            <AIBadge
+              noteId={displayNoteId}
+              active={showAIPanel}
+              onClick={() => setShowAIPanel(v => !v)}
+            />
+          )}
+
           {onToggleLineNumbers && (
             <button
               onClick={(e) => { e.stopPropagation(); onToggleLineNumbers(); }}
@@ -248,15 +376,15 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(!isMobileMenuOpen); }} className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"><MoreVertical size={16} /></button>
             {isMobileMenuOpen && (
               <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-[#1A1A24] shadow-xl rounded-lg border border-zinc-200 dark:border-[#2D2D42] p-1 flex flex-col gap-0.5 min-w-[180px] animate-fadeIn">
-                <button onClick={(e) => { 
-                  e.stopPropagation(); 
+                <button onClick={(e) => {
+                  e.stopPropagation();
                   const willBeChecklist = !note.is_checklist;
                   let newContent = note.content;
                   if (willBeChecklist) {
-                      newContent = serializeChecklistToMarkdown(parseMarkdownToChecklist(note.content));
+                    newContent = serializeChecklistToMarkdown(parseMarkdownToChecklist(note.content));
                   }
-                  onUpdate(note.id, { is_checklist: willBeChecklist, content: newContent }); 
-                  setIsMobileMenuOpen(false); 
+                  onUpdate(note.id, { is_checklist: willBeChecklist, content: newContent });
+                  setIsMobileMenuOpen(false);
                 }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_checklist ? 'text-[#1F3760] dark:text-blue-400 bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}><ListTodo size={14} />{note.is_checklist ? 'Quitar Checklist' : 'Hacer Checklist'}</button>
                 <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); onUpdate(note.id, { is_pinned: !note.is_pinned }); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_pinned ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}><Pin size={14} className={note.is_pinned ? "fill-current" : ""} />{note.is_pinned ? 'Desfijar' : 'Fijar Nota'}</button>
                 {onDuplicate && <button onClick={(e) => { e.stopPropagation(); onDuplicate(note.id); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><CopyPlus size={14} />Duplicar Nota</button>}
@@ -273,7 +401,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         </div>
       </div>
 
-      <div 
+      {/* CONTENT */}
+      <div
         ref={contentRef}
         className="flex-1 flex flex-col overflow-hidden min-h-0 bg-white dark:bg-[#1A1A24] relative"
       >
@@ -283,46 +412,94 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           </div>
         )}
 
-        <div className="px-4 pb-4 pt-2 w-full flex-1 flex flex-col min-h-0">
-          <NoteBreadcrumb 
+        <div className="px-4 pb-4 pt-2 w-full flex-1 flex flex-col min-h-0 gap-3">
+          <NoteBreadcrumb
             path={breadcrumbPath}
             activeNoteId={activeNoteId || note.id}
             onNavigate={navigate}
           />
-          {note.is_checklist ? (
-            <div className="bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4">
-              <ChecklistEditor idPrefix={displayNoteId} initialContent={displayContent} onUpdate={handleUpdateContent} />
-            </div>
-          ) : (
-            <div 
-              onClick={() => editorRef.current?.focus()}
-              className="note-editor-scroll bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4 cursor-text flex-1 overflow-y-scroll min-h-0"
-            >
-              <SmartNotesEditor 
-                ref={editorRef}
-                noteId={displayNoteId} 
-                initialContent={displayContent} 
-                searchQuery={searchQuery} 
-                onChange={handleUpdateContent} 
-                noteFont={noteFont} 
-                noteFontSize={noteFontSize} 
-                noteLineHeight={noteLineHeight} 
-                showLineNumbers={showLineNumbers}
+
+          {/* PANEL AI — generador, colapsable */}
+          {showAIPanel && session?.user && (
+            <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 dark:bg-[#1A1A2E]/60 p-4 animate-fadeIn">
+              <NoteAIPanel
+                noteId={displayNoteId}
+                userId={session.user.id}
+                noteStatus={note.ai_summary_status ?? 'idle'}
+                onPromoteToNote={onCreateNote ? handlePromoteToNote : undefined}
               />
             </div>
           )}
 
-          {session?.user && (
-            <NoteAIPanel 
-              noteId={displayNoteId}
-              userId={session.user.id}
-              noteStatus={note.ai_summary_status ?? 'idle'}
-            />
+          {/* TABS — solo cuando AI abierto y hay análisis */}
+          {showAIPanel && completedSummaries.length > 0 && (
+            <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+              <button
+                onClick={() => setActiveTab('original')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all border shrink-0 ${
+                  activeTab === 'original'
+                    ? 'bg-zinc-800 text-zinc-100 border-zinc-600'
+                    : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-zinc-400'
+                }`}
+              >
+                <FileText size={11} /> Original
+              </button>
+              {completedSummaries.map((s, idx) => (
+                <button key={s.id} onClick={() => setActiveTab(s.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all border shrink-0 max-w-[160px] ${
+                    activeTab === s.id
+                      ? 'bg-violet-600 text-white border-violet-500 shadow-sm shadow-violet-500/20'
+                      : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/40 hover:text-violet-400'
+                  }`}
+                >
+                  <Sparkles size={10} className="shrink-0" />
+                  <span className="truncate">{s.target_objective || `Análisis ${idx + 1}`}</span>
+                </button>
+              ))}
+            </div>
           )}
+
+          {/* CONTENIDO ACTIVO */}
+          {(!showAIPanel || activeTab === 'original') ? (
+            note.is_checklist ? (
+              <div className="bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4">
+                <ChecklistEditor idPrefix={displayNoteId} initialContent={displayContent} onUpdate={handleUpdateContent} />
+              </div>
+            ) : (
+              <div onClick={() => editorRef.current?.focus()}
+                className="note-editor-scroll bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4 cursor-text flex-1 overflow-y-scroll min-h-0">
+                <SmartNotesEditor
+                  ref={editorRef}
+                  noteId={displayNoteId}
+                  initialContent={displayContent}
+                  searchQuery={searchQuery}
+                  onChange={handleUpdateContent}
+                  noteFont={noteFont}
+                  noteFontSize={noteFontSize}
+                  noteLineHeight={noteLineHeight}
+                  showLineNumbers={showLineNumbers}
+                />
+              </div>
+            )
+          ) : completedSummaries.find(s => s.id === activeTab) ? (
+            <div className="flex-1 flex flex-col min-h-0 animate-fadeIn">
+              <SummaryTabContent
+                key={activeTab}
+                summary={completedSummaries.find(s => s.id === activeTab)!}
+                noteFont={noteFont}
+                noteFontSize={noteFontSize}
+                noteLineHeight={noteLineHeight}
+                showLineNumbers={showLineNumbers}
+                onDelete={deleteSummary}
+                onPromote={onCreateNote ? handlePromoteToNote : undefined}
+                updateScratchpad={updateScratchpad}
+              />
+            </div>
+          ) : null}
         </div>
       </div>
 
-      {/* Footer: Fechas y Estado Sync (Estilo Pizarrón) */}
+      {/* FOOTER */}
       <div className="flex items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-[#2D2D42]/50 rounded-b-2xl border-t border-zinc-200 dark:border-[#2D2D42] mt-auto">
         <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
           {note.created_at && (<span>Creado: {formatCleanDate(note.created_at)}</span>)}
@@ -335,11 +512,11 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       </div>
 
       {isMoveModalOpen && onMove && (
-        <MoveToGroupModal 
-          note={note} 
-          groups={groups} 
-          onClose={() => setIsMoveModalOpen(false)} 
-          onMove={onMove} 
+        <MoveToGroupModal
+          note={note}
+          groups={groups}
+          onClose={() => setIsMoveModalOpen(false)}
+          onMove={onMove}
         />
       )}
     </div>
