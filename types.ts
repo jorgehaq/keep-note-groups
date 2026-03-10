@@ -12,6 +12,17 @@ export interface Note {
   is_docked?: boolean;
   updated_at?: string;
   is_checklist?: boolean;
+  parent_note_id?: string | null;
+  generation_level?: number;
+  focus_prompt?: string | null;
+  ai_generated?: boolean;
+  generation_status?:
+    | "idle"
+    | "queued"
+    | "processing"
+    | "done"
+    | "error"
+    | "stale";
 }
 
 export type NoteFont = "sans" | "serif" | "mono";
