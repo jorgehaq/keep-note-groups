@@ -276,7 +276,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
       <div 
         ref={contentRef}
-        className="flex-1 flex flex-col overflow-hidden min-h-0 bg-white dark:bg-[#242432] relative"
+        className="flex-1 flex flex-col overflow-hidden min-h-0 bg-white dark:bg-[#1A1A24] relative"
       >
         {showStickyTitle && (
           <div className="sticky top-4 left-0 right-0 z-[40] flex justify-center pointer-events-none animate-fadeIn px-4">
