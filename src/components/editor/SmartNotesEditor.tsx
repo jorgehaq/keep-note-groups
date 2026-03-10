@@ -799,6 +799,34 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
         }
     };
 
+    const menuWidth = 260; 
+    const subMenuWidth = 240; 
+    const margin = 16;
+    
+    // Calcular left restringido para el menú principal
+    let clampedLeft = menuState?.left ?? 0;
+    if (menuState && !menuState.isMobile) {
+        const halfWidth = menuWidth / 2;
+        clampedLeft = Math.max(halfWidth + margin, Math.min(window.innerWidth - halfWidth - margin, menuState.left));
+    }
+
+    // Calcular desplazamiento del submenú si se sale de la pantalla
+    // El botón Tag está aprox a -30px del centro del menú principal
+    const getSubMenuStyle = () => {
+        if (!menuState || menuState.isMobile) return { left: '50%', transform: 'translateX(-50%)' };
+        const tagButtonViewportLeft = clampedLeft - 30; 
+        const halfSub = subMenuWidth / 2;
+        let offset = 0;
+        
+        if (tagButtonViewportLeft - halfSub < margin) offset = margin - (tagButtonViewportLeft - halfSub);
+        else if (tagButtonViewportLeft + halfSub > window.innerWidth - margin) offset = (window.innerWidth - margin) - (tagButtonViewportLeft + halfSub);
+        
+        return { 
+            left: '50%', 
+            transform: `translateX(calc(-50% + ${offset}px))` 
+        };
+    };
+
     return (
         <div className={`relative group/editor w-full bg-transparent ${readOnly ? 'pointer-events-none' : ''}`}>
             <CodeMirror
@@ -853,7 +881,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                             : 'fixed origin-bottom'
                         }
                     `}
-                    style={menuState.isMobile ? undefined : { top: menuState.top, left: menuState.left, transform: 'translateX(-50%)' }} 
+                    style={menuState.isMobile ? undefined : { top: menuState.top, left: clampedLeft, transform: 'translateX(-50%)' }} 
                     onMouseDown={(e) => e.preventDefault()} 
                 >
                     {isTranslating ? ( <div className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-blue-500"><Loader2 size={16} className="animate-spin" /> Traduciendo...</div> ) : (
@@ -869,7 +897,10 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                                 <span className="text-[14px] leading-none">🏷️</span>
                             </button>
                              {showMarkerMenu && (
-                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white dark:bg-[#242432] border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-2 grid grid-cols-2 gap-1.5 w-[240px] z-[110]">
+                                <div 
+                                    className="absolute bottom-full mb-2 bg-white dark:bg-[#242432] border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-2 grid grid-cols-2 gap-1.5 w-[240px] z-[110]"
+                                    style={getSubMenuStyle()}
+                                >
                                     {(Object.entries(MARKER_TYPES) as [MarkerType, typeof MARKER_TYPES[MarkerType]][]).map(([key, cfg]) => (
                                         <button
                                             key={key}
