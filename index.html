@@ -126,6 +126,17 @@
         background-color: rgba(73, 64, 217, 0.45) !important;
         color: #ffffff !important;
       }
+
+      /* Cursor Visibility (Caret) */
+      input, textarea, [contenteditable="true"] {
+        caret-color: auto; /* Default for light mode */
+      }
+      .dark input, .dark textarea, .dark [contenteditable="true"], .dark .cm-content {
+        caret-color: #CCCCCC !important;
+      }
+      .dark .cm-cursor, .dark .cm-dropCursor {
+        border-left-color: #CCCCCC !important;
+      }
     </style>
   </head>
 
