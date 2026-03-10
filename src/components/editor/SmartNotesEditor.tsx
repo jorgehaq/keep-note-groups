@@ -404,7 +404,12 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
     }
 }, { decorations: v => v.decorations });
 
-const clickHandlerExtension = EditorView.domEventHandlers({
+const clickHandlerExtension = Prec.highest(EditorView.domEventHandlers({
+    mousedown: (e, view) => {
+        // Solo cerramos los menús flotantes, no tocamos la selección nativa
+        if ((window as any).__closeEditorMenusOnly) (window as any).__closeEditorMenusOnly();
+        return false; // Delegar todo el manejo de selección a CodeMirror
+    },
     contextmenu: (e, view) => {
         const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
         if (pos !== null) {
@@ -451,7 +456,7 @@ const clickHandlerExtension = EditorView.domEventHandlers({
             }
         }
     }
-});
+}));
 
 // --- EL TEMA AHORA ES UNA FUNCIÓN DINÁMICA ---
 const createNotesTheme = (font: string, size: string, lineHeight: string = 'standard') => {
@@ -493,8 +498,14 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         },
         "&.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important", borderLeftWidth: "2px !important" },
         ".dark &.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important" },
-        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": { backgroundColor: "rgba(73, 64, 217, 0.45) !important" },
-        "&.cm-focused .cm-selectionLayer, .cm-selectionLayer": { zIndex: "1 !important" }, 
+        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": { 
+            backgroundColor: "rgba(73, 64, 217, 0.45) !important",
+            pointerEvents: "none !important" // <-- FIX: Permite que el clic atraviese el resalto
+        },
+        "&.cm-focused .cm-selectionLayer, .cm-selectionLayer": { 
+            zIndex: "0 !important", // <-- FIX: Baja prioridad visual para asegurar clics
+            pointerEvents: "none !important" // <-- FIX: Capa fantasma para eventos del mouse
+        }, 
         ".cm-content *": { textDecoration: "none !important", boxShadow: "none !important" },
         ".cm-gutters": { backgroundColor: "transparent !important", border: "none !important", color: "#71717a" },
         ".dark .cm-gutters": { color: "#52525b" },
@@ -588,6 +599,25 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
     const translationsMapRef = useRef<Record<string, string>>({});
     const searchQueryRef = useRef<string>(searchQuery || ''); 
     const debounceChangeTimerRef = useRef<NodeJS.Timeout | null>(null);
+    
+    // Exponer funciones de cierre para las extensiones de CodeMirror
+    useEffect(() => {
+        // Cierre completo (usado en Escape y Blur)
+        (window as any).__closeEditorMenus = () => {
+            setMenuState(null);
+            setShowMarkerMenu(false);
+            window.getSelection()?.removeAllRanges();
+        };
+        // Cierre suave (usado en mousedown para no romper eventos de selección)
+        (window as any).__closeEditorMenusOnly = () => {
+            setMenuState(null);
+            setShowMarkerMenu(false);
+        };
+        return () => { 
+            delete (window as any).__closeEditorMenus;
+            delete (window as any).__closeEditorMenusOnly;
+        };
+    }, []);
 
     // Regenera el tema visual solo si cambias la fuente o el tamaño en los ajustes
     const dynamicTheme = useMemo(() => createNotesTheme(noteFont, noteFontSize, noteLineHeight), [noteFont, noteFontSize, noteLineHeight]);
@@ -687,14 +717,21 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
     const selectionListener = useMemo(() => EditorView.updateListener.of((update) => {
         if (update.viewportChanged || update.docChanged) setTooltipState(null);
         if (update.selectionSet) {
-            // Guardar posición del cursor en localStorage (debounced)
-            const pos = update.state.selection.main.head;
+            const { main } = update.state.selection;
+
+            // 1. Si la selección está vacía (clic simple), resetear menú atómicamente
+            if (main.empty) {
+                if (menuState !== null) setMenuState(null);
+            }
+
+            // 2. Guardar posición del cursor en localStorage (debounced)
+            const cursorHead = main.head;
             clearTimeout((window as any)[`__cur_${noteId}`]);
             (window as any)[`__cur_${noteId}`] = setTimeout(() => {
-                localStorage.setItem(`cursor-pos-${noteId}`, String(pos));
+                localStorage.setItem(`cursor-pos-${noteId}`, String(cursorHead));
             }, 400);
 
-            const { main } = update.state.selection;
+            // 3. Mostrar menú si hay selección
             if (!main.empty) {
                 const rect = update.view.coordsAtPos(main.from);
                 if (rect) {
@@ -708,9 +745,9 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                         isMobile 
                     });
                 }
-            } else setMenuState(null);
+            }
         }
-    }), [noteId]);
+    }), [noteId, menuState]);
 
     const doFormat = (type: 'highlight' | 'link' | MarkerType) => {
         if (!menuState || !editorRef.current?.view) return;
@@ -820,6 +857,10 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
             clearTimeout(debounceChangeTimerRef.current);
             onChange(content);
         }
+        
+        // Cerrar menú si el foco se pierde
+        setMenuState(null);
+        setShowMarkerMenu(false);
     };
 
     const menuWidth = 260; 
@@ -865,15 +906,36 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                 extensions={[
                     // 🚀 MAGIA ANTI-HIJACKING: Prec.highest toma el control absoluto del evento
                     Prec.highest(
-                        keymap.of([{ 
-                            key: 'Tab', 
-                            preventDefault: true, 
-                            run: (view) => { 
-                                // replaceSelection inyecta en el cursor y lo mueve al final de la inserción automáticamente
-                                view.dispatch(view.state.replaceSelection('    ')); 
-                                return true; 
-                            } 
-                        }])
+                        keymap.of([
+                            { 
+                                key: 'Tab', 
+                                preventDefault: true, 
+                                run: (view) => { 
+                                    // replaceSelection inyecta en el cursor y lo mueve al final de la inserción automáticamente
+                                    view.dispatch(view.state.replaceSelection('    ')); 
+                                    return true; 
+                                } 
+                            },
+                            {
+                                key: 'Escape',
+                                run: (view) => {
+                                    // Limpiar selección de CodeMirror si existe
+                                    if (!view.state.selection.main.empty) {
+                                        view.dispatch({
+                                            selection: { anchor: view.state.selection.main.head }
+                                        });
+                                    }
+                                    
+                                    // Limpiar selección nativa del navegador (el culpable de que se vea "atorado")
+                                    window.getSelection()?.removeAllRanges();
+
+                                    // Cerrar menús de forma explícita
+                                    setMenuState(null);
+                                    setShowMarkerMenu(false);
+                                    return true;
+                                }
+                            }
+                        ])
                     ),
                     
                     ...(showLineNumbers ? [lineNumbers()] : []),
