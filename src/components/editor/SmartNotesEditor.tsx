@@ -897,10 +897,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                                 <span className="text-[14px] leading-none">🏷️</span>
                             </button>
                              {showMarkerMenu && (
-                                <div 
-                                    className="absolute bottom-full mb-2 bg-white dark:bg-[#242432] border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-2 grid grid-cols-2 gap-1.5 w-[240px] z-[110]"
-                                    style={getSubMenuStyle()}
-                                >
+                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white dark:bg-[#242432] border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-2 grid grid-cols-2 gap-1.5 w-[240px] z-[110]">
                                     {(Object.entries(MARKER_TYPES) as [MarkerType, typeof MARKER_TYPES[MarkerType]][]).map(([key, cfg]) => (
                                         <button
                                             key={key}
