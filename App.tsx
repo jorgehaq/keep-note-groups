@@ -934,12 +934,10 @@ function App() {
           .note-editor-scroll { scrollbar-width: thin; scrollbar-color: #3f3f46 transparent; }
           
           ::selection {
-            background-color: rgba(73, 64, 217, 0.45);
-            color: #ffffff !important;
+            background-color: rgba(73, 64, 217, 0.28);
           }
           ::-moz-selection {
-            background-color: rgba(73, 64, 217, 0.45);
-            color: #ffffff !important;
+            background-color: rgba(73, 64, 217, 0.28);
           }
 
           .cm-lineNumbers .cm-gutterElement {
