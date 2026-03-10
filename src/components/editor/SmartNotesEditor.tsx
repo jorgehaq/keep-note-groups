@@ -446,8 +446,14 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         },
         "&.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important", borderLeftWidth: "2px !important" },
         ".dark &.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important" },
-        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": { backgroundColor: "rgba(73, 64, 217, 0.45) !important" },
-        "&.cm-focused .cm-selectionLayer, .cm-selectionLayer": { zIndex: "1 !important" }, 
+        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": { 
+            backgroundColor: "rgba(73, 64, 217, 0.45) !important",
+            pointerEvents: "none !important" 
+        },
+        "&.cm-focused .cm-selectionLayer, .cm-selectionLayer": { 
+            zIndex: "0 !important",
+            pointerEvents: "none !important" 
+        }, 
         ".cm-content *": { textDecoration: "none !important", boxShadow: "none !important" },
         ".cm-gutters": { backgroundColor: "transparent !important", border: "none !important", color: "#71717a" },
         ".dark .cm-gutters": { color: "#52525b" },
@@ -691,16 +697,18 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
             const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
             const { main } = view.state.selection;
 
-            // 🚀 FIX ANTI-JACKING: Si el clic es dentro de una selección, colapsamos manualmente 
-            // pero vía requestAnimationFrame para no interferir con el ciclo de eventos nativo de CM.
+            // 🚀 FIX DEFINITIVO: Si el clic es dentro de una selección, colapsamos manualmente.
+            // Usamos preventDefault() para que el navegador no intente su propia lógica de selección/drag
+            // que es lo que causa el "secuestro" visual. Luego forzamos el foco.
             if (pos !== null && !main.empty && pos >= main.from && pos <= main.to) {
-                requestAnimationFrame(() => {
-                    view.dispatch({
-                        selection: { anchor: pos, head: pos },
-                        scrollIntoView: false
-                    });
-                    window.getSelection()?.removeAllRanges();
+                e.preventDefault(); 
+                view.dispatch({
+                    selection: { anchor: pos, head: pos },
+                    scrollIntoView: false
                 });
+                window.getSelection()?.removeAllRanges();
+                view.focus(); // Restaurar foco tras preventDefault
+                return true; 
             }
             return false; 
         },
@@ -709,8 +717,14 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
             if (pos !== null) {
                 e.preventDefault();
                 const line = view.state.doc.lineAt(pos).number;
+                const currentRevealed = view.state.field(revealedLineField, false);
+                
+                // Toggle: si es la misma línea, la cerramos. Si es otra, la abrimos.
                 view.dispatch({
-                    effects: [setRevealedLine.of(line), ForceRedrawEffect.of(null)]
+                    effects: [
+                        setRevealedLine.of(currentRevealed === line ? null : line),
+                        ForceRedrawEffect.of(null)
+                    ]
                 });
                 return true;
             }
@@ -925,10 +939,13 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                                         });
                                     }
                                     
-                                    // Limpiar selección nativa del navegador (el culpable de que se vea "atorado")
+                                    // Limpiar selección nativa del navegador
                                     window.getSelection()?.removeAllRanges();
 
-                                    // Cerrar menús de forma explícita
+                                    // Cerrar menús y ocultar markdown revelado
+                                    view.dispatch({
+                                        effects: [setRevealedLine.of(null), ForceRedrawEffect.of(null)]
+                                    });
                                     closeMenus();
                                     return true;
                                 }
