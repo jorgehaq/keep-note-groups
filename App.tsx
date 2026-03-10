@@ -927,11 +927,12 @@ function App() {
 
           .note-editor-scroll::-webkit-scrollbar { width: 8px; }
           .note-editor-scroll::-webkit-scrollbar-track { background: transparent; }
-          .note-editor-scroll::-webkit-scrollbar-thumb { background-color: #d4d4d8; border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
-          .note-editor-scroll::-webkit-scrollbar-thumb:hover { background-color: #a1a1aa; }
+          .note-editor-scroll::-webkit-scrollbar-thumb { background-color: #e4e4e7; border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
+          .note-editor-scroll::-webkit-scrollbar-thumb:hover { background-color: #d4d4d8; }
           .dark .note-editor-scroll::-webkit-scrollbar-thumb { background-color: #3f3f46; }
           .dark .note-editor-scroll::-webkit-scrollbar-thumb:hover { background-color: #52525b; }
-          .note-editor-scroll { scrollbar-width: thin; scrollbar-color: #3f3f46 transparent; }
+          .note-editor-scroll { scrollbar-width: thin; scrollbar-color: #e4e4e7 transparent; }
+          .dark .note-editor-scroll { scrollbar-color: #3f3f46 transparent; }
           
           ::selection {
             background-color: rgba(73, 64, 217, 0.45);
@@ -963,11 +964,11 @@ function App() {
           
           {/* 1. BANNER DE RECORDATORIOS VENCIDOS (BARRA PLANA BORDERLESS) */}
           {showOverdueMarquee && overdueRemindersList.length > 0 && (
-            <div className="w-full bg-[#0F0F12] overflow-hidden shrink-0 border-b border-zinc-800">
+            <div className="w-full bg-[#FAFAFA] dark:bg-[#13131A] overflow-hidden shrink-0 border-b border-zinc-200 dark:border-zinc-800">
               <div className="py-2.5 flex items-center">
                 <div className="flex-1 overflow-hidden relative h-6 flex items-center">
-                  <div className="marquee-content text-[11px] font-normal tracking-[0.1em] text-[#D5D6D8] uppercase">
-                    {/* Set A */}
+                  <div className="marquee-content text-[11px] font-bold tracking-[0.1em] text-zinc-800 dark:text-[#D5D6D8] uppercase">
+                                           {/* Set A */}
                     <div className="flex shrink-0 items-center pr-[100vw]">
                       {overdueRemindersList.map((r, idx) => (
                         <span key={`a-${r.targetId}`} className="shrink-0">
@@ -1128,8 +1129,8 @@ function App() {
                           </div>
 
                           {/* Controles de Grupo (En una mini-cápsula gris) */}
-                          <div className="h-9 flex items-center gap-1 bg-zinc-50 dark:bg-zinc-950 p-1 rounded-xl border border-[#1B1B1E] shrink-0">
-                              
+                          <div className="h-9 flex items-center gap-1 bg-zinc-50 dark:bg-zinc-950 p-1 rounded-xl border border-zinc-200 dark:border-[#1B1B1E] shrink-0">
+                                                             
                               {/* Buscador */}
                               <div className="relative flex items-center transition-all duration-300 mr-2">
                                 <Search size={15} className={`absolute left-2 pointer-events-none transition-colors ${currentSearchQuery.trim() ? 'text-amber-600 dark:text-amber-500 font-bold' : 'text-zinc-400'}`} />
@@ -1267,8 +1268,8 @@ function App() {
 
                 {/* 2. FRANJA DE NOTAS (INTEGRADA EN EL ENCABEZADO) */}
                 {isGlobalNoteTrayOpen && activeGroup && (
-                  <div className="pt-4 px-4 pb-4 bg-[#13131A] dark:bg-[#13131A]">
-                    <div className="flex flex-wrap justify-center gap-2.5">
+                  <div className="pt-4 px-4 pb-4 bg-[#FAFAFA] dark:bg-[#13131A]">
+                                                                  <div className="flex flex-wrap justify-center gap-2.5">
                       {sortNotesArray(activeGroup.notes, noteSortMode)
                         .map(note => {
                         const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
@@ -1324,11 +1325,11 @@ function App() {
                                   ? 'bg-[#4940D9] text-white shadow-md shadow-[#4940D9]/20 scale-[1.02]'
                                   : isSearchActive
                                     ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 shadow-sm'
-                                    : 'bg-white/10 dark:bg-white/10 text-[#A1A1AA] hover:text-white hover:bg-white/20'
+                                    : 'bg-zinc-200/50 dark:bg-white/10 text-zinc-500 dark:text-[#A1A1AA] hover:text-zinc-800 dark:hover:text-white hover:bg-zinc-300/50 dark:hover:bg-white/20'
                               } ${
                                 isSearchActive
                                   ? 'border-amber-500 ring-1 ring-amber-500/50'
-                                  : 'border-transparent'
+                                                                      : 'border-transparent'
                               }`}
                             >
                               <span className="whitespace-nowrap">{highlightTitle(note.title || 'Sin Título')}</span>

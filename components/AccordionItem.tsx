@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash } from 'lucide-react';
 import { Note, NoteFont } from '../types';
-import { SmartNotesEditor } from '../src/components/editor/SmartNotesEditor';
+import { SmartNotesEditor, SmartNotesEditorRef } from '../src/components/editor/SmartNotesEditor';
 import { ChecklistEditor, parseMarkdownToChecklist, serializeChecklistToMarkdown } from '../src/components/editor/ChecklistEditor';
 import { KanbanSemaphore } from './KanbanSemaphore';
 import { MoveToGroupModal } from './MoveToGroupModal';
@@ -85,6 +85,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(!note.title);
   const [tempTitle, setTempTitle] = useState(note.title);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<SmartNotesEditorRef>(null);
 
   // --- AI Summary State ---
   const { activeNoteId, activeNote, breadcrumbPath, navigate } = useNoteTree(note.id);
@@ -94,11 +95,12 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   // 🚀 NUEVO: Sincronización Realtime UI
   // Fuerza la actualización del input local si el título cambia en otro dispositivo
   useEffect(() => {
-    // Solo sincronizar si NO está en modo edición activa
-    if (!isEditingTitle && note.title !== undefined && note.title !== tempTitle) {
+    // Solo sincronizar si NO está en modo edición activa (local state o foco real)
+    const isActuallyFocused = document.activeElement === titleInputRef.current;
+    if (!isEditingTitle && !isActuallyFocused && note.title !== undefined && note.title !== tempTitle) {
       setTempTitle(note.title);
     }
-  }, [note.title, isEditingTitle]);
+  }, [note.title, isEditingTitle, tempTitle]);
 
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -165,8 +167,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   };
 
   const handleSaveTitle = (shouldFocusEditor = false) => {
-    if (tempTitle.trim()) onUpdate(note.id, { title: tempTitle });
-    else {
+    setIsEditingTitle(false);
+    if (tempTitle.trim()) {
+      onUpdate(note.id, { title: tempTitle });
+    } else {
       const fallback = "Nueva Nota";
       setTempTitle(fallback);
       onUpdate(note.id, { title: fallback });
@@ -202,6 +206,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 type="text"
                 value={tempTitle}
                 onChange={(e) => setTempTitle(e.target.value)}
+                onFocus={() => setIsEditingTitle(true)}
                 onBlur={() => handleSaveTitle(false)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleSaveTitle(true);
@@ -290,14 +295,17 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             activeNoteId={activeNoteId || note.id}
             onNavigate={navigate}
           />
-
           {note.is_checklist ? (
             <div className="bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4">
               <ChecklistEditor idPrefix={displayNoteId} initialContent={displayContent} onUpdate={handleUpdateContent} />
             </div>
           ) : (
-            <div className="note-editor-scroll bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4 cursor-text flex-1 overflow-y-scroll min-h-0">
+            <div 
+              onClick={() => editorRef.current?.focus()}
+              className="note-editor-scroll bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4 cursor-text flex-1 overflow-y-scroll min-h-0"
+            >
               <SmartNotesEditor 
+                ref={editorRef}
                 noteId={displayNoteId} 
                 initialContent={displayContent} 
                 searchQuery={searchQuery} 

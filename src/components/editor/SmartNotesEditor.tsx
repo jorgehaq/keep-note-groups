@@ -6,7 +6,12 @@ import { languages } from '@codemirror/language-data';
 import { EditorView, ViewPlugin, Decoration, WidgetType, ViewUpdate, keymap, lineNumbers } from '@codemirror/view';
 import { RangeSet, StateEffect, Prec, StateField } from '@codemirror/state'; 
 import { Highlighter, Languages, Loader2, Link as LinkIcon } from 'lucide-react';
+import { useImperativeHandle, forwardRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+
+export interface SmartNotesEditorRef {
+    focus: () => void;
+}
 
 interface SmartNotesEditorProps {
     noteId: string;
@@ -21,14 +26,14 @@ interface SmartNotesEditorProps {
 }
 
 const MARKER_TYPES = {
-  ins:   { label: 'Insight',   color: '#7C3AED', emoji: '💡' },
-  idea:  { label: 'Idea',      color: '#DC2626', emoji: '🔥' },
-  op:    { label: 'Opinión',   color: '#65A30D', emoji: '🌱' },
-  duda:  { label: 'Duda',      color: '#0EA5E9', emoji: '💧' },
-  wow:   { label: 'Sorpresa',  color: '#DB2777', emoji: '✨' },
-  pat:   { label: 'Patrón',    color: '#6D28D9', emoji: '🌀' },
-  yo:    { label: 'Yo',        color: '#F59E0B', emoji: '⭐' },
-  ruido: { label: 'Ruido',     color: '#6B7280', emoji: '🔇' },
+  ins:   { label: 'Insight',   light: '#7C3AED', dark: '#A78BFA', emoji: '💡' },
+  idea:  { label: 'Idea',      light: '#DC2626', dark: '#F87171', emoji: '🔥' },
+  op:    { label: 'Opinión',   light: '#4D7C0F', dark: '#A3E635', emoji: '🌱' },
+  duda:  { label: 'Duda',      light: '#0284C7', dark: '#38BDF8', emoji: '💧' },
+  wow:   { label: 'Sorpresa',  light: '#C026D3', dark: '#F472B6', emoji: '✨' },
+  pat:   { label: 'Patrón',    light: '#6D28D9', dark: '#C084FC', emoji: '🌀' },
+  yo:    { label: 'Yo',        light: '#B45309', dark: '#FBBF24', emoji: '⭐' },
+  ruido: { label: 'Ruido',     light: '#4B5563', dark: '#9CA3AF', emoji: '🔇' },
 } as const;
 
 type MarkerType = keyof typeof MARKER_TYPES;
@@ -249,11 +254,10 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
                         const codeContent = codeLines.join('\n').trimEnd();
 
                         // Apply line decorations + hide ``` when not focused
-                        const openFocused = lineAtCursor === openLine;
-                        const closeFocused = lineAtCursor === closeLine;
+                        const isRevealed = revealedLine === openLine || revealedLine === closeLine;
 
                         decos.push(Decoration.line({ class: cbHeaderClass }).range(openLineObj.from));
-                        if (!openFocused) {
+                        if (!isRevealed) {
                             // Hide the ```lang text
                             safeReplace(openLineObj.from, openLineObj.to);
                         }
@@ -264,7 +268,7 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
                         }
 
                         decos.push(Decoration.line({ class: cbFooterClass }).range(closeLineObj.from));
-                        if (!closeFocused) {
+                        if (!isRevealed) {
                             // Hide the closing ```
                             safeReplace(closeLineObj.from, closeLineObj.to);
                         }
@@ -300,48 +304,63 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
                 let match;
                 while ((match = rule.regex.exec(textToSearch)) !== null) {
                     const mFrom = from + match.index; const mTo = from + match.index + match[0].length;
-                    if (insideCB(mFrom)) continue;
+                    
+                    // Allow markers (hl, tr, mk-) even inside code blocks
+                    const isMarker = rule.type === 'hl' || rule.type === 'tr' || rule.type.startsWith('mk-');
+                    if (insideCB(mFrom) && !isMarker) continue;
+
                     const matchLine = view.state.doc.lineAt(mFrom).number;
-                    const editingLine = view.state.field(editingLineField, false);
-                    const isFocused = matchLine === editingLine || matchLine === revealedLine;
+                    const isRevealed = matchLine === revealedLine;
 
                     if (rule.type === 'raw-link') safeMark('cm-custom-link', mFrom, mTo, { 'data-url': match[0] });
                     else if (rule.type === 'md-link') {
-                        safeReplace(mFrom, mFrom + 1); if (match[1].length > 0) safeMark('cm-custom-link', mFrom + 1, mFrom + 1 + match[1].length, { 'data-url': match[2] }); 
-                        safeReplace(mFrom + 1 + match[1].length, mTo); decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, match[1]), side: 1 }).range(mTo, mTo));
+                        if (isRevealed) safeMark('cm-custom-link', mFrom, mTo, { 'data-url': match[2] });
+                        else {
+                            safeReplace(mFrom, mFrom + 1); if (match[1].length > 0) safeMark('cm-custom-link', mFrom + 1, mFrom + 1 + match[1].length, { 'data-url': match[2] }); 
+                            safeReplace(mFrom + 1 + match[1].length, mTo); decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, match[1]), side: 1 }).range(mTo, mTo));
+                        }
                     }
                     else if (rule.type === 'tr') {
                         const translatedText = match[1] === 'legacy' ? 'Traduciendo...' : match[1];
-                        safeReplace(mFrom, mFrom + 6 + (match[1]?.length || 0));
-                        safeMark('cm-custom-tr', mFrom + 6 + (match[1]?.length || 0), mTo - 2, { 'data-translation-text': translatedText });
-                        safeReplace(mTo - 2, mTo); decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, match[2]), side: 1 }).range(mTo, mTo));
+                        if (isRevealed) safeMark('cm-custom-tr', mFrom, mTo, { 'data-translation-text': translatedText });
+                        else {
+                            safeReplace(mFrom, mFrom + 6 + (match[1]?.length || 0));
+                            safeMark('cm-custom-tr', mFrom + 6 + (match[1]?.length || 0), mTo - 2, { 'data-translation-text': translatedText });
+                            safeReplace(mTo - 2, mTo); decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, match[2]), side: 1 }).range(mTo, mTo));
+                        }
                     } 
                     else if (rule.type === 'hl') {
-                        safeReplace(mFrom, mFrom + 2); safeMark('cm-custom-hl', mFrom + 2, mTo - 2);
-                        safeReplace(mTo - 2, mTo); decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, match[1]), side: 1 }).range(mTo, mTo));
+                        if (isRevealed) safeMark('cm-custom-hl', mFrom, mTo);
+                        else {
+                            safeReplace(mFrom, mFrom + 2); safeMark('cm-custom-hl', mFrom + 2, mTo - 2);
+                            safeReplace(mTo - 2, mTo); decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, match[1]), side: 1 }).range(mTo, mTo));
+                        }
                     }
                     else if (rule.type.startsWith('mk-')) {
                       const mType = rule.type.replace('mk-', '');
-                      // Calcular longitud del prefijo [[tipo:timestamp|  y ocultar prefijo + sufijo ]]
-                      const prefixLen = mTo - mFrom - match[1].length - 2; // 2 = ]]
-                      safeReplace(mFrom, mFrom + prefixLen);                // ocultar [[tipo:timestamp|
-                      safeMark(`cm-custom-mk-${mType}`, mFrom + prefixLen, mTo - 2); // marcar solo el texto
-                      safeReplace(mTo - 2, mTo);                            // ocultar ]]
-                      decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, match[1]), side: 1 }).range(mTo, mTo));
+                      if (isRevealed) safeMark(`cm-custom-mk-${mType}`, mFrom, mTo);
+                      else {
+                        // Calcular longitud del prefijo [[tipo:timestamp|  y ocultar prefijo + sufijo ]]
+                        const prefixLen = mTo - mFrom - match[1].length - 2; // 2 = ]]
+                        safeReplace(mFrom, mFrom + prefixLen);                // ocultar [[tipo:timestamp|
+                        safeMark(`cm-custom-mk-${mType}`, mFrom + prefixLen, mTo - 2); // marcar solo el texto
+                        safeReplace(mTo - 2, mTo);                            // ocultar ]]
+                        decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, match[1]), side: 1 }).range(mTo, mTo));
+                      }
                     }
                     else if (rule.type === 'hr') {
                         safeReplace(mFrom, mTo); decos.push(Decoration.widget({ widget: new HrWidget(), side: 0 }).range(mFrom, mFrom));
                         decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, ""), side: 1 }).range(mTo, mTo));
                     }
                     else if (rule.type === 'h1') {
-                        if (isFocused) safeMark('cm-custom-h1', mFrom, mTo); 
+                        if (isRevealed) safeMark('cm-custom-h1', mFrom, mTo); 
                         else { const pLen = match[0].match(/^(#{1,6}\s+)/)?.[0].length || 2; safeReplace(mFrom, mFrom + pLen); safeMark('cm-custom-h1', mFrom + pLen, mTo); }
                     } 
                     else if (rule.type === 'bold') {
-                        if (isFocused) safeMark('cm-custom-bold', mFrom, mTo); else { safeReplace(mFrom, mFrom + 2); safeMark('cm-custom-bold', mFrom + 2, mTo - 2); safeReplace(mTo - 2, mTo); }
+                        if (isRevealed) safeMark('cm-custom-bold', mFrom, mTo); else { safeReplace(mFrom, mFrom + 2); safeMark('cm-custom-bold', mFrom + 2, mTo - 2); safeReplace(mTo - 2, mTo); }
                     }
                     else if (rule.type === 'italic_under' || rule.type === 'italic_star') {
-                        if (isFocused) safeMark('cm-custom-italic', mFrom, mTo); else { safeReplace(mFrom, mFrom + 1); safeMark('cm-custom-italic', mFrom + 1, mTo - 1); safeReplace(mTo - 1, mTo); }
+                        if (isRevealed) safeMark('cm-custom-italic', mFrom, mTo); else { safeReplace(mFrom, mFrom + 1); safeMark('cm-custom-italic', mFrom + 1, mTo - 1); safeReplace(mTo - 1, mTo); }
                     }
                 }
             });
@@ -362,17 +381,18 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
 }, { decorations: v => v.decorations });
 
 const clickHandlerExtension = EditorView.domEventHandlers({
-    dblclick: (e, view) => {
+    contextmenu: (e, view) => {
         const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
         if (pos !== null) {
+            e.preventDefault(); // Ocultar menú nativo del dispositivo móvil/navegador
             const line = view.state.doc.lineAt(pos).number;
-            // Set the revealed line AND force the visual plugin to redraw
             view.dispatch({
                 effects: [
                     setRevealedLine.of(line),
                     ForceRedrawEffect.of(null)
                 ]
             });
+            return true;
         }
         return false;
     },
@@ -428,7 +448,14 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             fontFamily: fontFamily,
             backgroundColor: "transparent !important", // Deja que el contenedor padre maneje el fondo standardized
             color: "inherit !important",               
-            transition: "font-size 0.2s ease, font-family 0.2s ease" // Animación suave al cambiar ajustes
+            outline: "none !important", // Eliminar borde punteado de foco
+            transition: "font-size 0.2s ease, font-family 0.2s ease", // Animación suave al cambiar ajustes
+            WebkitTouchCallout: "none !important", // Ocultar menú nativo de "copy/paste" al tocar sostenido
+            WebkitUserSelect: "text !important",
+            userSelect: "text !important",
+        },
+        "&.cm-focused": {
+            outline: "none !important"
         },
         ".cm-scroller": {
             fontFamily: fontFamily,
@@ -437,21 +464,25 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-content": {
             fontFamily: fontFamily,
             fontSize: fontSize,
+            WebkitUserSelect: "text !important",
+            userSelect: "text !important",
         },
         "&.cm-focused .cm-cursor": { borderLeftColor: "currentColor !important", borderLeftWidth: "2px !important" },
         "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection, .cm-line ::selection, ::selection": { backgroundColor: "rgba(73, 64, 217, 0.45) !important", color: "#ffffff !important", fontWeight: "normal !important" },
         "&.cm-focused .cm-selectionLayer, .cm-selectionLayer": { display: "none !important" }, // Desactivar capa CM para usar nativa
         ".cm-content *": { textDecoration: "none !important", boxShadow: "none !important" },
-        ".cm-line": { lineHeight: lHeight },
-        "&.cm-focused": { outline: "none" },
         ".cm-gutters": { backgroundColor: "transparent !important", border: "none !important", color: "#71717a" },
         ".dark .cm-gutters": { color: "#52525b" },
         ".cm-activeLineGutter": { backgroundColor: "transparent !important" },
         ".cm-lineNumbers .cm-gutterElement": { paddingRight: "10px !important", paddingLeft: "4px !important" },
+        ".cm-line": { 
+            lineHeight: lHeight, 
+            paddingLeft: "12px !important", 
+            borderLeft: "3px solid transparent",
+            transition: "border-color 0.2s ease"
+        },
         ".cm-cursor-indicator-line": { 
-            borderLeft: "3px solid #6366f1 !important",
-            paddingLeft: "4px !important",
-            boxSizing: "border-box"
+            borderLeftColor: "#6366f1 !important"
         },
         ".cm-custom-hl": { backgroundColor: "#FACC15 !important", color: "#000000 !important", padding: "0 2px", fontWeight: "600 !important", borderRadius: "4px !important" },
         ".dark .cm-custom-hl": { backgroundColor: "#FACC15 !important", color: "#000000 !important", borderRadius: "4px !important" },
@@ -474,23 +505,24 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".dark .cm-custom-hr": { backgroundColor: "#3f3f3f" },
         ".cm-search-match": { backgroundColor: "rgba(245, 158, 11, 0.4) !important", borderBottom: "2px solid #f59e0b", color: "#000 !important" },
         ".cm-selectionMatch": { backgroundColor: "#518141 !important", color: "#000 !important" },
-        ".cm-cb-header": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderBottom: "none", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#71717a", position: "relative", padding: "0 8px", minHeight: "2px" },
+        ".cm-cb-header": { backgroundColor: "#F1F1F4", border: "1px solid #D4D4D8", borderBottom: "none", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#52525b", position: "relative", padding: "0 8px", minHeight: "2px" },
         ".cm-cb-header-dark": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderBottom: "none", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#a1a1aa", position: "relative", padding: "0 8px", minHeight: "2px" },
-        ".cm-cb-line": { backgroundColor: "#0D0D0F", borderLeft: "1px solid #3F3F46", borderRight: "1px solid #3F3F46", fontFamily: fontFamily, fontSize: "0.9em !important", color: "#A78BFA !important", padding: "0 8px" },
+        ".cm-cb-line": { backgroundColor: "#F1F1F4", borderLeft: "1px solid #D4D4D8", borderRight: "1px solid #D4D4D8", fontFamily: fontFamily, fontSize: "0.9em !important", color: "#312E81 !important", padding: "0 8px" },
         ".cm-cb-line-dark": { backgroundColor: "#0D0D0F", borderLeft: "1px solid #3F3F46", borderRight: "1px solid #3F3F46", fontFamily: fontFamily, fontSize: "0.9em !important", color: "#A78BFA !important", padding: "0 8px" },
         ".cm-cb-line ::selection, .cm-cb-line-dark ::selection, .cm-cb-line .cm-selectionBackground, .cm-cb-line-dark .cm-selectionBackground": { 
-          backgroundColor: "#8B5CF6 !important", // Un violeta más sólido y brillante
-          color: "#ffffff !important"           // TEXTO BLANCO para máximo contraste
+          backgroundColor: "#8B5CF6 !important", 
+          color: "#ffffff !important"           
         },
         ".cm-cb-line ::-moz-selection, .cm-cb-line-dark ::-moz-selection": { 
           backgroundColor: "#8B5CF6 !important",
           color: "#ffffff !important"
         },
-        ".cm-cb-footer": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderTop: "none", borderRadius: "0 0 8px 8px", fontFamily: fontFamily, fontSize: "0.85em", color: "#71717a", padding: "0 8px", minHeight: "2px" },
+        ".cm-cb-footer": { backgroundColor: "#F1F1F4", border: "1px solid #D4D4D8", borderTop: "none", borderRadius: "0 0 8px 8px", fontFamily: fontFamily, fontSize: "0.85em", color: "#52525b", padding: "0 8px", minHeight: "2px" },
         ".cm-cb-footer-dark": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderTop: "none", borderRadius: "0 0 8px 8px", fontFamily: fontFamily, fontSize: "0.85em", color: "#a1a1aa", padding: "0 8px", minHeight: "2px" },
         ".cm-codeblock-copy": { position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "4px", borderRadius: "4px", backgroundColor: "transparent", color: "#a1a1aa", cursor: "pointer", border: "none", transition: "all 0.15s", opacity: "0" },
         ".cm-cb-header:hover .cm-codeblock-copy, .cm-cb-header-dark:hover .cm-codeblock-copy": { opacity: "1" },
-        ".cm-codeblock-copy:hover": { backgroundColor: "#d4d4d8", color: "#52525b" },
+        ".cm-codeblock-copy:hover": { backgroundColor: "#E4E4E7", color: "#52525b" },
+        ".dark .cm-codeblock-copy:hover": { backgroundColor: "#3F3F46", color: "#a1a1aa" },
         ".cm-remove-btn-wrapper": { display: "inline-block", width: "0px", overflow: "visible", verticalAlign: "baseline", position: "relative" },
         ".cm-remove-btn": { position: "absolute", display: "inline-flex", alignItems: "center", justifyContent: "center", backgroundColor: "#ef4444", border: "2px solid #ffffff", color: "white !important", width: "18px", height: "18px", left: "-6px", top: "-14px", borderRadius: "50%", fontSize: "14px", fontWeight: "bold", lineHeight: "1", cursor: "pointer !important", zIndex: "100", opacity: "0", transition: "opacity 0.15s", pointerEvents: "none" },
         ".cm-remove-btn-visible": { opacity: "1 !important", pointerEvents: "auto !important" },
@@ -501,15 +533,33 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
 };
 
 
-export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
+export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditorProps>(({
     noteId, initialContent, searchQuery, onChange, noteFont = 'sans', noteFontSize = 'medium', noteLineHeight = 'standard', readOnly = false, showLineNumbers = false
-}) => {
+}, ref) => {
     const [content, setContent] = useState('');
     const editorRef = useRef<ReactCodeMirrorRef>(null);
+
+    useImperativeHandle(ref, () => ({
+        focus: () => {
+            if (editorRef.current?.view) {
+                editorRef.current.view.focus();
+            }
+        }
+    }));
     const [menuState, setMenuState] = useState<{top: number, left: number, from: number, to: number, text: string, isMobile?: boolean} | null>(null);
     const [tooltipState, setTooltipState] = useState<{text: string, top: number, left: number} | null>(null);
     const [isTranslating, setIsTranslating] = useState(false);
     const [showMarkerMenu, setShowMarkerMenu] = useState(false);
+    
+    // Detectar modo oscuro de forma reactiva para los colores de las etiquetas
+    const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
+    useEffect(() => {
+        const observer = new MutationObserver(() => {
+            setIsDarkMode(document.documentElement.classList.contains('dark'));
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        return () => observer.disconnect();
+    }, []);
     
     const translationsMapRef = useRef<Record<string, string>>({});
     const searchQueryRef = useRef<string>(searchQuery || ''); 
@@ -796,7 +846,7 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
             {menuState && (
                 <div
                     className={`
-                        z-[100] flex items-center gap-1 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-white p-1.5 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-zinc-200 dark:border-zinc-700 animate-fadeIn pointer-events-auto
+                        z-[100] flex items-center gap-1 bg-white dark:bg-[#242432] text-zinc-800 dark:text-white p-1.5 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-zinc-200 dark:border-zinc-700 animate-fadeIn pointer-events-auto
                         ${menuState.isMobile 
                             ? 'fixed bottom-6 left-4 right-4 justify-around p-2' 
                             : 'fixed origin-bottom'
@@ -806,28 +856,32 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
                     onMouseDown={(e) => e.preventDefault()} 
                 >
                     {isTranslating ? ( <div className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-blue-500"><Loader2 size={16} className="animate-spin" /> Traduciendo...</div> ) : (
-                        <><button onClick={doHighlight} className="p-2 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Resaltar"><Highlighter size={16} className="text-[#6B8E23] dark:text-[#ccff00]" /></button>
+                        <><button onClick={doHighlight} className="flex items-center gap-1.5 px-3 py-2 bg-[#6B8E23]/10 dark:bg-[#ccff00]/10 hover:bg-[#6B8E23]/20 dark:hover:bg-[#ccff00]/20 rounded-lg text-xs font-bold transition-all text-[#6B8E23] dark:text-[#ccff00] active:scale-95" title="Resaltar"><Highlighter size={16} /></button>
                         
                         {/* Botón marcador → sub-menú compacto */}
                         <div className="relative">
                             <button
                                 onClick={() => setShowMarkerMenu(p => !p)}
-                                className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold transition-colors active:scale-95 ${showMarkerMenu ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-white' : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-bold transition-all active:scale-95 ${showMarkerMenu ? 'bg-indigo-500/40 text-indigo-800 dark:text-white shadow-inner scale-[0.98]' : 'bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 dark:hover:bg-indigo-500/40'}`}
                                 title="Etiquetar"
                             >
-                                <span>🏷️</span>
+                                <span className="text-[14px] leading-none">🏷️</span>
                             </button>
-                            {showMarkerMenu && (
-                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-1.5 grid grid-cols-2 gap-0.5 w-[160px] z-[110]">
+                             {showMarkerMenu && (
+                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white dark:bg-[#242432] border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-2 grid grid-cols-2 gap-1.5 w-[240px] z-[110]">
                                     {(Object.entries(MARKER_TYPES) as [MarkerType, typeof MARKER_TYPES[MarkerType]][]).map(([key, cfg]) => (
                                         <button
                                             key={key}
                                             onClick={() => doFormat(key)}
-                                            className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left whitespace-nowrap"
-                                            style={{ color: cfg.color }}
+                                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold transition-all text-left whitespace-nowrap border hover:scale-[1.02] active:scale-[0.98] shadow-sm"
+                                            style={{ 
+                                                color: isDarkMode ? cfg.dark : cfg.light,
+                                                backgroundColor: `${isDarkMode ? cfg.dark : cfg.light}20`, 
+                                                borderColor: `${isDarkMode ? cfg.dark : cfg.light}30`
+                                            }}
                                         >
-                                            <span>{cfg.emoji}</span>
-                                            <span>{cfg.label}</span>
+                                            <span className="text-sm">{cfg.emoji}</span>
+                                            <span className="truncate">{cfg.label}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -835,7 +889,7 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
                         </div>
 
                         <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
-                        <button onClick={doLink} className="flex items-center gap-1.5 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-black rounded-lg transition-colors text-zinc-400 hover:text-blue-500 active:scale-95" title="Convertir a Link"><LinkIcon size={16} /></button>
+                        <button onClick={doLink} className="flex items-center gap-1.5 px-3 py-2 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-all text-blue-500 dark:text-blue-400 active:scale-95" title="Convertir a Link"><LinkIcon size={16} /></button>
                         <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
                         <button onClick={() => doTranslate('en')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-500 dark:text-blue-400 active:scale-95" title="Traducir a Inglés"> EN</button>
                         <button onClick={() => doTranslate('es')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-500 dark:text-blue-400 active:scale-95" title="Traducir al Español"> ES</button></>
@@ -844,4 +898,4 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
             )}
         </div>
     );
-};
+});
