@@ -439,7 +439,8 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             fontSize: fontSize,
         },
         "&.cm-focused .cm-cursor": { borderLeftColor: "currentColor !important", borderLeftWidth: "2px !important" },
-        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": { backgroundColor: "rgba(73, 64, 217, 0.28) !important", color: "inherit !important", fontWeight: "normal !important" },
+        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection, .cm-line ::selection, ::selection": { backgroundColor: "rgba(73, 64, 217, 0.45) !important", color: "#ffffff !important", fontWeight: "normal !important" },
+        "&.cm-focused .cm-selectionLayer, .cm-selectionLayer": { display: "none !important" }, // Desactivar capa CM para usar nativa
         ".cm-content *": { textDecoration: "none !important", boxShadow: "none !important" },
         ".cm-line": { lineHeight: lHeight },
         "&.cm-focused": { outline: "none" },
@@ -477,6 +478,14 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-cb-header-dark": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderBottom: "none", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#a1a1aa", position: "relative", padding: "0 8px", minHeight: "2px" },
         ".cm-cb-line": { backgroundColor: "#0D0D0F", borderLeft: "1px solid #3F3F46", borderRight: "1px solid #3F3F46", fontFamily: fontFamily, fontSize: "0.9em !important", color: "#A78BFA !important", padding: "0 8px" },
         ".cm-cb-line-dark": { backgroundColor: "#0D0D0F", borderLeft: "1px solid #3F3F46", borderRight: "1px solid #3F3F46", fontFamily: fontFamily, fontSize: "0.9em !important", color: "#A78BFA !important", padding: "0 8px" },
+        ".cm-cb-line ::selection, .cm-cb-line-dark ::selection, .cm-cb-line .cm-selectionBackground, .cm-cb-line-dark .cm-selectionBackground": { 
+          backgroundColor: "#8B5CF6 !important", // Un violeta más sólido y brillante
+          color: "#ffffff !important"           // TEXTO BLANCO para máximo contraste
+        },
+        ".cm-cb-line ::-moz-selection, .cm-cb-line-dark ::-moz-selection": { 
+          backgroundColor: "#8B5CF6 !important",
+          color: "#ffffff !important"
+        },
         ".cm-cb-footer": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderTop: "none", borderRadius: "0 0 8px 8px", fontFamily: fontFamily, fontSize: "0.85em", color: "#71717a", padding: "0 8px", minHeight: "2px" },
         ".cm-cb-footer-dark": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderTop: "none", borderRadius: "0 0 8px 8px", fontFamily: fontFamily, fontSize: "0.85em", color: "#a1a1aa", padding: "0 8px", minHeight: "2px" },
         ".cm-codeblock-copy": { position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "4px", borderRadius: "4px", backgroundColor: "transparent", color: "#a1a1aa", cursor: "pointer", border: "none", transition: "all 0.15s", opacity: "0" },
@@ -774,7 +783,7 @@ export const SmartNotesEditor: React.FC<SmartNotesEditorProps> = ({
                     createVisualMarkupPlugin(translationsMapRef, searchQueryRef), 
                     clickHandlerExtension, hoverTooltipExtension, selectionListener, pasteCleanerExtension, EditorView.lineWrapping, EditorView.editable.of(!readOnly)
                 ]}
-                basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false, highlightActiveLineGutter: false, syntaxHighlighting: false }}
+                basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false, highlightActiveLineGutter: false, syntaxHighlighting: false, drawSelection: false }}
             />
              {tooltipState && (
                 <div

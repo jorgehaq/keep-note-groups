@@ -5,6 +5,7 @@ import {
     GlobalAppView,
     Group,
     Note,
+    NoteSortMode,
     Task,
     Translation,
 } from "../../types";
@@ -19,7 +20,7 @@ interface UIStore {
     // Dock / Launcher State
     dockedGroupIds: string[]; // Groups visible in the sidebar
     lastLauncherTab: LauncherTab;
-    noteSortMode: "date-desc" | "date-asc" | "alpha-asc" | "alpha-desc";
+    noteSortMode: NoteSortMode;
     globalView: GlobalAppView;
     activeTimersCount: number;
     overdueRemindersCount: number;
@@ -92,7 +93,13 @@ interface UIStore {
     closeGroup: (id: string) => void; // Removes from dock
     setLauncherTab: (tab: LauncherTab) => void;
     setNoteSortMode: (
-        mode: "date-desc" | "date-asc" | "alpha-asc" | "alpha-desc",
+        mode:
+            | "date-desc"
+            | "date-asc"
+            | "created-desc"
+            | "created-asc"
+            | "alpha-asc"
+            | "alpha-desc",
     ) => void;
     setGlobalView: (view: GlobalAppView) => void;
     setActiveTimersCount: (count: number) => void;

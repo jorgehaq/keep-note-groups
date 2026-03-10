@@ -37,6 +37,14 @@ export interface Group {
   last_accessed_at?: string;
 }
 
+export type NoteSortMode =
+  | "date-desc"
+  | "date-asc"
+  | "created-desc"
+  | "created-asc"
+  | "alpha-asc"
+  | "alpha-desc";
+
 export type Theme = "light" | "dark" | "system";
 
 export type NoteAction =

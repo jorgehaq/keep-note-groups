@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid, Maximize2, Minimize2, ChevronsDownUp, Bell, Pin, PanelLeft } from 'lucide-react';
-import { Note, Group, Theme, NoteFont, Reminder } from './types';
+import { Note, Group, Theme, NoteFont, Reminder, NoteSortMode } from './types';
 import { AccordionItem } from './components/AccordionItem';
 import { Sidebar } from './components/Sidebar';
 import { SettingsWindow } from './components/SettingsWindow';
@@ -31,6 +31,16 @@ const sortNotesArray = (notes: Note[], mode: string) => {
       case 'date-asc': {
         const dateA = new Date(a.updated_at || a.created_at || 0).getTime();
         const dateB = new Date(b.updated_at || b.created_at || 0).getTime();
+        return dateA - dateB;
+      }
+      case 'created-desc': {
+        const dateB = new Date(b.created_at || 0).getTime();
+        const dateA = new Date(a.created_at || 0).getTime();
+        return dateB - dateA;
+      }
+      case 'created-asc': {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
         return dateA - dateB;
       }
       case 'alpha-asc': return (a.title || '').toLowerCase().localeCompare((b.title || '').toLowerCase());
@@ -371,7 +381,7 @@ function App() {
     }
   }, [theme]);
 
-  const applyManualSort = (mode: 'date-desc' | 'date-asc' | 'alpha-asc' | 'alpha-desc') => {
+  const applyManualSort = (mode: NoteSortMode) => {
     setNoteSortMode(mode);
     setIsSortMenuOpen(false);
 
@@ -724,18 +734,53 @@ function App() {
     const originalIndex = currentGroup.notes.findIndex(n => n.id === noteId);
     if (originalIndex === -1) return;
     const original = currentGroup.notes[originalIndex];
+
     try {
+      // 🚀 Lógica de Título Secuencial
+      const baseTitle = original.title || 'Sin título';
+      
+      // 1. Limpiar el título base de cualquier sufijo numérico existente (ej: "Nota 2" -> "Nota")
+      const titleMatch = baseTitle.match(/^(.*?)(?:\s+(\d+))?$/);
+      const pureTitle = titleMatch ? titleMatch[1].trim() : baseTitle;
+
+      // 2. Buscar el número más alto en el grupo que coincida con ese título base
+      const existingNumbers = currentGroup.notes
+        .map(n => {
+          const match = (n.title || '').match(new RegExp(`^${pureTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\s+(\\d+))?$`));
+          if (match) {
+            return match[1] ? parseInt(match[1], 10) : 1;
+          }
+          return null;
+        })
+        .filter((n): n is number => n !== null);
+
+      const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 2;
+      const newTitle = `${pureTitle} ${nextNumber}`;
+
       const position = currentGroup.notes.length;
       const { data, error } = await supabase.from('notes').insert([{
-        title: `Copia de ${original.title || 'Sin título'}`,
+        title: newTitle,
         content: original.content || '',
         group_id: activeGroupId,
         user_id: session.user.id,
         position,
         is_checklist: original.is_checklist || false,
+        created_at: original.created_at, // Heredar fecha de creación
+        updated_at: original.updated_at  // Heredar fecha de actualización
       }]).select().single();
+
       if (error) throw error;
-      const newNote: Note = { id: data.id, title: data.title, content: data.content || '', isOpen: true, created_at: data.created_at, group_id: data.group_id, position: data.position, is_checklist: data.is_checklist };
+      const newNote: Note = { 
+        id: data.id, 
+        title: data.title, 
+        content: data.content || '', 
+        isOpen: true, 
+        created_at: data.created_at, 
+        updated_at: data.updated_at,
+        group_id: data.group_id, 
+        position: data.position, 
+        is_checklist: data.is_checklist 
+      };
       
       setGroups(groups.map(g => {
         if (g.id === activeGroupId) {
@@ -889,10 +934,12 @@ function App() {
           .note-editor-scroll { scrollbar-width: thin; scrollbar-color: #3f3f46 transparent; }
           
           ::selection {
-            background-color: rgba(73, 64, 217, 0.28);
+            background-color: rgba(73, 64, 217, 0.45);
+            color: #ffffff !important;
           }
           ::-moz-selection {
-            background-color: rgba(73, 64, 217, 0.28);
+            background-color: rgba(73, 64, 217, 0.45);
+            color: #ffffff !important;
           }
 
           .cm-lineNumbers .cm-gutterElement {
@@ -1124,6 +1171,15 @@ function App() {
                                     <button onClick={() => applyManualSort('date-asc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'date-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
                                       <Calendar size={14} /> Fecha (Antiguos)
                                       {noteSortMode === 'date-asc' && <Check size={14} className="ml-auto" />}
+                                    </button>
+
+                                    <button onClick={() => applyManualSort('created-desc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'created-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                      <Calendar size={14} /> Creación (reciente)
+                                      {noteSortMode === 'created-desc' && <Check size={14} className="ml-auto" />}
+                                    </button>
+                                    <button onClick={() => applyManualSort('created-asc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'created-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                      <Calendar size={14} /> Creación (antigua)
+                                      {noteSortMode === 'created-asc' && <Check size={14} className="ml-auto" />}
                                     </button>
                                     
                                     <button onClick={() => applyManualSort('alpha-asc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'alpha-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
