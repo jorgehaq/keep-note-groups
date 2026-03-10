@@ -202,9 +202,9 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
     const archivo = dumps.filter(d => d.status === 'history');
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#1B1B1E] overflow-hidden">
-            <div className={`sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md shrink-0 ${isDumpTrayOpen ? '' : 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm'}`}>
-                <div className={`h-[72px] flex items-center justify-between px-4 md:px-6 py-4 ${isDumpTrayOpen ? 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm' : ''}`}>
+        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
+            <div className={`sticky top-0 z-30 bg-white/80 dark:bg-[#1A1A24]/90 backdrop-blur-md shrink-0 ${isDumpTrayOpen ? '' : 'border-b border-zinc-200 dark:border-[#2D2D42] shadow-sm'}`}>
+                <div className={`h-[72px] flex items-center justify-between px-4 md:px-6 py-4 ${isDumpTrayOpen ? 'border-b border-zinc-200 dark:border-[#2D2D42] shadow-sm' : ''}`}>
                     <h1 className="text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] flex items-center gap-3">
                         <div className="h-9 p-2 bg-[#FFD700] rounded-lg text-amber-900 shadow-lg shadow-amber-500/20">
                             <PenTool size={20} />
@@ -220,7 +220,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                           ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
                           : overdueRemindersCount > 0
                             ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
-                            : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
+                            : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
                       }`}
                       title={showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                     >
@@ -246,7 +246,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
 
                     <button
                       onClick={() => setIsBraindumpMaximized(!isBraindumpMaximized)}
-                      className="h-9 p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400 transition-all active:scale-95 shrink-0"
+                      className="h-9 p-2 bg-white dark:bg-[#2D2D42] border border-zinc-200 dark:border-[#2D2D42] rounded-xl text-zinc-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400 transition-all active:scale-95 shrink-0"
                       title={isBraindumpMaximized ? "Minimizar" : "Maximizar"}
                     >
                       {isBraindumpMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
@@ -259,7 +259,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
 
                 {/* FRANJA DE PIZARRONES (ACCESOS DIRECTOS) */}
                 {isDumpTrayOpen && pizarrones.length > 0 && (
-                    <div className="pt-4 px-4 pb-4 bg-[#1B1B1E] dark:bg-[#1B1B1E]">
+                    <div className="pt-4 px-4 pb-4 bg-[#13131A] dark:bg-[#13131A]">
                         <div className="flex flex-wrap justify-center gap-2.5">
                              {pizarrones.map(p => {
                                  const isFocused = focusedDumpId === p.id;
@@ -299,7 +299,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                 )}
             </div>
 
-            <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#1B1B1E] px-4 pb-4 ${isDumpTrayOpen && pizarrones.length > 0 ? 'pt-0' : 'pt-4'} hidden-scrollbar`}>
+            <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 ${isDumpTrayOpen && pizarrones.length > 0 ? 'pt-0' : 'pt-4'} hidden-scrollbar`}>
                 <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto flex flex-col gap-12 pb-20`}>
                     
                     {/* 1. PIZARRONES (PERSISTENTES - FILTRADO POR FOCO) */}
@@ -311,7 +311,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                 const isEdited = (updatedMs - createdMs) > 60000;
 
                                 return (
-                                <div key={pizarron.id} className="m-1 bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 flex flex-col">
+                                <div key={pizarron.id} className="m-1 bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] transition-all duration-300 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 flex flex-col">
                                     
                                     {/* Pizarron header: title + action buttons */}
                                     <div ref={pizarronHeaderRef} className="flex items-center justify-between pr-3 pt-1">
@@ -326,10 +326,10 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                             <div className="relative" ref={openMenuId === pizarron.id ? menuRef : undefined}>
                                                 <button
                                                     onClick={() => setOpenMenuId(openMenuId === pizarron.id ? null : pizarron.id)}
-                                                    className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                                    className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] rounded-lg transition-colors"
                                                 ><MoreVertical size={16} /></button>
                                                 {openMenuId === pizarron.id && (
-                                                    <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-800 shadow-xl rounded-lg border border-zinc-200 dark:border-zinc-700 p-1 flex flex-col gap-0.5 min-w-[180px] animate-fadeIn">
+                                                    <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-[#1A1A24] shadow-xl rounded-lg border border-zinc-200 dark:border-[#2D2D42] p-1 flex flex-col gap-0.5 min-w-[180px] animate-fadeIn">
                                                         <button onClick={() => { 
                                                             const willBeChecklist = !pizarron.is_checklist;
                                                             let contentToSave = pizarron.content;
@@ -338,9 +338,9 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                                             }
                                                             autoSave(pizarron.id, { is_checklist: willBeChecklist, content: contentToSave }); 
                                                             setOpenMenuId(null); 
-                                                        }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${pizarron.is_checklist ? 'text-[#1F3760] dark:text-blue-400 bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}><ListTodo size={14} />{pizarron.is_checklist ? 'Quitar Checklist' : 'Hacer Checklist'}</button>
-                                                        <div className="border-t border-zinc-100 dark:border-zinc-700 my-0.5" />
-                                                        <button onClick={() => { changeStatus(pizarron.id, 'history'); setOpenMenuId(null); }} className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><ArchiveIcon size={14} />Archivar</button>
+                                                        }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${pizarron.is_checklist ? 'text-[#1F3760] dark:text-blue-400 bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42]'}`}><ListTodo size={14} />{pizarron.is_checklist ? 'Quitar Checklist' : 'Hacer Checklist'}</button>
+                                                        <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
+                                                        <button onClick={() => { changeStatus(pizarron.id, 'history'); setOpenMenuId(null); }} className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"><ArchiveIcon size={14} />Archivar</button>
                                                         <button onClick={() => { deleteDump(pizarron.id); setOpenMenuId(null); }} className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"><Trash2 size={14} />Eliminar</button>
                                                     </div>
                                                 )}
@@ -356,7 +356,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                             </div>
                                         )}
 
-                                        <div className="mx-4 mb-4 p-4 bg-zinc-50 dark:bg-[#181818] border border-zinc-200 dark:border-zinc-800 rounded-xl cursor-text min-h-[150px]">
+                                        <div className="mx-4 mb-4 p-4 bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl cursor-text min-h-[150px]">
                                             {pizarron.is_checklist ? (
                                                 <ChecklistEditor idPrefix={pizarron.id} initialContent={pizarron.content} onUpdate={(c) => autoSave(pizarron.id, { content: c })} noteLineHeight={noteLineHeight} noteFont={noteFont} noteFontSize={noteFontSize} />
                                             ) : (
@@ -366,7 +366,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                     </div>
                                     
                                     {/* Footer: Fechas */}
-                                    <div className="flex items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800">
+                                    <div className="flex items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-[#2D2D42]/50 rounded-b-2xl border-t border-zinc-200 dark:border-[#2D2D42]">
                                         <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
                                             <span>Creado: {formatCleanDate(pizarron.created_at)}</span>
                                             {isEdited && (
@@ -398,12 +398,12 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                     const isEdited = (updatedMs - createdMs) > 60000;
                                     
                                     return (
-                                    <div key={a.id} className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-200 dark:border-zinc-800 transition-colors">
+                                    <div key={a.id} className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-[#1A1A24]/50 rounded-lg border border-zinc-200 dark:border-[#2D2D42] transition-colors">
                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                                             
                                             {/* Título y Botón Expandir */}
                                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                <button onClick={() => toggleExpandHistory(a.id)} className="p-1.5 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded-md text-zinc-500 transition-colors" title="Desplegar pizarrón">
+                                                <button onClick={() => toggleExpandHistory(a.id)} className="p-1.5 bg-zinc-200 dark:bg-[#2D2D42] hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded-md text-zinc-500 transition-colors" title="Desplegar pizarrón">
                                                     {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                                 </button>
                                                 <ArchiveIcon size={16} className="text-zinc-400 shrink-0" />
@@ -424,7 +424,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-1 shrink-0">
-                                                    <div className="w-px h-4 bg-zinc-300 dark:bg-zinc-700 mx-1"></div>
+                                                    <div className="w-px h-4 bg-zinc-300 dark:bg-[#2D2D42] mx-1"></div>
                                                     <button onClick={() => changeStatus(a.id, 'main')} className="p-1.5 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md transition-colors" title="Restaurar Pizarrón"><RotateCcw size={16}/></button>
                                                     <button onClick={() => deleteDump(a.id)} className="p-1.5 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors" title="Eliminar para siempre"><Trash2 size={16}/></button>
                                                 </div>
@@ -433,7 +433,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                         
                                         {/* Vista expandida del Archivo (Opaca) */}
                                         {isExpanded && (
-                                            <div className="mt-2 bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 opacity-70 animate-fadeIn">
+                                            <div className="mt-2 bg-zinc-100/50 dark:bg-[#13131A]/30 border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4 opacity-70 animate-fadeIn">
                                                 <div className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed" dangerouslySetInnerHTML={{__html: parseMarkdownPreview(a.content)}} />
                                             </div>
                                         )}

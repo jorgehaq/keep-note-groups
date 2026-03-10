@@ -426,7 +426,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         "&": {
             fontSize: fontSize,
             fontFamily: fontFamily,
-            backgroundColor: "#181818 !important", 
+            backgroundColor: "transparent !important", // Deja que el contenedor padre maneje el fondo standardized
             color: "inherit !important",               
             transition: "font-size 0.2s ease, font-family 0.2s ease" // Animación suave al cambiar ajustes
         },
@@ -439,11 +439,11 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             fontSize: fontSize,
         },
         "&.cm-focused .cm-cursor": { borderLeftColor: "currentColor !important", borderLeftWidth: "2px !important" },
-        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": { backgroundColor: "#C4944A !important", color: "white !important", fontWeight: "normal !important" },
+        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": { backgroundColor: "rgba(73, 64, 217, 0.28) !important", color: "inherit !important", fontWeight: "normal !important" },
         ".cm-content *": { textDecoration: "none !important", boxShadow: "none !important" },
         ".cm-line": { lineHeight: lHeight },
         "&.cm-focused": { outline: "none" },
-        ".cm-gutters": { backgroundColor: "#181818 !important", border: "none !important", color: "#71717a" },
+        ".cm-gutters": { backgroundColor: "transparent !important", border: "none !important", color: "#71717a" },
         ".dark .cm-gutters": { color: "#52525b" },
         ".cm-activeLineGutter": { backgroundColor: "transparent !important" },
         ".cm-lineNumbers .cm-gutterElement": { paddingRight: "10px !important", paddingLeft: "4px !important" },

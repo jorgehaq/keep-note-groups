@@ -174,14 +174,14 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   };
 
   return (
-    <div className={`transition-all duration-300 flex-1 flex flex-col min-h-0 bg-white dark:bg-zinc-900 overflow-hidden ${
+    <div className={`transition-all duration-300 flex-1 flex flex-col min-h-0 bg-white dark:bg-[#1A1A24] overflow-hidden ${
       note.is_docked 
-        ? 'rounded-none shadow-none border-b border-zinc-200 dark:border-zinc-800' 
+        ? 'rounded-none shadow-none border-b border-zinc-200 dark:border-[#2D2D42]' 
         : 'rounded-2xl shadow-lg border'
     } ${
       isHighlightedBySearch
         ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50/30 dark:bg-amber-900/10'
-        : `${note.is_docked ? '' : 'border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/50'}`
+        : `${note.is_docked ? '' : 'border-zinc-200 dark:border-[#2D2D42] hover:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/50'}`
     }`}>
       
       <div
@@ -248,7 +248,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           <div className="relative" ref={mobileMenuRef}>
             <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(!isMobileMenuOpen); }} className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"><MoreVertical size={16} /></button>
             {isMobileMenuOpen && (
-              <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-800 shadow-xl rounded-lg border border-zinc-200 dark:border-zinc-700 p-1 flex flex-col gap-0.5 min-w-[180px] animate-fadeIn">
+              <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-[#1A1A24] shadow-xl rounded-lg border border-zinc-200 dark:border-[#2D2D42] p-1 flex flex-col gap-0.5 min-w-[180px] animate-fadeIn">
                 <button onClick={(e) => { 
                   e.stopPropagation(); 
                   const willBeChecklist = !note.is_checklist;
@@ -261,8 +261,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_checklist ? 'text-[#1F3760] dark:text-blue-400 bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}><ListTodo size={14} />{note.is_checklist ? 'Quitar Checklist' : 'Hacer Checklist'}</button>
                 <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); onUpdate(note.id, { is_pinned: !note.is_pinned }); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_pinned ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}><Pin size={14} className={note.is_pinned ? "fill-current" : ""} />{note.is_pinned ? 'Desfijar' : 'Fijar Nota'}</button>
                 {onDuplicate && <button onClick={(e) => { e.stopPropagation(); onDuplicate(note.id); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><CopyPlus size={14} />Duplicar Nota</button>}
-                {onMove && <button onClick={(e) => { e.stopPropagation(); setIsMoveModalOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><FolderInput size={14} />Mover de Grupo</button>}
-                <div className="border-t border-zinc-100 dark:border-zinc-700 my-0.5" />
+                {onMove && <button onClick={(e) => { e.stopPropagation(); setIsMoveModalOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"><FolderInput size={14} />Mover de Grupo</button>}
+                <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
                 <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); onUpdate(note.id, { is_docked: !note.is_docked }); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_docked ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}><PanelLeft size={14} />{note.is_docked ? 'Quitar del Sidebar' : 'Anclar al Sidebar'}</button>
                 {onCopyNote && <button onClick={(e) => { e.stopPropagation(); onCopyNote(note); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><Clipboard size={14} />Copiar Nota</button>}
                 {onExportNote && <button onClick={(e) => { e.stopPropagation(); onExportNote(note); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><Download size={14} />Exportar (.md)</button>}
@@ -276,7 +276,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
       <div 
         ref={contentRef}
-        className="flex-1 flex flex-col overflow-hidden min-h-0 bg-white dark:bg-zinc-900 relative"
+        className="flex-1 flex flex-col overflow-hidden min-h-0 bg-white dark:bg-[#242432] relative"
       >
         {showStickyTitle && (
           <div className="sticky top-4 left-0 right-0 z-[40] flex justify-center pointer-events-none animate-fadeIn px-4">
@@ -292,11 +292,11 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           />
 
           {note.is_checklist ? (
-            <div className="bg-zinc-50 dark:bg-[#181818] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4">
+            <div className="bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4">
               <ChecklistEditor idPrefix={displayNoteId} initialContent={displayContent} onUpdate={handleUpdateContent} />
             </div>
           ) : (
-            <div className="note-editor-scroll bg-zinc-50 dark:bg-[#181818] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-text flex-1 overflow-y-scroll min-h-0">
+            <div className="note-editor-scroll bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4 cursor-text flex-1 overflow-y-scroll min-h-0">
               <SmartNotesEditor 
                 noteId={displayNoteId} 
                 initialContent={displayContent} 
@@ -320,7 +320,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       </div>
 
       {/* Footer: Fechas y Estado Sync (Estilo Pizarrón) */}
-      <div className="flex items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800 mt-auto">
+      <div className="flex items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-[#2D2D42]/50 rounded-b-2xl border-t border-zinc-200 dark:border-[#2D2D42] mt-auto">
         <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
           {note.created_at && (<span>Creado: {formatCleanDate(note.created_at)}</span>)}
           {note.updated_at && note.created_at && (new Date(note.updated_at).getTime() - new Date(note.created_at).getTime() > 60000) && (
