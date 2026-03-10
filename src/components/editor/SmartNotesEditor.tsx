@@ -164,9 +164,33 @@ const trimCodeBlocks = (text: string) => {
 };
 
 /**
- * Extension para interceptar el pegado y limpiar bloques de código al instante
+ * 🧹 Limpiador de texto para el portapapeles:
+ * Elimina la sintaxis interna de resaltados y etiquetas.
  */
-const pasteCleanerExtension = EditorView.domEventHandlers({
+const cleanTextForClipboard = (text: string) => {
+    return text
+        // 1. Quitar resaltados: {=texto=} -> texto
+        .replace(/\{=([\s\S]*?)=\}/g, '$1')
+        // 2. Quitar etiquetas y traducciones: [[tipo:ts|texto]] -> texto
+        .replace(/\[\[(?:tr|[a-z]+):[^|\]]*\|([\s\S]*?)\]\]/g, '$1');
+};
+
+/**
+ * Extension para interceptar el pegado y copiado
+ */
+const clipboardExtension = EditorView.domEventHandlers({
+    copy: (event, view) => {
+        const selection = view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to);
+        if (!selection) return false;
+
+        const cleaned = cleanTextForClipboard(selection);
+        if (cleaned !== selection) {
+            event.clipboardData?.setData('text/plain', cleaned);
+            event.preventDefault();
+            return true;
+        }
+        return false;
+    },
     paste: (event, view) => {
         const text = event.clipboardData?.getData('text/plain');
         if (!text) return false;
@@ -860,7 +884,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                     revealedLineField,
                     editingLineField,
                     createVisualMarkupPlugin(translationsMapRef, searchQueryRef), 
-                    clickHandlerExtension, hoverTooltipExtension, selectionListener, pasteCleanerExtension, EditorView.lineWrapping, EditorView.editable.of(!readOnly)
+                    clickHandlerExtension, hoverTooltipExtension, selectionListener, clipboardExtension, EditorView.lineWrapping, EditorView.editable.of(!readOnly)
                 ]}
                 basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false, highlightActiveLineGutter: false, syntaxHighlighting: false, drawSelection: false }}
             />
