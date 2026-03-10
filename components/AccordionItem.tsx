@@ -312,11 +312,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
           {session?.user && (
             <NoteAIPanel 
-              rootNoteId={note.id}
-              activeNoteId={displayNoteId}
-              onNavigate={navigate}
+              noteId={displayNoteId}
               userId={session.user.id}
-              groupId={note.group_id}
             />
           )}
         </div>
