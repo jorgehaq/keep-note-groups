@@ -69,7 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      <div className="w-12 md:w-16 bg-zinc-200 dark:bg-zinc-900 border-r border-zinc-300 dark:border-zinc-800 flex flex-col items-center py-3 gap-4 h-full shrink-0 z-50 overflow-visible">
+      <div className="w-12 md:w-16 bg-zinc-200 dark:bg-[#13131A] border-r border-zinc-300 dark:border-[#2D2D42] flex flex-col items-center py-3 gap-4 h-full shrink-0 z-50 overflow-visible">
 
         {/* Reminders Button */}
         <button
@@ -159,7 +159,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Languages size={20} />
         </button>
 
-        <div className="w-8 h-0.5 bg-zinc-300 dark:bg-zinc-700 rounded-full shrink-0"></div>
+        <div className="w-8 h-0.5 bg-zinc-300 dark:bg-[#2D2D42] rounded-full shrink-0"></div>
 
         {/* New Group Button (Quick Add) */}
         <button
@@ -179,7 +179,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Grid size={20} />
         </button>
 
-        <div className="w-8 h-0.5 bg-zinc-300 dark:bg-zinc-700 rounded-full shrink-0"></div>
+        <div className="w-8 h-0.5 bg-zinc-300 dark:bg-[#2D2D42] rounded-full shrink-0"></div>
 
         {/* Docked Groups List */}
         <div className="flex flex-col gap-4 w-full items-center flex-1 overflow-y-auto hidden-scrollbar">
@@ -213,7 +213,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     ${isGroupActive && isNotesView && !focusedNoteIsDocked
                       ? 'h-32 bg-[#4940D9] hover:bg-[#3D35C0] text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 scale-[1.02] active:scale-95'
                       : isGroupActive && (!isNotesView || focusedNoteIsDocked)
-                        ? 'h-32 bg-zinc-300 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-inner ring-1 ring-zinc-400/30 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:ring-0 hover:scale-[1.04] active:scale-95'
+                        ? 'h-32 bg-zinc-300 dark:bg-[#2D2D42] text-zinc-700 dark:text-zinc-200 shadow-inner ring-1 ring-zinc-400/30 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:ring-0 hover:scale-[1.04] active:scale-95'
                         : 'h-24 bg-zinc-200/50 dark:bg-zinc-800/50 text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:scale-[1.04] active:scale-95'}
                     `}
                   title={group.title}
@@ -242,8 +242,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       const bubbleClass = isActiveFocus
                         ? 'bg-[#4940D9] hover:bg-[#3D35C0] text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 scale-[1.15] active:scale-95' // Activa enfocada
                         : isGroupActive
-                          ? 'bg-zinc-300 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-inner ring-1 ring-zinc-400/30 scale-105 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:ring-0 hover:scale-110 active:scale-95' // Parte de grupo activo o rastro (Gris Medio)
-                          : 'bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:scale-110 active:scale-95'; // Muerta / Inactiva
+                          ? 'bg-zinc-300 dark:bg-[#2D2D42] text-zinc-700 dark:text-zinc-200 shadow-inner ring-1 ring-zinc-400/30 scale-105 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:ring-0 hover:scale-110 active:scale-95' // Parte de grupo activo o rastro (Gris Medio)
+                          : 'bg-zinc-200/80 dark:bg-zinc-800/50 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:scale-110 active:scale-95'; // Muerta / Inactiva
 
                       // NUEVO: LÓGICA DEL SEMÁFORO KANBAN
                       const linkedTask = globalTasks?.find(t => t.id === note.id);
@@ -289,7 +289,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Bottom Area: Settings */}
         <div className="mt-auto pt-3 shrink-0 flex flex-col items-center gap-4">
-          <div className="w-8 h-0.5 bg-zinc-300 dark:bg-zinc-700 rounded-full"></div>
+          <div className="w-8 h-0.5 bg-zinc-300 dark:bg-[#2D2D42] rounded-full"></div>
           <button
             onClick={onOpenSettings}
             className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white dark:hover:bg-zinc-700 hover:shadow-sm transition-all duration-300 hover:scale-105 active:scale-95"

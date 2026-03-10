@@ -175,9 +175,9 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
   if (loading) return <div className="p-10 text-center animate-pulse text-zinc-500">Cargando Traductor...</div>;
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#1B1B1E] overflow-hidden">
-        
-        <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
+        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
+            
+            <div className="sticky top-0 z-30 bg-white/80 dark:bg-[#1A1A24]/90 backdrop-blur-md border-b border-zinc-200 dark:border-[#2D2D42] shadow-sm shrink-0">
             <div className="h-[72px] flex items-center justify-between px-4 md:px-6 py-4">
                 <h1 className="text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] flex items-center gap-3">
                     <div className="h-9 p-2 bg-[#8B5CF6] rounded-lg text-white shadow-lg shadow-violet-500/20">
@@ -204,7 +204,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
 
                     <button
                       onClick={() => setIsTranslatorMaximized(!isTranslatorMaximized)}
-                      className="h-9 p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 hover:text-violet-600 dark:hover:text-violet-400 transition-all active:scale-95 shrink-0"
+                      className="h-9 p-2 bg-white dark:bg-[#2D2D42] border border-zinc-200 dark:border-[#2D2D42] rounded-xl text-zinc-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 hover:text-violet-600 dark:hover:text-violet-400 transition-all active:scale-95 shrink-0"
                       title={isTranslatorMaximized ? "Minimizar" : "Maximizar"}
                     >
                       {isTranslatorMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
@@ -219,13 +219,13 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                 {/* 1. MÓDULO DE CREACIÓN */}
                 <div className="space-y-6 animate-fadeIn">
                     {/* 🚀 FIX: focus-within EN LA TARJETA EXTERIOR EXCLUSIVAMENTE */}
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:border-violet-500/50 hover:shadow-xl hover:shadow-violet-500/5 focus-within:ring-2 focus-within:ring-violet-500/50 overflow-hidden">
+                    <div className="bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] transition-all duration-300 hover:border-violet-500/50 hover:shadow-xl hover:shadow-violet-500/5 focus-within:ring-2 focus-within:ring-violet-500/50 overflow-hidden">
                         
-                        <div className="bg-zinc-50 dark:bg-[#1B1B1E] rounded-xl m-4 p-4 border border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+                        <div className="bg-zinc-50 dark:bg-[#13131A] rounded-xl m-4 p-4 border border-zinc-200 dark:border-[#2D2D42] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
                             <select 
                                 value={sourceLang} 
                                 onChange={(e) => setSourceLang(e.target.value)}
-                                className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-[#CCCCCC] text-sm font-normal rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer transition-all"
+                                className="flex-1 bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] text-zinc-800 dark:text-[#CCCCCC] text-sm font-normal rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer transition-all"
                             >
                                 {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
                             </select>
@@ -237,7 +237,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                             <select 
                                 value={targetLang} 
                                 onChange={(e) => setTargetLang(e.target.value)}
-                                className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-[#CCCCCC] text-sm font-normal rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer transition-all"
+                                className="flex-1 bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] text-zinc-800 dark:text-[#CCCCCC] text-sm font-normal rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer transition-all"
                             >
                                 {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
                             </select>
@@ -245,7 +245,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
 
                         {/* 🚀 FIX: Eliminado el 'focus-within:ring-2' de los textarea internos */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mx-4 mb-4">
-                            <div className="relative flex flex-col bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden transition-all">
+                            <div className="relative flex flex-col bg-zinc-50 dark:bg-[#13131A]/50 border border-zinc-200 dark:border-[#2D2D42] rounded-xl overflow-hidden transition-all">
                                 <textarea
                                     value={originalText}
                                     onChange={(e) => setOriginalText(e.target.value)}
@@ -259,7 +259,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                                 )}
                             </div>
                             
-                            <div className="relative flex flex-col bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden transition-all">
+                            <div className="relative flex flex-col bg-zinc-50 dark:bg-[#13131A]/50 border border-zinc-200 dark:border-[#2D2D42] rounded-xl overflow-hidden transition-all">
                                 {isTranslating && (
                                     <div className="absolute top-4 right-4 text-violet-500 animate-spin">
                                         <Loader2 size={18} />
@@ -287,7 +287,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                         </div>
 
                         {/* 🚀 FIX: Footer estandarizado edge-to-edge */}
-                        <div className="flex justify-between items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800">
+                        <div className="flex justify-between items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-[#2D2D42]/50 rounded-b-2xl border-t border-zinc-200 dark:border-[#2D2D42]">
                             <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
                                 {isTranslating ? (
                                     <span className="text-violet-500 animate-pulse">Traduciendo...</span>
@@ -331,7 +331,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                             const isExpanded = expandedTranslationIds.has(t.id);
                             
                             return (
-                            <div key={t.id} className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-200 dark:border-zinc-800 transition-colors">
+                            <div key={t.id} className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-[#1A1A24]/50 rounded-lg border border-zinc-200 dark:border-[#2D2D42] transition-colors">
                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                                     
                                     {/* Cabecera / Fila Compacta */}
@@ -367,7 +367,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                                 
                                 {/* Vista Expandida */}
                                 {isExpanded && (
-                                    <div className="mt-2 bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 animate-fadeIn">
+                                    <div className="mt-2 bg-zinc-100/50 dark:bg-[#13131A]/30 border border-zinc-200 dark:border-[#2D2D42] animate-fadeIn">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="relative group text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
                                                 <div className="mb-1 text-[10px] font-bold text-violet-500/70 uppercase tracking-wider">{getLangName(t.source_lang)}</div>

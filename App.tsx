@@ -795,7 +795,7 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen bg-zinc-50 dark:bg-[#1B1B1E] overflow-hidden transition-colors duration-300">
+    <div className="flex h-screen bg-zinc-50 dark:bg-[#13131A] overflow-hidden transition-colors duration-300">
       <Sidebar
         groups={groups}
         activeGroupId={activeGroupId}
@@ -887,6 +887,13 @@ function App() {
           .dark .note-editor-scroll::-webkit-scrollbar-thumb { background-color: #3f3f46; }
           .dark .note-editor-scroll::-webkit-scrollbar-thumb:hover { background-color: #52525b; }
           .note-editor-scroll { scrollbar-width: thin; scrollbar-color: #3f3f46 transparent; }
+          
+          ::selection {
+            background-color: rgba(73, 64, 217, 0.28);
+          }
+          ::-moz-selection {
+            background-color: rgba(73, 64, 217, 0.28);
+          }
 
           .cm-lineNumbers .cm-gutterElement {
             display: flex;
@@ -985,7 +992,7 @@ function App() {
          globalView === 'braindump' ? <BrainDumpApp session={session!} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} /> :
          globalView === 'translator' ? <TranslatorApp session={session!} /> : (
           <>
-            <div className={`sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md shrink-0 ${isGlobalNoteTrayOpen ? '' : 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm'}`}>
+            <div className={`sticky top-0 z-30 bg-white/80 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 ${isGlobalNoteTrayOpen ? '' : 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm'}`}>
                <div className={`min-h-[72px] h-auto flex flex-col lg:flex-row lg:items-center justify-between px-4 md:px-6 py-3 gap-3 ${isGlobalNoteTrayOpen ? 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm' : ''}`}>
                  {activeGroup ? (
                     <>
@@ -1204,7 +1211,7 @@ function App() {
 
                 {/* 2. FRANJA DE NOTAS (INTEGRADA EN EL ENCABEZADO) */}
                 {isGlobalNoteTrayOpen && activeGroup && (
-                  <div className="pt-4 px-4 pb-4 bg-[#1B1B1E] dark:bg-[#1B1B1E]">
+                  <div className="pt-4 px-4 pb-4 bg-[#13131A] dark:bg-[#13131A]">
                     <div className="flex flex-wrap justify-center gap-2.5">
                       {sortNotesArray(activeGroup.notes, noteSortMode)
                         .map(note => {

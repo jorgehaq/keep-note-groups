@@ -242,9 +242,9 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
     const history = timers.filter(t => t.status === 'history');
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#1B1B1E] overflow-hidden">
+        <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
             {/* HEADER */}
-            <div className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
+            <div className="sticky top-0 z-30 bg-white/80 dark:bg-[#1A1A24]/90 backdrop-blur-md border-b border-zinc-200 dark:border-[#2D2D42] shadow-sm shrink-0">
                 <div className="h-[72px] flex items-center justify-between px-4 md:px-6 py-4">
                     <h1 className="text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] flex items-center gap-3">
                         <div className="h-9 p-2 bg-[#2563EB] rounded-lg text-white shadow-lg shadow-blue-500/20">
@@ -277,7 +277,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#1B1B1E] p-4 hidden-scrollbar">
+            <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#13131A] p-4 hidden-scrollbar">
                 <div className="max-w-4xl mx-auto flex flex-col gap-12 pb-20">
                     
                     {/* 1. BORRADORES (EN CONSTRUCCIÓN) */}
@@ -288,7 +288,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                 <span className="text-sm font-bold uppercase tracking-widest">Creación de Cronómetro</span>
                             </div>
                             {drafts.map(draft => (
-                                <div key={draft.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:border-[#2563EB]/50 hover:shadow-xl hover:shadow-[#2563EB]/5 focus-within:ring-2 focus-within:ring-[#2563EB]/50 flex flex-col overflow-hidden">
+                                <div key={draft.id} className="bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] transition-all duration-300 hover:border-[#2563EB]/50 hover:shadow-xl hover:shadow-[#2563EB]/5 focus-within:ring-2 focus-within:ring-[#2563EB]/50 flex flex-col overflow-hidden">
                                     <div className="flex items-center justify-between pr-4">
                                         <input 
                                             type="text" placeholder="¿Qué vamos a medir? (ej. Sprint Programación)" 
@@ -298,17 +298,17 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                     </div>
 
                                     
-                                    <div className="mx-4 mb-4 p-4 bg-zinc-50 dark:bg-[#181818] border border-zinc-200 dark:border-zinc-800 rounded-xl cursor-text min-h-[100px]">
+                                    <div className="mx-4 mb-4 p-4 bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl cursor-text min-h-[100px]">
                                         <SmartNotesEditor noteId={draft.id} initialContent={draft.content} onChange={c => autoSave(draft.id, { content: c })} noteFont={noteFont} noteFontSize={noteFontSize} />
                                     </div>
                                     
                                     {/* SELECCIÓN DE TIPO DE CRONÓMETRO */}
-                                    <div className="bg-zinc-50 dark:bg-[#1B1B1E] rounded-xl mx-4 mb-4 p-4 border border-zinc-200 dark:border-zinc-800">
+                                    <div className="bg-zinc-50 dark:bg-[#13131A] rounded-xl mx-4 mb-4 p-4 border border-zinc-200 dark:border-[#2D2D42]">
                                         <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 block">Modo de Operación:</span>
                                         <select 
                                             value={draft.type} 
                                             onChange={e => autoSave(draft.id, { type: e.target.value as TimerType })}
-                                            className="w-full p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm font-normal outline-none focus:ring-2 focus:ring-indigo-500 dark:text-[#CCCCCC]"
+                                            className="w-full p-3 bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm font-normal outline-none focus:ring-2 focus:ring-indigo-500 dark:text-[#CCCCCC]"
                                         >
                                             <option value="cycle">🔄 Modo Ciclo (Pausar crea un Lap y detiene el reloj)</option>
                                             <option value="racing">🏁 Modo Carrera (Marcar Hitos sin detener el reloj principal)</option>
@@ -345,7 +345,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                     const isRunning = timer.last_started_at !== null;
 
                                     return (
-                                        <div key={timer.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg transition-all duration-300 flex flex-col border border-zinc-200 dark:border-zinc-800 hover:border-[#2563EB]/50 hover:shadow-xl hover:shadow-[#2563EB]/5 focus-within:ring-2 focus-within:ring-[#2563EB]/50 overflow-hidden">
+                                        <div key={timer.id} className="bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg transition-all duration-300 flex flex-col border border-zinc-200 dark:border-[#2D2D42] hover:border-[#2563EB]/50 hover:shadow-xl hover:shadow-[#2563EB]/5 focus-within:ring-2 focus-within:ring-[#2563EB]/50 overflow-hidden">
                                             <div className="p-5 pb-4">
                                                 {/* HEADER */}
                                                 <div className="flex justify-between items-start mb-4">
@@ -362,12 +362,12 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                             {/* ÁREA EXPANDIDA */}
                                             <div className="animate-fadeIn space-y-4">
                                                     
-                                                    <div className="bg-zinc-50 dark:bg-[#181818] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 cursor-text min-h-[100px]">
+                                                    <div className="bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4 cursor-text min-h-[100px]">
                                                         <SmartNotesEditor noteId={timer.id} initialContent={timer.content} onChange={c => autoSave(timer.id, { content: c })} noteFont={noteFont} noteFontSize={noteFontSize} />
                                                     </div>
 
                                                     {/* DISPLAY DEL RELOJ GIGANTE */}
-                                                    <div className="flex flex-col items-center justify-center p-8 bg-zinc-50 dark:bg-[#1B1B1E] rounded-xl border border-zinc-200 dark:border-zinc-800">
+                                                    <div className="flex flex-col items-center justify-center p-8 bg-zinc-50 dark:bg-[#13131A] rounded-xl border border-zinc-200 dark:border-[#2D2D42]">
                                                         <LiveClock accumulatedMs={timer.accumulated_ms} lastStartedAt={timer.last_started_at} isLarge={true} />
                                                         
                                                         {/* BOTONES DE CONTROL DE TIEMPO */}
@@ -399,7 +399,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                                 <div className="mt-4 space-y-3">
                                                     <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">Registro de Laps ({timer.laps.length})</span>
                                                     {timer.laps.map((lap, idx) => (
-                                                        <div key={lap.id} className="flex flex-col group p-3 bg-zinc-50 dark:bg-zinc-800/30 rounded-xl border border-zinc-200 dark:border-zinc-800/80">
+                                                        <div key={lap.id} className="flex flex-col group p-3 bg-zinc-50 dark:bg-[#2D2D42]/30 rounded-xl border border-zinc-200 dark:border-[#2D2D42]/80">
                                                             <div className="flex justify-between items-start w-full">
                                                                 <span className="font-bold text-sm text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
                                                                     <span className="bg-zinc-200 dark:bg-zinc-700 px-2 py-0.5 rounded text-xs">Lap {idx + 1}</span>
@@ -421,7 +421,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                             </div>
 
                                             {/* FOOTER ACCIONES */}
-                                            <div className="flex justify-between items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800 mt-auto">
+                                            <div className="flex justify-between items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-[#2D2D42]/50 rounded-b-2xl border-t border-zinc-200 dark:border-[#2D2D42] mt-auto">
                                                 <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
                                                     <span>Creado: {formatCleanDate(timer.created_at)}</span>
                                                     {(new Date(timer.updated_at).getTime() - new Date(timer.created_at).getTime() > 60000) && (
@@ -460,7 +460,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                     const isExpanded = expandedHistoryIds.has(t.id);
                                     
                                     return (
-                                    <div key={t.id} className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-200 dark:border-zinc-800 transition-colors">
+                                    <div key={t.id} className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-[#1A1A24]/50 rounded-lg border border-zinc-200 dark:border-[#2D2D42] transition-colors">
                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                                             
                                             <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -489,7 +489,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                         {isExpanded && (
                                             <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800 animate-fadeIn space-y-4">
                                                 {t.content && (
-                                                    <div className="bg-zinc-100/50 dark:bg-[#181818] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 opacity-70">
+                                                    <div className="bg-zinc-100/50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4 opacity-70">
                                                         <div className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed" dangerouslySetInnerHTML={{__html: parseMarkdownPreview(t.content)}} />
                                                     </div>
                                                 )}

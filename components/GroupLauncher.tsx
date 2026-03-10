@@ -117,11 +117,11 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
     return (
         <div className="fixed inset-0 z-[60] flex items-start justify-center pt-20 bg-black/50 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
             <div
-                className="w-full max-w-2xl mx-4 sm:mx-auto bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden transform transition-all scale-100"
+                className="w-full max-w-2xl mx-4 sm:mx-auto bg-white dark:bg-[#1A1A24] rounded-2xl shadow-2xl border border-zinc-200 dark:border-[#2D2D42] overflow-hidden transform transition-all scale-100"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header: Search */}
-                <div className="p-4 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-lg pb-2">
+                <div className="p-4 bg-white/50 dark:bg-[#1A1A24]/90 backdrop-blur-lg pb-2">
                     <div className="relative flex items-center">
                         <Search size={15} className={`absolute left-3 pointer-events-none transition-colors ${searchQuery.trim() ? 'text-amber-600 dark:text-amber-500' : 'text-zinc-400'}`} />
                         <input
@@ -132,7 +132,7 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
                             onChange={e => setSearchQuery(e.target.value)}
                             className={`w-full pl-9 pr-8 py-2 text-sm rounded-lg border transition-all focus:outline-none ${searchQuery.trim()
                                 ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50'
-                                : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'}`}
+                                : 'border-zinc-200 dark:border-[#2D2D42] bg-white dark:bg-[#13131A] text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'}`}
                             autoFocus
                         />
                         {searchQuery.trim() && (
@@ -150,11 +150,11 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
                 {/* Tabs - Only show if NO search query */}
                 {!searchQuery.trim() && (
                     <div className="px-4 py-1">
-                        <div className="flex bg-zinc-100 dark:bg-black/40 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                        <div className="flex bg-zinc-100 dark:bg-black/40 p-1 rounded-xl border border-zinc-200 dark:border-[#2D2D42]">
                             <button
                                 onClick={() => handleTabChange('alpha')}
                                 className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-medium rounded-lg transition-all ${activeTab === 'alpha'
-                                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-[#CCCCCC] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                                    ? 'bg-white dark:bg-[#2D2D42] text-zinc-900 dark:text-[#CCCCCC] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
                                     : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
                                     }`}
                             >
@@ -163,7 +163,7 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
                             <button
                                 onClick={() => handleTabChange('recent')}
                                 className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-medium rounded-lg transition-all ${activeTab === 'recent'
-                                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-[#CCCCCC] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                                    ? 'bg-white dark:bg-[#2D2D42] text-zinc-900 dark:text-[#CCCCCC] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
                                     : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
                                     }`}
                             >
@@ -172,7 +172,7 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
                             <button
                                 onClick={() => handleTabChange('pinned')}
                                 className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-medium rounded-lg transition-all ${activeTab === 'pinned'
-                                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-[#CCCCCC] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                                    ? 'bg-white dark:bg-[#2D2D42] text-zinc-900 dark:text-[#CCCCCC] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
                                     : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
                                     }`}
                             >
@@ -254,7 +254,7 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
 
                 {/* Footer Hint */}
                 {searchQuery.trim() === '' && (
-                    <div className="bg-zinc-50 dark:bg-[#1B1B1E] p-2 text-center text-xs text-zinc-400 border-t border-zinc-100 dark:border-zinc-800">
+                    <div className="bg-zinc-50 dark:bg-[#13131A] p-2 text-center text-xs text-zinc-400 border-t border-zinc-100 dark:border-[#2D2D42]">
                         Presiona <code>Esc</code> para cerrar
                     </div>
                 )}

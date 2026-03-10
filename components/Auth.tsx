@@ -99,8 +99,8 @@ export function Auth() {
     };
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4">
-            <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl shadow-xl p-8 border border-zinc-200 dark:border-zinc-800">
+        <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-50 dark:bg-[#13131A] p-4">
+            <div className="w-full max-w-md bg-white dark:bg-[#1A1A24] rounded-2xl shadow-xl p-8 border border-zinc-200 dark:border-[#2D2D42]">
 
                 {/* Header */}
                 <div className="mb-8 text-center">
@@ -151,7 +151,7 @@ export function Auth() {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 disabled={loading}
-                                className="w-full pl-10 pr-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-2 focus:ring-[#1F3760]/50 focus:border-[#1F3760] transition-all"
+                                className="w-full pl-10 pr-4 py-3 rounded-lg border border-zinc-300 dark:border-[#2D2D42] bg-white dark:bg-[#13131A] text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-2 focus:ring-[#1F3760]/50 focus:border-[#1F3760] transition-all"
                             />
                         </div>
                     </div>
@@ -173,7 +173,7 @@ export function Auth() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     disabled={loading}
-                                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-2 focus:ring-[#1F3760]/50 focus:border-[#1F3760] transition-all"
+                                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-zinc-300 dark:border-[#2D2D42] bg-white dark:bg-[#13131A] text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-2 focus:ring-[#1F3760]/50 focus:border-[#1F3760] transition-all"
                                 />
                             </div>
                         </div>
@@ -203,7 +203,7 @@ export function Auth() {
                 </form>
 
                 {/* Mode switcher */}
-                <div className="mt-6 pt-5 border-t border-zinc-200 dark:border-zinc-800 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                <div className="mt-6 pt-5 border-t border-zinc-200 dark:border-[#2D2D42] text-center text-sm text-zinc-500 dark:text-zinc-400">
                     {mode === 'login' ? (
                         <p>
                             ¿No tienes cuenta?{' '}
