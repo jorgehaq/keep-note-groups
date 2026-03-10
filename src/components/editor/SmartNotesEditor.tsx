@@ -493,8 +493,8 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         },
         "&.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important", borderLeftWidth: "2px !important" },
         ".dark &.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important" },
-        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection, .cm-line ::selection, ::selection": { backgroundColor: "rgba(73, 64, 217, 0.45) !important", color: "#ffffff !important", fontWeight: "normal !important" },
-        "&.cm-focused .cm-selectionLayer, .cm-selectionLayer": { display: "none !important" }, // Desactivar capa CM para usar nativa
+        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": { backgroundColor: "rgba(73, 64, 217, 0.45) !important" },
+        "&.cm-focused .cm-selectionLayer, .cm-selectionLayer": { zIndex: "1 !important" }, 
         ".cm-content *": { textDecoration: "none !important", boxShadow: "none !important" },
         ".cm-gutters": { backgroundColor: "transparent !important", border: "none !important", color: "#71717a" },
         ".dark .cm-gutters": { color: "#52525b" },
@@ -510,7 +510,6 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             borderLeftColor: "#6366f1 !important"
         },
         ".cm-custom-hl": { backgroundColor: "#FACC15 !important", color: "#000000 !important", padding: "0 2px", fontWeight: "600 !important", borderRadius: "4px !important" },
-        ".dark .cm-custom-hl": { backgroundColor: "#FACC15 !important", color: "#000000 !important", borderRadius: "4px !important" },
         ".cm-custom-tr": { position: "relative", backgroundColor: "#10B981 !important", color: "white !important", padding: "0 2px", cursor: "help", borderRadius: "4px !important" },
         ".dark .cm-custom-tr": { backgroundColor: "#10B981 !important", color: "white !important", borderRadius: "4px !important" },
         ".cm-custom-h1": { fontSize: "1.4em", fontWeight: "bold", color: "inherit", lineHeight: "1.2" },
@@ -886,7 +885,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                     createVisualMarkupPlugin(translationsMapRef, searchQueryRef), 
                     clickHandlerExtension, hoverTooltipExtension, selectionListener, clipboardExtension, EditorView.lineWrapping, EditorView.editable.of(!readOnly)
                 ]}
-                basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false, highlightActiveLineGutter: false, syntaxHighlighting: false, drawSelection: false }}
+                basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false, highlightActiveLineGutter: false, syntaxHighlighting: false, drawSelection: true }}
             />
              {tooltipState && (
                 <div

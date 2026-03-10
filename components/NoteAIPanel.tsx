@@ -5,6 +5,7 @@ import { useSummaries, SummaryStatus } from '../src/lib/useSummaries';
 interface NoteAIPanelProps {
   noteId: string;
   userId: string;
+  noteStatus: string;
 }
 
 const STATUS_CONFIG: Record<SummaryStatus, { label: string; color: string; spinner: boolean }> = {
@@ -22,7 +23,7 @@ const neutralizeCodeBlocks = (text: string) => {
   return text.replace(/```/g, '`\u200B`\u200B`');
 };
 
-export const NoteAIPanel: React.FC<NoteAIPanelProps> = ({ noteId, userId }) => {
+export const NoteAIPanel: React.FC<NoteAIPanelProps> = ({ noteId, userId, noteStatus }) => {
   const [objectiveInput, setObjectiveInput] = useState('');
   const { summaries, loading, generateSummary, deleteSummary } = useSummaries(noteId);
   const [isCreating, setIsCreating] = useState(false);
@@ -37,6 +38,20 @@ export const NoteAIPanel: React.FC<NoteAIPanelProps> = ({ noteId, userId }) => {
 
   return (
     <div className="border-t border-zinc-200 dark:border-zinc-800 mt-4 pt-4 space-y-4">
+      {/* Badge estado de la nota */}
+      {noteStatus === 'queued' && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+          <Loader2 size={12} className="animate-spin text-amber-400" />
+          <span className="text-xs font-bold text-amber-400">Nota en cola — esperando motor AI</span>
+        </div>
+      )}
+      {noteStatus === 'processing' && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-violet-500/10 border border-violet-500/20 rounded-xl">
+          <Loader2 size={12} className="animate-spin text-violet-400" />
+          <span className="text-xs font-bold text-violet-400">Motor AI procesando esta nota...</span>
+        </div>
+      )}
+
       {/* Input de Objetivo + Botón Generar */}
       <div className="flex flex-col gap-2">
         <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">

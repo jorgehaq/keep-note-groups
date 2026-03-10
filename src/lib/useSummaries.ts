@@ -49,7 +49,7 @@ export const useSummaries = (noteId: string | null) => {
                 (payload) => {
                     if (payload.eventType === "INSERT") {
                         setSummaries(
-                            (prev) => [payload.new as Summary, ...prev]
+                            (prev) => [payload.new as Summary, ...prev],
                         );
                     } else if (payload.eventType === "UPDATE") {
                         setSummaries((prev) =>
@@ -75,6 +75,17 @@ export const useSummaries = (noteId: string | null) => {
 
     const generateSummary = async (objective?: string) => {
         if (!noteId) return;
+
+        // 🎯 Sincronizar el objetivo en la nota para que el motor Python lo detecte
+        const { error: updateError } = await supabase
+            .from("notes")
+            .update({
+                focus_prompt: objective || null,
+                ai_summary_status: "queued",
+            })
+            .eq("id", noteId);
+
+        console.log("UPDATE NOTES RESULT:", updateError);
 
         const { data, error } = await supabase
             .from("summaries")

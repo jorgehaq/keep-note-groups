@@ -16,6 +16,12 @@ export interface Note {
   generation_level?: number;
   focus_prompt?: string | null;
   ai_generated?: boolean;
+  ai_summary_status?:
+    | "idle"
+    | "queued"
+    | "processing"
+    | "done"
+    | "error";
   generation_status?:
     | "idle"
     | "queued"

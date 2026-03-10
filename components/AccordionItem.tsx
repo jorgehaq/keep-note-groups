@@ -322,6 +322,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             <NoteAIPanel 
               noteId={displayNoteId}
               userId={session.user.id}
+              noteStatus={note.ai_summary_status ?? 'idle'}
             />
           )}
         </div>
