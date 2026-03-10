@@ -128,7 +128,12 @@ CREATE TABLE IF NOT EXISTS "public"."notes" (
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "is_docked" boolean DEFAULT false,
     "is_checklist" boolean DEFAULT false,
-    "ai_summary_status" "public"."ai_job_status" DEFAULT 'idle'::"public"."ai_job_status"
+    "ai_summary_status" "public"."ai_job_status" DEFAULT 'idle'::"public"."ai_job_status",
+    "parent_note_id" "uuid",
+    "generation_level" integer DEFAULT 0,
+    "focus_prompt" "text",
+    "ai_generated" boolean DEFAULT false,
+    "generation_status" "text" DEFAULT 'idle'::"text"
 );
 
 
@@ -257,6 +262,10 @@ CREATE INDEX "idx_notes_ai_status" ON "public"."notes" USING "btree" ("ai_summar
 
 
 
+CREATE INDEX "idx_notes_parent" ON "public"."notes" USING "btree" ("parent_note_id");
+
+
+
 CREATE INDEX "idx_tasks_source_id" ON "public"."tasks" USING "btree" ("source_id");
 
 
@@ -289,6 +298,11 @@ ALTER TABLE ONLY "public"."groups"
 
 ALTER TABLE ONLY "public"."notes"
     ADD CONSTRAINT "notes_group_id_fkey" FOREIGN KEY ("group_id") REFERENCES "public"."groups"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."notes"
+    ADD CONSTRAINT "notes_parent_note_id_fkey" FOREIGN KEY ("parent_note_id") REFERENCES "public"."notes"("id") ON DELETE CASCADE;
 
 
 

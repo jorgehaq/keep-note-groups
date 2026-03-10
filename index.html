@@ -89,6 +89,23 @@
         -ms-overflow-style: none;
         scrollbar-width: none;
       }
+
+      @keyframes animate-loading-bar {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
+
+      .animate-loading-bar {
+        animation: animate-loading-bar 1.5s infinite linear;
+      }
+
+      .raw-note-content {
+        white-space: pre-wrap !important;
+        word-break: break-word !important;
+        display: block;
+        unicode-bidi: embed;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+      }
     </style>
     <script type="importmap">
       {

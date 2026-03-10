@@ -1,237 +1,124 @@
-import React, { useState, useEffect } from 'react';
-import { Loader2, Sparkles, X, RotateCcw, AlertCircle, ChevronRight } from 'lucide-react';
-import { supabase } from '../src/lib/supabaseClient';
-
-interface NoteNode {
-  id: string;
-  title: string;
-  content: string;
-  parent_note_id: string | null;
-  generation_level: number;
-  focus_prompt: string | null;
-  ai_generated: boolean;
-  generation_status: 'idle' | 'queued' | 'processing' | 'done' | 'error' | 'stale';
-  created_at: string;
-}
+import React, { useState } from 'react';
+import { Loader2, Sparkles, X, RotateCcw, AlertCircle, MessageSquare } from 'lucide-react';
+import { useSummaries, SummaryStatus } from '../src/lib/useSummaries';
 
 interface NoteAIPanelProps {
-  rootNoteId: string;                    // ID de la nota original (raíz)
-  activeNoteId: string;                  // Nota que se está mostrando ahora
-  onNavigate: (noteId: string) => void;  // Cambiar nota activa
-  onChildCreated?: (note: NoteNode) => void;
+  noteId: string;
   userId: string;
-  groupId?: string;
 }
 
-const STATUS_CONFIG = {
-  idle:       { label: '🤖 Generar resumen AI',     disabled: false, spinner: false },
-  queued:     { label: '⏳ En cola...',              disabled: true,  spinner: true  },
-  processing: { label: '⚙️ Procesando...',           disabled: true,  spinner: true  },
-  done:       { label: '🔄 Regenerar',               disabled: false, spinner: false },
-  error:      { label: '⚠️ Error — Reintentar',      disabled: false, spinner: false },
-  stale:      { label: '🔄 Regenerar (desactualizado)', disabled: false, spinner: false },
+const STATUS_CONFIG: Record<SummaryStatus, { label: string; color: string; spinner: boolean }> = {
+  pending:    { label: '⏳ En cola...',    color: 'text-amber-500',  spinner: true  },
+  processing: { label: '⚙️ Procesando...', color: 'text-violet-400', spinner: true  },
+  completed:  { label: '✨ Completado',     color: 'text-emerald-400', spinner: false },
+  failed:     { label: '⚠️ Error',          color: 'text-red-400',     spinner: false },
 };
 
-export const NoteAIPanel: React.FC<NoteAIPanelProps> = ({
-  rootNoteId, activeNoteId, onNavigate, onChildCreated, userId, groupId
-}) => {
-  const [focusInput, setFocusInput] = useState('');
+/**
+ * Función utilitaria para romper la regla de bloques de código en el renderizado.
+ */
+const neutralizeCodeBlocks = (text: string) => {
+  if (!text) return '';
+  return text.replace(/```/g, '`\u200B`\u200B`');
+};
+
+export const NoteAIPanel: React.FC<NoteAIPanelProps> = ({ noteId, userId }) => {
+  const [objectiveInput, setObjectiveInput] = useState('');
+  const { summaries, loading, generateSummary, deleteSummary } = useSummaries(noteId);
   const [isCreating, setIsCreating] = useState(false);
-  const [directChildren, setDirectChildren] = useState<NoteNode[]>([]);
-  const [loadingChildren, setLoadingChildren] = useState(true);
-
-  // Cargar hijos directos de la nota activa
-  useEffect(() => {
-    let isMounted = true;
-    const fetchChildren = async () => {
-      setLoadingChildren(true);
-      const { data } = await supabase
-        .from('notes')
-        .select('id, title, content, parent_note_id, generation_level, focus_prompt, ai_generated, generation_status, created_at')
-        .eq('parent_note_id', activeNoteId)
-        .eq('ai_generated', true)
-        .order('created_at', { ascending: true });
-      if (isMounted) {
-        setDirectChildren(data || []);
-        setLoadingChildren(false);
-      }
-    };
-    fetchChildren();
-
-    // Realtime: actualizar cuando cambia generation_status de un hijo
-    const channel = supabase
-      .channel(`children-${activeNoteId}`)
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'notes',
-        filter: `parent_note_id=eq.${activeNoteId}`
-      }, () => fetchChildren())
-      .subscribe();
-
-    return () => {
-      isMounted = false;
-      supabase.removeChannel(channel);
-    };
-  }, [activeNoteId]);
 
   const handleGenerate = async () => {
-    if (!focusInput.trim() || isCreating) return;
+    if (isCreating) return;
     setIsCreating(true);
-
-    try {
-      // 1. Crear la nota hija vacía
-      const { data: newNote, error: noteError } = await supabase
-        .from('notes')
-        .insert({
-          user_id: userId,
-          group_id: groupId || null,
-          title: focusInput.trim().slice(0, 80),
-          content: '',
-          parent_note_id: activeNoteId,
-          generation_level: (directChildren[0]?.generation_level ?? 0) + 1,
-          focus_prompt: focusInput.trim(),
-          ai_generated: true,
-          generation_status: 'queued',
-        })
-        .select()
-        .single();
-
-      if (noteError || !newNote) throw noteError;
-
-      // 2. Encolar el job de procesamiento
-      await supabase.from('processing_jobs').insert({
-        user_id: userId,
-        note_id: newNote.id,
-        fase: 1,
-        status: 'pending',
-        priority: 3,
-      });
-
-      setFocusInput('');
-      onChildCreated?.(newNote);
-      // Navegar automáticamente al hijo recién creado
-      onNavigate(newNote.id);
-    } catch (e: any) {
-      alert('Error al crear resumen: ' + (e?.message || 'desconocido'));
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const handleDelete = async (noteId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm('¿Borrar este resumen y todos sus descendientes?')) return;
-    await supabase.from('notes').delete().eq('id', noteId);
-    // Si la nota activa era la que se borró, volver a la raíz
-    if (activeNoteId === noteId) onNavigate(rootNoteId);
-  };
-
-  const handleRegenerate = async (child: NoteNode, e: React.MouseEvent) => {
-    e.stopPropagation();
-    // Marcar hijos del hijo como 'stale'
-    await supabase
-      .from('notes')
-      .update({ generation_status: 'stale' })
-      .eq('parent_note_id', child.id);
-
-    // Resetear a queued y encolar nuevo job
-    await supabase
-      .from('notes')
-      .update({ generation_status: 'queued', content: '' })
-      .eq('id', child.id);
-
-    await supabase.from('processing_jobs').insert({
-      user_id: userId,
-      note_id: child.id,
-      fase: 1,
-      status: 'pending',
-      priority: 3,
-    });
+    await generateSummary(objectiveInput.trim());
+    setObjectiveInput('');
+    setIsCreating(false);
   };
 
   return (
-    <div className="border-t border-zinc-800 mt-4 pt-4 space-y-3">
-      {/* Input de enfoque + botón generar */}
+    <div className="border-t border-zinc-800 mt-4 pt-4 space-y-4">
+      {/* Input de Objetivo + Botón Generar */}
       <div className="flex flex-col gap-2">
-        <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">
-          Enfoque del resumen AI
+        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">
+          <Sparkles size={10} className="text-violet-500" />
+          Enfoque del Resumen AI
         </label>
         <div className="flex gap-2">
           <input
             type="text"
-            value={focusInput}
-            onChange={e => setFocusInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleGenerate(); }}}
-            placeholder="ej: ¿por qué me debería gustar Dostoievsky?"
-            className="flex-1 bg-zinc-800/60 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder-zinc-600 outline-none focus:border-zinc-500 transition-colors"
+            value={objectiveInput}
+            onChange={e => setObjectiveInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleGenerate(); }}
+            placeholder="ej: Resumo los puntos de acción..."
+            className="flex-1 bg-zinc-800/40 border border-zinc-700/50 rounded-xl px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 outline-none focus:border-violet-500/50 focus:ring-4 focus:ring-violet-500/10 transition-all"
           />
           <button
             onClick={handleGenerate}
-            disabled={isCreating || !focusInput.trim()}
-            className="flex items-center gap-1.5 px-3 py-2 bg-violet-600 hover:bg-violet-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white rounded-lg text-sm font-semibold transition-colors active:scale-95 whitespace-nowrap"
+            disabled={isCreating}
+            className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white rounded-xl text-sm font-bold transition-all active:scale-95 shadow-lg shadow-violet-900/20"
           >
-            {isCreating
-              ? <><Loader2 size={14} className="animate-spin" /> Creando...</>
-              : <><Sparkles size={14} /> Generar</>
-            }
+            {isCreating ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+            <span>Generar</span>
           </button>
         </div>
       </div>
 
-      {/* Lista de hijos directos */}
-      {!loadingChildren && directChildren.length > 0 && (
-        <div className="space-y-1">
-          <p className="text-xs text-zinc-600 uppercase tracking-wide font-medium">
-            Resúmenes generados desde esta nota
-          </p>
-          {directChildren.map(child => {
-            const cfg = STATUS_CONFIG[child.generation_status] ?? STATUS_CONFIG.idle;
-            const isActive = child.id === activeNoteId;
-            return (
-              <div
-                key={child.id}
-                onClick={() => onNavigate(child.id)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors group ${
-                  isActive
-                    ? 'bg-violet-600/20 border border-violet-600/40 text-violet-300'
-                    : 'bg-zinc-800/40 border border-zinc-700/50 hover:bg-zinc-700/40 text-zinc-300'
-                }`}
-              >
-                {cfg.spinner
-                  ? <Loader2 size={13} className="animate-spin text-violet-400 shrink-0" />
-                  : <Sparkles size={13} className="text-violet-400 shrink-0" />
-                }
-                <span className="flex-1 text-sm truncate">
-                  {child.focus_prompt || child.title || 'Resumen'}
-                </span>
-                {child.generation_status === 'stale' && (
-                  <span className="text-[10px] text-amber-500 shrink-0">desact.</span>
-                )}
-                {child.generation_status === 'error' && (
-                  <AlertCircle size={13} className="text-red-400 shrink-0" />
-                )}
-                {/* Botón regenerar */}
-                {(child.generation_status === 'done' || child.generation_status === 'error' || child.generation_status === 'stale') && (
-                  <button
-                    onClick={e => handleRegenerate(child, e)}
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:text-violet-300 transition-all"
-                    title="Regenerar"
-                  >
-                    <RotateCcw size={12} />
-                  </button>
-                )}
-                {/* Botón borrar */}
+      {/* Lista de Resúmenes */}
+      <div className="space-y-2">
+        {loading && summaries.length === 0 && (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 size={24} className="animate-spin text-zinc-700" />
+          </div>
+        )}
+
+        {summaries.map(summary => {
+          const cfg = STATUS_CONFIG[summary.status];
+          return (
+            <div
+              key={summary.id}
+              className="group bg-zinc-800/30 border border-zinc-700/30 rounded-2xl p-4 transition-all hover:bg-zinc-800/50"
+            >
+              <div className="flex items-start justify-between gap-4 mb-2">
+                <div className="flex items-center gap-2">
+                  <div className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full bg-zinc-900/50 ${cfg.color} border border-white/5`}>
+                    {cfg.spinner && <Loader2 size={10} className="animate-spin" />}
+                    {cfg.label}
+                  </div>
+                  {summary.target_objective && (
+                    <span className="text-[11px] text-zinc-500 font-medium flex items-center gap-1">
+                      <MessageSquare size={10} />
+                      {summary.target_objective}
+                    </span>
+                  )}
+                </div>
                 <button
-                  onClick={e => handleDelete(child.id, e)}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 transition-all"
-                  title="Borrar resumen"
+                  onClick={() => deleteSummary(summary.id)}
+                  className="opacity-0 group-hover:opacity-100 p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
                 >
-                  <X size={12} />
+                  <X size={14} />
                 </button>
               </div>
-            );
-          })}
-        </div>
-      )}
+
+              {summary.status === 'completed' && summary.content ? (
+                <div className="raw-note-content text-zinc-300 text-sm leading-relaxed">
+                  {neutralizeCodeBlocks(summary.content)}
+                </div>
+              ) : summary.status === 'pending' || summary.status === 'processing' ? (
+                <div className="h-20 flex flex-col items-center justify-center gap-3 bg-zinc-900/20 rounded-xl border border-dashed border-zinc-700/50">
+                   <div className="w-48 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-violet-600 to-indigo-500 animate-loading-bar" />
+                   </div>
+                   <span className="text-[11px] text-zinc-500 animate-pulse font-medium">Escaneando contenido y extrayendo ideas clave...</span>
+                </div>
+              ) : (
+                <div className="text-zinc-500 text-xs italic py-2">
+                  {summary.status === 'failed' ? 'Hubo un problema al generar este resumen. Por favor, intenta de nuevo.' : 'Esperando contenido...'}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
