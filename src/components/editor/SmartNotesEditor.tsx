@@ -467,8 +467,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             WebkitUserSelect: "text !important",
             userSelect: "text !important",
         },
-        "&.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important", borderLeftWidth: "2px !important" },
-        ".dark &.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important" },
+        "&.cm-focused .cm-cursor": { borderLeftColor: "currentColor !important", borderLeftWidth: "2px !important" },
         "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection, .cm-line ::selection, ::selection": { backgroundColor: "rgba(73, 64, 217, 0.45) !important", color: "#ffffff !important", fontWeight: "normal !important" },
         "&.cm-focused .cm-selectionLayer, .cm-selectionLayer": { display: "none !important" }, // Desactivar capa CM para usar nativa
         ".cm-content *": { textDecoration: "none !important", boxShadow: "none !important" },
