@@ -168,13 +168,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
   const handleSaveTitle = (shouldFocusEditor = false) => {
     setIsEditingTitle(false);
-    if (tempTitle.trim()) {
-      onUpdate(note.id, { title: tempTitle });
-    } else {
-      const fallback = "Nueva Nota";
-      setTempTitle(fallback);
-      onUpdate(note.id, { title: fallback });
-    }
+    onUpdate(note.id, { title: tempTitle.trim() });
   };
 
   return (

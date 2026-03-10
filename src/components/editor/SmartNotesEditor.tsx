@@ -404,59 +404,7 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
     }
 }, { decorations: v => v.decorations });
 
-const clickHandlerExtension = Prec.highest(EditorView.domEventHandlers({
-    mousedown: (e, view) => {
-        // Solo cerramos los menús flotantes, no tocamos la selección nativa
-        if ((window as any).__closeEditorMenusOnly) (window as any).__closeEditorMenusOnly();
-        return false; // Delegar todo el manejo de selección a CodeMirror
-    },
-    contextmenu: (e, view) => {
-        const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
-        if (pos !== null) {
-            e.preventDefault(); // Ocultar menú nativo del dispositivo móvil/navegador
-            const line = view.state.doc.lineAt(pos).number;
-            view.dispatch({
-                effects: [
-                    setRevealedLine.of(line),
-                    ForceRedrawEffect.of(null)
-                ]
-            });
-            return true;
-        }
-        return false;
-    },
-    click: (e) => {
-        const linkNode = (e.target as HTMLElement).closest('.cm-custom-link');
-        if (linkNode) { const url = linkNode.getAttribute('data-url'); if (url) { window.open(url, '_blank', 'noopener,noreferrer'); return true; } }
-        return false;
-    },
-    mouseover: (e) => {
-        const target = e.target as HTMLElement;
-        if (target.closest('.cm-custom-hl') || target.closest('.cm-custom-tr') || target.closest('.cm-custom-link')) {
-            const span = target.closest('.cm-custom-hl, .cm-custom-tr, .cm-custom-link') as HTMLElement;
-            // Walk siblings forward to find the remove button wrapper
-            let sibling = span?.nextElementSibling;
-            while (sibling) {
-                if (sibling.classList.contains('cm-remove-btn-wrapper')) {
-                    const btn = sibling.querySelector('.cm-remove-btn');
-                    if (btn) btn.classList.add('cm-remove-btn-visible');
-                    break;
-                }
-                sibling = sibling.nextElementSibling;
-            }
-        }
-    },
-    mouseout: (e) => {
-        const target = e.target as HTMLElement;
-        if (target.closest('.cm-custom-hl') || target.closest('.cm-custom-tr') || target.closest('.cm-custom-link')) {
-            // Remove visible class from all remove buttons in this line
-            const line = target.closest('.cm-line');
-            if (line) {
-                line.querySelectorAll('.cm-remove-btn-visible').forEach(btn => btn.classList.remove('cm-remove-btn-visible'));
-            }
-        }
-    }
-}));
+// clickHandlerExtension movida dentro del componente para soportar múltiples instancias y estado local
 
 // --- EL TEMA AHORA ES UNA FUNCIÓN DINÁMICA ---
 const createNotesTheme = (font: string, size: string, lineHeight: string = 'standard') => {
@@ -498,14 +446,8 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         },
         "&.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important", borderLeftWidth: "2px !important" },
         ".dark &.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important" },
-        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": { 
-            backgroundColor: "rgba(73, 64, 217, 0.45) !important",
-            pointerEvents: "none !important" // <-- FIX: Permite que el clic atraviese el resalto
-        },
-        "&.cm-focused .cm-selectionLayer, .cm-selectionLayer": { 
-            zIndex: "0 !important", // <-- FIX: Baja prioridad visual para asegurar clics
-            pointerEvents: "none !important" // <-- FIX: Capa fantasma para eventos del mouse
-        }, 
+        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": { backgroundColor: "rgba(73, 64, 217, 0.45) !important" },
+        "&.cm-focused .cm-selectionLayer, .cm-selectionLayer": { zIndex: "1 !important" }, 
         ".cm-content *": { textDecoration: "none !important", boxShadow: "none !important" },
         ".cm-gutters": { backgroundColor: "transparent !important", border: "none !important", color: "#71717a" },
         ".dark .cm-gutters": { color: "#52525b" },
@@ -600,24 +542,17 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
     const searchQueryRef = useRef<string>(searchQuery || ''); 
     const debounceChangeTimerRef = useRef<NodeJS.Timeout | null>(null);
     
-    // Exponer funciones de cierre para las extensiones de CodeMirror
-    useEffect(() => {
-        // Cierre completo (usado en Escape y Blur)
-        (window as any).__closeEditorMenus = () => {
-            setMenuState(null);
-            setShowMarkerMenu(false);
-            window.getSelection()?.removeAllRanges();
-        };
-        // Cierre suave (usado en mousedown para no romper eventos de selección)
-        (window as any).__closeEditorMenusOnly = () => {
-            setMenuState(null);
-            setShowMarkerMenu(false);
-        };
-        return () => { 
-            delete (window as any).__closeEditorMenus;
-            delete (window as any).__closeEditorMenusOnly;
-        };
-    }, []);
+    // Exponer funciones de cierre para la lógica interna (Escape)
+    const closeMenus = () => {
+        setMenuState(null);
+        setShowMarkerMenu(false);
+        window.getSelection()?.removeAllRanges();
+    };
+
+    const closeMenusOnly = () => {
+        setMenuState(null);
+        setShowMarkerMenu(false);
+    };
 
     // Regenera el tema visual solo si cambias la fuente o el tamaño en los ajustes
     const dynamicTheme = useMemo(() => createNotesTheme(noteFont, noteFontSize, noteLineHeight), [noteFont, noteFontSize, noteLineHeight]);
@@ -719,9 +654,9 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
         if (update.selectionSet) {
             const { main } = update.state.selection;
 
-            // 1. Si la selección está vacía (clic simple), resetear menú atómicamente
+            // 1. Si la selección está vacía (clic simple), resetear menú
             if (main.empty) {
-                if (menuState !== null) setMenuState(null);
+                setMenuState(null);
             }
 
             // 2. Guardar posición del cursor en localStorage (debounced)
@@ -747,7 +682,71 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                 }
             }
         }
-    }), [noteId, menuState]);
+    }), [noteId]);
+
+    const clickHandlerExtension = useMemo(() => Prec.highest(EditorView.domEventHandlers({
+        mousedown: (e, view) => {
+            closeMenusOnly();
+            
+            const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
+            const { main } = view.state.selection;
+
+            // 🚀 FIX ANTI-JACKING: Si el clic es dentro de una selección, colapsamos manualmente 
+            // pero vía requestAnimationFrame para no interferir con el ciclo de eventos nativo de CM.
+            if (pos !== null && !main.empty && pos >= main.from && pos <= main.to) {
+                requestAnimationFrame(() => {
+                    view.dispatch({
+                        selection: { anchor: pos, head: pos },
+                        scrollIntoView: false
+                    });
+                    window.getSelection()?.removeAllRanges();
+                });
+            }
+            return false; 
+        },
+        contextmenu: (e, view) => {
+            const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
+            if (pos !== null) {
+                e.preventDefault();
+                const line = view.state.doc.lineAt(pos).number;
+                view.dispatch({
+                    effects: [setRevealedLine.of(line), ForceRedrawEffect.of(null)]
+                });
+                return true;
+            }
+            return false;
+        },
+        click: (e) => {
+            const linkNode = (e.target as HTMLElement).closest('.cm-custom-link');
+            if (linkNode) { 
+                const url = linkNode.getAttribute('data-url'); 
+                if (url) { window.open(url, '_blank', 'noopener,noreferrer'); return true; } 
+            }
+            return false;
+        },
+        mouseover: (e) => {
+            const target = e.target as HTMLElement;
+            if (target.closest('.cm-custom-hl, .cm-custom-tr, .cm-custom-link')) {
+                const span = target.closest('.cm-custom-hl, .cm-custom-tr, .cm-custom-link') as HTMLElement;
+                let sibling = span?.nextElementSibling;
+                while (sibling) {
+                    if (sibling.classList.contains('cm-remove-btn-wrapper')) {
+                        const btn = sibling.querySelector('.cm-remove-btn');
+                        if (btn) btn.classList.add('cm-remove-btn-visible');
+                        break;
+                    }
+                    sibling = sibling.nextElementSibling;
+                }
+            }
+        },
+        mouseout: (e) => {
+            const target = e.target as HTMLElement;
+            if (target.closest('.cm-custom-hl, .cm-custom-tr, .cm-custom-link')) {
+                const line = target.closest('.cm-line');
+                if (line) line.querySelectorAll('.cm-remove-btn-visible').forEach(btn => btn.classList.remove('cm-remove-btn-visible'));
+            }
+        }
+    })), [noteId]);
 
     const doFormat = (type: 'highlight' | 'link' | MarkerType) => {
         if (!menuState || !editorRef.current?.view) return;
@@ -930,8 +929,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                                     window.getSelection()?.removeAllRanges();
 
                                     // Cerrar menús de forma explícita
-                                    setMenuState(null);
-                                    setShowMarkerMenu(false);
+                                    closeMenus();
                                     return true;
                                 }
                             }
