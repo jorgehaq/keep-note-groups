@@ -5,7 +5,7 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { EditorView, ViewPlugin, Decoration, WidgetType, ViewUpdate, keymap, lineNumbers } from '@codemirror/view';
 import { RangeSet, StateEffect, Prec, StateField } from '@codemirror/state'; 
-import { Highlighter, Languages, Loader2, Link as LinkIcon } from 'lucide-react';
+import { Highlighter, Languages, Loader2, Link as LinkIcon, Check, X } from 'lucide-react';
 import { useImperativeHandle, forwardRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -550,6 +550,14 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
     const [lastAction, setLastAction] = useState<string>(
         () => localStorage.getItem('sme-last-action') || 'highlight'
     );
+    const [showLinkInput, setShowLinkInput] = useState(false);
+    const [linkUrl, setLinkUrl] = useState('');
+    const linkInputRef = useRef<HTMLInputElement>(null);
+    const linkUrlRef = useRef(linkUrl);
+    const showLinkInputRef = useRef(showLinkInput);
+    
+    useEffect(() => { linkUrlRef.current = linkUrl; }, [linkUrl]);
+    useEffect(() => { showLinkInputRef.current = showLinkInput; }, [showLinkInput]);
     
     // Detectar modo oscuro de forma reactiva para los colores de las etiquetas
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
@@ -565,16 +573,24 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
     const searchQueryRef = useRef<string>(searchQuery || ''); 
     const debounceChangeTimerRef = useRef<NodeJS.Timeout | null>(null);
     
+    useEffect(() => {
+        if (showLinkInput && linkInputRef.current) {
+            linkInputRef.current.focus();
+        }
+    }, [showLinkInput]);
+
     // Exponer funciones de cierre para la lógica interna (Escape)
     const closeMenus = () => {
         setMenuState(null);
         setShowExpandedMenu(false);
+        setShowLinkInput(false);
         window.getSelection()?.removeAllRanges();
     };
 
     const closeMenusOnly = () => {
         setMenuState(null);
         setShowExpandedMenu(false);
+        setShowLinkInput(false);
     };
 
     // Regenera el tema visual solo si cambias la fuente o el tamaño en los ajustes
@@ -591,9 +607,20 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                     const rect = target.getBoundingClientRect();
                     setTooltipState({ text, top: rect.top, left: rect.left + (rect.width / 2) });
                 }
+            } else if (target.classList.contains('cm-custom-link')) {
+                const url = target.getAttribute('data-url');
+                if (url) {
+                    const rect = target.getBoundingClientRect();
+                    setTooltipState({ text: url, top: rect.top, left: rect.left + (rect.width / 2) });
+                }
             }
         },
-        mouseout: (e) => { if ((e.target as HTMLElement).classList.contains('cm-custom-tr')) setTooltipState(null); }
+        mouseout: (e) => { 
+            const target = e.target as HTMLElement;
+            if (target.classList.contains('cm-custom-tr') || target.classList.contains('cm-custom-link')) {
+                setTooltipState(null); 
+            }
+        }
     }), []);
 
     useEffect(() => {
@@ -679,8 +706,13 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
 
             // 1. Si la selección está vacía (clic simple), resetear menú
             if (main.empty) {
+                // 🚀 PROTECCIÓN: No cerramos el menú si el input de link está activo.
+                // handleBlur se encargará de confirmar/cerrar de forma segura.
+                if (showLinkInputRef.current) return; 
+
                 setMenuState(null);
                 setShowExpandedMenu(false);
+                setShowLinkInput(false);
             }
 
             // 2. Guardar posición del cursor en localStorage (debounced)
@@ -696,7 +728,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                 if (rect) {
                     const isMobile = window.innerWidth < 768;
                     setMenuState({ 
-                        top: isMobile ? 0 : rect.top - 55, 
+                        top: isMobile ? 0 : rect.top - 8, 
                         left: isMobile ? 0 : rect.left, 
                         from: main.from, 
                         to: main.to, 
@@ -710,6 +742,10 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
 
     const clickHandlerExtension = useMemo(() => Prec.highest(EditorView.domEventHandlers({
         mousedown: (e, view) => {
+            const target = e.target as HTMLElement;
+            if (target.closest('.floating-menu-container')) {
+                return; // Si el clic es en el menú, no cerramos nada aquí
+            }
             closeMenusOnly();
             
             const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
@@ -796,13 +832,12 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
         if (type === 'highlight') {
             replacement = `{=${innerClean}=}`;
         } else if (type === 'link') {
-            const text = innerClean.trim();
-            const urlMatch = text.match(/(https?:\/\/[^\s]+)/);
-            if (urlMatch) {
-                const url = urlMatch[1];
-                let title = text.replace(url, '').replace(/^[-\s]+/, '').trim();
-                replacement = `[${title || url}](${url})`;
-            } else replacement = `[${text}]()`;
+            if (showLinkInput) return; // Reset Guard: No limpiar si ya estamos editando
+            setShowLinkInput(true);
+            setLinkUrl('');
+            setLastAction('link');
+            localStorage.setItem('sme-last-action', 'link');
+            return; // Esperar a confirmLink sin cerrar el menú
         } else if (type in MARKER_TYPES) {
             const ts = generateMarkerTimestamp();
             replacement = `[[${type}:${ts}|${innerClean}]]`;
@@ -811,6 +846,27 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
         editorRef.current.view.dispatch({ changes: { from: menuState.from, to: menuState.to, insert: replacement }, selection: { anchor: menuState.from + replacement.length } });
         setMenuState(null);
         setShowExpandedMenu(false);
+        setShowLinkInput(false);
+    };
+
+    const confirmLink = () => {
+        if (!menuState || !editorRef.current?.view) return;
+        const textToLink = menuState.text.replace(/\[\[(ins|idea|op|duda|wow|pat|yo|ruido):[^\|]+\|([^\]]+)\]\]/g, '$2').trim();
+        // Usamos la ref si estamos en un contexto asíncrono (como blur)
+        const currentUrl = linkUrlRef.current.trim();
+        
+        // Si hay una URL, aplicamos formato link. Si no, dejamos el texto limpio.
+        const replacement = currentUrl ? `[${textToLink}](${currentUrl})` : textToLink;
+        
+        editorRef.current.view.dispatch({ 
+            changes: { from: menuState.from, to: menuState.to, insert: replacement }, 
+            selection: { anchor: menuState.from + replacement.length } 
+        });
+        
+        setMenuState(null);
+        setShowExpandedMenu(false);
+        setShowLinkInput(false);
+        setLinkUrl('');
     };
 
 
@@ -880,21 +936,40 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
         debounceChangeTimerRef.current = setTimeout(() => onChange(value), 800); 
     };
 
-    const handleBlur = () => {
-        // Limpieza proactiva al salir del editor para corregir bloques editados manualmente
-        const cleaned = trimCodeBlocks(content);
-        if (cleaned !== content) {
-            setContent(cleaned);
-            if (debounceChangeTimerRef.current) clearTimeout(debounceChangeTimerRef.current);
-            onChange(cleaned);
-        } else if (debounceChangeTimerRef.current) {
-            clearTimeout(debounceChangeTimerRef.current);
-            onChange(content);
-        }
+    const handleBlur = (e: any) => {
+        const related = e.relatedTarget as HTMLElement;
+        const isFocusMovingToMenuImmediately = related && (related.closest('.floating-menu-container') || related.classList.contains('floating-menu-container'));
         
-        // Cerrar menú si el foco se pierde
-        setMenuState(null);
-        setShowExpandedMenu(false);
+        if (isFocusMovingToMenuImmediately) {
+            return; // El foco se movió directamente al menú
+        }
+
+        // Delay para verificar document.activeElement de forma definitiva (clics en input)
+        setTimeout(() => {
+            const active = document.activeElement;
+            const isInsideMenu = active && (active.closest('.floating-menu-container') || active.classList.contains('floating-menu-container'));
+            
+            if (isInsideMenu) return; 
+
+            // SECUENCIAL: Si perdemos el foco fuera del menú y el input estaba activo, autoconfirmar
+            if (showLinkInputRef.current) {
+                confirmLink();
+            } else {
+                const cleaned = trimCodeBlocks(content);
+                if (cleaned !== content) {
+                    setContent(cleaned);
+                    if (debounceChangeTimerRef.current) clearTimeout(debounceChangeTimerRef.current);
+                    onChange(cleaned);
+                } else if (debounceChangeTimerRef.current) {
+                    clearTimeout(debounceChangeTimerRef.current);
+                    onChange(content);
+                }
+                
+                setMenuState(null);
+                setShowExpandedMenu(false);
+                setShowLinkInput(false);
+            }
+        }, 150);
     };
 
     const menuWidth = 260; 
@@ -930,8 +1005,18 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
         if (res instanceof Promise) await res;
         setLastAction(actionKey);
         localStorage.setItem('sme-last-action', actionKey);
-        setShowExpandedMenu(false);
-        setMenuState(null);
+        
+        // Si no es un link guiado, cerramos todo. Si es link, el input tomará el relevo.
+        if (actionKey !== 'link') {
+            setShowExpandedMenu(false);
+            setShowLinkInput(false);
+            setMenuState(null);
+        } else {
+            // Para links, cerramos el expandido para dejar paso al input
+            setShowExpandedMenu(false);
+            setShowLinkInput(true);
+            setLinkUrl('');
+        }
     };
 
     const getLastActionDisplay = () => {
@@ -948,7 +1033,14 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
         if (lastAction === 'highlight') await doActionAndSave('highlight', () => doFormat('highlight'));
         else if (lastAction === 'en') await doActionAndSave('en', () => doTranslate('en'));
         else if (lastAction === 'es') await doActionAndSave('es', () => doTranslate('es'));
-        else if (lastAction === 'link') await doActionAndSave('link', () => doFormat('link'));
+        else if (lastAction === 'link') {
+            if (showLinkInput) return; // Si ya está abierto, no hacer nada para evitar reset de URL
+            setShowExpandedMenu(false);
+            setShowLinkInput(true);
+            setLinkUrl('');
+            setLastAction('link');
+            localStorage.setItem('sme-last-action', 'link');
+        }
         else if (lastAction in MARKER_TYPES) await doActionAndSave(lastAction, () => doFormat(lastAction as MarkerType));
         else await doActionAndSave('highlight', () => doFormat('highlight'));
     };
@@ -1027,11 +1119,56 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
             {menuState && (
                 <div
                     className="floating-menu-container fixed z-[100] flex flex-col items-center gap-1.5 animate-fadeIn origin-bottom pointer-events-auto"
-                    style={{ top: menuState.top, left: clampedLeft, transform: 'translateX(-50%)' }}
-                    onMouseDown={(e) => e.preventDefault()}
+                    style={{ 
+                        top: menuState.top, 
+                        left: clampedLeft, 
+                        transform: menuState.isMobile ? 'translateX(-50%)' : 'translate(-50%, -100%)' 
+                    }}
+                    onMouseDown={(e) => {
+                        // IMPORTANTE: No dar preventDefault si es un INPUT para que gane el foco
+                        if ((e.target as HTMLElement).tagName !== 'INPUT') {
+                            e.preventDefault();
+                        }
+                        e.stopPropagation();
+                    }}
                 >
-                    {/* Globo expandido — aparece arriba */}
-                    {showExpandedMenu && (
+                    {/* Input de Link — aparece cuando se solicita */}
+                    {showLinkInput && (
+                        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-1.5 flex items-center gap-1.5 animate-fadeIn">
+                            <input
+                                ref={linkInputRef}
+                                type="text"
+                                value={linkUrl}
+                                onChange={(e) => setLinkUrl(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') confirmLink();
+                                    if (e.key === 'Escape') setShowLinkInput(false);
+                                }}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onClick={(e) => e.stopPropagation()}
+                                placeholder="Pegar URL..."
+                                className="bg-zinc-100 dark:bg-zinc-800 border-none rounded-lg px-2.5 py-1.5 text-xs w-48 focus:ring-1 focus:ring-blue-500 outline-none dark:text-white"
+                            />
+                            <button 
+                                onClick={confirmLink}
+                                className="p-1.5 hover:bg-green-500/10 text-green-600 rounded-lg transition-colors"
+                                title="Confirmar"
+                            >
+                                <Check size={16} />
+                            </button>
+                            <button 
+                                onClick={() => setShowLinkInput(false)}
+                                className="p-1.5 hover:bg-red-500/10 text-red-500 rounded-lg transition-colors"
+                                title="Cancelar"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Globo expandido — aparece arriba (mutuamente exclusivo con link input para limpieza) */}
+                    {showExpandedMenu && !showLinkInput && (
                         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-1.5 flex flex-col gap-1">
                             {/* Fila 1 marcadores */}
                             <div className="flex gap-1">
@@ -1080,8 +1217,8 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                                 </button>
                                 <button onClick={() => doActionAndSave('link', () => doFormat('link'))}
                                     title="Convertir a link"
-                                    className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-                                    <LinkIcon size={15} className="text-zinc-500" />
+                                    className="w-9 h-9 rounded-lg flex items-center justify-center text-base hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                                    🔗
                                 </button>
                             </div>
                         </div>
@@ -1105,10 +1242,17 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                                     {getLastActionDisplay().emoji}
                                 </button>
                                 <button
-                                    onClick={() => setShowExpandedMenu(p => !p)}
+                                    onClick={() => {
+                                        if (showLinkInput) {
+                                            setShowLinkInput(false);
+                                            setShowExpandedMenu(true);
+                                        } else {
+                                            setShowExpandedMenu(p => !p);
+                                        }
+                                    }}
                                     title="Más opciones"
                                     className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold transition-colors ${
-                                        showExpandedMenu
+                                        showExpandedMenu || showLinkInput
                                             ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-white'
                                             : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                                     }`}
