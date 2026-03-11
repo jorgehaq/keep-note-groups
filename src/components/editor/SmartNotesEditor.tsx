@@ -432,6 +432,9 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             userSelect: "text !important",
             width: "100%",
             maxWidth: "100%",
+            minHeight: "100%",
+            display: "flex",
+            flexDirection: "column"
         },
         "&.cm-focused": {
             outline: "none !important"
@@ -441,6 +444,9 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             fontSize: fontSize,
             overflowX: "hidden !important",
             width: "100%",
+            flex: "1",
+            display: "flex",
+            flexDirection: "column"
         },
         ".cm-content": {
             fontFamily: fontFamily,
@@ -725,22 +731,26 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
             return false; 
         },
         contextmenu: (e, view) => {
+            e.preventDefault();
+            view.focus();
+            
             const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
-            if (pos !== null) {
-                e.preventDefault();
-                const line = view.state.doc.lineAt(pos).number;
-                const currentRevealed = view.state.field(revealedLineField, false);
-                
-                // Toggle: si es la misma línea, la cerramos. Si es otra, la abrimos.
-                view.dispatch({
-                    effects: [
-                        setRevealedLine.of(currentRevealed === line ? null : line),
-                        ForceRedrawEffect.of(null)
-                    ]
-                });
-                return true;
-            }
-            return false;
+            const docLines = view.state.doc.lines;
+            
+            // Si el clic es fuera del texto (abajo), usamos la última línea
+            const targetLine = pos !== null 
+                ? view.state.doc.lineAt(pos).number 
+                : docLines;
+
+            const currentRevealed = view.state.field(revealedLineField, false);
+            
+            view.dispatch({
+                effects: [
+                    setRevealedLine.of(currentRevealed === targetLine ? null : targetLine),
+                    ForceRedrawEffect.of(null)
+                ]
+            });
+            return true;
         },
         click: (e) => {
             const linkNode = (e.target as HTMLElement).closest('.cm-custom-link');
@@ -944,7 +954,10 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
     };
 
     return (
-        <div className={`relative group/editor w-full max-w-full bg-transparent ${readOnly ? 'pointer-events-none' : ''}`}>
+        <div 
+            className={`relative group/editor w-full h-full min-h-0 flex flex-col bg-transparent ${readOnly ? 'pointer-events-none' : ''}`}
+            onContextMenu={(e) => e.preventDefault()}
+        >
             <CodeMirror
                 key={String(showLineNumbers)}
                 ref={editorRef} 
@@ -953,8 +966,8 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                 onBlur={handleBlur} 
                 theme="none" 
                 readOnly={readOnly} 
-                height="auto"
-                className="w-full text-zinc-900 dark:text-[#CCCCCC]" 
+                height="100%"
+                className="flex-1 w-full text-zinc-900 dark:text-[#CCCCCC]" 
                 extensions={[
                     // 🚀 MAGIA ANTI-HIJACKING: Prec.highest toma el control absoluto del evento
                     Prec.highest(
