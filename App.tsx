@@ -98,6 +98,7 @@ function App() {
   // 🚀 NUEVO: Formatos de Fecha y Hora
   const [dateFormat, setDateFormat] = useState<string>(() => localStorage.getItem('app-date-format') || 'dd/mm/yyyy');
   const [timeFormat, setTimeFormat] = useState<string>(() => localStorage.getItem('app-time-format') || '12h');
+  const [summaryCounts, setSummaryCounts] = useState<Record<string, number>>({});
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
 
@@ -147,6 +148,13 @@ function App() {
   // 📡 REALTIME SYNC - Listeners para sincronización entre dispositivos
   useEffect(() => {
     if (!session) return;
+
+    const summaryChannel = supabase
+      .channel('summaries-global-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'summaries' }, () => {
+        fetchSummaryCounts();
+      })
+      .subscribe();
 
     const channel = supabase
       .channel('global-sync')
@@ -208,9 +216,21 @@ function App() {
 
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(summaryChannel);
     };
   }, [session]);
 
+  const fetchSummaryCounts = async () => {
+    try {
+      const { data, error } = await supabase.from('summaries').select('note_id');
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      data?.forEach(s => { counts[s.note_id] = (counts[s.note_id] || 0) + 1; });
+      setSummaryCounts(counts);
+    } catch (err) {
+      console.error('Error counts:', err);
+    }
+  };
 
   const fetchTranslations = async () => {
     if (!session) return;
@@ -354,6 +374,7 @@ function App() {
       // 📡 Carga inicial de Pizarrones y Traducciones
       fetchBrainDumps();
       fetchTranslations();
+      fetchSummaryCounts();
 
       const { data: notesData, error: notesError } = await supabase.from('notes').select('*').order('position', { ascending: true });
       if (notesError) throw notesError;
@@ -1349,7 +1370,7 @@ function App() {
 
                 {/* 2. FRANJA DE NOTAS (INTEGRADA EN EL ENCABEZADO) */}
                 {isGlobalNoteTrayOpen && activeGroup && (
-                  <div className="pt-4 px-4 pb-4 bg-[#FAFAFA] dark:bg-[#13131A]">
+                  <div className="pt-3 px-4 pb-3 bg-[#FAFAFA] dark:bg-[#13131A]">
                                                                   <div className="flex flex-wrap justify-center gap-2.5">
                       {sortNotesArray(activeGroup.notes, noteSortMode)
                         .map(note => {
@@ -1401,19 +1422,18 @@ function App() {
                                   if (isOpen) toggleNote(activeGroup.id, note.id);
                                 }
                               }}
-                              className={`relative flex items-center justify-center gap-2 px-3 py-2 text-[11px] font-medium rounded-xl transition-all shrink-0 border ${
+                              className={`relative flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 ${
                                 isFocused
-                                  ? 'bg-[#4940D9] text-white shadow-md shadow-[#4940D9]/20 scale-[1.02]'
+                                  ? 'bg-[#4940D9] text-white border-indigo-300 shadow-sm shadow-[#4940D9]/20 scale-[1.02]'
                                   : isSearchActive
-                                    ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 shadow-sm'
-                                    : 'bg-zinc-200/50 dark:bg-white/10 text-zinc-500 dark:text-[#A1A1AA] hover:text-zinc-800 dark:hover:text-white hover:bg-zinc-300/50 dark:hover:bg-white/20'
-                              } ${
-                                isSearchActive
-                                  ? 'border-amber-500 ring-1 ring-amber-500/50'
-                                                                      : 'border-transparent'
+                                    ? 'bg-amber-100 dark:bg-amber-900 border-amber-500 text-amber-900 dark:text-amber-100 shadow-sm ring-1 ring-amber-500/50'
+                                    : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/40 hover:text-indigo-600'
                               }`}
                             >
-                              <span className="whitespace-nowrap">{highlightTitle(note.title || 'Sin Título')}</span>
+                              <span className="whitespace-nowrap">
+                                {highlightTitle(note.title || 'Sin Título')}
+                                {summaryCounts[note.id] > 0 && ` (${summaryCounts[note.id]})`}
+                              </span>
                               {(note.is_docked || note.is_pinned) && (
                                 <span className="flex items-center gap-[3px] ml-1">
                                   {note.is_docked && <span className={`inline-block w-[8px] h-[8px] rounded-full ${isFocused ? 'bg-white' : 'bg-[#85858C]'}`} />}
@@ -1435,7 +1455,7 @@ function App() {
               </div>
 
               {/* AREA DE LA NOTA - OCUPA EL RESTO DEL ESPACIO */}
-              <main ref={mainRef} className={`flex-1 flex flex-col overflow-visible px-4 pb-4 ${isGlobalNoteTrayOpen && activeGroup ? 'pt-[3px]' : 'pt-4'}`}>
+              <main ref={mainRef} className={`flex-1 flex flex-col overflow-visible px-4 pb-4 ${isGlobalNoteTrayOpen && activeGroup ? 'pt-0' : 'pt-5'}`}>
                 <div className={`flex-1 flex flex-col min-h-0 ${isMaximized ? 'max-w-full' : 'max-w-6xl'} w-full mx-auto`}>
                   {activeGroup ? (
                      <div className="flex-1 flex flex-col min-h-0">

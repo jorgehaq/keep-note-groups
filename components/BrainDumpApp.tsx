@@ -54,6 +54,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
     const [loading, setLoading] = useState(false);
     
     const [expandedHistoryIds, setExpandedHistoryIds] = useState<Set<string>>(new Set());
+    const [summaryCounts, setSummaryCounts] = useState<Record<string, number>>({});
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
     const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
@@ -160,6 +161,29 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
         }
     }, [dumps.length]);
 
+    const fetchSummaryCounts = useCallback(async () => {
+        try {
+            const { data, error } = await supabase.from('summaries').select('note_id');
+            if (error) throw error;
+            const counts: Record<string, number> = {};
+            data?.forEach(s => { counts[s.note_id] = (counts[s.note_id] || 0) + 1; });
+            setSummaryCounts(counts);
+        } catch (err) {
+            console.error('Error counts:', err);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchSummaryCounts();
+        const channel = supabase
+            .channel('summaries-pizarron-sync')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'summaries' }, () => {
+                fetchSummaryCounts();
+            })
+            .subscribe();
+        return () => { supabase.removeChannel(channel); };
+    }, [fetchSummaryCounts]);
+
     // Removed validation effect to prevent focus resets on app switch.
     // Deletion explicitly clears focusedDumpId inside deleteDump.
 
@@ -259,7 +283,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
 
                 {/* FRANJA DE PIZARRONES (ACCESOS DIRECTOS) */}
                 {isDumpTrayOpen && pizarrones.length > 0 && (
-                    <div className="pt-4 px-4 pb-4 bg-[#FAFAFA] dark:bg-[#13131A]">
+                    <div className="pt-3 px-4 pb-3 bg-[#FAFAFA] dark:bg-[#13131A]">
                         <div className="flex flex-wrap justify-center gap-2.5">
                              {pizarrones.map(p => {
                                  const isFocused = focusedDumpId === p.id;
@@ -278,13 +302,16 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                      <button
                                          key={p.id}
                                          onClick={() => setFocusedDumpId(isFocused ? null : p.id)}
-                                         className={`relative flex items-center justify-center px-4 py-2 text-[11px] font-medium rounded-xl transition-all shrink-0 ${
+                                         className={`relative flex items-center justify-center px-4 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 ${
                                              isFocused
-                                                 ? 'bg-[#FFD700] text-amber-950 shadow-md shadow-amber-500/20 scale-[1.02]'
-                                                 : 'bg-zinc-200/50 dark:bg-white/10 text-zinc-500 dark:text-[#A1A1AA] hover:text-amber-900 dark:hover:text-white hover:bg-zinc-300/50 dark:hover:bg-white/20'
+                                                 ? 'bg-[#FFD700] text-amber-950 border-amber-300 shadow-sm shadow-amber-500/20 scale-[1.02]'
+                                                 : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/40 hover:text-amber-600'
                                          }`}
                                          >
-                                         <span className="whitespace-nowrap">{p.title || 'Pizarrón Sin Título'}</span>
+                                         <span className="whitespace-nowrap">
+                                             {p.title || 'Pizarrón Sin Título'}
+                                             {summaryCounts[p.id] > 0 && ` (${summaryCounts[p.id]})`}
+                                         </span>
                                          {dotColorClass && (
                                              <div 
                                                className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border border-[#9F9FA8]/50 z-10 shadow-sm transition-transform hover:scale-110 ${dotColorClass}`} 
@@ -299,7 +326,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                 )}
             </div>
 
-            <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 ${isDumpTrayOpen && pizarrones.length > 0 ? 'pt-0' : 'pt-4'} hidden-scrollbar`}>
+            <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 ${isDumpTrayOpen && pizarrones.length > 0 ? 'pt-0' : 'pt-5'} hidden-scrollbar`}>
                 <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto flex flex-col gap-12 pb-20`}>
                     
                     {/* 1. PIZARRONES (PERSISTENTES - FILTRADO POR FOCO) */}
