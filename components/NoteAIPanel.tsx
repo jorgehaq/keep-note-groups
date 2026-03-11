@@ -16,7 +16,6 @@ export const NoteAIPanel: React.FC<NoteAIPanelProps> = ({ noteId, noteStatus }) 
 
   const handleGenerate = async () => {
     if (isCreating) return;
-    if (!objectiveInput.trim()) return;
     setIsCreating(true);
     await generateSummary(objectiveInput.trim());
     setObjectiveInput('');

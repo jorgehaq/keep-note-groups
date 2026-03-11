@@ -95,7 +95,8 @@ const SummaryTabContent: React.FC<{
   onDelete: (id: string) => void;
   onPromote?: (content: string, title: string) => void;
   updateScratchpad: (id: string, text: string) => void;
-}> = ({ summary, noteFont, noteFontSize, noteLineHeight, showLineNumbers, onDelete, onPromote, updateScratchpad }) => {
+  updateContent: (id: string, text: string) => void;
+}> = ({ summary, noteFont, noteFontSize, noteLineHeight, showLineNumbers, onDelete, onPromote, updateScratchpad, updateContent }) => {
   const scratchRef = useRef<SmartNotesEditorRef>(null);
   const [localScratch, setLocalScratch] = useState(summary.scratchpad || '');
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -133,8 +134,16 @@ const SummaryTabContent: React.FC<{
             </button>
           </div>
         </div>
-        <div className="px-4 py-3 text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
-          {summary.content || ''}
+        <div className="px-4 py-3">
+          <SmartNotesEditor
+            noteId={`summary_${summary.id}`}
+            initialContent={summary.content || ''}
+            onChange={(text) => updateContent(summary.id, text)}
+            noteFont={noteFont}
+            noteFontSize={noteFontSize}
+            noteLineHeight={noteLineHeight}
+            showLineNumbers={showLineNumbers}
+          />
         </div>
       </div>
 
@@ -191,11 +200,12 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   const fontClass = noteFont === 'serif' ? 'font-serif' : noteFont === 'mono' ? 'font-mono text-xs' : 'font-sans';
 
   const { activeNoteId, activeNote, breadcrumbPath, navigate } = useNoteTree(note.id);
-  const displayContent = activeNote?.content ?? note.content;
-  const displayNoteId = activeNoteId ?? note.id;
+  const isRootLevel = !activeNoteId || activeNoteId === note.id;
+  const displayContent = isRootLevel ? note.content : (activeNote?.content ?? '');
+  const displayNoteId = isRootLevel ? note.id : activeNoteId;
 
   const [activeTab, setActiveTab] = useState<string>('original');
-  const { summaries: aiSummaries, deleteSummary, updateScratchpad } = useSummaries(displayNoteId);
+  const { summaries: aiSummaries, deleteSummary, updateScratchpad, updateSummaryContent } = useSummaries(displayNoteId);
   const completedSummaries = aiSummaries.filter(s => s.status === 'completed');
 
   useEffect(() => {
@@ -511,6 +521,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 onDelete={handleDeleteSummary}
                 onPromote={onCreateNote ? handlePromoteToNote : undefined}
                 updateScratchpad={updateScratchpad}
+                updateContent={updateSummaryContent}
               />
             </div>
           ) : null}

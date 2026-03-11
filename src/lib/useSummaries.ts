@@ -102,6 +102,7 @@ export const useSummaries = (noteId: string | null) => {
             .update({
                 focus_prompt: objective || null,
                 ai_summary_status: "queued",
+                updated_at: new Date().toISOString(),
             })
             .eq("id", noteId);
 
@@ -145,12 +146,21 @@ export const useSummaries = (noteId: string | null) => {
         if (error) console.error("Error updating scratchpad:", error);
     };
 
+    const updateSummaryContent = async (summaryId: string, text: string) => {
+        const { error } = await supabase
+            .from("summaries")
+            .update({ content: text })
+            .eq("id", summaryId);
+        if (error) console.error("Error updating summary content:", error);
+    };
+
     return {
         summaries,
         loading,
         generateSummary,
         deleteSummary,
         updateScratchpad,
+        updateSummaryContent,
         refresh: fetchSummaries,
     };
 };
