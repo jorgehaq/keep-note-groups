@@ -679,7 +679,10 @@ function App() {
     }
 
     if (Object.keys(dbUpdates).length === 0) return;
-    const debounceTime = isTextUpdate ? 2000 : 0; 
+    
+    // 🚀 FIX: Los títulos se guardan inmediatamente. Solo el contenido usa debounce de 2s.
+    const isTitleOnly = updates.title !== undefined && updates.content === undefined;
+    const debounceTime = isTitleOnly ? 0 : 2000; 
 
     if (saveTimeoutRef.current[noteId]) {
       clearTimeout(saveTimeoutRef.current[noteId]);

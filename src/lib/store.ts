@@ -322,9 +322,24 @@ export const useUIStore = create<UIStore>()(
                 set((state) => ({
                     groups: state.groups.map((g) => ({
                         ...g,
-                        notes: g.notes.map((n) =>
-                            n.id === noteId ? { ...n, ...updates } : n
-                        ),
+                        notes: g.notes.map((n) => {
+                            if (n.id !== noteId) return n;
+
+                            // 🛡️ Proteger contra actualizaciones viejas (Realtime race conditions)
+                            // Si el payload entrante tiene un updated_at menor al que ya tenemos, lo ignoramos.
+                            if (
+                                updates.updated_at && n.updated_at &&
+                                new Date(updates.updated_at).getTime() <
+                                    new Date(n.updated_at).getTime()
+                            ) {
+                                console.log(
+                                    `Ignorando actualización vieja para ${noteId}`,
+                                );
+                                return n;
+                            }
+
+                            return { ...n, ...updates };
+                        }),
                     })),
                 })),
 
