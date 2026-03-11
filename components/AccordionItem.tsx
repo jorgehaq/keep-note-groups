@@ -72,7 +72,7 @@ const AIBadge: React.FC<{ count: number; hasPending: boolean; active: boolean; o
       title={active ? 'Ocultar panel AI' : 'Abrir panel AI'}
       className={`relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
         active
-          ? 'bg-violet-600 text-white border-violet-500 shadow-md shadow-violet-500/20'
+          ? 'bg-violet-600 text-white border-violet-500 shadow-sm shadow-violet-500/20'
           : 'text-violet-400 border-violet-500/30 bg-violet-500/5 hover:bg-violet-500/10'
       }`}
     >
@@ -103,6 +103,21 @@ const SummaryTabContent: React.FC<{
   const [localScratch, setLocalScratch] = useState(summary.scratchpad || '');
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isMenuOpen]);
+
   const handleScratchChange = (text: string) => {
     setLocalScratch(text);
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -122,18 +137,46 @@ const SummaryTabContent: React.FC<{
               {new Date(summary.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
-            {onPromote && (
-              <button onClick={() => onPromote(summary.content || '', summary.target_objective ? `✨ ${summary.target_objective.slice(0,50)}` : '✨ Nota AI')}
-                className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-all">
-                <ArrowUpRight size={12} /> Nueva nota
-              </button>
-            )}
-            <button onClick={() => onDelete(summary.id)}
-              title="Eliminar análisis"
-              className="p-1.5 text-zinc-600 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all">
-              <Trash2 size={12} />
-            </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="relative" ref={menuRef}>
+               <button 
+                 onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
+                 className={`p-1.5 rounded-lg transition-colors ${
+                     isMenuOpen ? 'bg-violet-500/20 text-violet-300' : 'text-zinc-500 hover:text-violet-300 hover:bg-violet-500/10'
+                 }`}
+                 title="Opciones del Análisis"
+               >
+                 <MoreVertical size={14} />
+               </button>
+                 
+               {isMenuOpen && (
+                 <div className="absolute right-0 top-full mt-1 min-w-[180px] bg-white dark:bg-[#1A1A24] rounded-lg shadow-xl border border-zinc-200 dark:border-[#2D2D42] p-1 z-50 overflow-hidden animate-fadeIn">
+                   {onPromote && (
+                     <button
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         onPromote(summary.content || '', summary.target_objective ? `✨ ${summary.target_objective.slice(0,50)}` : '✨ Nota AI');
+                         setIsMenuOpen(false);
+                       }}
+                       className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left text-zinc-700 dark:text-zinc-300 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors"
+                     >
+                       <ArrowUpRight size={14} /> Convertir a Nota
+                     </button>
+                   )}
+                   {onPromote && <div className="h-px bg-zinc-200 dark:bg-[#2D2D42] my-1" />}
+                   <button
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       onDelete(summary.id);
+                       setIsMenuOpen(false);
+                     }}
+                     className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                   >
+                     <Trash2 size={14} /> Eliminar Análisis
+                   </button>
+                 </div>
+               )}
+            </div>
           </div>
         </div>
         <div className="px-4 py-3 min-w-0">
@@ -397,7 +440,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 border border-transparent">
           {/* Botón AI con badge */}
           {session?.user && (
             <AIBadge
@@ -411,7 +454,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           {showLineNumbers && onToggleLineNumbers && (
             <button
               onClick={(e) => { e.stopPropagation(); onToggleLineNumbers(); }}
-              className="p-1.5 rounded-lg transition-colors text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20"
+              className="p-1.5 rounded-lg transition-colors text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shrink-0"
               title="Ocultar números de línea"
             >
               <Hash size={14} />
@@ -421,7 +464,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           {note.is_docked && (
             <button
               onClick={(e) => { e.stopPropagation(); onUpdate(note.id, { is_docked: false }); }}
-              className="p-1.5 rounded-lg transition-colors text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 shrink-0"
+              className="p-1.5 rounded-lg transition-colors text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shrink-0"
               title="Quitar del Sidebar"
             >
               <PanelLeft size={14} />
@@ -431,7 +474,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           {note.is_pinned && (
             <button
               onClick={(e) => { e.stopPropagation(); onUpdate(note.id, { is_pinned: false }); }}
-              className="p-1.5 rounded-lg transition-colors text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20"
+              className="p-1.5 rounded-lg transition-colors text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 shrink-0"
               title="Desfijar Nota"
             >
               <Pin size={14} className="fill-current" />
@@ -439,31 +482,30 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           )}
 
           {isInKanban && (
-            <KanbanSemaphore sourceId={note.id} sourceTitle={note.title || 'Sin título'} onInteract={() => {}} />
+            <div className="shrink-0 flex items-center">
+              <KanbanSemaphore sourceId={note.id} sourceTitle={note.title || 'Sin título'} onInteract={() => {}} />
+            </div>
           )}
 
-          <div className="relative" ref={mobileMenuRef}>
+          <div className="relative shrink-0 flex items-center" ref={mobileMenuRef}>
             <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(!isMobileMenuOpen); }} className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"><MoreVertical size={16} /></button>
             {isMobileMenuOpen && (
               <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-[#1A1A24] shadow-xl rounded-lg border border-zinc-200 dark:border-[#2D2D42] p-1 flex flex-col gap-0.5 min-w-[180px] animate-fadeIn">
-                <button onClick={(e) => {
-                  e.stopPropagation();
-                  const willBeChecklist = !note.is_checklist;
-                  let newContent = note.content;
-                  if (willBeChecklist) {
-                    newContent = serializeChecklistToMarkdown(parseMarkdownToChecklist(note.content));
-                  }
-                  onUpdate(note.id, { is_checklist: willBeChecklist, content: newContent });
-                  setIsMobileMenuOpen(false);
-                }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_checklist ? 'text-[#1F3760] dark:text-blue-400 bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}><ListTodo size={14} />{note.is_checklist ? 'Quitar Checklist' : 'Hacer Checklist'}</button>
-                <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); onUpdate(note.id, { is_pinned: !note.is_pinned }); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_pinned ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}><Pin size={14} className={note.is_pinned ? "fill-current" : ""} />{note.is_pinned ? 'Desfijar' : 'Fijar Nota'}</button>
-                
+                {/* GRUPO 1: Estados de la nota */}
                 {onToggleLineNumbers && (
                   <button onClick={(e) => { e.stopPropagation(); onToggleLineNumbers(); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${showLineNumbers ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}>
                     <Hash size={14} /> {showLineNumbers ? 'Ocultar números' : 'Mostrar números'}
                   </button>
                 )}
-
+                
+                <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); onUpdate(note.id, { is_docked: !note.is_docked }); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_docked ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}>
+                  <PanelLeft size={14} />{note.is_docked ? 'Quitar del Sidebar' : 'Anclar al Sidebar'}
+                </button>
+                
+                <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); onUpdate(note.id, { is_pinned: !note.is_pinned }); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_pinned ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}>
+                  <Pin size={14} className={note.is_pinned ? "fill-current" : ""} />{note.is_pinned ? 'Desfijar Nota' : 'Fijar Nota'}
+                </button>
+                
                 {!isInKanban && (
                   <button onClick={async (e) => { 
                     e.stopPropagation(); 
@@ -474,13 +516,37 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                     <CheckSquare size={14} /> Añadir a Kanban
                   </button>
                 )}
+                
+                {/* SEPARADOR 1 */}
+                <div className="border-t border-zinc-100 dark:border-zinc-700 my-0.5" />
+                
+                {/* GRUPO 2: Checklist */}
+                <button onClick={(e) => {
+                  e.stopPropagation();
+                  const willBeChecklist = !note.is_checklist;
+                  let newContent = note.content;
+                  if (willBeChecklist) {
+                    newContent = serializeChecklistToMarkdown(parseMarkdownToChecklist(note.content));
+                  }
+                  onUpdate(note.id, { is_checklist: willBeChecklist, content: newContent });
+                  setIsMobileMenuOpen(false);
+                }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_checklist ? 'text-[#1F3760] dark:text-blue-400 bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}>
+                  <ListTodo size={14} />{note.is_checklist ? 'Quitar Checklist' : 'Hacer Checklist'}
+                </button>
+
+                {/* SEPARADOR 2 */}
+                <div className="border-t border-zinc-100 dark:border-zinc-700 my-0.5" />
+                
+                {/* GRUPO 3: Utilidades */}
+                {onCopyNote && <button onClick={(e) => { e.stopPropagation(); onCopyNote(note); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><Clipboard size={14} />Copiar Nota</button>}
                 {onDuplicate && <button onClick={(e) => { e.stopPropagation(); onDuplicate(note.id); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><CopyPlus size={14} />Duplicar Nota</button>}
                 {onMove && <button onClick={(e) => { e.stopPropagation(); setIsMoveModalOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"><FolderInput size={14} />Mover de Grupo</button>}
-                <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
-                <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); onUpdate(note.id, { is_docked: !note.is_docked }); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_docked ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}><PanelLeft size={14} />{note.is_docked ? 'Quitar del Sidebar' : 'Anclar al Sidebar'}</button>
-                {onCopyNote && <button onClick={(e) => { e.stopPropagation(); onCopyNote(note); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><Clipboard size={14} />Copiar Nota</button>}
                 {onExportNote && <button onClick={(e) => { e.stopPropagation(); onExportNote(note); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><Download size={14} />Exportar (.md)</button>}
+                
+                {/* SEPARADOR 3 */}
                 <div className="border-t border-zinc-100 dark:border-zinc-700 my-0.5" />
+                
+                {/* GRUPO 4: Peligro */}
                 <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false); if (confirm('¿Estás seguro de eliminar esta nota?')) onDelete(note.id); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"><Trash2 size={14} />Eliminar Nota</button>
               </div>
             )}
@@ -499,7 +565,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           </div>
         )}
 
-        <div className="px-4 pb-4 pt-2 w-full flex-1 flex flex-col min-h-0 gap-3">
+        <div className="px-4 pb-4 pt-2 w-full flex-1 flex flex-col min-h-0 gap-[10px]">
           <NoteBreadcrumb
             path={breadcrumbPath}
             activeNoteId={activeNoteId || note.id}
@@ -520,7 +586,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
           {/* TABS — chips unificados: pendientes + completados */}
           {showAIPanel && (aiSummaries.length > 0) && (
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 flex-wrap">
+            <div className="flex items-center gap-2.5 overflow-x-auto flex-wrap">
               {/* Tab Original — solo si hay completados */}
               {completedSummaries.length > 0 && (
                 <button

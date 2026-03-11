@@ -238,28 +238,33 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                 <div className="flex items-center gap-3">
                     {/* Botón Toggle Reminder (siempre primero de izquierda a derecha) */}
                     <button
-                      onClick={() => setShowOverdueMarquee(!showOverdueMarquee)}
-                      className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                      onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
+                      disabled={overdueRemindersCount === 0}
+                      className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
                         showOverdueMarquee 
-                          ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
+                          ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
                           : overdueRemindersCount > 0
                             ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
-                            : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
+                            : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
                       }`}
-                      title={showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
+                      title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                     >
-                      <Bell size={18} className={overdueRemindersCount > 0 ? 'animate-pulse' : ''} />
-                      <span className="text-xs font-bold">{overdueRemindersCount}</span>
+                      <Bell size={18} className={overdueRemindersCount > 0 ? 'animate-pulse text-red-500' : ''} />
+                      {overdueRemindersCount > 0 && (
+                        <span className="text-xs font-bold whitespace-nowrap">
+                          {overdueRemindersCount}
+                        </span>
+                      )}
                     </button>
 
                     {/* Botón Toggle Bandeja de Pizarrones */}
                     {pizarrones.length > 0 && (
                         <button
                             onClick={() => setIsDumpTrayOpen(!isDumpTrayOpen)}
-                            className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                            className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
                                 isDumpTrayOpen 
-                                  ? 'bg-[#FFD700] border-[#E5C100] text-amber-950 shadow-md shadow-[#FFD700]/20' 
-                                  : 'bg-amber-50 dark:bg-[#FFD700]/10 border-amber-200 dark:border-[#FFD700]/30 text-amber-600 dark:text-[#FFD700] hover:bg-amber-100 dark:hover:bg-[#FFD700]/20'
+                                  ? 'bg-[#FFD700] border-amber-300 text-amber-950 shadow-sm shadow-[#FFD700]/20' 
+                                  : 'bg-amber-50 dark:bg-[#FFD700]/10 border-amber-200 dark:border-[#FFD700]/30 text-amber-500 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-[#FFD700]/20'
                             }`}
                             title={isDumpTrayOpen ? "Ocultar Pizarrones" : "Mostrar Pizarrones"}
                         >
@@ -304,7 +309,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                          onClick={() => setFocusedDumpId(isFocused ? null : p.id)}
                                          className={`relative flex items-center justify-center px-4 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 ${
                                              isFocused
-                                                 ? 'bg-[#FFD700] text-amber-950 border-amber-300 shadow-sm shadow-amber-500/20 scale-[1.02]'
+                                                 ? 'bg-[#FFD700] text-amber-950 border-amber-300 scale-[1.02]'
                                                  : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/40 hover:text-amber-600'
                                          }`}
                                          >

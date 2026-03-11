@@ -1193,26 +1193,31 @@ function App() {
                           <div className="flex items-center gap-1.5 mr-1">
                              {/* Botón Toggle Reminder */}
                              <button
-                               onClick={() => setShowOverdueMarquee(!showOverdueMarquee)}
-                               className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                               onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
+                               disabled={overdueRemindersCount === 0}
+                               className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
                                  showOverdueMarquee 
-                                   ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
+                                   ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
                                    : overdueRemindersCount > 0
                                      ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
-                                     : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
+                                     : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
                                }`}
-                               title={showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
+                               title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                              >
-                                <Bell size={18} className={overdueRemindersList.length > 0 ? 'animate-pulse' : ''} />
-                                <span className="text-xs font-bold">{overdueRemindersList.length}</span>
+                                <Bell size={18} className={overdueRemindersList.length > 0 ? 'animate-pulse text-red-500' : ''} />
+                                {overdueRemindersCount > 0 && (
+                                  <span className="text-xs font-bold whitespace-nowrap">
+                                    {overdueRemindersList.length}
+                                  </span>
+                                )}
                              </button>
 
                              <button 
                                 onClick={() => setIsGlobalNoteTrayOpen(!isGlobalNoteTrayOpen)}
-                                className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                                className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
                                   isGlobalNoteTrayOpen 
-                                    ? 'bg-[#4940D9] border-[#4940D9] text-white shadow-md shadow-[#4940D9]/20' 
-                                    : 'bg-[#4940D9]/10 dark:bg-[#4940D9]/20 border-[#4940D9]/30 text-[#4940D9] hover:bg-[#4940D9]/20 dark:hover:bg-[#4940D9]/30'
+                                    ? 'bg-[#4940D9] border-[#4940D9] text-white shadow-sm shadow-[#4940D9]/20' 
+                                    : 'bg-[#4940D9]/10 dark:bg-[#4940D9]/20 border-[#4940D9]/30 text-indigo-500 dark:text-indigo-400 hover:bg-[#4940D9]/20 dark:hover:bg-[#4940D9]/30'
                                 }`}
                                 title={isGlobalNoteTrayOpen ? "Ocultar bandeja de notas" : "Mostrar bandeja de notas"}
                               >
@@ -1231,8 +1236,7 @@ function App() {
                           </div>
 
                           {/* Controles de Grupo (En una mini-cápsula gris) */}
-                          <div className="h-9 flex items-center gap-1 bg-zinc-50 dark:bg-zinc-950 p-1 rounded-xl border border-zinc-200 dark:border-[#3F3F46] shrink-0">
-                                                             
+                          <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-1 shadow-sm">
                               {/* Buscador */}
                               <div className="relative flex items-center transition-all duration-300 mr-2">
                                 <Search size={15} className={`absolute left-2 pointer-events-none transition-colors ${currentSearchQuery.trim() ? 'text-amber-600 dark:text-amber-500 font-bold' : 'text-zinc-400'}`} />
@@ -1256,10 +1260,10 @@ function App() {
                               <div className="relative" ref={sortMenuRef}>
                                 <button 
                                     onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} 
-                                    className="p-2 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg hover:bg-white dark:hover:bg-zinc-800 transition-colors"
+                                    className="p-1.5 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                                     title="Ordenar notas"
                                 >
-                                    <ArrowUpDown size={18} />
+                                    <ArrowUpDown size={16} />
                                 </button>
                                 
                                 {isSortMenuOpen && (
@@ -1301,17 +1305,17 @@ function App() {
 
                               <button 
                                   onClick={downloadGroupAsMarkdown} 
-                                  className="p-2 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg hover:bg-white dark:hover:bg-zinc-800 transition-colors"
+                                  className="p-1.5 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                                   title="Exportar Grupo"
                               >
-                                  <Download size={18} />
+                                  <Download size={16} />
                               </button>
                               <button 
                                   onClick={() => deleteGroup(activeGroup.id)} 
-                                  className="p-2 text-zinc-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                  className="p-1.5 text-zinc-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                                   title="Eliminar Grupo"
                               >
-                                  <Trash2 size={18} />
+                                  <Trash2 size={16} />
                               </button>
                           </div>
 
@@ -1336,18 +1340,23 @@ function App() {
                       <div className="flex items-center gap-2 shrink-0">
                         {/* Botón Toggle Reminder */}
                         <button
-                          onClick={() => setShowOverdueMarquee(!showOverdueMarquee)}
-                          className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                          onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
+                          disabled={overdueRemindersCount === 0}
+                          className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
                             showOverdueMarquee 
-                              ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
+                              ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
                               : overdueRemindersCount > 0
                                 ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
-                                : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
+                                : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
                           }`}
-                          title={showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
+                          title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                         >
-                          <Bell size={18} className={overdueRemindersList.length > 0 ? 'animate-pulse' : ''} />
-                          <span className="text-xs font-bold">{overdueRemindersList.length}</span>
+                          <Bell size={18} className={overdueRemindersList.length > 0 ? 'animate-pulse text-red-500' : ''} />
+                          {overdueRemindersCount > 0 && (
+                            <span className="text-xs font-bold whitespace-nowrap">
+                              {overdueRemindersList.length}
+                            </span>
+                          )}
                         </button>
                         <button
                           onClick={addGroup}
@@ -1370,7 +1379,7 @@ function App() {
 
                 {/* 2. FRANJA DE NOTAS (INTEGRADA EN EL ENCABEZADO) */}
                 {isGlobalNoteTrayOpen && activeGroup && (
-                  <div className="pt-3 px-4 pb-3 bg-[#FAFAFA] dark:bg-[#13131A]">
+                  <div className="pt-[10px] px-[10px] pb-[10px] bg-[#FAFAFA] dark:bg-[#13131A]">
                                                                   <div className="flex flex-wrap justify-center gap-2.5">
                       {sortNotesArray(activeGroup.notes, noteSortMode)
                         .map(note => {
@@ -1424,7 +1433,7 @@ function App() {
                               }}
                               className={`relative flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 ${
                                 isFocused
-                                  ? 'bg-[#4940D9] text-white border-indigo-300 shadow-sm shadow-[#4940D9]/20 scale-[1.02]'
+                                  ? 'bg-[#4940D9] text-white border-[#4940D9] shadow-sm shadow-[#4940D9]/20 scale-[1.02]'
                                   : isSearchActive
                                     ? 'bg-amber-100 dark:bg-amber-900 border-amber-500 text-amber-900 dark:text-amber-100 shadow-sm ring-1 ring-amber-500/50'
                                     : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/40 hover:text-indigo-600'
