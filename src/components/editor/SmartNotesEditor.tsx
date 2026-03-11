@@ -540,7 +540,10 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
     const [menuState, setMenuState] = useState<{top: number, left: number, from: number, to: number, text: string, isMobile?: boolean} | null>(null);
     const [tooltipState, setTooltipState] = useState<{text: string, top: number, left: number} | null>(null);
     const [isTranslating, setIsTranslating] = useState(false);
-    const [showMarkerMenu, setShowMarkerMenu] = useState(false);
+    const [showExpandedMenu, setShowExpandedMenu] = useState(false);
+    const [lastAction, setLastAction] = useState<string>(
+        () => localStorage.getItem('sme-last-action') || 'highlight'
+    );
     
     // Detectar modo oscuro de forma reactiva para los colores de las etiquetas
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
@@ -559,13 +562,13 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
     // Exponer funciones de cierre para la lógica interna (Escape)
     const closeMenus = () => {
         setMenuState(null);
-        setShowMarkerMenu(false);
+        setShowExpandedMenu(false);
         window.getSelection()?.removeAllRanges();
     };
 
     const closeMenusOnly = () => {
         setMenuState(null);
-        setShowMarkerMenu(false);
+        setShowExpandedMenu(false);
     };
 
     // Regenera el tema visual solo si cambias la fuente o el tamaño en los ajustes
@@ -671,6 +674,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
             // 1. Si la selección está vacía (clic simple), resetear menú
             if (main.empty) {
                 setMenuState(null);
+                setShowExpandedMenu(false);
             }
 
             // 2. Guardar posición del cursor en localStorage (debounced)
@@ -796,11 +800,9 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
 
         editorRef.current.view.dispatch({ changes: { from: menuState.from, to: menuState.to, insert: replacement }, selection: { anchor: menuState.from + replacement.length } });
         setMenuState(null);
-        setShowMarkerMenu(false);
+        setShowExpandedMenu(false);
     };
 
-    const doHighlight = () => doFormat('highlight');
-    const doLink = () => doFormat('link');
 
     const doTranslate = async (targetLang: 'en' | 'es') => {
         if (!menuState || !editorRef.current?.view) return;
@@ -852,6 +854,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                 selection: { anchor: menuState.from + replacement.length } 
             });
             setMenuState(null);
+            setShowExpandedMenu(false);
 
         } catch (err: any) {
             console.error("❌ Error fatal en traducción:", err);
@@ -881,7 +884,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
         
         // Cerrar menú si el foco se pierde
         setMenuState(null);
-        setShowMarkerMenu(false);
+        setShowExpandedMenu(false);
     };
 
     const menuWidth = 260; 
@@ -910,6 +913,34 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
             left: '50%', 
             transform: `translateX(calc(-50% + ${offset}px))` 
         };
+    };
+
+    const doActionAndSave = async (actionKey: string, fn: () => void | Promise<void>) => {
+        const res = fn();
+        if (res instanceof Promise) await res;
+        setLastAction(actionKey);
+        localStorage.setItem('sme-last-action', actionKey);
+        setShowExpandedMenu(false);
+        setMenuState(null);
+    };
+
+    const getLastActionDisplay = () => {
+        if (lastAction === 'highlight') return { emoji: '🖊️', title: 'Resaltar' };
+        if (lastAction === 'en') return { emoji: 'EN', title: 'Traducir → EN' };
+        if (lastAction === 'es') return { emoji: 'ES', title: 'Traducir → ES' };
+        if (lastAction === 'link') return { emoji: '🔗', title: 'Link' };
+        const m = MARKER_TYPES[lastAction as MarkerType];
+        if (m) return { emoji: m.emoji, title: m.label };
+        return { emoji: '🖊️', title: 'Resaltar' };
+    };
+
+    const fireLastAction = async () => {
+        if (lastAction === 'highlight') await doActionAndSave('highlight', () => doFormat('highlight'));
+        else if (lastAction === 'en') await doActionAndSave('en', () => doTranslate('en'));
+        else if (lastAction === 'es') await doActionAndSave('es', () => doTranslate('es'));
+        else if (lastAction === 'link') await doActionAndSave('link', () => doFormat('link'));
+        else if (lastAction in MARKER_TYPES) await doActionAndSave(lastAction, () => doFormat(lastAction as MarkerType));
+        else await doActionAndSave('highlight', () => doFormat('highlight'));
     };
 
     return (
@@ -982,58 +1013,98 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
             )}
             {menuState && (
                 <div
-                    className={`
-                        z-[100] flex items-center gap-1 bg-white dark:bg-[#242432] text-zinc-800 dark:text-white p-1.5 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-zinc-200 dark:border-zinc-700 animate-fadeIn pointer-events-auto
-                        ${menuState.isMobile 
-                            ? 'fixed bottom-6 left-4 right-4 justify-around p-2' 
-                            : 'fixed origin-bottom'
-                        }
-                    `}
-                    style={menuState.isMobile ? undefined : { top: menuState.top, left: clampedLeft, transform: 'translateX(-50%)' }} 
-                    onMouseDown={(e) => e.preventDefault()} 
+                    className="floating-menu-container fixed z-[100] flex flex-col items-center gap-1.5 animate-fadeIn origin-bottom pointer-events-auto"
+                    style={{ top: menuState.top, left: clampedLeft, transform: 'translateX(-50%)' }}
+                    onMouseDown={(e) => e.preventDefault()}
                 >
-                    {isTranslating ? ( <div className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-blue-500"><Loader2 size={16} className="animate-spin" /> Traduciendo...</div> ) : (
-                        <><button onClick={doHighlight} className="flex items-center gap-1.5 px-3 py-2 bg-[#6B8E23]/10 dark:bg-[#ccff00]/10 hover:bg-[#6B8E23]/20 dark:hover:bg-[#ccff00]/20 rounded-lg text-xs font-bold transition-all text-[#6B8E23] dark:text-[#ccff00] active:scale-95" title="Resaltar"><Highlighter size={16} /></button>
-                        
-                        {/* Botón marcador → sub-menú compacto */}
-                        <div className="relative">
-                            <button
-                                onClick={() => setShowMarkerMenu(p => !p)}
-                                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-bold transition-all active:scale-95 ${showMarkerMenu ? 'bg-indigo-500/40 text-indigo-800 dark:text-white shadow-inner scale-[0.98]' : 'bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 dark:hover:bg-indigo-500/40'}`}
-                                title="Etiquetar"
-                            >
-                                <span className="text-[14px] leading-none">🏷️</span>
-                            </button>
-                             {showMarkerMenu && (
-                                <div 
-                                    className="absolute bottom-full mb-2 bg-white dark:bg-[#242432] border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-2 grid grid-cols-2 gap-1.5 w-[240px] z-[110]"
-                                    style={getSubMenuStyle()}
-                                >
-                                    {(Object.entries(MARKER_TYPES) as [MarkerType, typeof MARKER_TYPES[MarkerType]][]).map(([key, cfg]) => (
-                                        <button
-                                            key={key}
-                                            onClick={() => doFormat(key)}
-                                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold transition-all text-left whitespace-nowrap border hover:scale-[1.02] active:scale-[0.98] shadow-sm"
-                                            style={{ 
-                                                color: isDarkMode ? cfg.dark : cfg.light,
-                                                backgroundColor: `${isDarkMode ? cfg.dark : cfg.light}20`, 
-                                                borderColor: `${isDarkMode ? cfg.dark : cfg.light}30`
-                                            }}
-                                        >
-                                            <span className="text-sm">{cfg.emoji}</span>
-                                            <span className="truncate">{cfg.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                    {/* Globo expandido — aparece arriba */}
+                    {showExpandedMenu && (
+                        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-1.5 flex flex-col gap-1">
+                            {/* Fila 1 marcadores */}
+                            <div className="flex gap-1">
+                                {(['ins','idea','op','duda'] as MarkerType[]).map(key => {
+                                    const cfg = MARKER_TYPES[key];
+                                    return (
+                                        <button key={key}
+                                            onClick={() => doActionAndSave(key, () => doFormat(key))}
+                                            title={cfg.label}
+                                            className="w-9 h-9 rounded-lg flex items-center justify-center text-base hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                        >{cfg.emoji}</button>
+                                    );
+                                })}
+                            </div>
+                            {/* Fila 2 marcadores */}
+                            <div className="flex gap-1">
+                                {(['wow','pat','yo','ruido'] as MarkerType[]).map(key => {
+                                    const cfg = MARKER_TYPES[key];
+                                    return (
+                                        <button key={key}
+                                            onClick={() => doActionAndSave(key, () => doFormat(key))}
+                                            title={cfg.label}
+                                            className="w-9 h-9 rounded-lg flex items-center justify-center text-base hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                        >{cfg.emoji}</button>
+                                    );
+                                })}
+                            </div>
+                            {/* Separador */}
+                            <div className="h-px bg-zinc-200 dark:bg-zinc-700 mx-1" />
+                            {/* Fila 3: highlight, EN, ES, link */}
+                            <div className="flex gap-1">
+                                <button onClick={() => doActionAndSave('highlight', () => doFormat('highlight'))}
+                                    title="Resaltar"
+                                    className="w-9 h-9 rounded-lg flex items-center justify-center text-base hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                                    🖊️
+                                </button>
+                                <button onClick={() => doActionAndSave('en', () => doTranslate('en'))}
+                                    title="Traducir → EN"
+                                    className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold text-blue-500 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 transition-colors">
+                                    EN
+                                </button>
+                                <button onClick={() => doActionAndSave('es', () => doTranslate('es'))}
+                                    title="Traducir → ES"
+                                    className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold text-blue-500 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 transition-colors">
+                                    ES
+                                </button>
+                                <button onClick={() => doActionAndSave('link', () => doFormat('link'))}
+                                    title="Convertir a link"
+                                    className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                                    <LinkIcon size={15} className="text-zinc-500" />
+                                </button>
+                            </div>
                         </div>
-
-                        <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
-                        <button onClick={doLink} className="flex items-center gap-1.5 px-3 py-2 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-all text-blue-500 dark:text-blue-400 active:scale-95" title="Convertir a Link"><LinkIcon size={16} /></button>
-                        <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
-                        <button onClick={() => doTranslate('en')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-500 dark:text-blue-400 active:scale-95" title="Traducir a Inglés"> EN</button>
-                        <button onClick={() => doTranslate('es')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-500 dark:text-blue-400 active:scale-95" title="Traducir al Español"> ES</button></>
                     )}
+
+                    {/* Globo compacto — siempre visible */}
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)] p-1 flex items-center gap-0.5 pointer-events-auto">
+                        {isTranslating ? (
+                            <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-blue-500">
+                                <Loader2 size={13} className="animate-spin" /> Traduciendo...
+                            </div>
+                        ) : (
+                            <>
+                                <button
+                                    onClick={fireLastAction}
+                                    title={getLastActionDisplay().title}
+                                    className={`w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors ${
+                                        (lastAction === 'en' || lastAction === 'es') ? 'text-xs font-bold text-blue-500' : 'text-base'
+                                    }`}
+                                >
+                                    {getLastActionDisplay().emoji}
+                                </button>
+                                <button
+                                    onClick={() => setShowExpandedMenu(p => !p)}
+                                    title="Más opciones"
+                                    className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold transition-colors ${
+                                        showExpandedMenu
+                                            ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-white'
+                                            : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                                    }`}
+                                >
+                                    ···
+                                </button>
+                            </>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
