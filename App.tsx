@@ -1433,7 +1433,7 @@ function App() {
                               }}
                               className={`relative flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 ${
                                 isFocused
-                                  ? 'bg-[#4940D9] text-white border-[#4940D9] shadow-sm shadow-[#4940D9]/20 scale-[1.02]'
+                                  ? `bg-[#4940D9] text-white border-[#4940D9] shadow-sm shadow-[#4940D9]/20 scale-[1.02] ${isSearchActive ? 'ring-2 ring-amber-400' : ''}`
                                   : isSearchActive
                                     ? 'bg-amber-100 dark:bg-amber-900 border-amber-500 text-amber-900 dark:text-amber-100 shadow-sm ring-1 ring-amber-500/50'
                                     : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/40 hover:text-indigo-600'

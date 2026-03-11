@@ -94,11 +94,12 @@ const SummaryTabContent: React.FC<{
   noteFontSize?: string;
   noteLineHeight?: string;
   showLineNumbers?: boolean;
+  searchQuery?: string;
   onDelete: (id: string) => void;
   onPromote?: (content: string, title: string) => void;
   updateScratchpad: (id: string, text: string) => void;
   updateContent: (id: string, text: string) => void;
-}> = ({ summary, noteFont, noteFontSize, noteLineHeight, showLineNumbers, onDelete, onPromote, updateScratchpad, updateContent }) => {
+}> = ({ summary, noteFont, noteFontSize, noteLineHeight, showLineNumbers, searchQuery, onDelete, onPromote, updateScratchpad, updateContent }) => {
   const scratchRef = useRef<SmartNotesEditorRef>(null);
   const [localScratch, setLocalScratch] = useState(summary.scratchpad || '');
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -126,7 +127,7 @@ const SummaryTabContent: React.FC<{
 
   return (
     <div className="flex flex-col gap-3 flex-1 min-h-0">
-      <div className="bg-[#1A1A2E] border border-violet-500/20 rounded-2xl overflow-hidden">
+      <div className={`bg-[#1A1A2E] rounded-2xl overflow-hidden border ${searchQuery?.trim() && summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ? 'border-amber-500' : 'border-violet-500/20'}`}>
         <div className="flex items-center justify-between px-4 py-2.5 bg-violet-500/5 border-b border-violet-500/10">
           <div className="flex items-center gap-2 min-w-0">
             <Sparkles size={12} className="text-violet-400 shrink-0" />
@@ -188,6 +189,7 @@ const SummaryTabContent: React.FC<{
             noteFontSize={noteFontSize}
             noteLineHeight={noteLineHeight}
             showLineNumbers={showLineNumbers}
+            searchQuery={searchQuery}
           />
         </div>
       </div>
@@ -198,7 +200,7 @@ const SummaryTabContent: React.FC<{
           <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Pizarrón</span>
         </div>
         <div onClick={() => scratchRef.current?.focus()}
-          className="note-editor-scroll bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4 cursor-text flex-1 overflow-y-scroll min-h-[120px]">
+          className={`note-editor-scroll bg-zinc-50 dark:bg-[#242432] rounded-xl p-4 cursor-text flex-1 overflow-y-scroll min-h-[120px] border ${searchQuery?.trim() && localScratch?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ? 'border-amber-500' : 'border-zinc-200 dark:border-[#2D2D42]'}`}>
           <SmartNotesEditor
             ref={scratchRef}
             noteId={`scratch_${summary.id}`}
@@ -208,6 +210,7 @@ const SummaryTabContent: React.FC<{
             noteFontSize={noteFontSize}
             noteLineHeight={noteLineHeight}
             showLineNumbers={showLineNumbers}
+            searchQuery={searchQuery}
           />
         </div>
       </div>
@@ -585,16 +588,21 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           )}
 
           {/* TABS — chips unificados: pendientes + completados */}
-          {showAIPanel && (aiSummaries.length > 0) && (
-            <div className="flex items-center gap-2.5 overflow-x-auto flex-wrap">
+          {showAIPanel && (aiSummaries.length > 0) && (() => {
+            const q = searchQuery?.trim().toLowerCase() || '';
+            const originalMatches = q && (note.content?.toLowerCase().includes(q) || note.title?.toLowerCase().includes(q));
+            return (
+            <div className="flex items-center gap-2.5 overflow-x-auto flex-wrap p-[2px]">
               {/* Tab Original — solo si hay completados */}
               {completedSummaries.length > 0 && (
                 <button
                   onClick={() => setActiveTab('original')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all border shrink-0 ${
                     activeTab === 'original'
-                      ? 'bg-zinc-800 text-zinc-100 border-zinc-600'
-                      : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-zinc-400'
+                      ? `bg-[#4940D9] text-white border-[#4940D9] shadow-sm shadow-[#4940D9]/20 ${originalMatches ? 'ring-2 ring-amber-400' : ''}`
+                      : originalMatches
+                        ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-500 ring-1 ring-amber-500/50'
+                        : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-zinc-400'
                   }`}
                 >
                   <FileText size={11} /> Original
@@ -610,21 +618,27 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 </div>
               ))}
               {/* Chips completados */}
-              {completedSummaries.map(s => (
+              {completedSummaries.map(s => {
+                const summaryMatches = q && ((s.content?.toLowerCase().includes(q)) || (s.scratchpad?.toLowerCase().includes(q)) || (s.target_objective?.toLowerCase().includes(q)));
+                return (
                 <button key={s.id}
                   onClick={() => setActiveTab(activeTab === s.id ? 'original' : s.id)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all border shrink-0 max-w-[180px] ${
                     activeTab === s.id
-                      ? 'bg-violet-600 text-white border-violet-500 shadow-sm shadow-violet-500/20'
-                      : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/40 hover:text-violet-400'
+                      ? `bg-violet-600 text-white border-violet-500 shadow-sm shadow-violet-500/20 ${summaryMatches ? 'ring-2 ring-amber-400' : ''}`
+                      : summaryMatches
+                        ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-500 ring-1 ring-amber-500/50'
+                        : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/40 hover:text-violet-400'
                   }`}
                 >
                   <Sparkles size={10} className="shrink-0" />
                   <span className="truncate">{s.target_objective || 'Análisis'}</span>
                 </button>
-              ))}
+                );
+              })}
             </div>
-          )}
+            );
+          })()}
 
           {/* CONTENIDO ACTIVO */}
           {(!showAIPanel || activeTab === 'original') ? (
@@ -634,7 +648,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               </div>
             ) : (
               <div onClick={() => editorRef.current?.focus()}
-                className="note-editor-scroll bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4 cursor-text flex-1 overflow-y-scroll min-h-0">
+                className={`note-editor-scroll bg-zinc-50 dark:bg-[#242432] rounded-xl p-4 cursor-text flex-1 overflow-y-scroll min-h-0 border ${searchQuery?.trim() && note.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ? 'border-amber-500' : 'border-zinc-200 dark:border-[#2D2D42]'}`}>
                 <SmartNotesEditor
                   ref={editorRef}
                   noteId={displayNoteId}
@@ -661,6 +675,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 onPromote={onCreateNote ? handlePromoteToNote : undefined}
                 updateScratchpad={updateScratchpad}
                 updateContent={updateSummaryContent}
+                searchQuery={searchQuery}
               />
             </div>
           ) : null}
