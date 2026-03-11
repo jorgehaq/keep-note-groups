@@ -430,6 +430,9 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             WebkitTouchCallout: "none !important", // Ocultar menú nativo de "copy/paste" al tocar sostenido
             WebkitUserSelect: "text !important",
             userSelect: "text !important",
+            width: "100%",
+            maxWidth: "100%",
+            overflowX: "hidden !important",
         },
         "&.cm-focused": {
             outline: "none !important"
@@ -437,12 +440,17 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-scroller": {
             fontFamily: fontFamily,
             fontSize: fontSize,
+            overflowX: "hidden !important",
+            width: "100%",
         },
         ".cm-content": {
             fontFamily: fontFamily,
             fontSize: fontSize,
             WebkitUserSelect: "text !important",
             userSelect: "text !important",
+            whiteSpace: "pre-wrap !important",
+            overflowWrap: "anywhere !important",
+            wordBreak: "break-word !important",
         },
         "&.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important", borderLeftWidth: "2px !important" },
         ".dark &.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important" },
@@ -463,14 +471,15 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             lineHeight: lHeight, 
             paddingLeft: "12px !important", 
             borderLeft: "3px solid transparent",
-            transition: "border-color 0.2s ease"
+            transition: "border-color 0.2s ease",
+            overflowWrap: "anywhere !important",
         },
         ".cm-cursor-indicator-line": { 
             borderLeftColor: "#6366f1 !important"
         },
         ".cm-custom-hl": { backgroundColor: "#FACC15 !important", color: "#000000 !important", padding: "0 2px", fontWeight: "600 !important", borderRadius: "4px !important" },
-        ".cm-custom-tr": { position: "relative", backgroundColor: "#10B981 !important", color: "white !important", padding: "0 2px", cursor: "help", borderRadius: "4px !important" },
-        ".dark .cm-custom-tr": { backgroundColor: "#10B981 !important", color: "white !important", borderRadius: "4px !important" },
+        ".cm-custom-tr": { position: "relative", backgroundColor: "#10B981 !important", color: "#064E3B !important", padding: "0 2px", cursor: "help", borderRadius: "4px !important", fontWeight: "600 !important" },
+        ".dark .cm-custom-tr": { backgroundColor: "#10B981 !important", color: "#064E3B !important", borderRadius: "4px !important", fontWeight: "600 !important" },
         ".cm-custom-h1": { fontSize: "1.4em", fontWeight: "bold", color: "inherit", lineHeight: "1.2" },
         ".cm-custom-bold": { fontWeight: "bold", color: "inherit" },
         ".cm-custom-italic": { fontStyle: "italic", color: "inherit" },
@@ -905,7 +914,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
     };
 
     return (
-        <div className={`relative group/editor w-full bg-transparent ${readOnly ? 'pointer-events-none' : ''}`}>
+        <div className={`relative group/editor w-full max-w-full overflow-x-hidden bg-transparent ${readOnly ? 'pointer-events-none' : ''}`}>
             <CodeMirror
                 key={String(showLineNumbers)}
                 ref={editorRef} 

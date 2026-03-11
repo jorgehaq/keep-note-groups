@@ -15,7 +15,8 @@ export interface Summary {
 
 export const useSummaries = (noteId: string | null) => {
     const [summaries, setSummaries] = useState<Summary[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(!!noteId);
+    const [hasFetched, setHasFetched] = useState(false);
 
     const fetchSummaries = useCallback(async () => {
         if (!noteId) return;
@@ -30,9 +31,11 @@ export const useSummaries = (noteId: string | null) => {
             setSummaries(data);
         }
         setLoading(false);
+        setHasFetched(true);
     }, [noteId]);
 
     useEffect(() => {
+        setHasFetched(false); // Reset on note change
         fetchSummaries();
 
         if (!noteId) return;
@@ -162,5 +165,6 @@ export const useSummaries = (noteId: string | null) => {
         updateScratchpad,
         updateSummaryContent,
         refresh: fetchSummaries,
+        hasFetched,
     };
 };

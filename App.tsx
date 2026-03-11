@@ -1210,7 +1210,7 @@ function App() {
                           </div>
 
                           {/* Controles de Grupo (En una mini-cápsula gris) */}
-                          <div className="h-9 flex items-center gap-1 bg-zinc-50 dark:bg-zinc-950 p-1 rounded-xl border border-zinc-200 dark:border-[#1B1B1E] shrink-0">
+                          <div className="h-9 flex items-center gap-1 bg-zinc-50 dark:bg-zinc-950 p-1 rounded-xl border border-zinc-200 dark:border-[#3F3F46] shrink-0">
                                                              
                               {/* Buscador */}
                               <div className="relative flex items-center transition-all duration-300 mr-2">

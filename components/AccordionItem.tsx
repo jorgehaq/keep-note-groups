@@ -11,6 +11,7 @@ import { NoteAIPanel } from './NoteAIPanel';
 import { NoteBreadcrumb } from './NoteBreadcrumb';
 import { useNoteTree } from '../src/lib/useNoteTree';
 import { useSummaries, Summary } from '../src/lib/useSummaries';
+import { useUIStore } from '../src/lib/store';
 
 interface AccordionItemProps {
   note: Note;
@@ -134,7 +135,7 @@ const SummaryTabContent: React.FC<{
             </button>
           </div>
         </div>
-        <div className="px-4 py-3">
+        <div className="px-4 py-3 min-w-0">
           <SmartNotesEditor
             noteId={`summary_${summary.id}`}
             initialContent={summary.content || ''}
@@ -192,33 +193,60 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 }) => {
 
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
-  const [showAIPanel, setShowAIPanel] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(!note.title);
   const [tempTitle, setTempTitle] = useState(note.title);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<SmartNotesEditorRef>(null);
   const fontClass = noteFont === 'serif' ? 'font-serif' : noteFont === 'mono' ? 'font-mono text-xs' : 'font-sans';
 
+  const { aiPanelOpenByNote, activeTabByNote, setAiPanelOpen, setActiveTab: setStoreActiveTab } = useUIStore();
   const { activeNoteId, activeNote, breadcrumbPath, navigate } = useNoteTree(note.id);
   const isRootLevel = !activeNoteId || activeNoteId === note.id;
   const displayContent = isRootLevel ? note.content : (activeNote?.content ?? '');
   const displayNoteId = isRootLevel ? note.id : activeNoteId;
 
-  const [activeTab, setActiveTab] = useState<string>('original');
-  const { summaries: aiSummaries, deleteSummary, updateScratchpad, updateSummaryContent } = useSummaries(displayNoteId);
+  const showAIPanel = aiPanelOpenByNote[displayNoteId] || false;
+  const setShowAIPanel = (val: boolean | ((v: boolean) => boolean)) => {
+    const next = typeof val === 'function' ? val(showAIPanel) : val;
+    setAiPanelOpen(displayNoteId, next);
+  };
+
+  const activeTab = activeTabByNote[displayNoteId] || 'original';
+  const setActiveTab = (tabId: string) => setStoreActiveTab(displayNoteId, tabId);
+  const { summaries: aiSummaries, deleteSummary, updateScratchpad, updateSummaryContent, loading: summariesLoading, hasFetched } = useSummaries(displayNoteId);
   const completedSummaries = aiSummaries.filter(s => s.status === 'completed');
 
+  // Fallback to 'original' if the active tab summary is missing (ONLY after initial fetch completes)
   useEffect(() => {
+    if (summariesLoading || !hasFetched) return;
     if (activeTab !== 'original' && !completedSummaries.find(s => s.id === activeTab)) {
+      console.log(`Fallback to original for ${displayNoteId} (summary ${activeTab} not found)`);
       setActiveTab('original');
     }
-  }, [completedSummaries.length]);
+  }, [completedSummaries.length, summariesLoading, hasFetched, activeTab, displayNoteId]);
 
+  // Auto-switch to newest summary ONLY when a NEW one arrives in the CURRENT session
+  const prevCountRef = useRef<number | null>(null);
   useEffect(() => {
-    if (completedSummaries.length > 0 && showAIPanel) {
-      setActiveTab(completedSummaries[completedSummaries.length - 1].id);
+    if (summariesLoading) {
+      prevCountRef.current = null; // Reset on note change/load
+      return;
     }
-  }, [completedSummaries.length, showAIPanel]);
+    
+    // First time loading completes for this note instance
+    if (prevCountRef.current === null) {
+      prevCountRef.current = completedSummaries.length;
+      return;
+    }
+
+    // Only auto-switch if count increased (new arrival) and panel is visible
+    if (completedSummaries.length > prevCountRef.current && showAIPanel) {
+      if (completedSummaries.length > 0) {
+        setActiveTab(completedSummaries[0].id);
+      }
+    }
+    prevCountRef.current = completedSummaries.length;
+  }, [completedSummaries.length, showAIPanel, summariesLoading, displayNoteId]);
 
   const handleDeleteSummary = (id: string) => {
     deleteSummary(id);

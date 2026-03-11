@@ -143,7 +143,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                         </button>
 
                         {/* TABS EN EL HEADER */}
-                        <div className="h-9 hidden md:flex bg-zinc-100 dark:bg-black/40 p-1 rounded-xl border border-[#1B1B1E] shrink-0">
+                        <div className="h-9 hidden md:flex bg-zinc-100 dark:bg-black/40 p-1 rounded-xl border border-zinc-200 dark:border-[#3F3F46] shrink-0">
                             {TABS.map((tab) => (
                                 <button
                                     key={tab.key}
@@ -174,7 +174,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
 
                 {/* Mobile Tabs (Sub-header) */}
                 <div className="flex md:hidden px-4 pb-3">
-                    <div className="flex bg-zinc-100 dark:bg-black/40 p-1 rounded-xl w-full border border-zinc-200 dark:border-[#2D2D42]">
+                    <div className="flex bg-zinc-100 dark:bg-black/40 p-1 rounded-xl w-full border border-zinc-200 dark:border-[#3F3F46]">
                         {TABS.map((tab) => (
                             <button
                                 key={tab.key}

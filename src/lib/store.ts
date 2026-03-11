@@ -42,6 +42,10 @@ interface UIStore {
     isBraindumpMaximized: boolean;
     isTranslatorMaximized: boolean;
 
+    // Persisted AI State (per-note)
+    aiPanelOpenByNote: Record<string, boolean>;
+    activeTabByNote: Record<string, string>;
+
     // Persisted UI State (per-group for notes)
     focusedNoteByGroup: Record<string, string | null>;
     noteTrayOpenByGroup: Record<string, boolean>;
@@ -83,6 +87,8 @@ interface UIStore {
     setIsMaximized: (maximized: boolean) => void;
     setIsBraindumpMaximized: (maximized: boolean) => void;
     setIsTranslatorMaximized: (maximized: boolean) => void;
+    setAiPanelOpen: (noteId: string, open: boolean) => void;
+    setActiveTab: (noteId: string, tabId: string) => void;
     setFocusedNoteId: (id: string | null, groupId?: string) => void;
     setIsGlobalNoteTrayOpen: (open: boolean, groupId?: string) => void;
     setFocusedDumpId: (id: string | null) => void;
@@ -150,6 +156,8 @@ export const useUIStore = create<UIStore>()(
             showOverdueMarquee: false,
             focusedNoteByGroup: {},
             noteTrayOpenByGroup: {},
+            aiPanelOpenByNote: {},
+            activeTabByNote: {},
             focusedDumpId: null,
             isDumpTrayOpen: false,
 
@@ -263,6 +271,20 @@ export const useUIStore = create<UIStore>()(
                 set({ isBraindumpMaximized: maximized }),
             setIsTranslatorMaximized: (maximized) =>
                 set({ isTranslatorMaximized: maximized }),
+            setAiPanelOpen: (noteId, open) =>
+                set((state) => ({
+                    aiPanelOpenByNote: {
+                        ...state.aiPanelOpenByNote,
+                        [noteId]: open,
+                    },
+                })),
+            setActiveTab: (noteId, tabId) =>
+                set((state) => ({
+                    activeTabByNote: {
+                        ...state.activeTabByNote,
+                        [noteId]: tabId,
+                    },
+                })),
             setFocusedNoteId: (id, groupId) => {
                 const gid = groupId ?? get().activeGroupId;
                 if (!gid) return;
@@ -384,7 +406,7 @@ export const useUIStore = create<UIStore>()(
                 })),
         }),
         {
-            name: "keep-note-groups-ui-storage-v8", // v8: per-group focus & tray
+            name: "keep-note-groups-ui-storage-v9", // v9: persistent AI state fix
             storage: createJSONStorage(() => localStorage),
             partialize: (state) => ({
                 dockedGroupIds: state.dockedGroupIds,
@@ -398,6 +420,8 @@ export const useUIStore = create<UIStore>()(
                 isTranslatorMaximized: state.isTranslatorMaximized,
                 focusedNoteByGroup: state.focusedNoteByGroup,
                 noteTrayOpenByGroup: state.noteTrayOpenByGroup,
+                aiPanelOpenByNote: state.aiPanelOpenByNote,
+                activeTabByNote: state.activeTabByNote,
                 focusedDumpId: state.focusedDumpId,
                 isDumpTrayOpen: state.isDumpTrayOpen,
             }),
