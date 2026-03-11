@@ -445,8 +445,6 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             overflowX: "hidden !important",
             width: "100%",
             flex: "1",
-            display: "flex",
-            flexDirection: "column"
         },
         ".cm-content": {
             fontFamily: fontFamily,
