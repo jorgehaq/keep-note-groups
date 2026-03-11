@@ -152,12 +152,13 @@ function App() {
       .channel('global-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, (payload) => {
         if (payload.eventType === 'INSERT') {
-          // 🚀 OPTIMIZATION: Inserción granular para evitar recarga completa
-          setGroups(prev => prev.map(g => 
-            g.id === payload.new.group_id 
-              ? { ...g, notes: sortNotesArray([...(g.notes || []), payload.new as Note], noteSortMode) } 
-              : g
-          ));
+          // Solo agregar si no existe ya en el estado local
+          setGroups(prev => prev.map(g => {
+            if (g.id !== payload.new.group_id) return g;
+            const yaExiste = g.notes.some(n => n.id === payload.new.id);
+            if (yaExiste) return g;
+            return { ...g, notes: sortNotesArray([...(g.notes || []), payload.new as Note], noteSortMode) };
+          }));
         } else if (payload.eventType === 'UPDATE') {
           // 🚀 OPTIMIZATION: Actualización granular para no colapsar notas ni recargar todo
           updateNoteSync(payload.new.id, payload.new as Partial<Note>);

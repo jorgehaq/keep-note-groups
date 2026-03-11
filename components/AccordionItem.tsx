@@ -62,10 +62,7 @@ const highlightText = (text: string, highlight?: string): React.ReactNode => {
 };
 
 // Badge con conteo de summaries para el botón AI del header
-const AIBadge: React.FC<{ noteId: string; active: boolean; onClick: () => void }> = ({ noteId, active, onClick }) => {
-  const { summaries } = useSummaries(noteId);
-  const count = summaries.filter(s => s.status === 'completed').length;
-  const hasPending = summaries.some(s => s.status === 'pending' || s.status === 'processing');
+const AIBadge: React.FC<{ count: number; hasPending: boolean; active: boolean; onClick: () => void }> = ({ count, hasPending, active, onClick }) => {
 
   return (
     <button
@@ -130,8 +127,9 @@ const SummaryTabContent: React.FC<{
               </button>
             )}
             <button onClick={() => onDelete(summary.id)}
+              title="Eliminar análisis"
               className="p-1.5 text-zinc-600 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all">
-              <X size={12} />
+              <Trash2 size={12} />
             </button>
           </div>
         </div>
@@ -211,6 +209,11 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       setActiveTab(completedSummaries[completedSummaries.length - 1].id);
     }
   }, [completedSummaries.length, showAIPanel]);
+
+  const handleDeleteSummary = (id: string) => {
+    deleteSummary(id);
+    if (activeTab === id) setActiveTab('original');
+  };
 
   useEffect(() => {
     const isActuallyFocused = document.activeElement === titleInputRef.current;
@@ -351,7 +354,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           {/* Botón AI con badge */}
           {session?.user && (
             <AIBadge
-              noteId={displayNoteId}
+              count={completedSummaries.length}
+              hasPending={aiSummaries.some(s => s.status === 'pending' || s.status === 'processing')}
               active={showAIPanel}
               onClick={() => setShowAIPanel(v => !v)}
             />
@@ -431,29 +435,43 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             </div>
           )}
 
-          {/* TABS — solo cuando AI abierto y hay análisis */}
-          {showAIPanel && completedSummaries.length > 0 && (
-            <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
-              <button
-                onClick={() => setActiveTab('original')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all border shrink-0 ${
-                  activeTab === 'original'
-                    ? 'bg-zinc-800 text-zinc-100 border-zinc-600'
-                    : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-zinc-400'
-                }`}
-              >
-                <FileText size={11} /> Original
-              </button>
-              {completedSummaries.map((s, idx) => (
-                <button key={s.id} onClick={() => setActiveTab(s.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all border shrink-0 max-w-[160px] ${
+          {/* TABS — chips unificados: pendientes + completados */}
+          {showAIPanel && (aiSummaries.length > 0) && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 flex-wrap">
+              {/* Tab Original — solo si hay completados */}
+              {completedSummaries.length > 0 && (
+                <button
+                  onClick={() => setActiveTab('original')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all border shrink-0 ${
+                    activeTab === 'original'
+                      ? 'bg-zinc-800 text-zinc-100 border-zinc-600'
+                      : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-zinc-400'
+                  }`}
+                >
+                  <FileText size={11} /> Original
+                </button>
+              )}
+              {/* Chips pendientes/processing — gestándose */}
+              {aiSummaries.filter(s => s.status === 'pending' || s.status === 'processing').map(s => (
+                <div key={s.id}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 max-w-[180px] bg-zinc-800/60 border-zinc-700 text-zinc-400 animate-pulse"
+                >
+                  <Loader2 size={10} className="animate-spin shrink-0" />
+                  <span className="truncate">{s.target_objective || 'Analizando...'}</span>
+                </div>
+              ))}
+              {/* Chips completados */}
+              {completedSummaries.map(s => (
+                <button key={s.id}
+                  onClick={() => setActiveTab(activeTab === s.id ? 'original' : s.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all border shrink-0 max-w-[180px] ${
                     activeTab === s.id
                       ? 'bg-violet-600 text-white border-violet-500 shadow-sm shadow-violet-500/20'
                       : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/40 hover:text-violet-400'
                   }`}
                 >
                   <Sparkles size={10} className="shrink-0" />
-                  <span className="truncate">{s.target_objective || `Análisis ${idx + 1}`}</span>
+                  <span className="truncate">{s.target_objective || 'Análisis'}</span>
                 </button>
               ))}
             </div>
@@ -490,7 +508,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 noteFontSize={noteFontSize}
                 noteLineHeight={noteLineHeight}
                 showLineNumbers={showLineNumbers}
-                onDelete={deleteSummary}
+                onDelete={handleDeleteSummary}
                 onPromote={onCreateNote ? handlePromoteToNote : undefined}
                 updateScratchpad={updateScratchpad}
               />
