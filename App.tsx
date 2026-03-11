@@ -1420,6 +1420,12 @@ function App() {
                                   {note.is_pinned && <Pin size={9} className={`fill-current ${isFocused ? 'text-white' : 'text-[#85858C]'}`} />}
                                 </span>
                               )}
+                              {dotColorClass && (
+                                <div 
+                                  className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full border border-[#9F9FA8]/50 z-10 shadow-sm transition-transform hover:scale-110 ${dotColorClass}`} 
+                                  title={`Estado Kanban`}
+                                />
+                              )}
                             </button>
                           );
                       })}
@@ -1429,7 +1435,7 @@ function App() {
               </div>
 
               {/* AREA DE LA NOTA - OCUPA EL RESTO DEL ESPACIO */}
-              <main ref={mainRef} className={`flex-1 flex flex-col overflow-hidden px-4 pb-4 ${isGlobalNoteTrayOpen && activeGroup ? 'pt-[3px]' : 'pt-4'}`}>
+              <main ref={mainRef} className={`flex-1 flex flex-col overflow-visible px-4 pb-4 ${isGlobalNoteTrayOpen && activeGroup ? 'pt-[3px]' : 'pt-4'}`}>
                 <div className={`flex-1 flex flex-col min-h-0 ${isMaximized ? 'max-w-full' : 'max-w-6xl'} w-full mx-auto`}>
                   {activeGroup ? (
                      <div className="flex-1 flex flex-col min-h-0">

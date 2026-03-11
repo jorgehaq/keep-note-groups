@@ -322,7 +322,9 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                         </div>
                                         {/* Action buttons: Kanban always visible, rest in 3-dot */}
                                         <div className="flex items-center gap-1 shrink-0">
-                                            <KanbanSemaphore sourceId={pizarron.id} sourceTitle={pizarron.title || 'Pizarrón sin título'} />
+                                            {globalTasks?.some(t => t.id === pizarron.id) && (
+                                                <KanbanSemaphore sourceId={pizarron.id} sourceTitle={pizarron.title || 'Pizarrón sin título'} />
+                                            )}
                                             <div className="relative" ref={openMenuId === pizarron.id ? menuRef : undefined}>
                                                 <button
                                                     onClick={() => setOpenMenuId(openMenuId === pizarron.id ? null : pizarron.id)}
@@ -339,6 +341,16 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                                             autoSave(pizarron.id, { is_checklist: willBeChecklist, content: contentToSave }); 
                                                             setOpenMenuId(null); 
                                                         }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${pizarron.is_checklist ? 'text-[#1F3760] dark:text-blue-400 bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42]'}`}><ListTodo size={14} />{pizarron.is_checklist ? 'Quitar Checklist' : 'Hacer Checklist'}</button>
+                                                        
+                                                        {!globalTasks?.some(t => t.id === pizarron.id) && (
+                                                            <button onClick={async () => {
+                                                                await supabase.from('tasks').upsert({ id: pizarron.id, title: pizarron.title || 'Pizarrón sin título', status: 'backlog' });
+                                                                window.dispatchEvent(new CustomEvent('kanban-updated'));
+                                                                setOpenMenuId(null);
+                                                            }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors">
+                                                                <CheckSquare size={14} /> Añadir a Kanban
+                                                            </button>
+                                                        )}
                                                         <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
                                                         <button onClick={() => { changeStatus(pizarron.id, 'history'); setOpenMenuId(null); }} className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"><ArchiveIcon size={14} />Archivar</button>
                                                         <button onClick={() => { deleteDump(pizarron.id); setOpenMenuId(null); }} className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"><Trash2 size={14} />Eliminar</button>

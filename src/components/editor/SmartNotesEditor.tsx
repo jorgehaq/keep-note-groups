@@ -432,7 +432,6 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             userSelect: "text !important",
             width: "100%",
             maxWidth: "100%",
-            overflowX: "hidden !important",
         },
         "&.cm-focused": {
             outline: "none !important"
@@ -914,7 +913,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
     };
 
     return (
-        <div className={`relative group/editor w-full max-w-full overflow-x-hidden bg-transparent ${readOnly ? 'pointer-events-none' : ''}`}>
+        <div className={`relative group/editor w-full max-w-full bg-transparent ${readOnly ? 'pointer-events-none' : ''}`}>
             <CodeMirror
                 key={String(showLineNumbers)}
                 ref={editorRef} 

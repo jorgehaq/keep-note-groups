@@ -12,6 +12,7 @@ import { NoteBreadcrumb } from './NoteBreadcrumb';
 import { useNoteTree } from '../src/lib/useNoteTree';
 import { useSummaries, Summary } from '../src/lib/useSummaries';
 import { useUIStore } from '../src/lib/store';
+import { supabase } from '../src/lib/supabaseClient';
 
 interface AccordionItemProps {
   note: Note;
@@ -248,6 +249,18 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
     prevCountRef.current = completedSummaries.length;
   }, [completedSummaries.length, showAIPanel, summariesLoading, displayNoteId]);
 
+  const [isInKanban, setIsInKanban] = useState(false);
+  useEffect(() => {
+    const checkKanban = async () => {
+      const { data } = await supabase.from('tasks').select('id').eq('id', note.id).maybeSingle();
+      setIsInKanban(!!data);
+    };
+    checkKanban();
+    const handleUpdate = () => checkKanban();
+    window.addEventListener('kanban-updated', handleUpdate);
+    return () => window.removeEventListener('kanban-updated', handleUpdate);
+  }, [note.id]);
+
   const handleDeleteSummary = (id: string) => {
     deleteSummary(id);
     if (activeTab === id) setActiveTab('original');
@@ -333,22 +346,18 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   };
 
   return (
-    <div className={`transition-all duration-300 flex-1 flex flex-col min-h-0 bg-white dark:bg-[#1A1A24] overflow-hidden ${
-      note.is_docked
-        ? 'rounded-none shadow-none border-b border-zinc-200 dark:border-[#2D2D42]'
-        : 'rounded-2xl shadow-lg border'
-    } ${
+    <div className={`m-1 transition-all duration-300 flex-1 flex flex-col min-h-0 bg-white dark:bg-[#1A1A24] overflow-hidden rounded-2xl shadow-lg border ${
       isHighlightedBySearch
         ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50/30 dark:bg-amber-900/10'
-        : `${note.is_docked ? '' : 'border-zinc-200 dark:border-[#2D2D42] hover:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/50'}`
+        : 'border-zinc-200 dark:border-[#2D2D42] hover:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/50'
     }`}>
 
       {/* HEADER */}
       <div
         ref={headerRef}
-        className="flex flex-wrap items-start sm:items-center justify-between px-4 pt-4 pb-2 transition-colors gap-2"
+        className="flex items-center justify-between px-4 pt-4 pb-2 transition-colors gap-2 min-w-0"
       >
-        <div className="flex items-center gap-3 flex-1 overflow-hidden pl-1">
+        <div className="flex items-center gap-3 flex-1 overflow-hidden pl-1 min-w-0">
           <div className="flex flex-col min-w-0 justify-center w-full">
             <div className="relative flex w-full">
               <div className="absolute inset-0 w-full pointer-events-none text-lg font-bold px-0.5 min-h-[1.5em] flex items-center overflow-hidden whitespace-nowrap">
@@ -377,7 +386,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 }}
                 onClick={(e) => e.stopPropagation()}
                 placeholder="Título de la nota..."
-                className={`w-full bg-transparent text-lg font-bold outline-none placeholder-zinc-400 transition-colors cursor-text pr-2 ${
+                className={`w-full min-w-0 bg-transparent text-lg font-bold outline-none placeholder-zinc-400 transition-colors cursor-text pr-2 ${
                   searchQuery && tempTitle.toLowerCase().includes(searchQuery.toLowerCase())
                     ? "text-transparent caret-zinc-800 dark:caret-[#CCCCCC]"
                     : "text-zinc-800 dark:text-[#CCCCCC]"
@@ -399,20 +408,39 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             />
           )}
 
-          {onToggleLineNumbers && (
+          {showLineNumbers && onToggleLineNumbers && (
             <button
               onClick={(e) => { e.stopPropagation(); onToggleLineNumbers(); }}
-              className={`p-1.5 rounded-lg transition-colors ${
-                showLineNumbers
-                  ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-                  : 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-              }`}
-              title={showLineNumbers ? 'Ocultar números de línea' : 'Mostrar números de línea'}
+              className="p-1.5 rounded-lg transition-colors text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20"
+              title="Ocultar números de línea"
             >
               <Hash size={14} />
             </button>
           )}
-          <KanbanSemaphore sourceId={note.id} sourceTitle={note.title || 'Sin título'} onInteract={() => {}} />
+
+          {note.is_docked && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onUpdate(note.id, { is_docked: false }); }}
+              className="p-1.5 rounded-lg transition-colors text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 shrink-0"
+              title="Quitar del Sidebar"
+            >
+              <PanelLeft size={14} />
+            </button>
+          )}
+
+          {note.is_pinned && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onUpdate(note.id, { is_pinned: false }); }}
+              className="p-1.5 rounded-lg transition-colors text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20"
+              title="Desfijar Nota"
+            >
+              <Pin size={14} className="fill-current" />
+            </button>
+          )}
+
+          {isInKanban && (
+            <KanbanSemaphore sourceId={note.id} sourceTitle={note.title || 'Sin título'} onInteract={() => {}} />
+          )}
 
           <div className="relative" ref={mobileMenuRef}>
             <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(!isMobileMenuOpen); }} className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"><MoreVertical size={16} /></button>
@@ -429,6 +457,23 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                   setIsMobileMenuOpen(false);
                 }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_checklist ? 'text-[#1F3760] dark:text-blue-400 bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}><ListTodo size={14} />{note.is_checklist ? 'Quitar Checklist' : 'Hacer Checklist'}</button>
                 <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); onUpdate(note.id, { is_pinned: !note.is_pinned }); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_pinned ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}><Pin size={14} className={note.is_pinned ? "fill-current" : ""} />{note.is_pinned ? 'Desfijar' : 'Fijar Nota'}</button>
+                
+                {onToggleLineNumbers && (
+                  <button onClick={(e) => { e.stopPropagation(); onToggleLineNumbers(); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${showLineNumbers ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}>
+                    <Hash size={14} /> {showLineNumbers ? 'Ocultar números' : 'Mostrar números'}
+                  </button>
+                )}
+
+                {!isInKanban && (
+                  <button onClick={async (e) => { 
+                    e.stopPropagation(); 
+                    await supabase.from('tasks').upsert({ id: note.id, title: note.title || 'Sin título', status: 'backlog' });
+                    window.dispatchEvent(new CustomEvent('kanban-updated'));
+                    setIsMobileMenuOpen(false);
+                  }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
+                    <CheckSquare size={14} /> Añadir a Kanban
+                  </button>
+                )}
                 {onDuplicate && <button onClick={(e) => { e.stopPropagation(); onDuplicate(note.id); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><CopyPlus size={14} />Duplicar Nota</button>}
                 {onMove && <button onClick={(e) => { e.stopPropagation(); setIsMoveModalOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"><FolderInput size={14} />Mover de Grupo</button>}
                 <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
@@ -446,7 +491,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       {/* CONTENT */}
       <div
         ref={contentRef}
-        className="flex-1 flex flex-col overflow-hidden min-h-0 bg-white dark:bg-[#1A1A24] relative"
+        className="flex-1 flex flex-col overflow-hidden min-h-0 bg-transparent relative"
       >
         {showStickyTitle && (
           <div className="sticky top-4 left-0 right-0 z-[40] flex justify-center pointer-events-none animate-fadeIn px-4">
