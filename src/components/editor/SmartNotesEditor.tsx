@@ -23,6 +23,9 @@ interface SmartNotesEditorProps {
     noteLineHeight?: string;
     readOnly?: boolean;
     showLineNumbers?: boolean;
+    autoHeight?: boolean; // If true, height is auto instead of 100%
+    onEnterAction?: () => void; // Triggered on Enter (if not shifted)
+    onBackspaceEmpty?: () => void; // Triggered if Backspace is pressed when completely empty
 }
 
 const MARKER_TYPES = {
@@ -622,9 +625,9 @@ const SearchMarkers = ({ view, query }: { view: EditorView | null, query: string
 };
 
 
-const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEditorProps>((props, ref) => {
+export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEditorProps>((props, ref) => {
     const {
-        noteId, initialContent, searchQuery, onChange, noteFont = 'sans', noteFontSize = 'medium', noteLineHeight = 'standard', readOnly = false, showLineNumbers = false
+        noteId, initialContent, searchQuery, onChange, noteFont = 'sans', noteFontSize = 'medium', noteLineHeight = 'standard', readOnly = false, showLineNumbers = false, autoHeight = false, onEnterAction, onBackspaceEmpty
     } = props;
     const [content, setContent] = useState('');
     const editorRef = useRef<ReactCodeMirrorRef>(null);
@@ -1186,7 +1189,7 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
 
     return (
         <div 
-            className={`relative group/editor w-full h-full min-h-0 flex flex-col bg-transparent ${readOnly ? 'pointer-events-none' : ''}`}
+            className={`relative group/editor w-full ${autoHeight ? 'h-auto' : 'h-full min-h-0'} flex flex-col bg-transparent ${readOnly ? 'pointer-events-none' : ''}`}
             onContextMenu={(e) => e.preventDefault()}
         >
             <CodeMirror
@@ -1197,8 +1200,8 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
                 onBlur={handleBlur} 
                 theme="none" 
                 readOnly={readOnly} 
-                height="100%"
-                className="flex-1 w-full text-zinc-900 dark:text-[#CCCCCC]" 
+                height={autoHeight ? "auto" : "100%"}
+                className={`w-full text-zinc-900 dark:text-[#CCCCCC] ${autoHeight ? '' : 'flex-1'}`} 
                 extensions={[
                     // 🚀 MAGIA ANTI-HIJACKING: Prec.highest toma el control absoluto del evento
                     Prec.highest(
@@ -1211,6 +1214,27 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
                                     view.dispatch(view.state.replaceSelection('    ')); 
                                     return true; 
                                 } 
+                            },
+                            {
+                                key: 'Enter',
+                                run: (view) => {
+                                    if (onEnterAction) {
+                                        onEnterAction();
+                                        return true; // Evitar el salto de línea por defecto
+                                    }
+                                    return false; // Deja que CodeMirror haga su salto normal
+                                },
+                                shift: () => false // Shift+Enter hace salto normal siempre
+                            },
+                            {
+                                key: 'Backspace',
+                                run: (view) => {
+                                    if (onBackspaceEmpty && view.state.doc.length === 0) {
+                                        onBackspaceEmpty();
+                                        return true;
+                                    }
+                                    return false;
+                                }
                             },
                             {
                                 key: 'Escape',
