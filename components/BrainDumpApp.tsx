@@ -5,7 +5,7 @@ import { KanbanSemaphore } from './KanbanSemaphore';
 import { supabase } from '../src/lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import { SmartNotesEditor } from '../src/components/editor/SmartNotesEditor';
-import { ChecklistEditor, parseMarkdownToChecklist, serializeChecklistToMarkdown } from '../src/components/editor/ChecklistEditor';
+import { ChecklistEditor, parseMarkdownToChecklist, serializeChecklistToMarkdown, serializeChecklistToPlainMarkdown } from '../src/components/editor/ChecklistEditor';
 import { useUIStore } from '../src/lib/store';
 
 // --- TYPES ---
@@ -364,7 +364,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                 const isEdited = (updatedMs - createdMs) > 60000;
 
                                 return (
-                                <div key={pizarron.id} className={`m-1 rounded-2xl shadow-lg transition-all duration-300 flex-1 flex flex-col min-h-0 overflow-hidden border ${
+                                <div key={pizarron.id} className={`m-1 mb-2 rounded-2xl shadow-lg transition-all duration-300 flex-1 flex flex-col min-h-0 overflow-hidden border h-full ${
                                     localSearchQuery.trim() && (pizarron.title?.toLowerCase().includes(localSearchQuery.toLowerCase()) || pizarron.content?.toLowerCase().includes(localSearchQuery.toLowerCase()))
                                         ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50/30 dark:bg-amber-900/10'
                                         : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50'
@@ -398,6 +398,8 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                                             let contentToSave = pizarron.content;
                                                             if (willBeChecklist) {
                                                                 contentToSave = serializeChecklistToMarkdown(parseMarkdownToChecklist(pizarron.content));
+                                                            } else {
+                                                                contentToSave = serializeChecklistToPlainMarkdown(parseMarkdownToChecklist(pizarron.content));
                                                             }
                                                             autoSave(pizarron.id, { is_checklist: willBeChecklist, content: contentToSave }); 
                                                             setOpenMenuId(null); 
@@ -427,7 +429,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                     </div>
 
                                     {/* Editor Area with Internal Scroll */}
-                                    <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+                                    <div className="flex-1 flex flex-col min-h-0 relative">
                                         <div className="mx-4 mb-4 p-4 bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl cursor-text flex-1 overflow-y-auto hidden-scrollbar note-editor-scroll">
                                             {pizarron.is_checklist ? (
                                                 <ChecklistEditor idPrefix={pizarron.id} initialContent={pizarron.content} onUpdate={(c) => autoSave(pizarron.id, { content: c })} noteLineHeight={noteLineHeight} noteFont={noteFont} noteFontSize={noteFontSize} searchQuery={localSearchQuery} />

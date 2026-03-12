@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash, Sparkles, FileText, PenLine, ArrowUpRight } from 'lucide-react';
 import { Note, NoteFont } from '../types';
 import { SmartNotesEditor, SmartNotesEditorRef } from '../src/components/editor/SmartNotesEditor';
-import { ChecklistEditor, parseMarkdownToChecklist, serializeChecklistToMarkdown } from '../src/components/editor/ChecklistEditor';
+import { ChecklistEditor, ChecklistEditorRef, parseMarkdownToChecklist, serializeChecklistToMarkdown, serializeChecklistToPlainMarkdown } from '../src/components/editor/ChecklistEditor';
 import { KanbanSemaphore } from './KanbanSemaphore';
 import { MoveToGroupModal } from './MoveToGroupModal';
 import { Group } from '../types';
@@ -244,6 +244,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   const [tempTitle, setTempTitle] = useState(note.title);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<SmartNotesEditorRef>(null);
+  const checklistRef = useRef<ChecklistEditorRef>(null);
   const fontClass = noteFont === 'serif' ? 'font-serif' : noteFont === 'mono' ? 'font-mono text-xs' : 'font-sans';
 
   const { aiPanelOpenByNote, activeTabByNote, setAiPanelOpen, setActiveTab: setStoreActiveTab } = useUIStore();
@@ -527,11 +528,19 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 <button onClick={(e) => {
                   e.stopPropagation();
                   const willBeChecklist = !note.is_checklist;
-                  let newContent = note.content;
+                  let newContent = displayContent;
                   if (willBeChecklist) {
-                    newContent = serializeChecklistToMarkdown(parseMarkdownToChecklist(note.content));
+                    newContent = serializeChecklistToMarkdown(parseMarkdownToChecklist(displayContent));
+                  } else {
+                    // Si ya existe el ref, usar los items actuales para no depender de props desincronizadas
+                    const currentItems = checklistRef.current?.getItems();
+                    if (currentItems) {
+                      newContent = serializeChecklistToPlainMarkdown(currentItems);
+                    } else {
+                      newContent = serializeChecklistToPlainMarkdown(parseMarkdownToChecklist(displayContent));
+                    }
                   }
-                  onUpdate(note.id, { is_checklist: willBeChecklist, content: newContent });
+                  onUpdate(displayNoteId, { is_checklist: willBeChecklist, content: newContent });
                   setIsMobileMenuOpen(false);
                 }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_checklist ? 'text-[#1F3760] dark:text-blue-400 bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}>
                   <ListTodo size={14} />{note.is_checklist ? 'Quitar Checklist' : 'Hacer Checklist'}
@@ -644,7 +653,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           {(!showAIPanel || activeTab === 'original') ? (
             note.is_checklist ? (
               <div className="bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4">
-                <ChecklistEditor idPrefix={displayNoteId} initialContent={displayContent} onUpdate={handleUpdateContent} />
+                <ChecklistEditor ref={checklistRef} idPrefix={displayNoteId} initialContent={displayContent} onUpdate={handleUpdateContent} />
               </div>
             ) : (
               <div onClick={() => editorRef.current?.focus()}

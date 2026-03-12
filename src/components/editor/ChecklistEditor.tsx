@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useImperativeHandle } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { GripVertical, CheckSquare, Square, ListTodo } from 'lucide-react';
 
@@ -24,8 +24,8 @@ const generateId = () => Math.random().toString(36).substr(2, 9);
 export const parseMarkdownToChecklist = (markdown: string): ChecklistItem[] => {
     if (!markdown.trim()) return [];
     return markdown.split('\n').filter(line => line.trim() !== '').map(line => {
-        const isChecked = line.startsWith('[x] ') || line.startsWith('- [x] ');
-        const text = line.replace(/^[-*]?\s*\[[x ]\]\s*/, '').trimStart();
+        const isChecked = /^\s*[-*]?\s*\[[xX]\]\s*/.test(line);
+        const text = line.replace(/^\s*[-*]?\s*\[[xX ]\]\s*/, '').trimStart();
         return { id: generateId(), text, isChecked };
     });
 };
@@ -33,6 +33,11 @@ export const parseMarkdownToChecklist = (markdown: string): ChecklistItem[] => {
 export const serializeChecklistToMarkdown = (items: ChecklistItem[]): string => {
     if (items.length === 0) return '';
     return items.map(item => `${item.isChecked ? '[x] ' : '[ ] '}${item.text}`).join('\n');
+};
+
+export const serializeChecklistToPlainMarkdown = (items: ChecklistItem[]): string => {
+    if (items.length === 0) return '';
+    return items.map(item => item.isChecked ? `~~${item.text}~~` : item.text).join('\n');
 };
 
 const highlightText = (text: string, highlight?: string): React.ReactNode => {
@@ -149,9 +154,17 @@ const ChecklistItemRow = ({
     );
 };
 
-export const ChecklistEditor: React.FC<ChecklistEditorProps> = ({ idPrefix, initialContent, onUpdate, noteLineHeight = 'standard', noteFont = 'sans', noteFontSize = 'medium', searchQuery }) => {
+export interface ChecklistEditorRef {
+    getItems: () => ChecklistItem[];
+}
+
+export const ChecklistEditor = React.forwardRef<ChecklistEditorRef, ChecklistEditorProps>(({ idPrefix, initialContent, onUpdate, noteLineHeight = 'standard', noteFont = 'sans', noteFontSize = 'medium', searchQuery }, ref) => {
     const [items, setItems] = useState<ChecklistItem[]>(() => parseMarkdownToChecklist(initialContent));
     const prevInitialContent = useRef(initialContent);
+
+    useImperativeHandle(ref, () => ({
+        getItems: () => items,
+    }), [items]);
 
     useEffect(() => {
         if (initialContent !== prevInitialContent.current) {
@@ -165,6 +178,12 @@ export const ChecklistEditor: React.FC<ChecklistEditorProps> = ({ idPrefix, init
             prevInitialContent.current = initialContent;
         }
     }, [initialContent]);
+
+    useEffect(() => {
+        return () => {
+            if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        };
+    }, []);
 
     const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -280,4 +299,4 @@ export const ChecklistEditor: React.FC<ChecklistEditorProps> = ({ idPrefix, init
             </Droppable>
         </DragDropContext>
     );
-};
+});

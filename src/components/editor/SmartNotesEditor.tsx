@@ -5,7 +5,7 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { EditorView, ViewPlugin, Decoration, WidgetType, ViewUpdate, keymap, lineNumbers } from '@codemirror/view';
 import { RangeSet, StateEffect, Prec, StateField } from '@codemirror/state'; 
-import { Highlighter, Languages, Loader2, Link as LinkIcon, Check, X, Tags } from 'lucide-react';
+import { Plus, Settings, Grid, X, Check, Trash2, List, Type, Languages, Highlighter, Tag, StickyNote, History, Info, ChevronRight, ChevronDown, ChevronLeft, Search, Loader2, Tags, Image, Link as LinkIcon, Maximize2, Minimize2, ExternalLink, Bold, Italic, Strikethrough, Heading } from 'lucide-react';
 import { useImperativeHandle, forwardRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -330,7 +330,9 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
                 { type: 'mk-pat',    regex: /\[\[pat:[^\|]+\|([^\]]+)\]\]/g },
                 { type: 'mk-yo',     regex: /\[\[yo:[^\|]+\|([^\]]+)\]\]/g },
                 { type: 'mk-ruido',  regex: /\[\[ruido:[^\|]+\|([^\]]+)\]\]/g },
-                { type: 'h1', regex: /^(#{1,6})\s+(.*)/gm }, { type: 'bold', regex: /\*\*([\s\S]*?)\*\*/g }, 
+                { type: 'h1', regex: /^(#{1,6})\s+(.*)/gm }, 
+                { type: 'bold', regex: /\*\*([\s\S]*?)\*\*/g }, 
+                { type: 'strikethrough', regex: /~~([\s\S]*?)~~/g },
                 { type: 'italic_under', regex: /(?<!_)_([^_]+)_(?!_)/g }, { type: 'italic_star', regex: /(?<!\*)\*([^*]+)\*(?!\*)/g }, 
                 { type: 'hr', regex: /^---+$/gm }, { type: 'md-link', regex: /\[([^\]]*)\]\(([^)\n]*)\)/g },
                 { type: 'raw-link', regex: /(?<!\()(https?:\/\/[^\s\n)]+)/g }
@@ -419,6 +421,9 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
                     } 
                     else if (rule.type === 'bold') {
                         if (isRevealed) safeMark('cm-custom-bold', mFrom, mTo); else { safeReplace(mFrom, mFrom + 2); safeMark('cm-custom-bold', mFrom + 2, mTo - 2); safeReplace(mTo - 2, mTo); }
+                    }
+                    else if (rule.type === 'strikethrough') {
+                        if (isRevealed) safeMark('cm-custom-strikethrough', mFrom, mTo); else { safeReplace(mFrom, mFrom + 2); safeMark('cm-custom-strikethrough', mFrom + 2, mTo - 2); safeReplace(mTo - 2, mTo); }
                     }
                     else if (rule.type === 'italic_under' || rule.type === 'italic_star') {
                         if (isRevealed) safeMark('cm-custom-italic', mFrom, mTo); else { safeReplace(mFrom, mFrom + 1); safeMark('cm-custom-italic', mFrom + 1, mTo - 1); safeReplace(mTo - 1, mTo); }
@@ -519,6 +524,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".dark .cm-custom-tr": { backgroundColor: "#10B981 !important", color: "#000000 !important", borderRadius: "4px !important" },
         ".cm-custom-h1": { fontSize: "1.4em", fontWeight: "bold", color: "inherit", lineHeight: "1.2" },
         ".cm-custom-bold": { fontWeight: "bold", color: "inherit" },
+        ".cm-custom-strikethrough": { textDecoration: "line-through !important", color: "inherit", opacity: "0.6" },
         ".cm-custom-italic": { fontStyle: "italic", color: "inherit" },
         ".cm-url, .cm-link, .cm-custom-link, .cm-custom-link *": { color: "#60A5FA !important", textDecoration: "underline !important", cursor: "pointer !important", transition: "opacity 0.2s", opacity: "1 !important" },
         ".cm-custom-link:hover": { opacity: "0.8 !important" },
@@ -557,8 +563,62 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-remove-btn-visible": { opacity: "1 !important", pointerEvents: "auto !important" },
         ".cm-remove-btn:hover": { opacity: "1 !important", pointerEvents: "auto !important", transform: "scale(1.1)" },
         ".dark .cm-content": { color: "#CCCCCC !important" },
-        ".dark .cm-line": { color: "#CCCCCC !important" }
+        ".dark .cm-line": { color: "#CCCCCC !important" },
+        ".cm-search-marker-container": {
+            position: "absolute",
+            right: "2px",
+            top: "0",
+            width: "3px",
+            height: "100%",
+            zIndex: "10",
+            pointerEvents: "none"
+        },
+        ".cm-search-marker": {
+            position: "absolute",
+            left: "0",
+            width: "3px",
+            height: "3px",
+            backgroundColor: "#f59e0b",
+            borderRadius: "50%",
+            boxShadow: "0 0 2px #f59e0b"
+        }
     });
+};
+
+const SearchMarkers = ({ view, query }: { view: EditorView | null, query: string }) => {
+    const [markers, setMarkers] = useState<number[]>([]);
+    
+    useEffect(() => {
+        if (!view || !query.trim()) {
+            setMarkers([]);
+            return;
+        }
+        
+        const q = query.toLowerCase();
+        const doc = view.state.doc;
+        const text = doc.toString().toLowerCase();
+        const newMarkers: number[] = [];
+        let pos = 0;
+        
+        while ((pos = text.indexOf(q, pos)) !== -1) {
+            // Calcular posición relativa (%)
+            const percent = (pos / doc.length) * 100;
+            newMarkers.push(percent);
+            pos += q.length;
+        }
+        
+        setMarkers(newMarkers);
+    }, [view, query, view?.state.doc.length]);
+
+    if (markers.length === 0) return null;
+
+    return (
+        <div className="cm-search-marker-container">
+            {markers.map((top, i) => (
+                <div key={i} className="cm-search-marker" style={{ top: `${top}%` }} />
+            ))}
+        </div>
+    );
 };
 
 
@@ -865,7 +925,7 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
         }
     })), [noteId]);
 
-    const doFormat = (type: 'highlight' | 'link' | MarkerType, color?: HlColorKey) => {
+    const doFormat = (type: 'highlight' | 'link' | 'strikethrough' | 'heading' | MarkerType, color?: HlColorKey) => {
         if (!menuState || !editorRef.current?.view) return;
 
         const targetColor = color || hlColor;
@@ -875,6 +935,7 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
         const innerClean = rawSelected
             .replace(/\[\[hl:[^|]+\|([^|\]]+)\|[yrbg]\]\]/g, '$1')
             .replace(/\{=([\s\S]*?)=\}/g, '$1')
+            .replace(/~~([\s\S]*?)~~/g, '$1')
             .replace(/\[\[(ins|idea|op|duda|wow|pat|yo|ruido):[^\|]+\|([^\]]+)\]\]/g, '$2');
 
         if (type === 'link') {
@@ -886,10 +947,31 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
             return;
         }
 
+        if (type === 'heading') {
+            const view = editorRef.current?.view;
+            if (!view || !menuState) return;
+            const line = view.state.doc.lineAt(menuState.from);
+            // Si ya empieza con # la quitamos, si no la ponemos
+            const hasHeading = line.text.startsWith('# ');
+            if (hasHeading) {
+                view.dispatch({
+                    changes: { from: line.from, to: line.from + 2, insert: '' }
+                });
+            } else {
+                view.dispatch({
+                    changes: { from: line.from, to: line.from, insert: '# ' }
+                });
+            }
+            setMenuState(null);
+            return;
+        }
+
         const ts = generateMarkerTimestamp();
         let formatted = '';
         if (type === 'highlight') {
             formatted = `[[hl:${ts}|${innerClean}|${targetColor}]]`;
+        } else if (type === 'strikethrough') {
+            formatted = `~~${innerClean}~~`;
         } else {
             formatted = `[[${type}:${ts}|${innerClean}]]`;
         }
@@ -1078,6 +1160,8 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
         if (lastAction === 'en') return { emoji: 'EN', title: 'Traducir → EN', icon: null };
         if (lastAction === 'es') return { emoji: 'ES', title: 'Traducir → ES', icon: null };
         if (lastAction === 'link') return { emoji: '🔗', title: 'Link', icon: null };
+        if (lastAction === 'strikethrough') return { icon: <Strikethrough size={16} />, title: 'Tachado', emoji: '' };
+        if (lastAction === 'heading') return { icon: <Heading size={16} />, title: 'Título', emoji: '' };
         const m = MARKER_TYPES[lastAction as MarkerType];
         if (m) return { emoji: m.emoji, title: m.label, icon: null };
         return { icon: <Highlighter size={16} color={HL_COLORS[hlColor].hex} />, title: 'Resaltar', emoji: '' };
@@ -1094,6 +1178,8 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
             setLastAction('link');
             localStorage.setItem('sme-last-action', 'link');
         }
+        else if (lastAction === 'strikethrough') { await doActionAndSave('strikethrough', () => { doFormat('strikethrough'); }); }
+        else if (lastAction === 'heading') { await doActionAndSave('heading', () => { doFormat('heading'); }); }
         else if (lastAction in MARKER_TYPES) { await doActionAndSave(lastAction, () => { doFormat(lastAction as MarkerType); }); }
         else { await doActionAndSave('highlight', () => { doFormat('highlight'); }); }
     };
@@ -1161,6 +1247,7 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
                 ]}
                 basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false, highlightActiveLineGutter: false, syntaxHighlighting: false, drawSelection: true }}
             />
+            <SearchMarkers view={editorRef.current?.view || null} query={searchQuery || ''} />
              {tooltipState && (
                 <div
                     className="fixed z-[9999] bg-[#f4f4f5] text-black text-[13px] font-medium font-sans px-3 py-2 rounded-lg border border-zinc-200 shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05)] pointer-events-none whitespace-pre-wrap leading-tight"
@@ -1350,9 +1437,21 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
                                     <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5" />
 
                                     <button onClick={() => doActionAndSave('link', () => doFormat('link'))}
-                                        title="Convertir a link"
-                                        className="w-9 h-9 rounded-lg flex items-center justify-center text-base hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-                                        🔗
+                                        title="Link"
+                                        className="w-9 h-9 rounded-lg flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                                        <LinkIcon size={18} />
+                                    </button>
+
+                                    <button onClick={() => doActionAndSave('strikethrough', () => doFormat('strikethrough'))}
+                                        title="Tachado"
+                                        className="w-9 h-9 rounded-lg flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                                        <Strikethrough size={18} />
+                                    </button>
+
+                                    <button onClick={() => doActionAndSave('heading', () => doFormat('heading'))}
+                                        title="Título"
+                                        className="w-9 h-9 rounded-lg flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                                        <Heading size={18} />
                                     </button>
                                 </>
                             )}
