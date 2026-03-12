@@ -33,8 +33,8 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
 
     // --- FETCH ---
     useEffect(() => {
-        const fetchTasks = async () => {
-            setLoading(true);
+        const fetchTasks = async (isFirstLoad = false) => {
+            if (isFirstLoad) setLoading(true);
             const { data, error } = await supabase
                 .from('tasks')
                 .select('*')
@@ -49,11 +49,12 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                 const done = data.filter(t => t.status === 'done').length;
                 setKanbanCounts(todo, inProgress, done);
             }
-            setLoading(false);
+            if (isFirstLoad) setLoading(false);
         };
-        fetchTasks();
-        window.addEventListener('kanban-updated', fetchTasks);
-        return () => window.removeEventListener('kanban-updated', fetchTasks);
+        fetchTasks(true);
+        const handleUpdate = () => fetchTasks(false);
+        window.addEventListener('kanban-updated', handleUpdate);
+        return () => window.removeEventListener('kanban-updated', handleUpdate);
     }, [setKanbanCounts]);
 
     // --- HANDLERS (FUNCIONALIDAD INTACTA) ---
