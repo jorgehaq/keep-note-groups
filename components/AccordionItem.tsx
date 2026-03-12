@@ -577,7 +577,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
           {/* PANEL AI — generador, colapsable */}
           {showAIPanel && session?.user && (
-            <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 dark:bg-[#1A1A2E]/60 p-4 animate-fadeIn">
+            <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 dark:bg-[#1A1A2E]/60 p-4 animate-fadeIn shrink-0">
               <NoteAIPanel
                 noteId={displayNoteId}
                 userId={session.user.id}
@@ -592,7 +592,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             const q = searchQuery?.trim().toLowerCase() || '';
             const originalMatches = q && (note.content?.toLowerCase().includes(q) || note.title?.toLowerCase().includes(q));
             return (
-            <div className="flex items-center gap-2.5 overflow-x-auto flex-wrap p-[2px]">
+            <div className="flex items-center gap-2.5 overflow-x-auto flex-wrap p-[2px] shrink-0">
               {/* Tab Original — solo si hay completados */}
               {completedSummaries.length > 0 && (
                 <button

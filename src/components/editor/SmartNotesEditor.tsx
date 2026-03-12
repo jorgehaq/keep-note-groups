@@ -430,11 +430,6 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             WebkitTouchCallout: "none !important", // Ocultar menú nativo de "copy/paste" al tocar sostenido
             WebkitUserSelect: "text !important",
             userSelect: "text !important",
-            width: "100%",
-            maxWidth: "100%",
-            minHeight: "100%",
-            display: "flex",
-            flexDirection: "column"
         },
         "&.cm-focused": {
             outline: "none !important"
@@ -442,9 +437,6 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-scroller": {
             fontFamily: fontFamily,
             fontSize: fontSize,
-            overflowX: "hidden !important",
-            width: "100%",
-            flex: "1",
         },
         ".cm-content": {
             fontFamily: fontFamily,

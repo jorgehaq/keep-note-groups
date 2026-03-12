@@ -1464,7 +1464,7 @@ function App() {
               </div>
 
               {/* AREA DE LA NOTA - OCUPA EL RESTO DEL ESPACIO */}
-              <main ref={mainRef} className={`flex-1 flex flex-col overflow-visible px-4 pb-4 ${isGlobalNoteTrayOpen && activeGroup ? 'pt-0' : 'pt-5'}`}>
+              <main ref={mainRef} className={`flex-1 flex flex-col overflow-hidden px-4 pb-4 ${isGlobalNoteTrayOpen && activeGroup ? 'pt-0' : 'pt-5'}`}>
                 <div className={`flex-1 flex flex-col min-h-0 ${isMaximized ? 'max-w-full' : 'max-w-6xl'} w-full mx-auto`}>
                   {activeGroup ? (
                      <div className="flex-1 flex flex-col min-h-0">
