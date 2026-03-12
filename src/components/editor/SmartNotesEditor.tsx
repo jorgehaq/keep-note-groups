@@ -509,11 +509,12 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-cursor-indicator-line": { 
             borderLeftColor: "#6366f1 !important"
         },
-        ".cm-custom-hl, .cm-hl-y, .cm-hl-r, .cm-hl-b, .cm-hl-g": { color: "#000000 !important", padding: "0 2px", borderRadius: "0px !important" },
+        ".cm-hl-y, .cm-hl-r, .cm-hl-b, .cm-hl-g, .cm-custom-hl": { color: "#000000 !important", padding: "0 2px", borderRadius: "0px !important" },
         ".cm-hl-y": { backgroundColor: "#FFFF00 !important" },
         ".cm-hl-r": { backgroundColor: "#FF0000 !important" },
         ".cm-hl-b": { backgroundColor: "#3282F6 !important" },
         ".cm-hl-g": { backgroundColor: "#92D050 !important" },
+        ".cm-custom-hl": { backgroundColor: "#FFFF00 !important" },
         ".cm-custom-tr": { position: "relative", backgroundColor: "#10B981 !important", color: "#000000 !important", border: "1px solid #00000030", padding: "0 2px", cursor: "help", borderRadius: "4px !important" },
         ".dark .cm-custom-tr": { backgroundColor: "#10B981 !important", color: "#000000 !important", borderRadius: "4px !important" },
         ".cm-custom-h1": { fontSize: "1.4em", fontWeight: "bold", color: "inherit", lineHeight: "1.2" },
@@ -578,10 +579,10 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
     const [menuState, setMenuState] = useState<{top: number, left: number, from: number, to: number, text: string, isMobile?: boolean} | null>(null);
     const [tooltipState, setTooltipState] = useState<{text: React.ReactNode, top: number, left: number} | null>(null);
     const [isTranslating, setIsTranslating] = useState(false);
-    const [showExpandedMenu, setShowExpandedMenu] = useState(false);
     const [hlColor, setHlColor] = useState<HlColorKey>('y');
     const [showHlOptions, setShowHlOptions] = useState(false);
     const [showTagOptions, setShowTagOptions] = useState(false);
+    const [showTrOptions, setShowTrOptions] = useState(false);
     const [lastAction, setLastAction] = useState<string>(
         () => localStorage.getItem('sme-last-action') || 'highlight'
     );
@@ -617,14 +618,12 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
     // Exponer funciones de cierre para la lógica interna (Escape)
     const closeMenus = () => {
         setMenuState(null);
-        setShowExpandedMenu(false);
         setShowLinkInput(false);
         window.getSelection()?.removeAllRanges();
     };
 
     const closeMenusOnly = () => {
         setMenuState(null);
-        setShowExpandedMenu(false);
         setShowLinkInput(false);
     };
 
@@ -757,7 +756,6 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
                 if (showLinkInputRef.current) return; 
 
                 setMenuState(null);
-                setShowExpandedMenu(false);
                 setShowLinkInput(false);
             }
 
@@ -867,8 +865,10 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
         }
     })), [noteId]);
 
-    const doFormat = (type: 'highlight' | 'link' | MarkerType) => {
+    const doFormat = (type: 'highlight' | 'link' | MarkerType, color?: HlColorKey) => {
         if (!menuState || !editorRef.current?.view) return;
+
+        const targetColor = color || hlColor;
 
         const rawSelected = menuState.text;
         // Limpiador: quita resaltados (hl-new y hl-old) y marcadores para evitar anidamiento corrupto
@@ -889,7 +889,7 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
         const ts = generateMarkerTimestamp();
         let formatted = '';
         if (type === 'highlight') {
-            formatted = `[[hl:${ts}|${innerClean}|${hlColor}]]`;
+            formatted = `[[hl:${ts}|${innerClean}|${targetColor}]]`;
         } else {
             formatted = `[[${type}:${ts}|${innerClean}]]`;
         }
@@ -900,7 +900,6 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
         });
         
         setMenuState(null);
-        setShowExpandedMenu(false);
         setShowLinkInput(false);
     };
 
@@ -919,7 +918,6 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
         });
         
         setMenuState(null);
-        setShowExpandedMenu(false);
         setShowLinkInput(false);
         setLinkUrl('');
     };
@@ -932,7 +930,6 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
 
         console.log("🚀 Iniciando traducción a través de Edge Function...");
         setIsTranslating(true);
-        setShowExpandedMenu(false);
         
         try {
             // 1. Obtener sesión para el historial
@@ -976,7 +973,6 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
                 selection: { anchor: menuState.from + replacement.length } 
             });
             setMenuState(null);
-            setShowExpandedMenu(false);
 
         } catch (err: any) {
             console.error("❌ Error fatal en traducción:", err);
@@ -1022,7 +1018,6 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
                 }
                 
                 setMenuState(null);
-                setShowExpandedMenu(false);
                 setShowLinkInput(false);
             }
         }, 150);
@@ -1066,15 +1061,13 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
         if (res instanceof Promise) await res;
         setLastAction(actionKey);
         localStorage.setItem('sme-last-action', actionKey);
-        
+
         // Si no es un link guiado, cerramos todo. Si es link, el input tomará el relevo.
         if (actionKey !== 'link') {
-            setShowExpandedMenu(false);
             setShowLinkInput(false);
             setMenuState(null);
         } else {
             // Para links, cerramos el expandido para dejar paso al input
-            setShowExpandedMenu(false);
             setShowLinkInput(true);
             setLinkUrl('');
         }
@@ -1096,7 +1089,6 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
         else if (lastAction === 'es') { await doActionAndSave('es', () => { doTranslate('es'); }); }
         else if (lastAction === 'link') {
             if (showLinkInput) return; // Si ya está abierto, no hacer nada para evitar reset de URL
-            setShowExpandedMenu(false);
             setShowLinkInput(true);
             setLinkUrl('');
             setLastAction('link');
@@ -1228,147 +1220,144 @@ const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEdit
                         </div>
                     )}
 
-                    {/* Globo expandido — aparece arriba (mutuamente exclusivo con link input para limpieza) */}
-                    {showExpandedMenu && !showLinkInput && (
-                        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-1.5 flex flex-col gap-1">
-                            {/* Fila única con popovers */}
-                            <div className="flex gap-1 items-center">
-                                {/* Popover de Etiquetas */}
-                                <div 
-                                  className="relative group/tags flex items-center"
-                                  onMouseEnter={() => setShowTagOptions(true)}
-                                  onMouseLeave={() => setShowTagOptions(false)}
-                                >
-                                    <button 
-                                        className="w-9 h-9 rounded-lg flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                                        title="Tags y Marcadores"
+                    {/* Menú Principal — aparece directamente al seleccionar */}
+                    {!showLinkInput ? (
+                        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-1 flex items-center gap-0.5 animate-fadeIn pointer-events-auto">
+                            {isTranslating ? (
+                                <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-blue-500">
+                                    <Loader2 size={13} className="animate-spin" /> Traduciendo...
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Popover de Etiquetas */}
+                                    <div 
+                                      className="relative group/tags flex items-center"
+                                      onMouseEnter={() => setShowTagOptions(true)}
+                                      onMouseLeave={() => setShowTagOptions(false)}
                                     >
-                                        <Tags size={18} />
-                                    </button>
-
-                                    {showTagOptions && (
-                                        <div 
-                                          className="absolute bottom-full left-0 mb-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 z-[100] animate-fadeIn"
-                                          style={getSubMenuStyle(-85)}
+                                        <button 
+                                            className="w-9 h-9 rounded-lg flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                            title="Tags y Marcadores"
                                         >
-                                            {/* Bridge overlay (padding 6px + margin 6px = 12px) */}
-                                            <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
-                                            
-                                            <div className="flex items-center gap-1">
-                                                {(Object.keys(MARKER_TYPES) as MarkerType[]).map(key => {
-                                                    const cfg = MARKER_TYPES[key];
-                                                    return (
-                                                        <button key={key}
-                                                            onClick={() => {
-                                                                doActionAndSave(key, () => doFormat(key));
-                                                                setShowTagOptions(false);
-                                                            }}
-                                                            title={cfg.label}
-                                                            className="w-9 h-9 rounded-lg flex items-center justify-center text-base hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                                                        >{cfg.emoji}</button>
-                                                    );
-                                                })}
+                                            <Tags size={18} />
+                                        </button>
+
+                                        {showTagOptions && (
+                                            <div 
+                                              className="absolute bottom-full left-0 mb-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 z-[100] animate-fadeIn"
+                                              style={getSubMenuStyle(-85)}
+                                            >
+                                                {/* Bridge overlay (padding 6px + margin 4px = 10px, use h-8 for safety) */}
+                                                <div className="absolute top-full left-0 w-full h-[8px] bg-transparent" />
+                                                
+                                                <div className="flex items-center gap-1">
+                                                    {(Object.keys(MARKER_TYPES) as MarkerType[]).map(key => {
+                                                        const cfg = MARKER_TYPES[key];
+                                                        return (
+                                                            <button key={key}
+                                                                onClick={() => {
+                                                                    doActionAndSave(key, () => doFormat(key));
+                                                                    setShowTagOptions(false);
+                                                                }}
+                                                                title={cfg.label}
+                                                                className="w-9 h-9 rounded-lg flex items-center justify-center text-base hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                                            >{cfg.emoji}</button>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
-                                </div>
+                                        )}
+                                    </div>
 
-                                {/* Separador vertical */}
-                                <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5" />
-                                
-                                {/* Resaltador (con su popover de colores) */}
-                                <div 
-                                  className="relative group/hl flex items-center"
-                                  onMouseEnter={() => setShowHlOptions(true)}
-                                  onMouseLeave={() => setShowHlOptions(false)}
-                                >
-                                    <button onClick={() => { doActionAndSave('highlight', () => { doFormat('highlight'); }); }}
-                                        title="Resaltar"
-                                        className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                                        style={{ color: HL_COLORS[hlColor].hex }}
+                                    {/* Separador vertical */}
+                                    <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5" />
+                                    
+                                    {/* Resaltador (con su popover de colores) */}
+                                    <div 
+                                      className="relative group/hl flex items-center"
+                                      onMouseEnter={() => setShowHlOptions(true)}
+                                      onMouseLeave={() => setShowHlOptions(false)}
                                     >
-                                        <Highlighter size={18} />
-                                    </button>
-
-                                    {showHlOptions && (
-                                        <div 
-                                          className="absolute bottom-full left-0 mb-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 flex gap-1 items-center animate-fadeIn z-[100]"
-                                          style={getSubMenuStyle(-40)}
+                                        <button onClick={() => { doActionAndSave('highlight', () => { doFormat('highlight'); }); }}
+                                            title="Resaltar"
+                                            className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                            style={{ color: HL_COLORS[hlColor].hex }}
                                         >
-                                            {/* Bridge overlay (padding 6px + margin 6px = 12px) */}
-                                            <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
-                                            
-                                            {(Object.keys(HL_COLORS) as HlColorKey[]).map(cKey => (
-                                                <button
-                                                  key={cKey}
-                                                  onClick={() => {
-                                                    setHlColor(cKey);
-                                                    setShowHlOptions(false);
-                                                  }}
-                                                  className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 ${hlColor === cKey ? 'border-zinc-400' : 'border-transparent'}`}
-                                                  style={{ backgroundColor: HL_COLORS[cKey].hex }}
-                                                  title={HL_COLORS[cKey].label}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                                <button onClick={() => doActionAndSave('en', () => doTranslate('en'))}
-                                    title="Traducir → EN"
-                                    className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold text-blue-500 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 transition-colors">
-                                    EN
-                                </button>
-                                <button onClick={() => doActionAndSave('es', () => doTranslate('es'))}
-                                    title="Traducir → ES"
-                                    className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold text-blue-500 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 transition-colors">
-                                    ES
-                                </button>
-                                <button onClick={() => doActionAndSave('link', () => doFormat('link'))}
-                                    title="Convertir a link"
-                                    className="w-9 h-9 rounded-lg flex items-center justify-center text-base hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-                                    🔗
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                                            <Highlighter size={18} />
+                                        </button>
 
-                    {/* Globo compacto — siempre visible */}
-                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)] p-1 flex items-center gap-0.5 pointer-events-auto">
-                        {isTranslating ? (
-                            <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-blue-500">
-                                <Loader2 size={13} className="animate-spin" /> Traduciendo...
-                            </div>
-                        ) : (
-                            <>
-                                <button
-                                    onClick={() => { fireLastAction(); }}
-                                    title={getLastActionDisplay().title}
-                                    className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                                >
-                                    {getLastActionDisplay().icon || getLastActionDisplay().emoji}
-                                </button>
-                                <button
-                                    onMouseEnter={() => setShowExpandedMenu(true)}
-                                    onClick={() => {
-                                        if (showLinkInput) {
-                                            setShowLinkInput(false);
-                                            setShowExpandedMenu(true);
-                                        } else {
-                                            setShowExpandedMenu(p => !p);
-                                        }
-                                    }}
-                                    title="Más opciones"
-                                    className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold transition-colors ${
-                                        showExpandedMenu || showLinkInput
-                                            ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-white'
-                                            : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                                    }`}
-                                >
-                                    ···
-                                </button>
-                            </>
-                        )}
-                    </div>
+                                        {showHlOptions && (
+                                            <div 
+                                              className="absolute bottom-full left-0 mb-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 flex gap-1 items-center animate-fadeIn z-[100]"
+                                              style={getSubMenuStyle(-40)}
+                                            >
+                                                {/* Bridge overlay (padding 6px + margin 4px = 10px, use h-8 for safety) */}
+                                                <div className="absolute top-full left-0 w-full h-[8px] bg-transparent" />
+                                                
+                                                {(Object.keys(HL_COLORS) as HlColorKey[]).map(cKey => (
+                                                    <button
+                                                      key={cKey}
+                                                      onClick={() => {
+                                                        setHlColor(cKey);
+                                                        doActionAndSave('highlight', () => doFormat('highlight', cKey));
+                                                        setShowHlOptions(false);
+                                                      }}
+                                                      className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 ${hlColor === cKey ? 'border-zinc-400 font-bold' : 'border-transparent'}`}
+                                                      style={{ backgroundColor: HL_COLORS[cKey].hex }}
+                                                      title={HL_COLORS[cKey].label}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Traducción */}
+                                    <div 
+                                      className="relative group/tr flex items-center"
+                                      onMouseEnter={() => setShowTrOptions(true)}
+                                      onMouseLeave={() => setShowTrOptions(false)}
+                                    >
+                                        <button 
+                                            className="w-9 h-9 rounded-lg flex items-center justify-center text-blue-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                            title="Traducir selección"
+                                        >
+                                            <Languages size={18} />
+                                        </button>
+
+                                        {showTrOptions && (
+                                            <div 
+                                              className="absolute bottom-full left-0 mb-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 flex gap-1 items-center animate-fadeIn z-[100]"
+                                              style={getSubMenuStyle(5)}
+                                            >
+                                                {/* Bridge overlay (padding 6px + margin 4px = 10px, use h-8 for safety) */}
+                                                <div className="absolute top-full left-0 w-full h-[8px] bg-transparent" />
+                                                
+                                                <button onClick={() => doActionAndSave('en', () => doTranslate('en'))}
+                                                    title="Traducir → EN"
+                                                    className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold text-blue-500 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 transition-colors">
+                                                    EN
+                                                </button>
+                                                <button onClick={() => doActionAndSave('es', () => doTranslate('es'))}
+                                                    title="Traducir → ES"
+                                                    className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold text-blue-500 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 transition-colors">
+                                                    ES
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Separador vertical */}
+                                    <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5" />
+
+                                    <button onClick={() => doActionAndSave('link', () => doFormat('link'))}
+                                        title="Convertir a link"
+                                        className="w-9 h-9 rounded-lg flex items-center justify-center text-base hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                                        🔗
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    ) : null}
                 </div>
             )}
         </div>

@@ -353,7 +353,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
             </div>
 
             <div ref={scrollContainerRef} className={`flex-1 ${focusedDumpId ? 'overflow-hidden' : 'overflow-y-auto'} bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 ${isDumpTrayOpen && pizarrones.length > 0 ? 'pt-0' : 'pt-5'} hidden-scrollbar flex flex-col`}>
-                <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto flex flex-col gap-12 pb-20 ${focusedDumpId ? 'flex-1 w-full min-h-0' : ''}`}>
+                <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto flex flex-col ${focusedDumpId ? 'gap-0 pb-0 flex-1 w-full min-h-0' : 'gap-12 pb-20'}`}>
                     
                     {/* 1. PIZARRONES (PERSISTENTES - FILTRADO POR FOCO) */}
                     {focusedDumpId && pizarrones.some(p => p.id === focusedDumpId) && (
