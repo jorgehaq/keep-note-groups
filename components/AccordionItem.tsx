@@ -127,14 +127,14 @@ const SummaryTabContent: React.FC<{
 
   return (
     <div className="flex flex-col gap-3 flex-1 min-h-0">
-      <div className={`bg-[#1A1A2E] rounded-2xl overflow-hidden border ${searchQuery?.trim() && summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ? 'border-amber-500' : 'border-violet-500/20'}`}>
-        <div className="flex items-center justify-between px-4 py-2.5 bg-violet-500/5 border-b border-violet-500/10">
+      <div className={`bg-violet-50 dark:bg-[#1A1A2E] rounded-2xl border ${searchQuery?.trim() && summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ? 'border-amber-500' : 'border-violet-200 dark:border-violet-500/20'}`}>
+        <div className="flex items-center justify-between px-4 py-2.5 bg-violet-100/60 dark:bg-violet-500/5 border-b border-violet-200 dark:border-violet-500/10">
           <div className="flex items-center gap-2 min-w-0">
             <Sparkles size={12} className="text-violet-400 shrink-0" />
-            <span className="text-[11px] font-bold text-violet-300 truncate">
+            <span className="text-[11px] font-bold text-violet-600 dark:text-violet-300 truncate">
               {summary.target_objective || 'Análisis AI'}
             </span>
-            <span className="text-[10px] text-zinc-600 shrink-0">
+            <span className="text-[10px] text-zinc-500 dark:text-zinc-600 shrink-0">
               {new Date(summary.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>

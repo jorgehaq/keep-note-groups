@@ -480,9 +480,9 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-cursor-indicator-line": { 
             borderLeftColor: "#6366f1 !important"
         },
-        ".cm-custom-hl": { backgroundColor: "#FACC15 !important", color: "#000000 !important", padding: "0 2px", fontWeight: "600 !important", borderRadius: "4px !important" },
-        ".cm-custom-tr": { position: "relative", backgroundColor: "#10B981 !important", color: "#064E3B !important", padding: "0 2px", cursor: "help", borderRadius: "4px !important", fontWeight: "600 !important" },
-        ".dark .cm-custom-tr": { backgroundColor: "#10B981 !important", color: "#064E3B !important", borderRadius: "4px !important", fontWeight: "600 !important" },
+        ".cm-custom-hl": { backgroundColor: "#FACC15 !important", color: "#000000 !important", border: "1px solid #00000030", padding: "0 2px", borderRadius: "4px !important" },
+        ".cm-custom-tr": { position: "relative", backgroundColor: "#10B981 !important", color: "#000000 !important", border: "1px solid #00000030", padding: "0 2px", cursor: "help", borderRadius: "4px !important" },
+        ".dark .cm-custom-tr": { backgroundColor: "#10B981 !important", color: "#000000 !important", borderRadius: "4px !important" },
         ".cm-custom-h1": { fontSize: "1.4em", fontWeight: "bold", color: "inherit", lineHeight: "1.2" },
         ".cm-custom-bold": { fontWeight: "bold", color: "inherit" },
         ".cm-custom-italic": { fontStyle: "italic", color: "inherit" },
@@ -542,7 +542,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
         }
     }));
     const [menuState, setMenuState] = useState<{top: number, left: number, from: number, to: number, text: string, isMobile?: boolean} | null>(null);
-    const [tooltipState, setTooltipState] = useState<{text: string, top: number, left: number} | null>(null);
+    const [tooltipState, setTooltipState] = useState<{text: React.ReactNode, top: number, left: number} | null>(null);
     const [isTranslating, setIsTranslating] = useState(false);
     const [showExpandedMenu, setShowExpandedMenu] = useState(false);
     const [lastAction, setLastAction] = useState<string>(
@@ -603,7 +603,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                 const text = target.getAttribute('data-translation-text');
                 if (text) {
                     const rect = target.getBoundingClientRect();
-                    setTooltipState({ text, top: rect.top, left: rect.left + (rect.width / 2) });
+                    setTooltipState({ text: <span className="flex items-center gap-1.5"><Languages size={13} className="shrink-0" />{text}</span>, top: rect.top, left: rect.left + (rect.width / 2) });
                 }
             } else if (target.classList.contains('cm-custom-link')) {
                 const url = target.getAttribute('data-url');
@@ -611,11 +611,25 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                     const rect = target.getBoundingClientRect();
                     setTooltipState({ text: url, top: rect.top, left: rect.left + (rect.width / 2) });
                 }
+            } else if (target.classList.contains('cm-custom-hl')) {
+                const rect = target.getBoundingClientRect();
+                setTooltipState({ text: '✏️ Interesante', top: rect.top, left: rect.left + (rect.width / 2) });
+            } else {
+                // Check for marker tag classes (cm-custom-mk-ins, cm-custom-mk-idea, etc.)
+                const mkClass = Array.from(target.classList).find(c => c.startsWith('cm-custom-mk-'));
+                if (mkClass) {
+                    const tagType = mkClass.replace('cm-custom-mk-', '') as MarkerType;
+                    const cfg = MARKER_TYPES[tagType];
+                    if (cfg) {
+                        const rect = target.getBoundingClientRect();
+                        setTooltipState({ text: `${cfg.emoji} ${cfg.label}`, top: rect.top, left: rect.left + (rect.width / 2) });
+                    }
+                }
             }
         },
         mouseout: (e) => { 
             const target = e.target as HTMLElement;
-            if (target.classList.contains('cm-custom-tr') || target.classList.contains('cm-custom-link')) {
+            if (target.classList.contains('cm-custom-tr') || target.classList.contains('cm-custom-link') || target.classList.contains('cm-custom-hl') || Array.from(target.classList).some(c => c.startsWith('cm-custom-mk-'))) {
                 setTooltipState(null); 
             }
         }
@@ -875,6 +889,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
 
         console.log("🚀 Iniciando traducción a través de Edge Function...");
         setIsTranslating(true);
+        setShowExpandedMenu(false);
         
         try {
             // 1. Obtener sesión para el historial
@@ -1018,7 +1033,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
     };
 
     const getLastActionDisplay = () => {
-        if (lastAction === 'highlight') return { emoji: '🖊️', title: 'Resaltar' };
+        if (lastAction === 'highlight') return { emoji: '✏️', title: 'Resaltar' };
         if (lastAction === 'en') return { emoji: 'EN', title: 'Traducir → EN' };
         if (lastAction === 'es') return { emoji: 'ES', title: 'Traducir → ES' };
         if (lastAction === 'link') return { emoji: '🔗', title: 'Link' };
@@ -1201,7 +1216,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                                 <button onClick={() => doActionAndSave('highlight', () => doFormat('highlight'))}
                                     title="Resaltar"
                                     className="w-9 h-9 rounded-lg flex items-center justify-center text-base hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-                                    🖊️
+                                    ✏️
                                 </button>
                                 <button onClick={() => doActionAndSave('en', () => doTranslate('en'))}
                                     title="Traducir → EN"
