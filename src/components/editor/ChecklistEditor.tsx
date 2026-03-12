@@ -70,7 +70,7 @@ const ChecklistItemRow = ({
 }) => {
     const [localText, setLocalText] = useState(item.text);
     const [isFocused, setIsFocused] = useState(false);
-    const inputRef = useRef<HTMLInputElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
 
     // Solo sincronizar del item de forma forzada si cambia su id base,
     // o si cambió pero no desde nosotros (ej sync server)
@@ -80,13 +80,23 @@ const ChecklistItemRow = ({
         }
     }, [item.text]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Ajustar altura inicial y cuando cambie el texto remotamente
+    useEffect(() => {
+        if (inputRef.current) {
+            inputRef.current.style.height = 'auto';
+            inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
+        }
+    }, [localText, isFocused]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setLocalText(e.target.value);
         onUpdateText(item.id, e.target.value);
+        e.target.style.height = 'auto';
+        e.target.style.height = `${e.target.scrollHeight}px`;
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             onEnter(item.id);
         } else if (e.key === 'Backspace' && localText === '') {
@@ -105,46 +115,47 @@ const ChecklistItemRow = ({
                 >
                     <div 
                         {...provided.dragHandleProps} 
-                        className="mt-0.5 text-zinc-300 hover:text-zinc-500 dark:text-zinc-600 dark:hover:text-zinc-400 cursor-grab active:cursor-grabbing shrink-0"
+                        className="mt-2.5 text-zinc-300 hover:text-zinc-500 dark:text-zinc-600 dark:hover:text-zinc-400 cursor-grab active:cursor-grabbing shrink-0"
                     >
                         <GripVertical size={14} />
                     </div>
                     
                     <button 
                         onClick={(e) => { e.stopPropagation(); onToggle(item.id); }} 
-                        className={`mt-0.5 shrink-0 rounded transition-colors ${item.isChecked ? 'text-emerald-500' : 'text-zinc-400 hover:text-[#1F3760]'}`}
+                        className={`mt-2.5 shrink-0 rounded transition-colors ${item.isChecked ? 'text-emerald-500' : 'text-zinc-400 hover:text-[#1F3760]'}`}
                     >
                         {item.isChecked ? <CheckSquare size={16} /> : <Square size={16} />}
                     </button>
                     
-                    <div className="relative flex-1 min-w-0">
+                    <div className="relative flex-1 min-w-0 flex flex-col justify-center">
                         {/* Overlay para resaltado de búsqueda */}
                         {!isFocused && searchQuery && (
                             <div 
-                                className={`absolute inset-0 pointer-events-none truncate ${item.isChecked ? 'line-through text-zinc-400 dark:text-zinc-500 opacity-60' : 'text-zinc-700 dark:text-zinc-300'}`}
+                                className={`absolute inset-0 pointer-events-none whitespace-pre-wrap break-words ${item.isChecked ? 'line-through text-zinc-400 dark:text-zinc-500 opacity-60' : 'text-zinc-700 dark:text-zinc-300'}`}
                                 style={{ 
                                     lineHeight: noteLineHeight === 'more' ? '2.0' : noteLineHeight === 'large' ? '2.5' : '1.6',
                                     fontFamily: noteFont === 'serif' ? 'var(--font-serif)' : noteFont === 'mono' ? 'var(--font-mono)' : 'var(--font-sans)',
                                     fontSize: noteFontSize === 'small' ? '13px' : noteFontSize === 'large' ? '18px' : '15px',
-                                    paddingTop: '0px'
+                                    paddingTop: '6px' // Alineación aproximada al textarea
                                 }}
                             >
                                 {highlightText(localText, searchQuery)}
                             </div>
                         )}
-                        <input 
+                        <textarea 
                             ref={inputRef}
-                            type="text"
+                            rows={1}
                             value={localText}
                             onChange={handleChange}
                             onKeyDown={handleKeyDown}
                             onFocus={() => setIsFocused(true)}
                             onBlur={() => setIsFocused(false)}
-                            className={`w-full bg-transparent outline-none ${item.isChecked ? 'line-through text-zinc-400 dark:text-zinc-500' : 'text-zinc-700 dark:text-zinc-300'} ${!isFocused && searchQuery && localText.toLowerCase().includes(searchQuery.toLowerCase()) ? 'text-transparent' : ''}`}
+                            className={`w-full bg-transparent outline-none resize-none overflow-hidden m-0 p-0 py-1.5 ${item.isChecked ? 'line-through text-zinc-400 dark:text-zinc-500' : 'text-zinc-700 dark:text-zinc-300'} ${!isFocused && searchQuery && localText.toLowerCase().includes(searchQuery.toLowerCase()) ? 'text-transparent' : ''}`}
                             style={{ 
                                 lineHeight: noteLineHeight === 'more' ? '2.0' : noteLineHeight === 'large' ? '2.5' : '1.6',
                                 fontFamily: noteFont === 'serif' ? 'var(--font-serif)' : noteFont === 'mono' ? 'var(--font-mono)' : 'var(--font-sans)',
-                                fontSize: noteFontSize === 'small' ? '13px' : noteFontSize === 'large' ? '18px' : '15px'
+                                fontSize: noteFontSize === 'small' ? '13px' : noteFontSize === 'large' ? '18px' : '15px',
+                                minHeight: '1.5rem'
                             }}
                         />
                     </div>
