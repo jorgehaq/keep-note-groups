@@ -49,7 +49,86 @@ const parseMarkdownPreview = (text: string) => {
         .replace(/\n/g, '<span class="mx-1 opacity-30 text-[10px]">&para;</span> ');
 };
 
-export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteFontSize?: string; noteLineHeight?: string }> = ({ session, noteFont, noteFontSize, noteLineHeight = 'standard' }) => {
+const highlightText = (text: string, highlight?: string): React.ReactNode => {
+    if (!highlight || !highlight.trim()) return text;
+    const escaped = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+    return parts.map((part, index) =>
+        part.toLowerCase() === highlight.toLowerCase() ? (
+            <mark key={index} className="bg-yellow-200 dark:bg-yellow-500/40 text-yellow-900 dark:text-yellow-100 px-0.5 font-medium">
+                {part}
+            </mark>
+        ) : (
+            part
+        )
+    );
+};
+
+const PizarronTitleInput = ({ pizarron, onSave, searchQuery }: { pizarron: BrainDump, onSave: (title: string) => void, searchQuery?: string }) => {
+    const [tempTitle, setTempTitle] = useState(pizarron.title || '');
+    const [isEditing, setIsEditing] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+    
+    useEffect(() => {
+        if (!isEditing) {
+            setTempTitle(pizarron.title || '');
+        }
+    }, [pizarron.title, isEditing]);
+
+    const handleSave = () => {
+        setIsEditing(false);
+        if (tempTitle !== (pizarron.title || '')) {
+            onSave(tempTitle);
+        }
+    };
+
+    return (
+        <div className="relative flex w-full">
+            {/* Overlay para resaltado de búsqueda */}
+            <div className="absolute inset-0 w-full pointer-events-none text-xl font-bold p-4 pb-3 flex items-center overflow-hidden whitespace-nowrap">
+                <span className="truncate">
+                    {searchQuery ? highlightText(tempTitle, searchQuery) : ""}
+                </span>
+            </div>
+            <input
+                ref={inputRef}
+                type="text"
+                placeholder="Título del pizarrón (opcional)"
+                value={tempTitle}
+                onChange={e => setTempTitle(e.target.value)}
+                onFocus={() => setIsEditing(true)}
+                onBlur={handleSave}
+                onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                        handleSave();
+                        inputRef.current?.blur();
+                    }
+                    if (e.key === 'Escape') {
+                        setIsEditing(false);
+                        setTempTitle(pizarron.title || '');
+                        inputRef.current?.blur();
+                    }
+                    if (e.key === 'Tab') {
+                        e.preventDefault();
+                        const card = inputRef.current?.closest('div.rounded-2xl');
+                        if (card) {
+                            const focusable = card.querySelector('.cm-content, input[type="text"]:not([placeholder*="Título"])') as HTMLElement;
+                            if (focusable) focusable.focus();
+                        }
+                    }
+                }}
+                onClick={e => e.stopPropagation()}
+                className={`w-full bg-transparent text-xl font-bold outline-none placeholder-zinc-400 transition-colors p-4 pb-3 cursor-text ${
+                    searchQuery && tempTitle.toLowerCase().includes(searchQuery.toLowerCase())
+                        ? "text-transparent caret-zinc-800 dark:caret-[#CCCCCC]"
+                        : "text-zinc-800 dark:text-[#CCCCCC]"
+                }`}
+            />
+        </div>
+    );
+};
+
+export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteFontSize?: string; noteLineHeight?: string; searchQuery?: string }> = ({ session, noteFont, noteFontSize, noteLineHeight = 'standard', searchQuery }) => {
     const { isBraindumpMaximized, setIsBraindumpMaximized, brainDumps: dumps, setBrainDumps: setDumps, showOverdueMarquee, setShowOverdueMarquee, overdueRemindersCount, globalTasks, focusedDumpId, setFocusedDumpId, isDumpTrayOpen, setIsDumpTrayOpen } = useUIStore();
     const [loading, setLoading] = useState(false);
     
@@ -64,58 +143,6 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
     const pizarronHeaderRef = useRef<HTMLDivElement>(null);
     const pizarronContentRef = useRef<HTMLDivElement>(null);
     const [showStickyPizarronTitle, setShowStickyPizarronTitle] = useState(false);
-
-    const PizarronTitleInput = ({ pizarron, onSave }: { pizarron: BrainDump, onSave: (title: string) => void }) => {
-        const [tempTitle, setTempTitle] = useState(pizarron.title || '');
-        const inputRef = useRef<HTMLInputElement>(null);
-        
-        useEffect(() => {
-            if (document.activeElement !== inputRef.current) {
-                setTempTitle(pizarron.title || '');
-            }
-        }, [pizarron.title]);
-
-        const handleSave = () => {
-            if (tempTitle !== (pizarron.title || '')) {
-                onSave(tempTitle);
-            }
-        };
-
-        return (
-            <input
-                ref={inputRef}
-                type="text"
-                placeholder="Título del pizarrón (opcional)"
-                value={tempTitle}
-                onChange={e => setTempTitle(e.target.value)}
-                onBlur={handleSave}
-                onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                        handleSave();
-                        inputRef.current?.blur();
-                    }
-                    if (e.key === 'Escape') {
-                        setTempTitle(pizarron.title || '');
-                        inputRef.current?.blur();
-                    }
-                    if (e.key === 'Tab') {
-                        e.preventDefault();
-                        // Find the editor container in the same pizarron card
-                        const card = inputRef.current?.closest('div.rounded-2xl');
-                        if (card) {
-                            const focusable = card.querySelector('.cm-content, input[type="text"]:not([placeholder*="Título"])') as HTMLElement;
-                            if (focusable) focusable.focus();
-                        }
-                    }
-                }}
-                onClick={e => e.stopPropagation()}
-                className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] outline-none placeholder-zinc-400 transition-colors p-4 pb-3"
-            />
-        );
-    };
-
-
-
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -314,7 +341,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                          }`}
                                          >
                                          <span className="whitespace-nowrap">
-                                             {p.title || 'Pizarrón Sin Título'}
+                                             {searchQuery ? highlightText(p.title || 'Pizarrón Sin Título', searchQuery) : (p.title || 'Pizarrón Sin Título')}
                                              {summaryCounts[p.id] > 0 && ` (${summaryCounts[p.id]})`}
                                          </span>
                                          {dotColorClass && (
@@ -349,7 +376,11 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                     <div ref={pizarronHeaderRef} className="flex items-center justify-between pr-3 pt-1">
                                         <div className="flex flex-col min-w-0 justify-center w-full flex-1">
                                             <div className="relative flex w-full">
-                                                <PizarronTitleInput pizarron={pizarron} onSave={(title) => autoSave(pizarron.id, { title })} />
+                                                <PizarronTitleInput 
+                                                    pizarron={pizarron} 
+                                                    onSave={(title) => autoSave(pizarron.id, { title })} 
+                                                    searchQuery={searchQuery} 
+                                                />
                                             </div>
                                         </div>
                                         {/* Action buttons: Kanban always visible, rest in 3-dot */}
@@ -396,7 +427,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                     <div ref={pizarronContentRef} className="relative">
                                         {showStickyPizarronTitle && (
                                             <div className={`sticky ${isDumpTrayOpen && pizarrones.length > 0 ? 'top-4' : 'top-0'} left-0 right-0 z-[40] flex justify-center pointer-events-none animate-fadeIn px-4 pt-0`}>
-                                                <div onClick={(e) => { e.stopPropagation(); pizarronHeaderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }} className="bg-white/95 dark:bg-zinc-100/95 backdrop-blur-md text-zinc-900 dark:text-zinc-900 px-5 py-1.5 rounded-full shadow-lg shadow-black/10 text-[13px] font-bold flex items-center gap-2 pointer-events-auto cursor-pointer active:scale-95 transition-all border border-zinc-200/50 dark:border-zinc-300 w-auto max-w-[90%] sm:max-w-[400px] hover:shadow-xl"><span className="truncate">{pizarron.title || 'Pizarrón sin título'}</span><ChevronUp size={14} className="opacity-70 shrink-0" /></div>
+                                                <div onClick={(e) => { e.stopPropagation(); pizarronHeaderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }} className="bg-white/95 dark:bg-zinc-100/95 backdrop-blur-md text-zinc-900 dark:text-zinc-900 px-5 py-1.5 rounded-full shadow-lg shadow-black/10 text-[13px] font-bold flex items-center gap-2 pointer-events-auto cursor-pointer active:scale-95 transition-all border border-zinc-200/50 dark:border-zinc-300 w-auto max-w-[90%] sm:max-w-[400px] hover:shadow-xl"><span className="truncate">{searchQuery ? highlightText(pizarron.title || 'Pizarrón sin título', searchQuery) : (pizarron.title || 'Pizarrón sin título')}</span><ChevronUp size={14} className="opacity-70 shrink-0" /></div>
                                             </div>
                                         )}
 
@@ -452,7 +483,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                                 </button>
                                                 <ArchiveIcon size={16} className="text-zinc-400 shrink-0" />
                                                 <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400 line-through truncate">
-                                                    {a.title || 'Pizarrón sin título'}
+                                                    {searchQuery ? highlightText(a.title || 'Pizarrón sin título', searchQuery) : (a.title || 'Pizarrón sin título')}
                                                 </span>
                                             </div>
 

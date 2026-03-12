@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid, Maximize2, Minimize2, ChevronsDownUp, Bell, Pin, PanelLeft } from 'lucide-react';
-import { Note, Group, Theme, NoteFont, Reminder, NoteSortMode } from './types';
+import { Note, Group, Theme, NoteFont, Reminder, NoteSortMode, BrainDump } from './types';
 import { AccordionItem } from './components/AccordionItem';
 import { Sidebar } from './components/Sidebar';
 import { SettingsWindow } from './components/SettingsWindow';
@@ -209,8 +209,16 @@ function App() {
         fetchTranslations();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'brain_dumps' }, (payload) => {
-        // Trigger de recarga para Pizarras
-        fetchBrainDumps();
+        if (payload.eventType === 'INSERT') {
+          setBrainDumps(prev => {
+            if (prev.find(d => d.id === payload.new.id)) return prev;
+            return [payload.new as BrainDump, ...prev];
+          });
+        } else if (payload.eventType === 'UPDATE') {
+          setBrainDumps(prev => prev.map(d => d.id === payload.new.id ? (payload.new as BrainDump) : d));
+        } else if (payload.eventType === 'DELETE') {
+          setBrainDumps(prev => prev.filter(d => d.id !== payload.old.id));
+        }
       })
       .subscribe();
 
@@ -1139,7 +1147,7 @@ function App() {
         ) :
          globalView === 'timers' ? <TimeTrackerApp session={session!} /> :
          globalView === 'reminders' ? <RemindersApp session={session!} dateFormat={dateFormat} timeFormat={timeFormat} /> :
-         globalView === 'braindump' ? <BrainDumpApp session={session!} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} /> :
+         globalView === 'braindump' ? <BrainDumpApp session={session!} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} searchQuery={currentSearchQuery} /> :
          globalView === 'translator' ? <TranslatorApp session={session!} /> : (
           <>
             <div className={`sticky top-0 z-30 bg-white/80 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 ${isGlobalNoteTrayOpen ? '' : 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm'}`}>
