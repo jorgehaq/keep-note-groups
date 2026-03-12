@@ -5,7 +5,7 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { EditorView, ViewPlugin, Decoration, WidgetType, ViewUpdate, keymap, lineNumbers } from '@codemirror/view';
 import { RangeSet, StateEffect, Prec, StateField } from '@codemirror/state'; 
-import { Highlighter, Languages, Loader2, Link as LinkIcon, Check, X } from 'lucide-react';
+import { Highlighter, Languages, Loader2, Link as LinkIcon, Check, X, Tags } from 'lucide-react';
 import { useImperativeHandle, forwardRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -36,7 +36,15 @@ const MARKER_TYPES = {
   ruido: { label: 'Ruido',     light: '#4B5563', dark: '#9CA3AF', emoji: '🔇' },
 } as const;
 
+const HL_COLORS = {
+  y: { label: 'Amarillo', hex: '#FFFF00', class: 'cm-hl-y' },
+  r: { label: 'Rojo',     hex: '#FF0000', class: 'cm-hl-r' },
+  b: { label: 'Azul',     hex: '#3282F6', class: 'cm-hl-b' },
+  g: { label: 'Verde',    hex: '#92D050', class: 'cm-hl-g' },
+} as const;
+
 type MarkerType = keyof typeof MARKER_TYPES;
+type HlColorKey = keyof typeof HL_COLORS;
 
 const generateMarkerTimestamp = (): string => {
   const now = new Date();
@@ -169,9 +177,11 @@ const trimCodeBlocks = (text: string) => {
  */
 const cleanTextForClipboard = (text: string) => {
     return text
-        // 1. Quitar resaltados: {=texto=} -> texto
+        // 1. Quitar resaltados nuevos: [[hl:ts|texto|c]] -> texto
+        .replace(/\[\[hl:[^|]+\|([^|\]]+)\|[yrbg]\]\]/g, '$1')
+        // 2. Quitar resaltados antiguos: {=texto=} -> texto
         .replace(/\{=([\s\S]*?)=\}/g, '$1')
-        // 2. Quitar etiquetas y traducciones: [[tipo:ts|texto]] -> texto
+        // 3. Quitar etiquetas y traducciones: [[tipo:ts|texto]] -> texto
         .replace(/\[\[(?:tr|[a-z]+):[^|\]]*\|([\s\S]*?)\]\]/g, '$1');
 };
 
@@ -309,7 +319,9 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
 
             // --- STEP 2: Inline formatting (skip inside code blocks) ---
             const rules = [
-                { type: 'hl', regex: /\{=([\s\S]*?)=\}/g }, { type: 'tr', regex: /\[\[tr:([^|\]]+)\|([\s\S]*?)\]\]/g },
+                { type: 'hl-new', regex: /\[\[hl:[^|]+\|([^|\]]+)\|([yrbg])\]\]/g },
+                { type: 'hl-old', regex: /\{=([\s\S]*?)=\}/g },
+                { type: 'tr', regex: /\[\[tr:([^|\]]+)\|([\s\S]*?)\]\]/g },
                 { type: 'mk-ins',    regex: /\[\[ins:[^\|]+\|([^\]]+)\]\]/g },
                 { type: 'mk-idea',   regex: /\[\[idea:[^\|]+\|([^\]]+)\]\]/g },
                 { type: 'mk-op',     regex: /\[\[op:[^\|]+\|([^\]]+)\]\]/g },
@@ -330,7 +342,7 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
                     const mFrom = from + match.index; const mTo = from + match.index + match[0].length;
                     
                     // Allow markers (hl, tr, mk-) even inside code blocks
-                    const isMarker = rule.type === 'hl' || rule.type === 'tr' || rule.type.startsWith('mk-');
+                    const isMarker = rule.type.startsWith('hl-') || rule.type === 'tr' || rule.type.startsWith('mk-');
                     if (insideCB(mFrom) && !isMarker) continue;
 
                     const matchLine = view.state.doc.lineAt(mFrom).number;
@@ -353,10 +365,35 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
                             safeReplace(mTo - 2, mTo); decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, match[2]), side: 1 }).range(mTo, mTo));
                         }
                     } 
-                    else if (rule.type === 'hl') {
-                        if (isRevealed) safeMark('cm-custom-hl', mFrom, mTo);
+                    else if (rule.type === 'hl-new') {
+                        const colorCode = match[2] as HlColorKey;
+                        const hrClass = `cm-hl-${colorCode}`;
+                        if (isRevealed) safeMark(hrClass, mFrom, mTo);
                         else {
-                            safeReplace(mFrom, mFrom + 2); safeMark('cm-custom-hl', mFrom + 2, mTo - 2);
+                            // match[0] es [[hl:ts|text|c]]
+                            // match[1] es text
+                            // match[2] es c
+                            // El prefijo es [[hl:ts| (hasta el primer | antes del texto)
+                            const fullStr = match[0];
+                            const textStr = match[1];
+                            const colorStr = match[2];
+                            
+                            const firstPipe = fullStr.indexOf('|');
+                            const secondPipe = fullStr.lastIndexOf('|');
+                            
+                            const prefixLen = firstPipe + 1;
+                            const suffixLen = fullStr.length - secondPipe; // incluye el | antes del color
+                            
+                            safeReplace(mFrom, mFrom + prefixLen);
+                            safeMark(hrClass, mFrom + prefixLen, mTo - suffixLen);
+                            safeReplace(mTo - suffixLen, mTo);
+                            decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, match[1]), side: 1 }).range(mTo, mTo));
+                        }
+                    }
+                    else if (rule.type === 'hl-old') {
+                        if (isRevealed) safeMark('cm-hl-y', mFrom, mTo);
+                        else {
+                            safeReplace(mFrom, mFrom + 2); safeMark('cm-hl-y', mFrom + 2, mTo - 2);
                             safeReplace(mTo - 2, mTo); decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, match[1]), side: 1 }).range(mTo, mTo));
                         }
                     }
@@ -472,7 +509,11 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-cursor-indicator-line": { 
             borderLeftColor: "#6366f1 !important"
         },
-        ".cm-custom-hl": { backgroundColor: "#FACC15 !important", color: "#000000 !important", border: "1px solid #00000030", padding: "0 2px", borderRadius: "4px !important" },
+        ".cm-custom-hl, .cm-hl-y, .cm-hl-r, .cm-hl-b, .cm-hl-g": { color: "#000000 !important", padding: "0 2px", borderRadius: "0px !important" },
+        ".cm-hl-y": { backgroundColor: "#FFFF00 !important" },
+        ".cm-hl-r": { backgroundColor: "#FF0000 !important" },
+        ".cm-hl-b": { backgroundColor: "#3282F6 !important" },
+        ".cm-hl-g": { backgroundColor: "#92D050 !important" },
         ".cm-custom-tr": { position: "relative", backgroundColor: "#10B981 !important", color: "#000000 !important", border: "1px solid #00000030", padding: "0 2px", cursor: "help", borderRadius: "4px !important" },
         ".dark .cm-custom-tr": { backgroundColor: "#10B981 !important", color: "#000000 !important", borderRadius: "4px !important" },
         ".cm-custom-h1": { fontSize: "1.4em", fontWeight: "bold", color: "inherit", lineHeight: "1.2" },
@@ -520,9 +561,10 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
 };
 
 
-export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditorProps>(({
-    noteId, initialContent, searchQuery, onChange, noteFont = 'sans', noteFontSize = 'medium', noteLineHeight = 'standard', readOnly = false, showLineNumbers = false
-}, ref) => {
+const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNotesEditorProps>((props, ref) => {
+    const {
+        noteId, initialContent, searchQuery, onChange, noteFont = 'sans', noteFontSize = 'medium', noteLineHeight = 'standard', readOnly = false, showLineNumbers = false
+    } = props;
     const [content, setContent] = useState('');
     const editorRef = useRef<ReactCodeMirrorRef>(null);
 
@@ -537,6 +579,9 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
     const [tooltipState, setTooltipState] = useState<{text: React.ReactNode, top: number, left: number} | null>(null);
     const [isTranslating, setIsTranslating] = useState(false);
     const [showExpandedMenu, setShowExpandedMenu] = useState(false);
+    const [hlColor, setHlColor] = useState<HlColorKey>('y');
+    const [showHlOptions, setShowHlOptions] = useState(false);
+    const [showTagOptions, setShowTagOptions] = useState(false);
     const [lastAction, setLastAction] = useState<string>(
         () => localStorage.getItem('sme-last-action') || 'highlight'
     );
@@ -603,9 +648,6 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                     const rect = target.getBoundingClientRect();
                     setTooltipState({ text: url, top: rect.top, left: rect.left + (rect.width / 2) });
                 }
-            } else if (target.classList.contains('cm-custom-hl')) {
-                const rect = target.getBoundingClientRect();
-                setTooltipState({ text: '✏️ Interesante', top: rect.top, left: rect.left + (rect.width / 2) });
             } else {
                 // Check for marker tag classes (cm-custom-mk-ins, cm-custom-mk-idea, etc.)
                 const mkClass = Array.from(target.classList).find(c => c.startsWith('cm-custom-mk-'));
@@ -621,7 +663,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
         },
         mouseout: (e) => { 
             const target = e.target as HTMLElement;
-            if (target.classList.contains('cm-custom-tr') || target.classList.contains('cm-custom-link') || target.classList.contains('cm-custom-hl') || Array.from(target.classList).some(c => c.startsWith('cm-custom-mk-'))) {
+            if (target.classList.contains('cm-custom-tr') || target.classList.contains('cm-custom-link') || Array.from(target.classList).some(c => c.startsWith('cm-custom-mk-')) || Array.from(target.classList).some(c => c.startsWith('cm-hl-'))) {
                 setTooltipState(null); 
             }
         }
@@ -802,8 +844,9 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
         },
         mouseover: (e) => {
             const target = e.target as HTMLElement;
-            if (target.closest('.cm-custom-hl, .cm-custom-tr, .cm-custom-link')) {
-                const span = target.closest('.cm-custom-hl, .cm-custom-tr, .cm-custom-link') as HTMLElement;
+            const hlNode = target.closest('[class*="cm-hl-"], .cm-custom-hl, .cm-custom-tr, .cm-custom-link');
+            if (hlNode) {
+                const span = hlNode as HTMLElement;
                 let sibling = span?.nextElementSibling;
                 while (sibling) {
                     if (sibling.classList.contains('cm-remove-btn-wrapper')) {
@@ -817,7 +860,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
         },
         mouseout: (e) => {
             const target = e.target as HTMLElement;
-            if (target.closest('.cm-custom-hl, .cm-custom-tr, .cm-custom-link')) {
+            if (target.closest('[class*="cm-hl-"], .cm-custom-hl, .cm-custom-tr, .cm-custom-link')) {
                 const line = target.closest('.cm-line');
                 if (line) line.querySelectorAll('.cm-remove-btn-visible').forEach(btn => btn.classList.remove('cm-remove-btn-visible'));
             }
@@ -827,27 +870,35 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
     const doFormat = (type: 'highlight' | 'link' | MarkerType) => {
         if (!menuState || !editorRef.current?.view) return;
 
-        // Anti-mescolanza: si el texto seleccionado es el interior de un marcador existente,
-        // usar el texto limpio (sin sintaxis anidada)
         const rawSelected = menuState.text;
-        const innerClean = rawSelected.replace(/\[\[(ins|idea|op|duda|wow|pat|yo|ruido):[^\|]+\|([^\]]+)\]\]/g, '$2');
+        // Limpiador: quita resaltados (hl-new y hl-old) y marcadores para evitar anidamiento corrupto
+        const innerClean = rawSelected
+            .replace(/\[\[hl:[^|]+\|([^|\]]+)\|[yrbg]\]\]/g, '$1')
+            .replace(/\{=([\s\S]*?)=\}/g, '$1')
+            .replace(/\[\[(ins|idea|op|duda|wow|pat|yo|ruido):[^\|]+\|([^\]]+)\]\]/g, '$2');
 
-        let replacement = '';
-        if (type === 'highlight') {
-            replacement = `{=${innerClean}=}`;
-        } else if (type === 'link') {
-            if (showLinkInput) return; // Reset Guard: No limpiar si ya estamos editando
+        if (type === 'link') {
+            if (showLinkInput) return;
             setShowLinkInput(true);
             setLinkUrl('');
             setLastAction('link');
             localStorage.setItem('sme-last-action', 'link');
-            return; // Esperar a confirmLink sin cerrar el menú
-        } else if (type in MARKER_TYPES) {
-            const ts = generateMarkerTimestamp();
-            replacement = `[[${type}:${ts}|${innerClean}]]`;
+            return;
         }
 
-        editorRef.current.view.dispatch({ changes: { from: menuState.from, to: menuState.to, insert: replacement }, selection: { anchor: menuState.from + replacement.length } });
+        const ts = generateMarkerTimestamp();
+        let formatted = '';
+        if (type === 'highlight') {
+            formatted = `[[hl:${ts}|${innerClean}|${hlColor}]]`;
+        } else {
+            formatted = `[[${type}:${ts}|${innerClean}]]`;
+        }
+
+        editorRef.current.view.dispatch({ 
+            changes: { from: menuState.from, to: menuState.to, insert: formatted }, 
+            selection: { anchor: menuState.from + formatted.length } 
+        });
+        
         setMenuState(null);
         setShowExpandedMenu(false);
         setShowLinkInput(false);
@@ -989,19 +1040,24 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
     }
 
     // Calcular desplazamiento del submenú si se sale de la pantalla
-    // El botón Tag está aprox a -30px del centro del menú principal
-    const getSubMenuStyle = () => {
+    const getSubMenuStyle = (anchorOffset: number) => {
         if (!menuState || menuState.isMobile) return { left: '50%', transform: 'translateX(-50%)' };
-        const tagButtonViewportLeft = clampedLeft - 30; 
-        const halfSub = subMenuWidth / 2;
-        let offset = 0;
         
-        if (tagButtonViewportLeft - halfSub < margin) offset = margin - (tagButtonViewportLeft - halfSub);
-        else if (tagButtonViewportLeft + halfSub > window.innerWidth - margin) offset = (window.innerWidth - margin) - (tagButtonViewportLeft + halfSub);
+        // Posicion del botón en el viewport (clampedLeft es el centro del globo principal)
+        const buttonViewportLeft = clampedLeft + anchorOffset; 
+        const halfSub = subMenuWidth / 2;
+        let correction = 0;
+        
+        // Si el submenú se sale por la izquierda le sumamos correccion positiva, si por la derecha negativa
+        if (buttonViewportLeft - halfSub < margin) {
+            correction = margin - (buttonViewportLeft - halfSub);
+        } else if (buttonViewportLeft + halfSub > window.innerWidth - margin) {
+            correction = (window.innerWidth - margin) - (buttonViewportLeft + halfSub);
+        }
         
         return { 
             left: '50%', 
-            transform: `translateX(calc(-50% + ${offset}px))` 
+            transform: `translateX(calc(-50% + ${correction}px))` 
         };
     };
 
@@ -1025,19 +1081,19 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
     };
 
     const getLastActionDisplay = () => {
-        if (lastAction === 'highlight') return { emoji: '✏️', title: 'Resaltar' };
-        if (lastAction === 'en') return { emoji: 'EN', title: 'Traducir → EN' };
-        if (lastAction === 'es') return { emoji: 'ES', title: 'Traducir → ES' };
-        if (lastAction === 'link') return { emoji: '🔗', title: 'Link' };
+        if (lastAction === 'highlight') return { icon: <Highlighter size={16} color={HL_COLORS[hlColor].hex} />, title: 'Resaltar', emoji: '' };
+        if (lastAction === 'en') return { emoji: 'EN', title: 'Traducir → EN', icon: null };
+        if (lastAction === 'es') return { emoji: 'ES', title: 'Traducir → ES', icon: null };
+        if (lastAction === 'link') return { emoji: '🔗', title: 'Link', icon: null };
         const m = MARKER_TYPES[lastAction as MarkerType];
-        if (m) return { emoji: m.emoji, title: m.label };
-        return { emoji: '🖊️', title: 'Resaltar' };
+        if (m) return { emoji: m.emoji, title: m.label, icon: null };
+        return { icon: <Highlighter size={16} color={HL_COLORS[hlColor].hex} />, title: 'Resaltar', emoji: '' };
     };
 
     const fireLastAction = async () => {
-        if (lastAction === 'highlight') await doActionAndSave('highlight', () => doFormat('highlight'));
-        else if (lastAction === 'en') await doActionAndSave('en', () => doTranslate('en'));
-        else if (lastAction === 'es') await doActionAndSave('es', () => doTranslate('es'));
+        if (lastAction === 'highlight') { await doActionAndSave('highlight', () => { doFormat('highlight'); }); }
+        else if (lastAction === 'en') { await doActionAndSave('en', () => { doTranslate('en'); }); }
+        else if (lastAction === 'es') { await doActionAndSave('es', () => { doTranslate('es'); }); }
         else if (lastAction === 'link') {
             if (showLinkInput) return; // Si ya está abierto, no hacer nada para evitar reset de URL
             setShowExpandedMenu(false);
@@ -1046,8 +1102,8 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
             setLastAction('link');
             localStorage.setItem('sme-last-action', 'link');
         }
-        else if (lastAction in MARKER_TYPES) await doActionAndSave(lastAction, () => doFormat(lastAction as MarkerType));
-        else await doActionAndSave('highlight', () => doFormat('highlight'));
+        else if (lastAction in MARKER_TYPES) { await doActionAndSave(lastAction, () => { doFormat(lastAction as MarkerType); }); }
+        else { await doActionAndSave('highlight', () => { doFormat('highlight'); }); }
     };
 
     return (
@@ -1127,7 +1183,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                     style={{ 
                         top: menuState.top, 
                         left: clampedLeft, 
-                        transform: menuState.isMobile ? 'translateX(-50%)' : 'translate(-50%, -100%)' 
+                        transform: menuState.isMobile ? 'translateX(-50%)' : 'translate(-50%, calc(-100% - 6px))' 
                     }}
                     onMouseDown={(e) => {
                         // IMPORTANTE: No dar preventDefault si es un INPUT para que gane el foco
@@ -1175,41 +1231,88 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                     {/* Globo expandido — aparece arriba (mutuamente exclusivo con link input para limpieza) */}
                     {showExpandedMenu && !showLinkInput && (
                         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-1.5 flex flex-col gap-1">
-                            {/* Fila 1 marcadores */}
-                            <div className="flex gap-1">
-                                {(['ins','idea','op','duda'] as MarkerType[]).map(key => {
-                                    const cfg = MARKER_TYPES[key];
-                                    return (
-                                        <button key={key}
-                                            onClick={() => doActionAndSave(key, () => doFormat(key))}
-                                            title={cfg.label}
-                                            className="w-9 h-9 rounded-lg flex items-center justify-center text-base hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                                        >{cfg.emoji}</button>
-                                    );
-                                })}
-                            </div>
-                            {/* Fila 2 marcadores */}
-                            <div className="flex gap-1">
-                                {(['wow','pat','yo','ruido'] as MarkerType[]).map(key => {
-                                    const cfg = MARKER_TYPES[key];
-                                    return (
-                                        <button key={key}
-                                            onClick={() => doActionAndSave(key, () => doFormat(key))}
-                                            title={cfg.label}
-                                            className="w-9 h-9 rounded-lg flex items-center justify-center text-base hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                                        >{cfg.emoji}</button>
-                                    );
-                                })}
-                            </div>
-                            {/* Separador */}
-                            <div className="h-px bg-zinc-200 dark:bg-zinc-700 mx-1" />
-                            {/* Fila 3: highlight, EN, ES, link */}
-                            <div className="flex gap-1">
-                                <button onClick={() => doActionAndSave('highlight', () => doFormat('highlight'))}
-                                    title="Resaltar"
-                                    className="w-9 h-9 rounded-lg flex items-center justify-center text-base hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-                                    ✏️
-                                </button>
+                            {/* Fila única con popovers */}
+                            <div className="flex gap-1 items-center">
+                                {/* Popover de Etiquetas */}
+                                <div 
+                                  className="relative group/tags flex items-center"
+                                  onMouseEnter={() => setShowTagOptions(true)}
+                                  onMouseLeave={() => setShowTagOptions(false)}
+                                >
+                                    <button 
+                                        className="w-9 h-9 rounded-lg flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                        title="Tags y Marcadores"
+                                    >
+                                        <Tags size={18} />
+                                    </button>
+
+                                    {showTagOptions && (
+                                        <div 
+                                          className="absolute bottom-full left-0 mb-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 z-[100] animate-fadeIn"
+                                          style={getSubMenuStyle(-85)}
+                                        >
+                                            {/* Bridge overlay (padding 6px + margin 6px = 12px) */}
+                                            <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
+                                            
+                                            <div className="flex items-center gap-1">
+                                                {(Object.keys(MARKER_TYPES) as MarkerType[]).map(key => {
+                                                    const cfg = MARKER_TYPES[key];
+                                                    return (
+                                                        <button key={key}
+                                                            onClick={() => {
+                                                                doActionAndSave(key, () => doFormat(key));
+                                                                setShowTagOptions(false);
+                                                            }}
+                                                            title={cfg.label}
+                                                            className="w-9 h-9 rounded-lg flex items-center justify-center text-base hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                                        >{cfg.emoji}</button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Separador vertical */}
+                                <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5" />
+                                
+                                {/* Resaltador (con su popover de colores) */}
+                                <div 
+                                  className="relative group/hl flex items-center"
+                                  onMouseEnter={() => setShowHlOptions(true)}
+                                  onMouseLeave={() => setShowHlOptions(false)}
+                                >
+                                    <button onClick={() => { doActionAndSave('highlight', () => { doFormat('highlight'); }); }}
+                                        title="Resaltar"
+                                        className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                        style={{ color: HL_COLORS[hlColor].hex }}
+                                    >
+                                        <Highlighter size={18} />
+                                    </button>
+
+                                    {showHlOptions && (
+                                        <div 
+                                          className="absolute bottom-full left-0 mb-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 flex gap-1 items-center animate-fadeIn z-[100]"
+                                          style={getSubMenuStyle(-40)}
+                                        >
+                                            {/* Bridge overlay (padding 6px + margin 6px = 12px) */}
+                                            <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
+                                            
+                                            {(Object.keys(HL_COLORS) as HlColorKey[]).map(cKey => (
+                                                <button
+                                                  key={cKey}
+                                                  onClick={() => {
+                                                    setHlColor(cKey);
+                                                    setShowHlOptions(false);
+                                                  }}
+                                                  className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 ${hlColor === cKey ? 'border-zinc-400' : 'border-transparent'}`}
+                                                  style={{ backgroundColor: HL_COLORS[cKey].hex }}
+                                                  title={HL_COLORS[cKey].label}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                                 <button onClick={() => doActionAndSave('en', () => doTranslate('en'))}
                                     title="Traducir → EN"
                                     className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold text-blue-500 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 transition-colors">
@@ -1238,15 +1341,14 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                         ) : (
                             <>
                                 <button
-                                    onClick={fireLastAction}
+                                    onClick={() => { fireLastAction(); }}
                                     title={getLastActionDisplay().title}
-                                    className={`w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors ${
-                                        (lastAction === 'en' || lastAction === 'es') ? 'text-xs font-bold text-blue-500' : 'text-base'
-                                    }`}
+                                    className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                                 >
-                                    {getLastActionDisplay().emoji}
+                                    {getLastActionDisplay().icon || getLastActionDisplay().emoji}
                                 </button>
                                 <button
+                                    onMouseEnter={() => setShowExpandedMenu(true)}
                                     onClick={() => {
                                         if (showLinkInput) {
                                             setShowLinkInput(false);
@@ -1272,3 +1374,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
         </div>
     );
 });
+
+SmartNotesEditorComponent.displayName = 'SmartNotesEditor';
+
+export const SmartNotesEditor = SmartNotesEditorComponent;
