@@ -8,13 +8,15 @@ export interface Summary {
     note_id: string;
     target_objective: string | null;
     content: string | null;
+    scratchpad: string | null;
     status: SummaryStatus;
     created_at: string;
 }
 
 export const useSummaries = (noteId: string | null) => {
     const [summaries, setSummaries] = useState<Summary[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(!!noteId);
+    const [hasFetched, setHasFetched] = useState(false);
 
     const fetchSummaries = useCallback(async () => {
         if (!noteId) return;
@@ -29,15 +31,21 @@ export const useSummaries = (noteId: string | null) => {
             setSummaries(data);
         }
         setLoading(false);
+        setHasFetched(true);
     }, [noteId]);
 
     useEffect(() => {
+        setHasFetched(false); // Reset on note change
         fetchSummaries();
 
         if (!noteId) return;
 
+        // Channel name includes random suffix to prevent collisions on fast mount/unmount
+        const channelId = `summaries_${noteId}_${
+            Math.random().toString(36).substring(7)
+        }`;
         const channel = supabase
-            .channel(`summaries_${noteId}`)
+            .channel(channelId)
             .on(
                 "postgres_changes",
                 {
@@ -47,34 +55,59 @@ export const useSummaries = (noteId: string | null) => {
                     filter: `note_id=eq.${noteId}`,
                 },
                 (payload) => {
-                    if (payload.eventType === "INSERT") {
-                        setSummaries(
-                            (prev) => [payload.new as Summary, ...prev]
-                        );
-                    } else if (payload.eventType === "UPDATE") {
-                        setSummaries((prev) =>
-                            prev.map((s) =>
-                                s.id === payload.new.id
-                                    ? payload.new as Summary
-                                    : s
-                            )
-                        );
+                    console.log(
+                        "Realtime Summary Event:",
+                        payload.eventType,
+                        (payload.new as any)?.id || (payload.old as any)?.id,
+                    );
+                    if (
+                        payload.eventType === "INSERT" ||
+                        payload.eventType === "UPDATE"
+                    ) {
+                        const updatedItem = payload.new as Summary;
+                        setSummaries((prev) => {
+                            const exists = prev.find((s) =>
+                                s.id === updatedItem.id
+                            );
+                            if (exists) {
+                                return prev.map((s) =>
+                                    s.id === updatedItem.id ? updatedItem : s
+                                );
+                            }
+                            return [updatedItem, ...prev].sort((a, b) =>
+                                new Date(b.created_at).getTime() -
+                                new Date(a.created_at).getTime()
+                            );
+                        });
                     } else if (payload.eventType === "DELETE") {
                         setSummaries((prev) =>
-                            prev.filter((s) => s.id === payload.old.id)
+                            prev.filter((s) => s.id !== (payload.old as any).id)
                         );
                     }
                 },
             )
-            .subscribe();
+            .subscribe((status) => {
+                console.log(`Summary Subscription (${noteId}):`, status);
+            });
 
         return () => {
+            console.log(`Cleaning up Summary Channel (${noteId})`);
             supabase.removeChannel(channel);
         };
     }, [noteId, fetchSummaries]);
 
     const generateSummary = async (objective?: string) => {
         if (!noteId) return;
+
+        // 🎯 Sincronizar el objetivo en la nota para que el motor Python lo detecte
+        await supabase
+            .from("notes")
+            .update({
+                focus_prompt: objective || null,
+                ai_summary_status: "queued",
+                updated_at: new Date().toISOString(),
+            })
+            .eq("id", noteId);
 
         const { data, error } = await supabase
             .from("summaries")
@@ -91,13 +124,10 @@ export const useSummaries = (noteId: string | null) => {
             return null;
         }
 
-        // El procesamiento se dispara por DB Trigger o Edge Function
-        // pero aquí devolvemos el registro creado
-        // 🚀 Llamada a Edge Function para trigger de AI (Vibe Executed)
         if (data) {
-            // Por ahora es un log, el backend debe implementar 'summarizeNote'
+            // Optimistic Update: Add to local state immediately
+            setSummaries((prev) => [data as Summary, ...prev]);
             console.log("Triggering AI for summary:", data.id);
-            // await supabase.functions.invoke('summarizeNote', { body: { summaryId: data.id } });
         }
 
         return data;
@@ -111,11 +141,30 @@ export const useSummaries = (noteId: string | null) => {
         if (error) console.error("Error deleting summary:", error);
     };
 
+    const updateScratchpad = async (summaryId: string, text: string) => {
+        const { error } = await supabase
+            .from("summaries")
+            .update({ scratchpad: text })
+            .eq("id", summaryId);
+        if (error) console.error("Error updating scratchpad:", error);
+    };
+
+    const updateSummaryContent = async (summaryId: string, text: string) => {
+        const { error } = await supabase
+            .from("summaries")
+            .update({ content: text })
+            .eq("id", summaryId);
+        if (error) console.error("Error updating summary content:", error);
+    };
+
     return {
         summaries,
         loading,
         generateSummary,
         deleteSummary,
+        updateScratchpad,
+        updateSummaryContent,
         refresh: fetchSummaries,
+        hasFetched,
     };
 };

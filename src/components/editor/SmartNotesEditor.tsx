@@ -5,7 +5,7 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { EditorView, ViewPlugin, Decoration, WidgetType, ViewUpdate, keymap, lineNumbers } from '@codemirror/view';
 import { RangeSet, StateEffect, Prec, StateField } from '@codemirror/state'; 
-import { Highlighter, Languages, Loader2, Link as LinkIcon } from 'lucide-react';
+import { Highlighter, Languages, Loader2, Link as LinkIcon, Check, X } from 'lucide-react';
 import { useImperativeHandle, forwardRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -404,54 +404,7 @@ const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Rec
     }
 }, { decorations: v => v.decorations });
 
-const clickHandlerExtension = EditorView.domEventHandlers({
-    contextmenu: (e, view) => {
-        const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
-        if (pos !== null) {
-            e.preventDefault(); // Ocultar menú nativo del dispositivo móvil/navegador
-            const line = view.state.doc.lineAt(pos).number;
-            view.dispatch({
-                effects: [
-                    setRevealedLine.of(line),
-                    ForceRedrawEffect.of(null)
-                ]
-            });
-            return true;
-        }
-        return false;
-    },
-    click: (e) => {
-        const linkNode = (e.target as HTMLElement).closest('.cm-custom-link');
-        if (linkNode) { const url = linkNode.getAttribute('data-url'); if (url) { window.open(url, '_blank', 'noopener,noreferrer'); return true; } }
-        return false;
-    },
-    mouseover: (e) => {
-        const target = e.target as HTMLElement;
-        if (target.closest('.cm-custom-hl') || target.closest('.cm-custom-tr') || target.closest('.cm-custom-link')) {
-            const span = target.closest('.cm-custom-hl, .cm-custom-tr, .cm-custom-link') as HTMLElement;
-            // Walk siblings forward to find the remove button wrapper
-            let sibling = span?.nextElementSibling;
-            while (sibling) {
-                if (sibling.classList.contains('cm-remove-btn-wrapper')) {
-                    const btn = sibling.querySelector('.cm-remove-btn');
-                    if (btn) btn.classList.add('cm-remove-btn-visible');
-                    break;
-                }
-                sibling = sibling.nextElementSibling;
-            }
-        }
-    },
-    mouseout: (e) => {
-        const target = e.target as HTMLElement;
-        if (target.closest('.cm-custom-hl') || target.closest('.cm-custom-tr') || target.closest('.cm-custom-link')) {
-            // Remove visible class from all remove buttons in this line
-            const line = target.closest('.cm-line');
-            if (line) {
-                line.querySelectorAll('.cm-remove-btn-visible').forEach(btn => btn.classList.remove('cm-remove-btn-visible'));
-            }
-        }
-    }
-});
+// clickHandlerExtension movida dentro del componente para soportar múltiples instancias y estado local
 
 // --- EL TEMA AHORA ES UNA FUNCIÓN DINÁMICA ---
 const createNotesTheme = (font: string, size: string, lineHeight: string = 'standard') => {
@@ -490,11 +443,20 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             fontSize: fontSize,
             WebkitUserSelect: "text !important",
             userSelect: "text !important",
+            whiteSpace: "pre-wrap !important",
+            overflowWrap: "anywhere !important",
+            wordBreak: "break-word !important",
         },
         "&.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important", borderLeftWidth: "2px !important" },
         ".dark &.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important" },
-        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection, .cm-line ::selection, ::selection": { backgroundColor: "rgba(73, 64, 217, 0.45) !important", color: "#ffffff !important", fontWeight: "normal !important" },
-        "&.cm-focused .cm-selectionLayer, .cm-selectionLayer": { display: "none !important" }, // Desactivar capa CM para usar nativa
+        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": { 
+            backgroundColor: "rgba(73, 64, 217, 0.45) !important",
+            pointerEvents: "none !important" 
+        },
+        "&.cm-focused .cm-selectionLayer, .cm-selectionLayer": { 
+            zIndex: "0 !important",
+            pointerEvents: "none !important" 
+        }, 
         ".cm-content *": { textDecoration: "none !important", boxShadow: "none !important" },
         ".cm-gutters": { backgroundColor: "transparent !important", border: "none !important", color: "#71717a" },
         ".dark .cm-gutters": { color: "#52525b" },
@@ -504,15 +466,15 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             lineHeight: lHeight, 
             paddingLeft: "12px !important", 
             borderLeft: "3px solid transparent",
-            transition: "border-color 0.2s ease"
+            transition: "border-color 0.2s ease",
+            overflowWrap: "anywhere !important",
         },
         ".cm-cursor-indicator-line": { 
             borderLeftColor: "#6366f1 !important"
         },
-        ".cm-custom-hl": { backgroundColor: "#FACC15 !important", color: "#000000 !important", padding: "0 2px", fontWeight: "600 !important", borderRadius: "4px !important" },
-        ".dark .cm-custom-hl": { backgroundColor: "#FACC15 !important", color: "#000000 !important", borderRadius: "4px !important" },
-        ".cm-custom-tr": { position: "relative", backgroundColor: "#10B981 !important", color: "white !important", padding: "0 2px", cursor: "help", borderRadius: "4px !important" },
-        ".dark .cm-custom-tr": { backgroundColor: "#10B981 !important", color: "white !important", borderRadius: "4px !important" },
+        ".cm-custom-hl": { backgroundColor: "#FACC15 !important", color: "#000000 !important", border: "1px solid #00000030", padding: "0 2px", borderRadius: "4px !important" },
+        ".cm-custom-tr": { position: "relative", backgroundColor: "#10B981 !important", color: "#000000 !important", border: "1px solid #00000030", padding: "0 2px", cursor: "help", borderRadius: "4px !important" },
+        ".dark .cm-custom-tr": { backgroundColor: "#10B981 !important", color: "#000000 !important", borderRadius: "4px !important" },
         ".cm-custom-h1": { fontSize: "1.4em", fontWeight: "bold", color: "inherit", lineHeight: "1.2" },
         ".cm-custom-bold": { fontWeight: "bold", color: "inherit" },
         ".cm-custom-italic": { fontStyle: "italic", color: "inherit" },
@@ -572,9 +534,20 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
         }
     }));
     const [menuState, setMenuState] = useState<{top: number, left: number, from: number, to: number, text: string, isMobile?: boolean} | null>(null);
-    const [tooltipState, setTooltipState] = useState<{text: string, top: number, left: number} | null>(null);
+    const [tooltipState, setTooltipState] = useState<{text: React.ReactNode, top: number, left: number} | null>(null);
     const [isTranslating, setIsTranslating] = useState(false);
-    const [showMarkerMenu, setShowMarkerMenu] = useState(false);
+    const [showExpandedMenu, setShowExpandedMenu] = useState(false);
+    const [lastAction, setLastAction] = useState<string>(
+        () => localStorage.getItem('sme-last-action') || 'highlight'
+    );
+    const [showLinkInput, setShowLinkInput] = useState(false);
+    const [linkUrl, setLinkUrl] = useState('');
+    const linkInputRef = useRef<HTMLInputElement>(null);
+    const linkUrlRef = useRef(linkUrl);
+    const showLinkInputRef = useRef(showLinkInput);
+    
+    useEffect(() => { linkUrlRef.current = linkUrl; }, [linkUrl]);
+    useEffect(() => { showLinkInputRef.current = showLinkInput; }, [showLinkInput]);
     
     // Detectar modo oscuro de forma reactiva para los colores de las etiquetas
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
@@ -589,6 +562,26 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
     const translationsMapRef = useRef<Record<string, string>>({});
     const searchQueryRef = useRef<string>(searchQuery || ''); 
     const debounceChangeTimerRef = useRef<NodeJS.Timeout | null>(null);
+    
+    useEffect(() => {
+        if (showLinkInput && linkInputRef.current) {
+            linkInputRef.current.focus();
+        }
+    }, [showLinkInput]);
+
+    // Exponer funciones de cierre para la lógica interna (Escape)
+    const closeMenus = () => {
+        setMenuState(null);
+        setShowExpandedMenu(false);
+        setShowLinkInput(false);
+        window.getSelection()?.removeAllRanges();
+    };
+
+    const closeMenusOnly = () => {
+        setMenuState(null);
+        setShowExpandedMenu(false);
+        setShowLinkInput(false);
+    };
 
     // Regenera el tema visual solo si cambias la fuente o el tamaño en los ajustes
     const dynamicTheme = useMemo(() => createNotesTheme(noteFont, noteFontSize, noteLineHeight), [noteFont, noteFontSize, noteLineHeight]);
@@ -602,11 +595,36 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                 const text = target.getAttribute('data-translation-text');
                 if (text) {
                     const rect = target.getBoundingClientRect();
-                    setTooltipState({ text, top: rect.top, left: rect.left + (rect.width / 2) });
+                    setTooltipState({ text: <span className="flex items-center gap-1.5"><Languages size={13} className="shrink-0" />{text}</span>, top: rect.top, left: rect.left + (rect.width / 2) });
+                }
+            } else if (target.classList.contains('cm-custom-link')) {
+                const url = target.getAttribute('data-url');
+                if (url) {
+                    const rect = target.getBoundingClientRect();
+                    setTooltipState({ text: url, top: rect.top, left: rect.left + (rect.width / 2) });
+                }
+            } else if (target.classList.contains('cm-custom-hl')) {
+                const rect = target.getBoundingClientRect();
+                setTooltipState({ text: '✏️ Interesante', top: rect.top, left: rect.left + (rect.width / 2) });
+            } else {
+                // Check for marker tag classes (cm-custom-mk-ins, cm-custom-mk-idea, etc.)
+                const mkClass = Array.from(target.classList).find(c => c.startsWith('cm-custom-mk-'));
+                if (mkClass) {
+                    const tagType = mkClass.replace('cm-custom-mk-', '') as MarkerType;
+                    const cfg = MARKER_TYPES[tagType];
+                    if (cfg) {
+                        const rect = target.getBoundingClientRect();
+                        setTooltipState({ text: `${cfg.emoji} ${cfg.label}`, top: rect.top, left: rect.left + (rect.width / 2) });
+                    }
                 }
             }
         },
-        mouseout: (e) => { if ((e.target as HTMLElement).classList.contains('cm-custom-tr')) setTooltipState(null); }
+        mouseout: (e) => { 
+            const target = e.target as HTMLElement;
+            if (target.classList.contains('cm-custom-tr') || target.classList.contains('cm-custom-link') || target.classList.contains('cm-custom-hl') || Array.from(target.classList).some(c => c.startsWith('cm-custom-mk-'))) {
+                setTooltipState(null); 
+            }
+        }
     }), []);
 
     useEffect(() => {
@@ -688,20 +706,33 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
     const selectionListener = useMemo(() => EditorView.updateListener.of((update) => {
         if (update.viewportChanged || update.docChanged) setTooltipState(null);
         if (update.selectionSet) {
-            // Guardar posición del cursor en localStorage (debounced)
-            const pos = update.state.selection.main.head;
+            const { main } = update.state.selection;
+
+            // 1. Si la selección está vacía (clic simple), resetear menú
+            if (main.empty) {
+                // 🚀 PROTECCIÓN: No cerramos el menú si el input de link está activo.
+                // handleBlur se encargará de confirmar/cerrar de forma segura.
+                if (showLinkInputRef.current) return; 
+
+                setMenuState(null);
+                setShowExpandedMenu(false);
+                setShowLinkInput(false);
+            }
+
+            // 2. Guardar posición del cursor en localStorage (debounced)
+            const cursorHead = main.head;
             clearTimeout((window as any)[`__cur_${noteId}`]);
             (window as any)[`__cur_${noteId}`] = setTimeout(() => {
-                localStorage.setItem(`cursor-pos-${noteId}`, String(pos));
+                localStorage.setItem(`cursor-pos-${noteId}`, String(cursorHead));
             }, 400);
 
-            const { main } = update.state.selection;
+            // 3. Mostrar menú si hay selección
             if (!main.empty) {
                 const rect = update.view.coordsAtPos(main.from);
                 if (rect) {
                     const isMobile = window.innerWidth < 768;
                     setMenuState({ 
-                        top: isMobile ? 0 : rect.top - 55, 
+                        top: isMobile ? 0 : rect.top - 8, 
                         left: isMobile ? 0 : rect.left, 
                         from: main.from, 
                         to: main.to, 
@@ -709,9 +740,89 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                         isMobile 
                     });
                 }
-            } else setMenuState(null);
+            }
         }
     }), [noteId]);
+
+    const clickHandlerExtension = useMemo(() => Prec.highest(EditorView.domEventHandlers({
+        mousedown: (e, view) => {
+            const target = e.target as HTMLElement;
+            if (target.closest('.floating-menu-container')) {
+                return; // Si el clic es en el menú, no cerramos nada aquí
+            }
+            closeMenusOnly();
+            
+            const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
+            const { main } = view.state.selection;
+
+            // 🚀 FIX DEFINITIVO: Si el clic es dentro de una selección, colapsamos manualmente.
+            // Usamos preventDefault() para que el navegador no intente su propia lógica de selección/drag
+            // que es lo que causa el "secuestro" visual. Luego forzamos el foco.
+            if (pos !== null && !main.empty && pos >= main.from && pos <= main.to) {
+                e.preventDefault(); 
+                view.dispatch({
+                    selection: { anchor: pos, head: pos },
+                    scrollIntoView: false
+                });
+                window.getSelection()?.removeAllRanges();
+                view.focus(); // Restaurar foco tras preventDefault
+                return true; 
+            }
+            return false; 
+        },
+        contextmenu: (e, view) => {
+            e.preventDefault();
+            view.focus();
+            
+            const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
+            const docLines = view.state.doc.lines;
+            
+            // Si el clic es fuera del texto (abajo), usamos la última línea
+            const targetLine = pos !== null 
+                ? view.state.doc.lineAt(pos).number 
+                : docLines;
+
+            const currentRevealed = view.state.field(revealedLineField, false);
+            
+            view.dispatch({
+                effects: [
+                    setRevealedLine.of(currentRevealed === targetLine ? null : targetLine),
+                    ForceRedrawEffect.of(null)
+                ]
+            });
+            return true;
+        },
+        click: (e) => {
+            const linkNode = (e.target as HTMLElement).closest('.cm-custom-link');
+            if (linkNode) { 
+                const url = linkNode.getAttribute('data-url'); 
+                if (url) { window.open(url, '_blank', 'noopener,noreferrer'); return true; } 
+            }
+            return false;
+        },
+        mouseover: (e) => {
+            const target = e.target as HTMLElement;
+            if (target.closest('.cm-custom-hl, .cm-custom-tr, .cm-custom-link')) {
+                const span = target.closest('.cm-custom-hl, .cm-custom-tr, .cm-custom-link') as HTMLElement;
+                let sibling = span?.nextElementSibling;
+                while (sibling) {
+                    if (sibling.classList.contains('cm-remove-btn-wrapper')) {
+                        const btn = sibling.querySelector('.cm-remove-btn');
+                        if (btn) btn.classList.add('cm-remove-btn-visible');
+                        break;
+                    }
+                    sibling = sibling.nextElementSibling;
+                }
+            }
+        },
+        mouseout: (e) => {
+            const target = e.target as HTMLElement;
+            if (target.closest('.cm-custom-hl, .cm-custom-tr, .cm-custom-link')) {
+                const line = target.closest('.cm-line');
+                if (line) line.querySelectorAll('.cm-remove-btn-visible').forEach(btn => btn.classList.remove('cm-remove-btn-visible'));
+            }
+        }
+    })), [noteId]);
 
     const doFormat = (type: 'highlight' | 'link' | MarkerType) => {
         if (!menuState || !editorRef.current?.view) return;
@@ -725,13 +836,12 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
         if (type === 'highlight') {
             replacement = `{=${innerClean}=}`;
         } else if (type === 'link') {
-            const text = innerClean.trim();
-            const urlMatch = text.match(/(https?:\/\/[^\s]+)/);
-            if (urlMatch) {
-                const url = urlMatch[1];
-                let title = text.replace(url, '').replace(/^[-\s]+/, '').trim();
-                replacement = `[${title || url}](${url})`;
-            } else replacement = `[${text}]()`;
+            if (showLinkInput) return; // Reset Guard: No limpiar si ya estamos editando
+            setShowLinkInput(true);
+            setLinkUrl('');
+            setLastAction('link');
+            localStorage.setItem('sme-last-action', 'link');
+            return; // Esperar a confirmLink sin cerrar el menú
         } else if (type in MARKER_TYPES) {
             const ts = generateMarkerTimestamp();
             replacement = `[[${type}:${ts}|${innerClean}]]`;
@@ -739,11 +849,30 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
 
         editorRef.current.view.dispatch({ changes: { from: menuState.from, to: menuState.to, insert: replacement }, selection: { anchor: menuState.from + replacement.length } });
         setMenuState(null);
-        setShowMarkerMenu(false);
+        setShowExpandedMenu(false);
+        setShowLinkInput(false);
     };
 
-    const doHighlight = () => doFormat('highlight');
-    const doLink = () => doFormat('link');
+    const confirmLink = () => {
+        if (!menuState || !editorRef.current?.view) return;
+        const textToLink = menuState.text.replace(/\[\[(ins|idea|op|duda|wow|pat|yo|ruido):[^\|]+\|([^\]]+)\]\]/g, '$2').trim();
+        // Usamos la ref si estamos en un contexto asíncrono (como blur)
+        const currentUrl = linkUrlRef.current.trim();
+        
+        // Si hay una URL, aplicamos formato link. Si no, dejamos el texto limpio.
+        const replacement = currentUrl ? `[${textToLink}](${currentUrl})` : textToLink;
+        
+        editorRef.current.view.dispatch({ 
+            changes: { from: menuState.from, to: menuState.to, insert: replacement }, 
+            selection: { anchor: menuState.from + replacement.length } 
+        });
+        
+        setMenuState(null);
+        setShowExpandedMenu(false);
+        setShowLinkInput(false);
+        setLinkUrl('');
+    };
+
 
     const doTranslate = async (targetLang: 'en' | 'es') => {
         if (!menuState || !editorRef.current?.view) return;
@@ -752,6 +881,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
 
         console.log("🚀 Iniciando traducción a través de Edge Function...");
         setIsTranslating(true);
+        setShowExpandedMenu(false);
         
         try {
             // 1. Obtener sesión para el historial
@@ -795,6 +925,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                 selection: { anchor: menuState.from + replacement.length } 
             });
             setMenuState(null);
+            setShowExpandedMenu(false);
 
         } catch (err: any) {
             console.error("❌ Error fatal en traducción:", err);
@@ -810,17 +941,40 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
         debounceChangeTimerRef.current = setTimeout(() => onChange(value), 800); 
     };
 
-    const handleBlur = () => {
-        // Limpieza proactiva al salir del editor para corregir bloques editados manualmente
-        const cleaned = trimCodeBlocks(content);
-        if (cleaned !== content) {
-            setContent(cleaned);
-            if (debounceChangeTimerRef.current) clearTimeout(debounceChangeTimerRef.current);
-            onChange(cleaned);
-        } else if (debounceChangeTimerRef.current) {
-            clearTimeout(debounceChangeTimerRef.current);
-            onChange(content);
+    const handleBlur = (e: any) => {
+        const related = e.relatedTarget as HTMLElement;
+        const isFocusMovingToMenuImmediately = related && (related.closest('.floating-menu-container') || related.classList.contains('floating-menu-container'));
+        
+        if (isFocusMovingToMenuImmediately) {
+            return; // El foco se movió directamente al menú
         }
+
+        // Delay para verificar document.activeElement de forma definitiva (clics en input)
+        setTimeout(() => {
+            const active = document.activeElement;
+            const isInsideMenu = active && (active.closest('.floating-menu-container') || active.classList.contains('floating-menu-container'));
+            
+            if (isInsideMenu) return; 
+
+            // SECUENCIAL: Si perdemos el foco fuera del menú y el input estaba activo, autoconfirmar
+            if (showLinkInputRef.current) {
+                confirmLink();
+            } else {
+                const cleaned = trimCodeBlocks(content);
+                if (cleaned !== content) {
+                    setContent(cleaned);
+                    if (debounceChangeTimerRef.current) clearTimeout(debounceChangeTimerRef.current);
+                    onChange(cleaned);
+                } else if (debounceChangeTimerRef.current) {
+                    clearTimeout(debounceChangeTimerRef.current);
+                    onChange(content);
+                }
+                
+                setMenuState(null);
+                setShowExpandedMenu(false);
+                setShowLinkInput(false);
+            }
+        }, 150);
     };
 
     const menuWidth = 260; 
@@ -851,8 +1005,56 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
         };
     };
 
+    const doActionAndSave = async (actionKey: string, fn: () => void | Promise<void>) => {
+        const res = fn();
+        if (res instanceof Promise) await res;
+        setLastAction(actionKey);
+        localStorage.setItem('sme-last-action', actionKey);
+        
+        // Si no es un link guiado, cerramos todo. Si es link, el input tomará el relevo.
+        if (actionKey !== 'link') {
+            setShowExpandedMenu(false);
+            setShowLinkInput(false);
+            setMenuState(null);
+        } else {
+            // Para links, cerramos el expandido para dejar paso al input
+            setShowExpandedMenu(false);
+            setShowLinkInput(true);
+            setLinkUrl('');
+        }
+    };
+
+    const getLastActionDisplay = () => {
+        if (lastAction === 'highlight') return { emoji: '✏️', title: 'Resaltar' };
+        if (lastAction === 'en') return { emoji: 'EN', title: 'Traducir → EN' };
+        if (lastAction === 'es') return { emoji: 'ES', title: 'Traducir → ES' };
+        if (lastAction === 'link') return { emoji: '🔗', title: 'Link' };
+        const m = MARKER_TYPES[lastAction as MarkerType];
+        if (m) return { emoji: m.emoji, title: m.label };
+        return { emoji: '🖊️', title: 'Resaltar' };
+    };
+
+    const fireLastAction = async () => {
+        if (lastAction === 'highlight') await doActionAndSave('highlight', () => doFormat('highlight'));
+        else if (lastAction === 'en') await doActionAndSave('en', () => doTranslate('en'));
+        else if (lastAction === 'es') await doActionAndSave('es', () => doTranslate('es'));
+        else if (lastAction === 'link') {
+            if (showLinkInput) return; // Si ya está abierto, no hacer nada para evitar reset de URL
+            setShowExpandedMenu(false);
+            setShowLinkInput(true);
+            setLinkUrl('');
+            setLastAction('link');
+            localStorage.setItem('sme-last-action', 'link');
+        }
+        else if (lastAction in MARKER_TYPES) await doActionAndSave(lastAction, () => doFormat(lastAction as MarkerType));
+        else await doActionAndSave('highlight', () => doFormat('highlight'));
+    };
+
     return (
-        <div className={`relative group/editor w-full bg-transparent ${readOnly ? 'pointer-events-none' : ''}`}>
+        <div 
+            className={`relative group/editor w-full h-full min-h-0 flex flex-col bg-transparent ${readOnly ? 'pointer-events-none' : ''}`}
+            onContextMenu={(e) => e.preventDefault()}
+        >
             <CodeMirror
                 key={String(showLineNumbers)}
                 ref={editorRef} 
@@ -861,20 +1063,43 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                 onBlur={handleBlur} 
                 theme="none" 
                 readOnly={readOnly} 
-                height="auto"
-                className="w-full text-zinc-900 dark:text-[#CCCCCC]" 
+                height="100%"
+                className="flex-1 w-full text-zinc-900 dark:text-[#CCCCCC]" 
                 extensions={[
                     // 🚀 MAGIA ANTI-HIJACKING: Prec.highest toma el control absoluto del evento
                     Prec.highest(
-                        keymap.of([{ 
-                            key: 'Tab', 
-                            preventDefault: true, 
-                            run: (view) => { 
-                                // replaceSelection inyecta en el cursor y lo mueve al final de la inserción automáticamente
-                                view.dispatch(view.state.replaceSelection('    ')); 
-                                return true; 
-                            } 
-                        }])
+                        keymap.of([
+                            { 
+                                key: 'Tab', 
+                                preventDefault: true, 
+                                run: (view) => { 
+                                    // replaceSelection inyecta en el cursor y lo mueve al final de la inserción automáticamente
+                                    view.dispatch(view.state.replaceSelection('    ')); 
+                                    return true; 
+                                } 
+                            },
+                            {
+                                key: 'Escape',
+                                run: (view) => {
+                                    // Limpiar selección de CodeMirror si existe
+                                    if (!view.state.selection.main.empty) {
+                                        view.dispatch({
+                                            selection: { anchor: view.state.selection.main.head }
+                                        });
+                                    }
+                                    
+                                    // Limpiar selección nativa del navegador
+                                    window.getSelection()?.removeAllRanges();
+
+                                    // Cerrar menús y ocultar markdown revelado
+                                    view.dispatch({
+                                        effects: [setRevealedLine.of(null), ForceRedrawEffect.of(null)]
+                                    });
+                                    closeMenus();
+                                    return true;
+                                }
+                            }
+                        ])
                     ),
                     
                     ...(showLineNumbers ? [lineNumbers()] : []),
@@ -886,7 +1111,7 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
                     createVisualMarkupPlugin(translationsMapRef, searchQueryRef), 
                     clickHandlerExtension, hoverTooltipExtension, selectionListener, clipboardExtension, EditorView.lineWrapping, EditorView.editable.of(!readOnly)
                 ]}
-                basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false, highlightActiveLineGutter: false, syntaxHighlighting: false, drawSelection: false }}
+                basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false, highlightActiveLineGutter: false, syntaxHighlighting: false, drawSelection: true }}
             />
              {tooltipState && (
                 <div
@@ -898,58 +1123,150 @@ export const SmartNotesEditor = forwardRef<SmartNotesEditorRef, SmartNotesEditor
             )}
             {menuState && (
                 <div
-                    className={`
-                        z-[100] flex items-center gap-1 bg-white dark:bg-[#242432] text-zinc-800 dark:text-white p-1.5 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-zinc-200 dark:border-zinc-700 animate-fadeIn pointer-events-auto
-                        ${menuState.isMobile 
-                            ? 'fixed bottom-6 left-4 right-4 justify-around p-2' 
-                            : 'fixed origin-bottom'
+                    className="floating-menu-container fixed z-[100] flex flex-col items-center gap-1.5 animate-fadeIn origin-bottom pointer-events-auto"
+                    style={{ 
+                        top: menuState.top, 
+                        left: clampedLeft, 
+                        transform: menuState.isMobile ? 'translateX(-50%)' : 'translate(-50%, -100%)' 
+                    }}
+                    onMouseDown={(e) => {
+                        // IMPORTANTE: No dar preventDefault si es un INPUT para que gane el foco
+                        if ((e.target as HTMLElement).tagName !== 'INPUT') {
+                            e.preventDefault();
                         }
-                    `}
-                    style={menuState.isMobile ? undefined : { top: menuState.top, left: clampedLeft, transform: 'translateX(-50%)' }} 
-                    onMouseDown={(e) => e.preventDefault()} 
+                        e.stopPropagation();
+                    }}
                 >
-                    {isTranslating ? ( <div className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-blue-500"><Loader2 size={16} className="animate-spin" /> Traduciendo...</div> ) : (
-                        <><button onClick={doHighlight} className="flex items-center gap-1.5 px-3 py-2 bg-[#6B8E23]/10 dark:bg-[#ccff00]/10 hover:bg-[#6B8E23]/20 dark:hover:bg-[#ccff00]/20 rounded-lg text-xs font-bold transition-all text-[#6B8E23] dark:text-[#ccff00] active:scale-95" title="Resaltar"><Highlighter size={16} /></button>
-                        
-                        {/* Botón marcador → sub-menú compacto */}
-                        <div className="relative">
-                            <button
-                                onClick={() => setShowMarkerMenu(p => !p)}
-                                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-bold transition-all active:scale-95 ${showMarkerMenu ? 'bg-indigo-500/40 text-indigo-800 dark:text-white shadow-inner scale-[0.98]' : 'bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 dark:hover:bg-indigo-500/40'}`}
-                                title="Etiquetar"
+                    {/* Input de Link — aparece cuando se solicita */}
+                    {showLinkInput && (
+                        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-1.5 flex items-center gap-1.5 animate-fadeIn">
+                            <input
+                                ref={linkInputRef}
+                                type="text"
+                                value={linkUrl}
+                                onChange={(e) => setLinkUrl(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') confirmLink();
+                                    if (e.key === 'Escape') setShowLinkInput(false);
+                                }}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onClick={(e) => e.stopPropagation()}
+                                placeholder="Pegar URL..."
+                                className="bg-zinc-100 dark:bg-zinc-800 border-none rounded-lg px-2.5 py-1.5 text-xs w-48 focus:ring-1 focus:ring-blue-500 outline-none dark:text-white"
+                            />
+                            <button 
+                                onClick={confirmLink}
+                                className="p-1.5 hover:bg-green-500/10 text-green-600 rounded-lg transition-colors"
+                                title="Confirmar"
                             >
-                                <span className="text-[14px] leading-none">🏷️</span>
+                                <Check size={16} />
                             </button>
-                             {showMarkerMenu && (
-                                <div 
-                                    className="absolute bottom-full mb-2 bg-white dark:bg-[#242432] border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-2 grid grid-cols-2 gap-1.5 w-[240px] z-[110]"
-                                    style={getSubMenuStyle()}
-                                >
-                                    {(Object.entries(MARKER_TYPES) as [MarkerType, typeof MARKER_TYPES[MarkerType]][]).map(([key, cfg]) => (
-                                        <button
-                                            key={key}
-                                            onClick={() => doFormat(key)}
-                                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold transition-all text-left whitespace-nowrap border hover:scale-[1.02] active:scale-[0.98] shadow-sm"
-                                            style={{ 
-                                                color: isDarkMode ? cfg.dark : cfg.light,
-                                                backgroundColor: `${isDarkMode ? cfg.dark : cfg.light}20`, 
-                                                borderColor: `${isDarkMode ? cfg.dark : cfg.light}30`
-                                            }}
-                                        >
-                                            <span className="text-sm">{cfg.emoji}</span>
-                                            <span className="truncate">{cfg.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                            <button 
+                                onClick={() => setShowLinkInput(false)}
+                                className="p-1.5 hover:bg-red-500/10 text-red-500 rounded-lg transition-colors"
+                                title="Cancelar"
+                            >
+                                <X size={16} />
+                            </button>
                         </div>
-
-                        <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
-                        <button onClick={doLink} className="flex items-center gap-1.5 px-3 py-2 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-all text-blue-500 dark:text-blue-400 active:scale-95" title="Convertir a Link"><LinkIcon size={16} /></button>
-                        <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
-                        <button onClick={() => doTranslate('en')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-500 dark:text-blue-400 active:scale-95" title="Traducir a Inglés"> EN</button>
-                        <button onClick={() => doTranslate('es')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-500 dark:text-blue-400 active:scale-95" title="Traducir al Español"> ES</button></>
                     )}
+
+                    {/* Globo expandido — aparece arriba (mutuamente exclusivo con link input para limpieza) */}
+                    {showExpandedMenu && !showLinkInput && (
+                        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-1.5 flex flex-col gap-1">
+                            {/* Fila 1 marcadores */}
+                            <div className="flex gap-1">
+                                {(['ins','idea','op','duda'] as MarkerType[]).map(key => {
+                                    const cfg = MARKER_TYPES[key];
+                                    return (
+                                        <button key={key}
+                                            onClick={() => doActionAndSave(key, () => doFormat(key))}
+                                            title={cfg.label}
+                                            className="w-9 h-9 rounded-lg flex items-center justify-center text-base hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                        >{cfg.emoji}</button>
+                                    );
+                                })}
+                            </div>
+                            {/* Fila 2 marcadores */}
+                            <div className="flex gap-1">
+                                {(['wow','pat','yo','ruido'] as MarkerType[]).map(key => {
+                                    const cfg = MARKER_TYPES[key];
+                                    return (
+                                        <button key={key}
+                                            onClick={() => doActionAndSave(key, () => doFormat(key))}
+                                            title={cfg.label}
+                                            className="w-9 h-9 rounded-lg flex items-center justify-center text-base hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                        >{cfg.emoji}</button>
+                                    );
+                                })}
+                            </div>
+                            {/* Separador */}
+                            <div className="h-px bg-zinc-200 dark:bg-zinc-700 mx-1" />
+                            {/* Fila 3: highlight, EN, ES, link */}
+                            <div className="flex gap-1">
+                                <button onClick={() => doActionAndSave('highlight', () => doFormat('highlight'))}
+                                    title="Resaltar"
+                                    className="w-9 h-9 rounded-lg flex items-center justify-center text-base hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                                    ✏️
+                                </button>
+                                <button onClick={() => doActionAndSave('en', () => doTranslate('en'))}
+                                    title="Traducir → EN"
+                                    className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold text-blue-500 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 transition-colors">
+                                    EN
+                                </button>
+                                <button onClick={() => doActionAndSave('es', () => doTranslate('es'))}
+                                    title="Traducir → ES"
+                                    className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold text-blue-500 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 transition-colors">
+                                    ES
+                                </button>
+                                <button onClick={() => doActionAndSave('link', () => doFormat('link'))}
+                                    title="Convertir a link"
+                                    className="w-9 h-9 rounded-lg flex items-center justify-center text-base hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                                    🔗
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Globo compacto — siempre visible */}
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)] p-1 flex items-center gap-0.5 pointer-events-auto">
+                        {isTranslating ? (
+                            <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-blue-500">
+                                <Loader2 size={13} className="animate-spin" /> Traduciendo...
+                            </div>
+                        ) : (
+                            <>
+                                <button
+                                    onClick={fireLastAction}
+                                    title={getLastActionDisplay().title}
+                                    className={`w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors ${
+                                        (lastAction === 'en' || lastAction === 'es') ? 'text-xs font-bold text-blue-500' : 'text-base'
+                                    }`}
+                                >
+                                    {getLastActionDisplay().emoji}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (showLinkInput) {
+                                            setShowLinkInput(false);
+                                            setShowExpandedMenu(true);
+                                        } else {
+                                            setShowExpandedMenu(p => !p);
+                                        }
+                                    }}
+                                    title="Más opciones"
+                                    className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold transition-colors ${
+                                        showExpandedMenu || showLinkInput
+                                            ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-white'
+                                            : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                                    }`}
+                                >
+                                    ···
+                                </button>
+                            </>
+                        )}
+                    </div>
                 </div>
             )}
         </div>

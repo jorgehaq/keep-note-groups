@@ -54,6 +54,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
     const [loading, setLoading] = useState(false);
     
     const [expandedHistoryIds, setExpandedHistoryIds] = useState<Set<string>>(new Set());
+    const [summaryCounts, setSummaryCounts] = useState<Record<string, number>>({});
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
     const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
@@ -160,6 +161,29 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
         }
     }, [dumps.length]);
 
+    const fetchSummaryCounts = useCallback(async () => {
+        try {
+            const { data, error } = await supabase.from('summaries').select('note_id');
+            if (error) throw error;
+            const counts: Record<string, number> = {};
+            data?.forEach(s => { counts[s.note_id] = (counts[s.note_id] || 0) + 1; });
+            setSummaryCounts(counts);
+        } catch (err) {
+            console.error('Error counts:', err);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchSummaryCounts();
+        const channel = supabase
+            .channel('summaries-pizarron-sync')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'summaries' }, () => {
+                fetchSummaryCounts();
+            })
+            .subscribe();
+        return () => { supabase.removeChannel(channel); };
+    }, [fetchSummaryCounts]);
+
     // Removed validation effect to prevent focus resets on app switch.
     // Deletion explicitly clears focusedDumpId inside deleteDump.
 
@@ -214,28 +238,33 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                 <div className="flex items-center gap-3">
                     {/* Botón Toggle Reminder (siempre primero de izquierda a derecha) */}
                     <button
-                      onClick={() => setShowOverdueMarquee(!showOverdueMarquee)}
-                      className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                      onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
+                      disabled={overdueRemindersCount === 0}
+                      className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
                         showOverdueMarquee 
-                          ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
+                          ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
                           : overdueRemindersCount > 0
                             ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
-                            : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
+                            : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
                       }`}
-                      title={showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
+                      title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                     >
-                      <Bell size={18} className={overdueRemindersCount > 0 ? 'animate-pulse' : ''} />
-                      <span className="text-xs font-bold">{overdueRemindersCount}</span>
+                      <Bell size={18} className={overdueRemindersCount > 0 ? 'animate-pulse text-red-500' : ''} />
+                      {overdueRemindersCount > 0 && (
+                        <span className="text-xs font-bold whitespace-nowrap">
+                          {overdueRemindersCount}
+                        </span>
+                      )}
                     </button>
 
                     {/* Botón Toggle Bandeja de Pizarrones */}
                     {pizarrones.length > 0 && (
                         <button
                             onClick={() => setIsDumpTrayOpen(!isDumpTrayOpen)}
-                            className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                            className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
                                 isDumpTrayOpen 
-                                  ? 'bg-[#FFD700] border-[#E5C100] text-amber-950 shadow-md shadow-[#FFD700]/20' 
-                                  : 'bg-amber-50 dark:bg-[#FFD700]/10 border-amber-200 dark:border-[#FFD700]/30 text-amber-600 dark:text-[#FFD700] hover:bg-amber-100 dark:hover:bg-[#FFD700]/20'
+                                  ? 'bg-[#FFD700] border-amber-300 text-amber-950 shadow-sm shadow-[#FFD700]/20' 
+                                  : 'bg-amber-50 dark:bg-[#FFD700]/10 border-amber-200 dark:border-[#FFD700]/30 text-amber-500 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-[#FFD700]/20'
                             }`}
                             title={isDumpTrayOpen ? "Ocultar Pizarrones" : "Mostrar Pizarrones"}
                         >
@@ -259,7 +288,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
 
                 {/* FRANJA DE PIZARRONES (ACCESOS DIRECTOS) */}
                 {isDumpTrayOpen && pizarrones.length > 0 && (
-                    <div className="pt-4 px-4 pb-4 bg-[#FAFAFA] dark:bg-[#13131A]">
+                    <div className="pt-3 px-4 pb-3 bg-[#FAFAFA] dark:bg-[#13131A]">
                         <div className="flex flex-wrap justify-center gap-2.5">
                              {pizarrones.map(p => {
                                  const isFocused = focusedDumpId === p.id;
@@ -278,13 +307,16 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                      <button
                                          key={p.id}
                                          onClick={() => setFocusedDumpId(isFocused ? null : p.id)}
-                                         className={`relative flex items-center justify-center px-4 py-2 text-[11px] font-medium rounded-xl transition-all shrink-0 ${
+                                         className={`relative flex items-center justify-center px-4 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 ${
                                              isFocused
-                                                 ? 'bg-[#FFD700] text-amber-950 shadow-md shadow-amber-500/20 scale-[1.02]'
-                                                 : 'bg-zinc-200/50 dark:bg-white/10 text-zinc-500 dark:text-[#A1A1AA] hover:text-amber-900 dark:hover:text-white hover:bg-zinc-300/50 dark:hover:bg-white/20'
+                                                 ? 'bg-[#FFD700] text-amber-950 border-amber-300 scale-[1.02]'
+                                                 : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/40 hover:text-amber-600'
                                          }`}
                                          >
-                                         <span className="whitespace-nowrap">{p.title || 'Pizarrón Sin Título'}</span>
+                                         <span className="whitespace-nowrap">
+                                             {p.title || 'Pizarrón Sin Título'}
+                                             {summaryCounts[p.id] > 0 && ` (${summaryCounts[p.id]})`}
+                                         </span>
                                          {dotColorClass && (
                                              <div 
                                                className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border border-[#9F9FA8]/50 z-10 shadow-sm transition-transform hover:scale-110 ${dotColorClass}`} 
@@ -299,7 +331,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                 )}
             </div>
 
-            <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 ${isDumpTrayOpen && pizarrones.length > 0 ? 'pt-0' : 'pt-4'} hidden-scrollbar`}>
+            <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 ${isDumpTrayOpen && pizarrones.length > 0 ? 'pt-0' : 'pt-5'} hidden-scrollbar`}>
                 <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto flex flex-col gap-12 pb-20`}>
                     
                     {/* 1. PIZARRONES (PERSISTENTES - FILTRADO POR FOCO) */}
@@ -322,7 +354,9 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                         </div>
                                         {/* Action buttons: Kanban always visible, rest in 3-dot */}
                                         <div className="flex items-center gap-1 shrink-0">
-                                            <KanbanSemaphore sourceId={pizarron.id} sourceTitle={pizarron.title || 'Pizarrón sin título'} />
+                                            {globalTasks?.some(t => t.id === pizarron.id) && (
+                                                <KanbanSemaphore sourceId={pizarron.id} sourceTitle={pizarron.title || 'Pizarrón sin título'} />
+                                            )}
                                             <div className="relative" ref={openMenuId === pizarron.id ? menuRef : undefined}>
                                                 <button
                                                     onClick={() => setOpenMenuId(openMenuId === pizarron.id ? null : pizarron.id)}
@@ -339,6 +373,16 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                                             autoSave(pizarron.id, { is_checklist: willBeChecklist, content: contentToSave }); 
                                                             setOpenMenuId(null); 
                                                         }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${pizarron.is_checklist ? 'text-[#1F3760] dark:text-blue-400 bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42]'}`}><ListTodo size={14} />{pizarron.is_checklist ? 'Quitar Checklist' : 'Hacer Checklist'}</button>
+                                                        
+                                                        {!globalTasks?.some(t => t.id === pizarron.id) && (
+                                                            <button onClick={async () => {
+                                                                await supabase.from('tasks').upsert({ id: pizarron.id, title: pizarron.title || 'Pizarrón sin título', status: 'backlog' });
+                                                                window.dispatchEvent(new CustomEvent('kanban-updated'));
+                                                                setOpenMenuId(null);
+                                                            }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors">
+                                                                <CheckSquare size={14} /> Añadir a Kanban
+                                                            </button>
+                                                        )}
                                                         <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
                                                         <button onClick={() => { changeStatus(pizarron.id, 'history'); setOpenMenuId(null); }} className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"><ArchiveIcon size={14} />Archivar</button>
                                                         <button onClick={() => { deleteDump(pizarron.id); setOpenMenuId(null); }} className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"><Trash2 size={14} />Eliminar</button>
