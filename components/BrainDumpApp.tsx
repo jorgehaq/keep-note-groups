@@ -136,39 +136,10 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
     const [summaryCounts, setSummaryCounts] = useState<Record<string, number>>({});
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
     const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
     const hasLoadedOnce = useRef(false);
 
-    // Floating sticky banner refs
-    const pizarronHeaderRef = useRef<HTMLDivElement>(null);
-    const pizarronContentRef = useRef<HTMLDivElement>(null);
-    const [showStickyPizarronTitle, setShowStickyPizarronTitle] = useState(false);
-
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-    // Determines if the data is actually rendered so the refs exist
-    const hasFocusedPizarron = focusedDumpId !== null && dumps.some(d => d.id === focusedDumpId);
-
-    useEffect(() => {
-        const headerEl = pizarronHeaderRef.current;
-        const contentEl = pizarronContentRef.current;
-        if (!headerEl || !contentEl) return;
-        let isHeaderVisible = true;
-        let isContentVisible = true;
-        const checkVisibility = () => {
-            setShowStickyPizarronTitle(!isHeaderVisible && isContentVisible);
-        };
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.target === headerEl) isHeaderVisible = entry.isIntersecting;
-                if (entry.target === contentEl) isContentVisible = entry.isIntersecting;
-            });
-            checkVisibility();
-        }, { root: scrollContainerRef.current, threshold: 0, rootMargin: '0px 0px 0px 0px' });
-        observer.observe(headerEl);
-        observer.observe(contentEl);
-        return () => observer.disconnect();
-    }, [focusedDumpId, hasFocusedPizarron]);
 
     // Close menu on outside click
     useEffect(() => {
@@ -358,22 +329,22 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                 )}
             </div>
 
-            <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 ${isDumpTrayOpen && pizarrones.length > 0 ? 'pt-0' : 'pt-5'} hidden-scrollbar`}>
-                <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto flex flex-col gap-12 pb-20`}>
+            <div ref={scrollContainerRef} className={`flex-1 ${focusedDumpId ? 'overflow-hidden' : 'overflow-y-auto'} bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 ${isDumpTrayOpen && pizarrones.length > 0 ? 'pt-0' : 'pt-5'} hidden-scrollbar flex flex-col`}>
+                <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto flex flex-col gap-12 pb-20 ${focusedDumpId ? 'flex-1 w-full min-h-0' : ''}`}>
                     
                     {/* 1. PIZARRONES (PERSISTENTES - FILTRADO POR FOCO) */}
                     {focusedDumpId && pizarrones.some(p => p.id === focusedDumpId) && (
-                        <div className="space-y-6 animate-fadeIn">
+                        <div className="flex-1 flex flex-col min-h-0 animate-fadeIn">
                             {pizarrones.filter(p => p.id === focusedDumpId).map(pizarron => {
                                 const createdMs = new Date(pizarron.created_at).getTime();
                                 const updatedMs = new Date(pizarron.updated_at).getTime();
                                 const isEdited = (updatedMs - createdMs) > 60000;
 
                                 return (
-                                <div key={pizarron.id} className="m-1 bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] transition-all duration-300 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 flex flex-col">
+                                <div key={pizarron.id} className="m-1 bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] transition-all duration-300 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 flex-1 flex flex-col min-h-0 overflow-hidden">
                                     
                                     {/* Pizarron header: title + action buttons */}
-                                    <div ref={pizarronHeaderRef} className="flex items-center justify-between pr-3 pt-1">
+                                    <div className="flex items-center justify-between pr-3 pt-1 shrink-0 bg-white dark:bg-[#1A1A24] z-10">
                                         <div className="flex flex-col min-w-0 justify-center w-full flex-1">
                                             <div className="relative flex w-full">
                                                 <PizarronTitleInput 
@@ -428,15 +399,9 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                         </div>
                                     </div>
 
-                                    {/* Floating sticky title banner */}
-                                    <div ref={pizarronContentRef} className="relative">
-                                        {showStickyPizarronTitle && (
-                                            <div className={`sticky ${isDumpTrayOpen && pizarrones.length > 0 ? 'top-4' : 'top-0'} left-0 right-0 z-[40] flex justify-center pointer-events-none animate-fadeIn px-4 pt-0`}>
-                                                <div onClick={(e) => { e.stopPropagation(); pizarronHeaderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }} className="bg-white/95 dark:bg-zinc-100/95 backdrop-blur-md text-zinc-900 dark:text-zinc-900 px-5 py-1.5 rounded-full shadow-lg shadow-black/10 text-[13px] font-bold flex items-center gap-2 pointer-events-auto cursor-pointer active:scale-95 transition-all border border-zinc-200/50 dark:border-zinc-300 w-auto max-w-[90%] sm:max-w-[400px] hover:shadow-xl"><span className="truncate">{searchQuery ? highlightText(pizarron.title || 'Pizarrón sin título', searchQuery) : (pizarron.title || 'Pizarrón sin título')}</span><ChevronUp size={14} className="opacity-70 shrink-0" /></div>
-                                            </div>
-                                        )}
-
-                                        <div className="mx-4 mb-4 p-4 bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl cursor-text min-h-[150px]">
+                                    {/* Editor Area with Internal Scroll */}
+                                    <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+                                        <div className="mx-4 mb-4 p-4 bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl cursor-text flex-1 overflow-y-auto hidden-scrollbar note-editor-scroll">
                                             {pizarron.is_checklist ? (
                                                 <ChecklistEditor idPrefix={pizarron.id} initialContent={pizarron.content} onUpdate={(c) => autoSave(pizarron.id, { content: c })} noteLineHeight={noteLineHeight} noteFont={noteFont} noteFontSize={noteFontSize} />
                                             ) : (
@@ -445,8 +410,8 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                         </div>
                                     </div>
                                     
-                                    {/* Footer: Fechas */}
-                                    <div className="flex items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-[#2D2D42]/50 rounded-b-2xl border-t border-zinc-200 dark:border-[#2D2D42]">
+                                    {/* Footer: Fechas (Fixed) */}
+                                    <div className="flex items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-[#2D2D42]/50 rounded-b-2xl border-t border-zinc-200 dark:border-[#2D2D42] shrink-0">
                                         <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
                                             <span>Creado: {formatCleanDate(pizarron.created_at)}</span>
                                             {isEdited && (
@@ -463,65 +428,67 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                     )}
 
                     {/* 2. ARCHIVO (HISTORIAL) */}
-                    <div className="space-y-4 opacity-70">
-                        <div className="flex items-center gap-2 text-zinc-400">
-                            <ArchiveIcon size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Archivo ({archivo.length})</span>
-                        </div>
-                        {archivo.length === 0 ? (
-                            <div className="text-sm text-center text-zinc-400 p-4">El archivo está limpio.</div>
-                        ) : (
-                            <div className="space-y-2">
-                                {archivo.map(a => {
-                                    const isExpanded = expandedHistoryIds.has(a.id);
-                                    const createdMs = new Date(a.created_at).getTime();
-                                    const updatedMs = new Date(a.updated_at).getTime();
-                                    const isEdited = (updatedMs - createdMs) > 60000;
-                                    
-                                    return (
-                                    <div key={a.id} className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-[#1A1A24]/50 rounded-lg border border-zinc-200 dark:border-[#2D2D42] transition-colors">
-                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                                            
-                                            {/* Título y Botón Expandir */}
-                                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                <button onClick={() => toggleExpandHistory(a.id)} className="p-1.5 bg-zinc-200 dark:bg-[#2D2D42] hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded-md text-zinc-500 transition-colors" title="Desplegar pizarrón">
-                                                    {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                                                </button>
-                                                <ArchiveIcon size={16} className="text-zinc-400 shrink-0" />
-                                                <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400 line-through truncate">
-                                                    {searchQuery ? highlightText(a.title || 'Pizarrón sin título', searchQuery) : (a.title || 'Pizarrón sin título')}
-                                                </span>
-                                            </div>
-
-                                            {/* Fechas y Acciones en el Archivo */}
-                                            <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto pl-11 md:pl-0">
-                                                <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-bold shrink-0">
-                                                    <span>Creado: {formatCleanDate(a.created_at)}</span>
-                                                    {isEdited && (
-                                                        <>
-                                                            <span className="opacity-50">|</span>
-                                                            <span>Editado: {formatCleanDate(a.updated_at)}</span>
-                                                        </>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center gap-1 shrink-0">
-                                                    <div className="w-px h-4 bg-zinc-300 dark:bg-[#2D2D42] mx-1"></div>
-                                                    <button onClick={() => changeStatus(a.id, 'main')} className="p-1.5 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md transition-colors" title="Restaurar Pizarrón"><RotateCcw size={16}/></button>
-                                                    <button onClick={() => deleteDump(a.id)} className="p-1.5 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors" title="Eliminar para siempre"><Trash2 size={16}/></button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        {/* Vista expandida del Archivo (Opaca) */}
-                                        {isExpanded && (
-                                            <div className="mt-2 bg-zinc-100/50 dark:bg-[#13131A]/30 border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4 opacity-70 animate-fadeIn">
-                                                <div className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed" dangerouslySetInnerHTML={{__html: parseMarkdownPreview(a.content)}} />
-                                            </div>
-                                        )}
-                                    </div>
-                                )})}
+                    {!focusedDumpId && (
+                        <div className="space-y-4 opacity-70">
+                            <div className="flex items-center gap-2 text-zinc-400">
+                                <ArchiveIcon size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Archivo ({archivo.length})</span>
                             </div>
-                        )}
-                    </div>
+                            {archivo.length === 0 ? (
+                                <div className="text-sm text-center text-zinc-400 p-4">El archivo está limpio.</div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {archivo.map(a => {
+                                        const isExpanded = expandedHistoryIds.has(a.id);
+                                        const createdMs = new Date(a.created_at).getTime();
+                                        const updatedMs = new Date(a.updated_at).getTime();
+                                        const isEdited = (updatedMs - createdMs) > 60000;
+                                        
+                                        return (
+                                        <div key={a.id} className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-[#1A1A24]/50 rounded-lg border border-zinc-200 dark:border-[#2D2D42] transition-colors">
+                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                                
+                                                {/* Título y Botón Expandir */}
+                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    <button onClick={() => toggleExpandHistory(a.id)} className="p-1.5 bg-zinc-200 dark:bg-[#2D2D42] hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded-md text-zinc-500 transition-colors" title="Desplegar pizarrón">
+                                                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                                    </button>
+                                                    <ArchiveIcon size={16} className="text-zinc-400 shrink-0" />
+                                                    <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400 line-through truncate">
+                                                        {searchQuery ? highlightText(a.title || 'Pizarrón sin título', searchQuery) : (a.title || 'Pizarrón sin título')}
+                                                    </span>
+                                                </div>
+
+                                                {/* Fechas y Acciones en el Archivo */}
+                                                <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto pl-11 md:pl-0">
+                                                    <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-bold shrink-0">
+                                                        <span>Creado: {formatCleanDate(a.created_at)}</span>
+                                                        {isEdited && (
+                                                            <>
+                                                                <span className="opacity-50">|</span>
+                                                                <span>Editado: {formatCleanDate(a.updated_at)}</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                        <div className="w-px h-4 bg-zinc-300 dark:bg-[#2D2D42] mx-1"></div>
+                                                        <button onClick={() => changeStatus(a.id, 'main')} className="p-1.5 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md transition-colors" title="Restaurar Pizarrón"><RotateCcw size={16}/></button>
+                                                        <button onClick={() => deleteDump(a.id)} className="p-1.5 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors" title="Eliminar para siempre"><Trash2 size={16}/></button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Vista expandida del Archivo (Opaca) */}
+                                            {isExpanded && (
+                                                <div className="mt-2 bg-zinc-100/50 dark:bg-[#13131A]/30 border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4 opacity-70 animate-fadeIn">
+                                                    <div className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed" dangerouslySetInnerHTML={{__html: parseMarkdownPreview(a.content)}} />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )})}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
