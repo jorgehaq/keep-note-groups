@@ -60,6 +60,12 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
         return () => window.removeEventListener('kanban-updated', handleUpdate);
     }, [setKanbanCounts]);
 
+    // --- COUNTS ---
+    const backlogCount = tasks.filter(t => t.status === 'backlog').length;
+    const todoCount = tasks.filter(t => t.status === 'todo').length;
+    const inProgressCount = tasks.filter(t => t.status === 'in_progress').length;
+    const archivedCount = tasks.filter(t => t.status === 'archived').length;
+
     // --- HANDLERS (FUNCIONALIDAD INTACTA) ---
     const handleAdd = async () => {
         const targetStatus = activeTab === 'backlog' ? 'backlog' : 'todo';
@@ -169,6 +175,11 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                                 >
                                     {tab.icon}
                                     <span className="hidden lg:inline">{t(tab.labelKey)}</span>
+                                    <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold transition-colors ${
+                                        activeTab === tab.key ? 'bg-emerald-500/10 text-emerald-500' : 'bg-zinc-100 dark:bg-white/5 text-zinc-400'
+                                    }`}>
+                                        {tab.key === 'board' ? todoCount + inProgressCount : tab.key === 'backlog' ? backlogCount : archivedCount}
+                                    </span>
                                 </button>
                             ))}
                         </div>
@@ -200,6 +211,11 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                             >
                                 {tab.icon}
                                 <span>{t(tab.labelKey)}</span>
+                                <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold ${
+                                    activeTab === tab.key ? 'bg-emerald-500/10 text-emerald-500' : 'bg-zinc-100 dark:bg-white/5 text-zinc-400'
+                                }`}>
+                                    {tab.key === 'board' ? todoCount + inProgressCount : tab.key === 'backlog' ? backlogCount : archivedCount}
+                                </span>
                             </button>
                         ))}
                     </div>
