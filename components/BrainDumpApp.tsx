@@ -407,7 +407,12 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                                         
                                                         {!globalTasks?.some(t => t.id === pizarron.id) && (
                                                             <button onClick={async () => {
-                                                                await supabase.from('tasks').upsert({ id: pizarron.id, title: pizarron.title || 'Pizarrón sin título', status: 'backlog' });
+                                                                await supabase.from('tasks').upsert({ 
+                                                                    id: pizarron.id, 
+                                                                    title: pizarron.title || 'Pizarrón sin título', 
+                                                                    content: pizarron.content || '',
+                                                                    status: 'backlog' 
+                                                                });
                                                                 window.dispatchEvent(new CustomEvent('kanban-updated'));
                                                                 setOpenMenuId(null);
                                                             }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors">

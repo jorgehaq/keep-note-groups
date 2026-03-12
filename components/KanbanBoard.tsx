@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Task, TaskStatus, Group } from '../types';
 import { useTranslation } from 'react-i18next';
-import { Archive, Inbox, Trash2, GripVertical, StickyNote, Link as LinkIcon } from 'lucide-react';
-import { supabase } from '../src/lib/supabaseClient';
+import { Archive, Inbox, Trash2, GripVertical, Link as LinkIcon, Pencil, MoreVertical, ArrowRight, Maximize2, Minimize2, History } from 'lucide-react';
 import { KanbanLinkerModal } from './KanbanLinkerModal';
 
 interface KanbanBoardProps {
@@ -12,6 +11,7 @@ interface KanbanBoardProps {
     onOpenNote?: (groupId: string, noteId: string) => void;
     onUpdate: (id: string, updates: Partial<Task>) => void;
     onDelete: (id: string) => void;
+    onEdit?: (task: Task) => void;
     dateFormat?: string;
     timeFormat?: string;
 }
@@ -23,22 +23,26 @@ const COLUMNS: { status: TaskStatus; label: string; accent: string }[] = [
 ];
 
 const formatCustomDate = (isoString: string, dateFormat: string, timeFormat: string): string => {
-    const d = new Date(isoString);
-    const day = d.getDate().toString().padStart(2, '0');
-    const month = (d.getMonth() + 1).toString().padStart(2, '0');
-    const year = d.getFullYear();
-    const datePart = dateFormat === 'mm/dd/yyyy' ? `${month}/${day}/${year}` : `${day}/${month}/${year}`;
-    let hours = d.getHours();
-    const minutes = d.getMinutes().toString().padStart(2, '0');
-    let ampm = '';
-    if (timeFormat === '12h') {
-        ampm = hours >= 12 ? ' PM' : ' AM';
-        hours = hours % 12 || 12;
+    try {
+        const d = new Date(isoString);
+        const day = d.getDate().toString().padStart(2, '0');
+        const month = (d.getMonth() + 1).toString().padStart(2, '0');
+        const year = d.getFullYear();
+        const datePart = dateFormat === 'mm/dd/yyyy' ? `${month}/${day}/${year}` : `${day}/${month}/${year}`;
+        let hours = d.getHours();
+        const minutes = d.getMinutes().toString().padStart(2, '0');
+        let ampm = '';
+        if (timeFormat === '12h') {
+            ampm = hours >= 12 ? ' PM' : ' AM';
+            hours = hours % 12 || 12;
+        }
+        return `${datePart}, ${hours.toString().padStart(2, '0')}:${minutes}${ampm}`;
+    } catch (e) {
+        return '';
     }
-    return `${datePart}, ${hours.toString().padStart(2, '0')}:${minutes}${ampm}`;
 };
 
-export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], onOpenNote, onUpdate, onDelete, dateFormat = 'dd/mm/yyyy', timeFormat = '12h' }) => {
+export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], onOpenNote, onUpdate, onDelete, onEdit, dateFormat = 'dd/mm/yyyy', timeFormat = '12h' }) => {
     const { t } = useTranslation();
     const getColumnTasks = (status: TaskStatus) =>
         tasks.filter(t => t.status === status).sort((a, b) => a.position - b.position);
@@ -57,7 +61,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], on
             const [moved] = colTasks.splice(source.index, 1);
             colTasks.splice(destination.index, 0, moved);
 
-            // Update positions for all affected items
             colTasks.forEach((task, idx) => {
                 if (task.position !== idx) {
                     onUpdate(task.id, { position: idx });
@@ -71,17 +74,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], on
             const [moved] = sourceTasks.splice(source.index, 1);
             destTasks.splice(destination.index, 0, { ...moved, status: destStatus });
 
-            // Update moved task's status and position
             onUpdate(draggableId, { status: destStatus, position: destination.index });
 
-            // Reindex source column
             sourceTasks.forEach((task, idx) => {
                 if (task.position !== idx) {
                     onUpdate(task.id, { position: idx });
                 }
             });
 
-            // Reindex destination column (skip the moved task, already updated)
             destTasks.forEach((task, idx) => {
                 if (task.id !== draggableId && task.position !== idx) {
                     onUpdate(task.id, { position: idx });
@@ -129,6 +129,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], on
                                                             columnStatus={col.status}
                                                             onUpdate={onUpdate}
                                                             onDelete={onDelete}
+                                                            onEdit={onEdit}
                                                             groups={groups}
                                                             onOpenNote={onOpenNote}
                                                             dateFormat={dateFormat}
@@ -162,15 +163,14 @@ interface TaskCardProps {
     columnStatus: TaskStatus;
     onUpdate: (id: string, updates: Partial<Task>) => void;
     onDelete: (id: string) => void;
+    onEdit?: (task: Task) => void;
     groups?: Group[];
     onOpenNote?: (groupId: string, noteId: string) => void;
     dateFormat?: string;
     timeFormat?: string;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnStatus, onUpdate, onDelete, groups = [], onOpenNote, dateFormat = 'dd/mm/yyyy', timeFormat = '12h' }) => {
-    const [isEditing, setIsEditing] = useState(() => task.title.trim() === '');
-    const [tempTitle, setTempTitle] = useState(task.title);
+const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnStatus, onUpdate, onDelete, onEdit, groups = [], onOpenNote, dateFormat = 'dd/mm/yyyy', timeFormat = '12h' }) => {
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
 
     const linkedNote = React.useMemo(() => {
@@ -181,21 +181,12 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
         return null;
     }, [groups, task.id]);
 
-    const handleSave = () => {
-        if (tempTitle.trim() && tempTitle !== task.title) {
-            onUpdate(task.id, { title: tempTitle.trim() });
-        } else {
-            setTempTitle(task.title);
-        }
-        setIsEditing(false);
-    };
-
     return (
         <div
             ref={provided.innerRef}
             {...provided.draggableProps}
-            className={`group bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 transition-all duration-300 focus-within:ring-2 focus-within:ring-indigo-500/50 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5 ${isDragging
-                ? 'shadow-2xl border-indigo-500/50 ring-2 ring-indigo-500/30 scale-[1.02] rotate-1'
+            className={`group bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 transition-all duration-300 focus-within:ring-2 focus-within:ring-emerald-500/30 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 ${isDragging
+                ? 'shadow-2xl border-emerald-500/50 ring-2 ring-emerald-500/30 scale-[1.02] rotate-1'
                 : ''
                 }`}
         >
@@ -204,67 +195,59 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
                     {/* Drag Handle */}
                     <div
                         {...provided.dragHandleProps}
-                        className="pt-1 text-zinc-300 dark:text-zinc-600 hover:text-indigo-500 cursor-grab active:cursor-grabbing shrink-0 transition-colors"
+                        className="pt-1 text-zinc-300 dark:text-zinc-600 hover:text-emerald-500 cursor-grab active:cursor-grabbing shrink-0 transition-colors"
                     >
                         <GripVertical size={14} />
                     </div>
 
                     {/* Content */}
-                    <div className="flex-1 min-w-0">
-                        {isEditing ? (
-                            <input
-                                type="text"
-                                value={tempTitle}
-                                onChange={(e) => setTempTitle(e.target.value)}
-                                onBlur={handleSave}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleSave();
-                                    if (e.key === 'Escape') {
-                                        setTempTitle(task.title);
-                                        setIsEditing(false);
-                                    }
-                                }}
-                                autoFocus
-                                className="w-full text-zinc-800 dark:text-[#CCCCCC] text-sm font-medium leading-tight bg-transparent outline-none placeholder-zinc-400"
-                                placeholder="Nueva tarea..."
-                            />
-                        ) : (
-                            <input
-                                type="text"
-                                value={task.title}
-                                onFocus={() => {
-                                    setTempTitle(task.title);
-                                    setIsEditing(true);
-                                }}
-                                readOnly
-                                className="w-full text-zinc-800 dark:text-[#CCCCCC] text-sm font-medium leading-tight bg-transparent outline-none cursor-text placeholder-zinc-400"
-                                placeholder="Nueva tarea..."
-                            />
+                    <div className="flex-1 min-w-0 pr-1">
+                        <div className="group/title relative" title={task.title}>
+                            <h4 
+                                className="text-zinc-800 dark:text-[#CCCCCC] text-sm font-bold leading-tight line-clamp-1"
+                            >
+                                {task.title || <span className="text-zinc-400 italic font-normal">Sin título</span>}
+                            </h4>
+                        </div>
+                        {task.content && (
+                            <p 
+                                className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-500 line-clamp-2 leading-normal"
+                                title={task.content}
+                            >
+                                {task.content}
+                            </p>
                         )}
                     </div>
                 </div>
             </div>
 
-            {/* Mini Footer (Permanent & Compact) */}
+            {/* Mini Footer */}
             <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-50/50 dark:bg-zinc-800/20 border-t border-zinc-100 dark:border-zinc-800/50 rounded-b-2xl">
                 <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-tighter">
                     {task.updated_at ? formatCustomDate(task.updated_at, dateFormat, timeFormat) : ''}
                 </span>
 
                 <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => onEdit?.(task)}
+                        className="p-1.5 text-zinc-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                        title="Editar Tarea"
+                    >
+                        <Pencil size={15} />
+                    </button>
                     {linkedNote ? (
                         <button
                             onClick={() => onOpenNote?.(linkedNote.groupId, linkedNote.id)}
-                            className="p-1.5 text-zinc-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                            title="Abrir Nota"
+                            className="p-1.5 text-zinc-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
+                            title="Abrir Nota Asociada"
                         >
-                            <StickyNote size={15} />
+                            <LinkIcon size={15} />
                         </button>
                     ) : (
                         <button
                             onClick={() => setIsLinkModalOpen(true)}
                             className="p-1.5 text-zinc-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
-                            title="Convertir"
+                            title="Asociar a Nota"
                         >
                             <LinkIcon size={15} />
                         </button>

@@ -1,22 +1,21 @@
 import React from 'react';
 import { Task, TaskStatus, Group } from '../types';
-import { Trash2, ArrowRight, Inbox, Archive } from 'lucide-react';
+import { Trash2, ArrowRight, Inbox, Archive, Pencil } from 'lucide-react';
 
 interface KanbanListProps {
     view: 'backlog' | 'archive';
     tasks: Task[];
     onUpdate: (id: string, updates: Partial<Task>) => void;
     onDelete: (id: string) => void;
+    onEdit: (task: Task) => void; // 🚀 ADDED
     groups?: Group[];
     onOpenNote?: (groupId: string, noteId: string) => void;
 }
 
-export const KanbanList: React.FC<KanbanListProps> = ({ view, tasks, onUpdate, onDelete, groups, onOpenNote }) => {
+export const KanbanList: React.FC<KanbanListProps> = ({ view, tasks, onUpdate, onDelete, onEdit, groups, onOpenNote }) => {
     const status: TaskStatus = view === 'backlog' ? 'backlog' : 'archived';
     const filtered = tasks.filter(t => t.status === status).sort((a, b) => a.position - b.position);
     const emptyLabel = view === 'backlog' ? 'No hay tareas en el backlog.' : 'No hay tareas archivadas.';
-    const promoteLabel = view === 'backlog' ? 'Mover a Pendiente' : 'Restaurar a Pendiente';
-    const promoteStatus: TaskStatus = 'todo';
 
     return (
         <div className="flex-1 overflow-y-auto hidden-scrollbar py-0 px-0">
@@ -30,7 +29,7 @@ export const KanbanList: React.FC<KanbanListProps> = ({ view, tasks, onUpdate, o
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filtered.map(task => (
-                                <TaskListItem key={task.id} task={task} view={view} onUpdate={onUpdate} onDelete={onDelete} />
+                                <TaskListItem key={task.id} task={task} view={view} onUpdate={onUpdate} onDelete={onDelete} onEdit={onEdit} />
                             ))}
                         </div>
                     )}
@@ -45,21 +44,10 @@ const TaskListItem: React.FC<{
     view: 'backlog' | 'archive';
     onUpdate: (id: string, updates: Partial<Task>) => void;
     onDelete: (id: string) => void;
-}> = ({ task, view, onUpdate, onDelete }) => {
-    const [isEditing, setIsEditing] = React.useState(() => task.title.trim() === '');
-    const [tempTitle, setTempTitle] = React.useState(task.title);
-
+    onEdit: (task: Task) => void; // 🚀 ADDED
+}> = ({ task, view, onUpdate, onDelete, onEdit }) => {
     const promoteStatus: TaskStatus = 'todo';
     const promoteLabel = view === 'backlog' ? 'Mover a Pendiente' : 'Restaurar a Pendiente';
-
-    const handleSave = () => {
-        if (tempTitle.trim() && tempTitle !== task.title) {
-            onUpdate(task.id, { title: tempTitle.trim() });
-        } else {
-            setTempTitle(task.title);
-        }
-        setIsEditing(false);
-    };
 
     return (
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 transition-all duration-300 focus-within:ring-2 focus-within:ring-indigo-500/50 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5">
@@ -75,36 +63,16 @@ const TaskListItem: React.FC<{
                     </div>
                 </div>
 
-                {isEditing ? (
-                    <input
-                        type="text"
-                        value={tempTitle}
-                        onChange={(e) => setTempTitle(e.target.value)}
-                        onBlur={handleSave}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSave();
-                            if (e.key === 'Escape') {
-                                setTempTitle(task.title);
-                                setIsEditing(false);
-                            }
-                        }}
-                        autoFocus
-                        className="w-full text-zinc-800 dark:text-[#CCCCCC] text-sm font-medium leading-tight bg-transparent outline-none placeholder-zinc-400"
-                        placeholder="Nueva tarea..."
-                    />
-                ) : (
-                    <input
-                        type="text"
-                        value={task.title}
-                        onFocus={() => {
-                            setTempTitle(task.title);
-                            setIsEditing(true);
-                        }}
-                        readOnly
-                        className="w-full text-zinc-800 dark:text-[#CCCCCC] text-sm font-medium leading-tight bg-transparent outline-none cursor-text placeholder-zinc-400"
-                        placeholder="Nueva tarea..."
-                    />
-                )}
+                <div className="min-w-0" title={task.title}>
+                    <h4 className="text-zinc-800 dark:text-[#CCCCCC] text-sm font-bold leading-tight line-clamp-1">
+                        {task.title || <span className="text-zinc-400 italic font-normal">Sin título</span>}
+                    </h4>
+                    {task.content && (
+                        <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-500 line-clamp-2 leading-normal" title={task.content}>
+                            {task.content}
+                        </p>
+                    )}
+                </div>
             </div>
 
             {/* Mini Footer (Permanent & Compact) */}
@@ -114,6 +82,13 @@ const TaskListItem: React.FC<{
                 </span>
 
                 <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => onEdit(task)}
+                        className="p-1.5 text-zinc-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                        title="Editar Tarea"
+                    >
+                        <Pencil size={15} />
+                    </button>
                     {view === 'backlog' && (
                         <button
                             onClick={() => onUpdate(task.id, { status: 'archived' })}

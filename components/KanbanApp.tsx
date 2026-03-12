@@ -4,6 +4,7 @@ import { Task, TaskStatus, Group } from '../types';
 import { supabase } from '../src/lib/supabaseClient';
 import { KanbanBoard } from './KanbanBoard';
 import { KanbanList } from './KanbanList';
+import { KanbanTaskModal } from './KanbanTaskModal';
 import { useUIStore } from '../src/lib/store';
 import { useTranslation } from 'react-i18next';
 
@@ -26,6 +27,8 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<KanbanTab>('board');
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingTask, setEditingTask] = useState<Partial<Task> | null>(null);
     const { t } = useTranslation();
 
     // --- STORE ---
@@ -59,13 +62,22 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
 
     // --- HANDLERS (FUNCIONALIDAD INTACTA) ---
     const handleAdd = async () => {
-        const user = (await supabase.auth.getUser()).data.user;
         const targetStatus = activeTab === 'backlog' ? 'backlog' : 'todo';
+        setEditingTask({
+            title: '',
+            content: '',
+            status: targetStatus,
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleSaveNewTask = async (updates: Partial<Task>) => {
+        const user = (await supabase.auth.getUser()).data.user;
+        const targetStatus = updates.status || (activeTab === 'backlog' ? 'backlog' : 'todo');
         const position = tasks.filter(t => t.status === targetStatus).length * 1024;
         
         const newTask: Partial<Task> = {
-            title: '',
-            status: targetStatus,
+            ...updates,
             position: position,
             user_id: user?.id
         };
@@ -74,7 +86,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
         if (!error && data) {
             setTasks(prev => [data as Task, ...prev]);
             
-            // Re-calc
+            // Re-calc counts
             const allTasks = [data as Task, ...tasks];
             const todo = allTasks.filter(t => t.status === 'todo').length;
             const inProgress = allTasks.filter(t => t.status === 'in_progress').length;
@@ -201,18 +213,36 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                     {/* VISTAS FUNCIONALES INTACTAS */}
                     <div className="flex-1 flex flex-col min-h-0 animate-fadeIn">
                         {activeTab === 'board' && (
-                            <KanbanBoard tasks={tasks} groups={groups} onOpenNote={onOpenNote} onUpdate={updateTask} onDelete={deleteTask} dateFormat={dateFormat} timeFormat={timeFormat} />
+                            <KanbanBoard tasks={tasks} groups={groups} onOpenNote={onOpenNote} onUpdate={updateTask} onDelete={deleteTask} onEdit={(task) => { setEditingTask(task); setIsModalOpen(true); }} dateFormat={dateFormat} timeFormat={timeFormat} />
                         )}
                         {activeTab === 'backlog' && (
-                            <KanbanList view="backlog" tasks={tasks} groups={groups} onOpenNote={onOpenNote} onUpdate={updateTask} onDelete={deleteTask} />
+                            <KanbanList view="backlog" tasks={tasks} groups={groups} onOpenNote={onOpenNote} onUpdate={updateTask} onDelete={deleteTask} onEdit={(task) => { setEditingTask(task); setIsModalOpen(true); }} />
                         )}
                         {activeTab === 'archive' && (
-                            <KanbanList view="archive" tasks={tasks} groups={groups} onOpenNote={onOpenNote} onUpdate={updateTask} onDelete={deleteTask} />
+                            <KanbanList view="archive" tasks={tasks} groups={groups} onOpenNote={onOpenNote} onUpdate={updateTask} onDelete={deleteTask} onEdit={(task) => { setEditingTask(task); setIsModalOpen(true); }} />
                         )}
                     </div>
                     
                 </div>
             </div>
+
+            {isModalOpen && editingTask && (
+                <KanbanTaskModal 
+                    task={editingTask}
+                    isNew={!editingTask.id}
+                    onClose={() => {
+                        setIsModalOpen(false);
+                        setEditingTask(null);
+                    }}
+                    onSave={async (updates) => {
+                        if (editingTask.id) {
+                            await updateTask(editingTask.id, updates);
+                        } else {
+                            await handleSaveNewTask(updates);
+                        }
+                    }}
+                />
+            )}
         </div>
     );
 };

@@ -58,7 +58,7 @@ export const KanbanLinkerModal: React.FC<KanbanLinkerModalProps> = ({ task, grou
                 .insert([{
                     id: task.id, 
                     title: task.title, 
-                    content: '', 
+                    content: task.content || '', 
                     group_id: targetGroupId, 
                     user_id: session.user.id 
                 }]);
@@ -86,6 +86,7 @@ export const KanbanLinkerModal: React.FC<KanbanLinkerModalProps> = ({ task, grou
             const { error } = await supabase.from('tasks').upsert({
                 id: targetNoteId,
                 title: targetNoteTitle, // O podríamos usar el título de la nota, pero preferimos el de la tarea actual
+                content: task.content || '', // 🚀 PRESERVE CONTENT
                 status: task.status,
                 position: task.position
             });
