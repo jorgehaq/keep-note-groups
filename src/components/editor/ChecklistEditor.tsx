@@ -56,7 +56,7 @@ const highlightText = (text: string, highlight?: string): React.ReactNode => {
     );
 };
 
-const ChecklistItemRow = ({
+const ChecklistItemRow = React.memo(({
     item, index, idPrefix, onToggle, onUpdateText, onEnter, onDeleteIfEmpty, noteLineHeight, noteFont, noteFontSize, searchQuery
 }: {
     item: ChecklistItem; index: number; idPrefix: string;
@@ -129,28 +129,34 @@ const ChecklistItemRow = ({
                     </button>
                     
                     <div className="relative flex-1 min-w-0 flex flex-col justify-start">
-                        <SmartNotesEditorComponent
-                            noteId={`checklist-${item.id}`} // Dummy ID
-                            initialContent={localText}
-                            searchQuery={searchQuery}
-                            onChange={(content) => {
-                                setLocalText(content);
-                                onUpdateText(item.id, content);
+                        <textarea
+                            ref={inputRef}
+                            value={localText}
+                            onChange={handleChange}
+                            onKeyDown={handleKeyDown}
+                            onFocus={() => setIsFocused(true)}
+                            onBlur={() => setIsFocused(false)}
+                            placeholder="Nuevo elemento..."
+                            rows={1}
+                            className={`w-full bg-transparent outline-none resize-none overflow-hidden text-zinc-800 dark:text-[#CCCCCC] placeholder-zinc-400 dark:placeholder-zinc-600 transition-colors ${
+                                item.isChecked ? 'line-through text-zinc-500 dark:text-zinc-500' : ''
+                            } ${
+                                noteFont === 'serif' ? 'font-serif' : noteFont === 'mono' ? 'font-mono' : 'font-sans'
+                            } ${
+                                noteFontSize === 'small' ? 'text-[13px]' : noteFontSize === 'large' ? 'text-[18px]' : 'text-[15px]'
+                            }`}
+                            style={{ 
+                                lineHeight: noteLineHeight === 'more' ? '2.0' : noteLineHeight === 'large' ? '2.5' : '1.6',
+                                paddingTop: '2px', // Alineación fina visual para compensar el padding de codemirror que había antes
+                                paddingBottom: '2px'
                             }}
-                            noteFont={noteFont}
-                            noteFontSize={noteFontSize}
-                            noteLineHeight={noteLineHeight}
-                            autoHeight={true}
-                            onEnterAction={() => onEnter(item.id)}
-                            onBackspaceEmpty={() => onDeleteIfEmpty(item.id)}
-                            readOnly={false}
                         />
                     </div>
                 </div>
             )}
         </Draggable>
     );
-};
+});
 
 export interface ChecklistEditorRef {
     getItems: () => ChecklistItem[];
@@ -198,56 +204,73 @@ export const ChecklistEditor = React.forwardRef<ChecklistEditorRef, ChecklistEdi
     }, [onUpdate]);
 
     const handleToggle = useCallback((id: string) => {
-        triggerUpdate(items.map(item => item.id === id ? { ...item, isChecked: !item.isChecked } : item));
-    }, [items, triggerUpdate]);
+        setItems(currentItems => {
+            const next = currentItems.map(item => item.id === id ? { ...item, isChecked: !item.isChecked } : item);
+            triggerUpdate(next);
+            return next;
+        });
+    }, [triggerUpdate]);
 
     const handleUpdateText = useCallback((id: string, text: string) => {
-        triggerUpdate(items.map(item => item.id === id ? { ...item, text } : item));
-    }, [items, triggerUpdate]);
+        setItems(currentItems => {
+            const next = currentItems.map(item => item.id === id ? { ...item, text } : item);
+            triggerUpdate(next);
+            return next;
+        });
+    }, [triggerUpdate]);
 
     const handleEnter = useCallback((id: string) => {
-        const index = items.findIndex(item => item.id === id);
-        if (index === -1) return;
-        const newItems = [...items];
-        newItems.splice(index + 1, 0, { id: generateId(), text: '', isChecked: false });
-        triggerUpdate(newItems);
-        
-        setTimeout(() => {
-            // Un poco de hardcodeo robusto para enfocar el siguiente input
-            const container = document.getElementById(`checklist-droppable-${idPrefix}`);
-            if (container) {
-                 const inputs = container.querySelectorAll('input[type="text"]');
-                 if (inputs[index + 1]) (inputs[index + 1] as HTMLInputElement).focus();
-            }
-        }, 50);
-    }, [items, idPrefix, triggerUpdate]);
+        setItems(currentItems => {
+            const index = currentItems.findIndex(item => item.id === id);
+            if (index === -1) return currentItems;
+            const newItems = [...currentItems];
+            newItems.splice(index + 1, 0, { id: generateId(), text: '', isChecked: false });
+            triggerUpdate(newItems);
+            
+            setTimeout(() => {
+                // Un poco de hardcodeo robusto para enfocar el siguiente input
+                const container = document.getElementById(`checklist-droppable-${idPrefix}`);
+                if (container) {
+                     const textareas = container.querySelectorAll('textarea');
+                     if (textareas[index + 1]) (textareas[index + 1] as HTMLTextAreaElement).focus();
+                }
+            }, 50);
+            return newItems;
+        });
+    }, [idPrefix, triggerUpdate]);
 
     const handleDeleteIfEmpty = useCallback((id: string) => {
-        const index = items.findIndex(item => item.id === id);
-        if (index === -1) return;
-        const newItems = items.filter(item => item.id !== id);
-        triggerUpdate(newItems);
-        
-        setTimeout(() => {
-            const container = document.getElementById(`checklist-droppable-${idPrefix}`);
-            if (container) {
-                 const inputs = container.querySelectorAll('input[type="text"]');
-                 if (index > 0 && inputs[index - 1]) (inputs[index - 1] as HTMLInputElement).focus();
-            }
-        }, 50);
-    }, [items, idPrefix, triggerUpdate]);
+        setItems(currentItems => {
+            const index = currentItems.findIndex(item => item.id === id);
+            if (index === -1) return currentItems;
+            const newItems = currentItems.filter(item => item.id !== id);
+            triggerUpdate(newItems);
+            
+            setTimeout(() => {
+                const container = document.getElementById(`checklist-droppable-${idPrefix}`);
+                if (container) {
+                     const textareas = container.querySelectorAll('textarea');
+                     if (index > 0 && textareas[index - 1]) (textareas[index - 1] as HTMLTextAreaElement).focus();
+                }
+            }, 50);
+            return newItems;
+        });
+    }, [idPrefix, triggerUpdate]);
 
     const handleAddLast = useCallback(() => {
-        const newItems = [...items, { id: generateId(), text: '', isChecked: false }];
-        triggerUpdate(newItems);
-        setTimeout(() => {
-            const container = document.getElementById(`checklist-droppable-${idPrefix}`);
-            if (container) {
-                 const inputs = container.querySelectorAll('input[type="text"]');
-                 if (inputs[newItems.length - 1]) (inputs[newItems.length - 1] as HTMLInputElement).focus();
-            }
-        }, 50);
-    }, [items, idPrefix, triggerUpdate]);
+        setItems(currentItems => {
+            const newItems = [...currentItems, { id: generateId(), text: '', isChecked: false }];
+            triggerUpdate(newItems);
+            setTimeout(() => {
+                const container = document.getElementById(`checklist-droppable-${idPrefix}`);
+                if (container) {
+                     const textareas = container.querySelectorAll('textarea');
+                     if (textareas[newItems.length - 1]) (textareas[newItems.length - 1] as HTMLTextAreaElement).focus();
+                }
+            }, 50);
+            return newItems;
+        });
+    }, [idPrefix, triggerUpdate]);
 
     const handleDragEnd = useCallback((result: any) => {
         if (!result.destination) return;
@@ -255,12 +278,14 @@ export const ChecklistEditor = React.forwardRef<ChecklistEditorRef, ChecklistEdi
         const destinationIndex = result.destination.index;
         if (sourceIndex === destinationIndex) return;
 
-        const newItems = Array.from(items);
-        const [reorderedItem] = newItems.splice(sourceIndex, 1);
-        newItems.splice(destinationIndex, 0, reorderedItem);
-
-        triggerUpdate(newItems);
-    }, [items, triggerUpdate]);
+        setItems(currentItems => {
+            const newItems = Array.from(currentItems);
+            const [reorderedItem] = newItems.splice(sourceIndex, 1);
+            newItems.splice(destinationIndex, 0, reorderedItem);
+            triggerUpdate(newItems);
+            return newItems;
+        });
+    }, [triggerUpdate]);
 
     return (
         <DragDropContext onDragEnd={handleDragEnd}>

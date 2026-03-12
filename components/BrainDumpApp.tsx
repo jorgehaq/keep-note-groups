@@ -430,7 +430,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
 
                                     {/* Editor Area with Internal Scroll */}
                                     <div className="flex-1 flex flex-col min-h-0 relative">
-                                        <div className="mx-4 mb-4 p-4 bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl cursor-text flex-1 overflow-y-auto hidden-scrollbar note-editor-scroll">
+                                        <div className="mx-4 mb-4 p-4 bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl cursor-text flex-1 overflow-y-auto hidden-scrollbar note-editor-scroll min-h-0">
                                             {pizarron.is_checklist ? (
                                                 <ChecklistEditor idPrefix={pizarron.id} initialContent={pizarron.content} onUpdate={(c) => autoSave(pizarron.id, { content: c })} noteLineHeight={noteLineHeight} noteFont={noteFont} noteFontSize={noteFontSize} searchQuery={localSearchQuery} />
                                             ) : (

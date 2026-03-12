@@ -146,11 +146,12 @@ const cursorDotPlugin = ViewPlugin.fromClass(class {
     decorations: RangeSet<Decoration>;
     constructor(view: EditorView) { this.decorations = this.build(view); }
     update(update: ViewUpdate) {
-        if (update.selectionSet || update.docChanged) {
+        if (update.selectionSet || update.docChanged || update.focusChanged) {
             this.decorations = this.build(update.view);
         }
     }
     build(view: EditorView): RangeSet<Decoration> {
+        if (!view.hasFocus) return Decoration.none;
         const pos = view.state.selection.main.head;
         const line = view.state.doc.lineAt(pos);
         return Decoration.set([
@@ -1271,7 +1272,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                 ]}
                 basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false, highlightActiveLineGutter: false, syntaxHighlighting: false, drawSelection: true }}
             />
-            <SearchMarkers view={editorRef.current?.view || null} query={searchQuery || ''} />
+            {!autoHeight && <SearchMarkers view={editorRef.current?.view || null} query={searchQuery || ''} />}
              {tooltipState && (
                 <div
                     className="fixed z-[9999] bg-[#f4f4f5] text-black text-[13px] font-medium font-sans px-3 py-2 rounded-lg border border-zinc-200 shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05)] pointer-events-none whitespace-pre-wrap leading-tight"

@@ -652,7 +652,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           {/* CONTENIDO ACTIVO */}
           {(!showAIPanel || activeTab === 'original') ? (
             note.is_checklist ? (
-              <div className="bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4">
+              <div className="bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4 flex-1 overflow-y-scroll min-h-0 note-editor-scroll">
                 <ChecklistEditor ref={checklistRef} idPrefix={displayNoteId} initialContent={displayContent} onUpdate={handleUpdateContent} />
               </div>
             ) : (
