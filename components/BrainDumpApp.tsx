@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell, Grid, ChevronsDownUp, MoreVertical, ListTodo, CheckSquare, Square, GripVertical } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell, Grid, ChevronsDownUp, MoreVertical, ListTodo, CheckSquare, Square, GripVertical, Search, X } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { KanbanSemaphore } from './KanbanSemaphore';
 import { supabase } from '../src/lib/supabaseClient';
@@ -85,7 +85,7 @@ const PizarronTitleInput = ({ pizarron, onSave, searchQuery }: { pizarron: Brain
     return (
         <div className="relative flex w-full">
             {/* Overlay para resaltado de búsqueda */}
-            <div className="absolute inset-0 w-full pointer-events-none text-xl font-bold p-4 pb-3 flex items-center overflow-hidden whitespace-nowrap">
+            <div className="absolute inset-0 w-full pointer-events-none text-xl font-bold px-4 py-3 flex items-center overflow-hidden whitespace-nowrap z-0">
                 <span className="truncate">
                     {searchQuery ? highlightText(tempTitle, searchQuery) : ""}
                 </span>
@@ -139,6 +139,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
     const hasLoadedOnce = useRef(false);
+    const [localSearchQuery, setLocalSearchQuery] = useState('');
 
 
     // Close menu on outside click
@@ -271,6 +272,25 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                         </button>
                     )}
 
+                    <div className="relative flex items-center transition-all duration-300">
+                      <Search size={15} className={`absolute left-3 pointer-events-none transition-colors ${localSearchQuery.trim() ? 'text-amber-600 dark:text-amber-500 font-bold' : 'text-zinc-400'}`} />
+                      <input
+                        type="text"
+                        placeholder="Buscar pizarrones..."
+                        value={localSearchQuery}
+                        onChange={(e) => setLocalSearchQuery(e.target.value)}
+                        className={`h-9 w-32 md:w-48 lg:w-64 pl-9 pr-8 text-xs rounded-xl border transition-all focus:outline-none ${localSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50' : 'border-zinc-200 dark:border-[#2D2D42] bg-white dark:bg-[#1A1A24] text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'}`}
+                      />
+                      {localSearchQuery.trim() && (
+                        <button 
+                          onClick={() => setLocalSearchQuery('')} 
+                          className="absolute right-2 p-0.5 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 bg-amber-200/50 dark:bg-amber-800/50 hover:bg-amber-300/50 dark:hover:bg-amber-700/50 rounded-full transition-colors"
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+
                     <button
                       onClick={() => setIsBraindumpMaximized(!isBraindumpMaximized)}
                       className="h-9 p-2 bg-white dark:bg-[#2D2D42] border border-zinc-200 dark:border-[#2D2D42] rounded-xl text-zinc-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400 transition-all active:scale-95 shrink-0"
@@ -290,6 +310,7 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                         <div className="flex flex-wrap justify-center gap-2.5">
                              {pizarrones.map(p => {
                                  const isFocused = focusedDumpId === p.id;
+                                 const isHighlighted = localSearchQuery.trim() && (p.title?.toLowerCase().includes(localSearchQuery.toLowerCase()) || p.content?.toLowerCase().includes(localSearchQuery.toLowerCase()));
                                  const linkedTask = globalTasks?.find(t => t.id === p.id);
                                  let dotColorClass = null;
                                  if (linkedTask) {
@@ -308,11 +329,13 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                          className={`relative flex items-center justify-center px-4 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 ${
                                              isFocused
                                                  ? 'bg-[#FFD700] text-amber-950 border-amber-300 scale-[1.02]'
-                                                 : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/40 hover:text-amber-600'
+                                                 : isHighlighted
+                                                   ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500 ring-2 ring-amber-500/50 text-amber-700 dark:text-amber-300'
+                                                   : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-amber-400/50 hover:bg-amber-50 dark:hover:bg-amber-900/10'
                                          }`}
                                          >
                                          <span className="whitespace-nowrap">
-                                             {searchQuery ? highlightText(p.title || 'Pizarrón Sin Título', searchQuery) : (p.title || 'Pizarrón Sin Título')}
+                                             {localSearchQuery ? highlightText(p.title || 'Pizarrón Sin Título', localSearchQuery) : (p.title || 'Pizarrón Sin Título')}
                                              {summaryCounts[p.id] > 0 && ` (${summaryCounts[p.id]})`}
                                          </span>
                                          {dotColorClass && (
@@ -341,16 +364,20 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                 const isEdited = (updatedMs - createdMs) > 60000;
 
                                 return (
-                                <div key={pizarron.id} className="m-1 bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] transition-all duration-300 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 flex-1 flex flex-col min-h-0 overflow-hidden">
+                                <div key={pizarron.id} className={`m-1 rounded-2xl shadow-lg transition-all duration-300 flex-1 flex flex-col min-h-0 overflow-hidden border ${
+                                    localSearchQuery.trim() && (pizarron.title?.toLowerCase().includes(localSearchQuery.toLowerCase()) || pizarron.content?.toLowerCase().includes(localSearchQuery.toLowerCase()))
+                                        ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50/30 dark:bg-amber-900/10'
+                                        : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50'
+                                }`}>
                                     
                                     {/* Pizarron header: title + action buttons */}
-                                    <div className="flex items-center justify-between pr-3 pt-1 shrink-0 bg-white dark:bg-[#1A1A24] z-10">
+                                    <div className="flex items-center justify-between pr-3 pt-1 shrink-0 bg-transparent z-10">
                                         <div className="flex flex-col min-w-0 justify-center w-full flex-1">
                                             <div className="relative flex w-full">
                                                 <PizarronTitleInput 
                                                     pizarron={pizarron} 
                                                     onSave={(title) => autoSave(pizarron.id, { title })} 
-                                                    searchQuery={searchQuery} 
+                                                    searchQuery={localSearchQuery} 
                                                 />
                                             </div>
                                         </div>
@@ -403,9 +430,9 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                     <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
                                         <div className="mx-4 mb-4 p-4 bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl cursor-text flex-1 overflow-y-auto hidden-scrollbar note-editor-scroll">
                                             {pizarron.is_checklist ? (
-                                                <ChecklistEditor idPrefix={pizarron.id} initialContent={pizarron.content} onUpdate={(c) => autoSave(pizarron.id, { content: c })} noteLineHeight={noteLineHeight} noteFont={noteFont} noteFontSize={noteFontSize} />
+                                                <ChecklistEditor idPrefix={pizarron.id} initialContent={pizarron.content} onUpdate={(c) => autoSave(pizarron.id, { content: c })} noteLineHeight={noteLineHeight} noteFont={noteFont} noteFontSize={noteFontSize} searchQuery={localSearchQuery} />
                                             ) : (
-                                                <SmartNotesEditor noteId={pizarron.id} initialContent={pizarron.content} onChange={c => autoSave(pizarron.id, { content: c })} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} />
+                                                <SmartNotesEditor noteId={pizarron.id} initialContent={pizarron.content} onChange={c => autoSave(pizarron.id, { content: c })} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} searchQuery={localSearchQuery} />
                                             )}
                                         </div>
                                     </div>
@@ -442,9 +469,14 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                         const createdMs = new Date(a.created_at).getTime();
                                         const updatedMs = new Date(a.updated_at).getTime();
                                         const isEdited = (updatedMs - createdMs) > 60000;
+                                        const isHighlighted = localSearchQuery.trim() && (a.title?.toLowerCase().includes(localSearchQuery.toLowerCase()) || a.content?.toLowerCase().includes(localSearchQuery.toLowerCase()));
                                         
                                         return (
-                                        <div key={a.id} className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-[#1A1A24]/50 rounded-lg border border-zinc-200 dark:border-[#2D2D42] transition-colors">
+                                        <div key={a.id} className={`flex flex-col gap-2 p-3 rounded-lg transition-colors border ${
+                                            isHighlighted
+                                              ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500 ring-2 ring-amber-500/50'
+                                              : 'bg-zinc-50 dark:bg-[#1A1A24]/50 border-zinc-200 dark:border-[#2D2D42]'
+                                        }`}>
                                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                                                 
                                                 {/* Título y Botón Expandir */}
@@ -453,8 +485,8 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                                         {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                                     </button>
                                                     <ArchiveIcon size={16} className="text-zinc-400 shrink-0" />
-                                                    <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400 line-through truncate">
-                                                        {searchQuery ? highlightText(a.title || 'Pizarrón sin título', searchQuery) : (a.title || 'Pizarrón sin título')}
+                                                    <span className={`text-sm font-bold truncate ${isHighlighted ? 'text-amber-900 dark:text-amber-100' : 'text-zinc-600 dark:text-zinc-300'}`}>
+                                                        {localSearchQuery ? highlightText(a.title || 'Pizarrón Sin Título', localSearchQuery) : (a.title || 'Pizarrón Sin Título')}
                                                     </span>
                                                 </div>
 

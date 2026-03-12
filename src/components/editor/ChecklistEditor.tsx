@@ -9,6 +9,7 @@ interface ChecklistEditorProps {
     noteLineHeight?: string;
     noteFont?: string;
     noteFontSize?: string;
+    searchQuery?: string;
 }
 
 interface ChecklistItem {
@@ -34,8 +35,23 @@ export const serializeChecklistToMarkdown = (items: ChecklistItem[]): string => 
     return items.map(item => `${item.isChecked ? '[x] ' : '[ ] '}${item.text}`).join('\n');
 };
 
+const highlightText = (text: string, highlight?: string): React.ReactNode => {
+    if (!highlight || !highlight.trim()) return text;
+    const escaped = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+    return parts.map((part, index) =>
+        part.toLowerCase() === highlight.toLowerCase() ? (
+            <mark key={index} className="bg-yellow-200 dark:bg-yellow-500/40 text-yellow-900 dark:text-yellow-100 px-0.5 font-medium">
+                {part}
+            </mark>
+        ) : (
+            part
+        )
+    );
+};
+
 const ChecklistItemRow = ({
-    item, index, idPrefix, onToggle, onUpdateText, onEnter, onDeleteIfEmpty, noteLineHeight, noteFont, noteFontSize
+    item, index, idPrefix, onToggle, onUpdateText, onEnter, onDeleteIfEmpty, noteLineHeight, noteFont, noteFontSize, searchQuery
 }: {
     item: ChecklistItem; index: number; idPrefix: string;
     onToggle: (id: string) => void;
@@ -45,8 +61,10 @@ const ChecklistItemRow = ({
     noteLineHeight?: string;
     noteFont?: string;
     noteFontSize?: string;
+    searchQuery?: string;
 }) => {
     const [localText, setLocalText] = useState(item.text);
+    const [isFocused, setIsFocused] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
     // Solo sincronizar del item de forma forzada si cambia su id base,
@@ -94,26 +112,44 @@ const ChecklistItemRow = ({
                         {item.isChecked ? <CheckSquare size={16} /> : <Square size={16} />}
                     </button>
                     
-                    <input 
-                        ref={inputRef}
-                        type="text"
-                        value={localText}
-                        onChange={handleChange}
-                        onKeyDown={handleKeyDown}
-                        className={`flex-1 bg-transparent outline-none w-full ${item.isChecked ? 'line-through text-zinc-400 dark:text-zinc-500' : 'text-zinc-700 dark:text-zinc-300'}`}
-                        style={{ 
-                            lineHeight: noteLineHeight === 'more' ? '2.0' : noteLineHeight === 'large' ? '2.5' : '1.6',
-                            fontFamily: noteFont === 'serif' ? 'var(--font-serif)' : noteFont === 'mono' ? 'var(--font-mono)' : 'var(--font-sans)',
-                            fontSize: noteFontSize === 'small' ? '13px' : noteFontSize === 'large' ? '18px' : '15px'
-                        }}
-                    />
+                    <div className="relative flex-1 min-w-0">
+                        {/* Overlay para resaltado de búsqueda */}
+                        {!isFocused && searchQuery && (
+                            <div 
+                                className={`absolute inset-0 pointer-events-none truncate ${item.isChecked ? 'line-through text-zinc-400 dark:text-zinc-500 opacity-60' : 'text-zinc-700 dark:text-zinc-300'}`}
+                                style={{ 
+                                    lineHeight: noteLineHeight === 'more' ? '2.0' : noteLineHeight === 'large' ? '2.5' : '1.6',
+                                    fontFamily: noteFont === 'serif' ? 'var(--font-serif)' : noteFont === 'mono' ? 'var(--font-mono)' : 'var(--font-sans)',
+                                    fontSize: noteFontSize === 'small' ? '13px' : noteFontSize === 'large' ? '18px' : '15px',
+                                    paddingTop: '0px'
+                                }}
+                            >
+                                {highlightText(localText, searchQuery)}
+                            </div>
+                        )}
+                        <input 
+                            ref={inputRef}
+                            type="text"
+                            value={localText}
+                            onChange={handleChange}
+                            onKeyDown={handleKeyDown}
+                            onFocus={() => setIsFocused(true)}
+                            onBlur={() => setIsFocused(false)}
+                            className={`w-full bg-transparent outline-none ${item.isChecked ? 'line-through text-zinc-400 dark:text-zinc-500' : 'text-zinc-700 dark:text-zinc-300'} ${!isFocused && searchQuery && localText.toLowerCase().includes(searchQuery.toLowerCase()) ? 'text-transparent' : ''}`}
+                            style={{ 
+                                lineHeight: noteLineHeight === 'more' ? '2.0' : noteLineHeight === 'large' ? '2.5' : '1.6',
+                                fontFamily: noteFont === 'serif' ? 'var(--font-serif)' : noteFont === 'mono' ? 'var(--font-mono)' : 'var(--font-sans)',
+                                fontSize: noteFontSize === 'small' ? '13px' : noteFontSize === 'large' ? '18px' : '15px'
+                            }}
+                        />
+                    </div>
                 </div>
             )}
         </Draggable>
     );
 };
 
-export const ChecklistEditor: React.FC<ChecklistEditorProps> = ({ idPrefix, initialContent, onUpdate, noteLineHeight = 'standard', noteFont = 'sans', noteFontSize = 'medium' }) => {
+export const ChecklistEditor: React.FC<ChecklistEditorProps> = ({ idPrefix, initialContent, onUpdate, noteLineHeight = 'standard', noteFont = 'sans', noteFontSize = 'medium', searchQuery }) => {
     const [items, setItems] = useState<ChecklistItem[]>(() => parseMarkdownToChecklist(initialContent));
     const prevInitialContent = useRef(initialContent);
 
@@ -227,6 +263,7 @@ export const ChecklistEditor: React.FC<ChecklistEditorProps> = ({ idPrefix, init
                                 noteLineHeight={noteLineHeight}
                                 noteFont={noteFont}
                                 noteFontSize={noteFontSize}
+                                searchQuery={searchQuery}
                             />
                         ))}
                         {provided.placeholder}
