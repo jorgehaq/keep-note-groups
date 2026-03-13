@@ -709,6 +709,12 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
     const [lastAction, setLastAction] = useState<string>(
         () => localStorage.getItem('sme-last-action') || 'highlight'
     );
+    const [lastTag, setLastTag] = useState<MarkerType>(
+        () => (localStorage.getItem('sme-last-tag') as MarkerType) || 'ins'
+    );
+    const [lastMoreAction, setLastMoreAction] = useState<string>(
+        () => localStorage.getItem('sme-last-more-action') || 'bold'
+    );
     const [showLinkInput, setShowLinkInput] = useState(false);
     const [showMoreOptions, setShowMoreOptions] = useState(false);
     const [linkUrl, setLinkUrl] = useState('');
@@ -1308,8 +1314,19 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
     const doActionAndSave = async (actionKey: string, fn: () => void | Promise<void>) => {
         const res = fn();
         if (res instanceof Promise) await res;
+        
         setLastAction(actionKey);
         localStorage.setItem('sme-last-action', actionKey);
+
+        // Track specifically which category this action belongs to
+        if (actionKey in MARKER_TYPES) {
+            setLastTag(actionKey as MarkerType);
+            localStorage.setItem('sme-last-tag', actionKey);
+        } else if (actionKey !== 'highlight') {
+            // It's an action from the "More" menu
+            setLastMoreAction(actionKey);
+            localStorage.setItem('sme-last-more-action', actionKey);
+        }
 
         // Si no es un link guiado, cerramos todo. Si es link, el input tomará el relevo.
         if (actionKey !== 'link') {
@@ -1492,7 +1509,12 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                         transform: 'translate(-50%, -100%)' 
                     }}
                     onMouseDown={(e) => {
-                        // IMPORTANTE: No dar preventDefault si es un INPUT para que gane el foco
+                        if ((e.target as HTMLElement).tagName !== 'INPUT') {
+                            e.preventDefault();
+                        }
+                        e.stopPropagation();
+                    }}
+                    onPointerDown={(e) => {
                         if ((e.target as HTMLElement).tagName !== 'INPUT') {
                             e.preventDefault();
                         }
@@ -1545,7 +1567,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                 <>
 
 
-                                    {/* RESALTADOR */}
+                                    {/* RESALTADOR DINÁMICO */}
                                     <div 
                                       className="relative group/hl flex items-center"
                                       onMouseEnter={() => !menuState?.isMobile && setShowHlOptions(true)}
@@ -1558,20 +1580,19 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                                     setShowTagOptions(false);
                                                     setShowMoreOptions(false);
                                                 } else {
-                                                    doActionAndSave('highlight', () => doFormat('highlight'));
+                                                    // Acción directa: el color actual ya está en hlColor
+                                                    doActionAndSave('highlight', () => doFormat('highlight', hlColor));
                                                 }
                                             }}
-                                            title="Resaltar"
+                                            title={`Resaltar (${HL_COLORS[hlColor].label})`}
                                             className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${showHlOptions ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
                                             style={{ color: HL_COLORS[hlColor].hex }}
                                         >
                                             <Highlighter size={18} />
                                         </button>
-
-
                                     </div>
 
-                                    {/* ETIQUETAS */}
+                                    {/* ETIQUETAS DINÁMICAS */}
                                     <div 
                                       className="relative group/tags flex items-center"
                                       onMouseEnter={() => !menuState?.isMobile && setShowTagOptions(true)}
@@ -1583,34 +1604,57 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                                     setShowTagOptions(!showTagOptions);
                                                     setShowHlOptions(false);
                                                     setShowMoreOptions(false);
+                                                } else {
+                                                    // Acción directa: usar lastTag
+                                                    doActionAndSave(lastTag, () => doFormat(lastTag));
                                                 }
                                             }}
-                                            className={`w-10 h-10 rounded-lg flex items-center justify-center text-zinc-500 transition-colors ${showTagOptions ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
-                                            title="Tags y Marcadores"
+                                            className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${showTagOptions ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                                            title={`Etiqueta: ${MARKER_TYPES[lastTag].label}`}
                                         >
-                                            <Tags size={18} />
+                                            <span className="text-lg">{MARKER_TYPES[lastTag].emoji}</span>
                                         </button>
-
-
                                     </div>
 
-                                    {/* BOTÓN "MÁS" (Revelar, Link, Tachado, Título, Traducción) */}
+                                    {/* BOTÓN "MÁS" DINÁMICO */}
                                     <div className="relative group/more flex items-center">
                                         <button 
                                             onClick={() => {
-                                                setShowMoreOptions(!showMoreOptions);
-                                                setShowHlOptions(false);
-                                                setShowTagOptions(false);
+                                                if (menuState?.isMobile) {
+                                                    setShowMoreOptions(!showMoreOptions);
+                                                    setShowHlOptions(false);
+                                                    setShowTagOptions(false);
+                                                } else {
+                                                    // Ejecutar la última acción del menú "Más"
+                                                    if (lastMoreAction === 'es' || lastMoreAction === 'en') {
+                                                        doActionAndSave(lastMoreAction, () => doTranslate(lastMoreAction as 'es'|'en'));
+                                                    } else if (lastMoreAction === 'link') {
+                                                        setShowLinkInput(true);
+                                                        setLinkUrl('');
+                                                    } else {
+                                                        doActionAndSave(lastMoreAction, () => doFormat(lastMoreAction as any));
+                                                    }
+                                                }
                                             }}
                                             onMouseEnter={() => !menuState?.isMobile && setShowMoreOptions(true)}
                                             onMouseLeave={() => !menuState?.isMobile && setShowMoreOptions(false)}
-                                            className={`w-10 h-10 rounded-lg flex items-center justify-center text-zinc-500 transition-colors ${showMoreOptions ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                                            className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${showMoreOptions ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
                                             title="Más opciones"
                                         >
-                                            <MoreHorizontal size={18} />
+                                            {lastMoreAction === 'es' || lastMoreAction === 'en' ? (
+                                                <span className="text-[10px] font-black text-blue-500 uppercase">{lastMoreAction}</span>
+                                            ) : lastMoreAction === 'link' ? (
+                                                <LinkIcon size={18} className="text-zinc-500" />
+                                            ) : lastMoreAction === 'bold' ? (
+                                                <Bold size={18} className="text-zinc-500" />
+                                            ) : lastMoreAction === 'strikethrough' ? (
+                                                <Strikethrough size={18} className="text-zinc-500" />
+                                            ) : lastMoreAction === 'heading' ? (
+                                                <Heading size={18} className="text-zinc-500" />
+                                            ) : (
+                                                <MoreHorizontal size={18} className="text-zinc-500" />
+                                            )}
                                         </button>
-
-
                                     </div>
                                 </>
                             )}
@@ -1620,8 +1664,10 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                     {showHlOptions && (
                         <div 
                           ref={hlMenuRef}
-                          className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 flex gap-1 items-center animate-fadeIn z-[100]"
+                          className="absolute bottom-full left-1/2 mb-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 flex gap-1 items-center animate-fadeIn z-[100]"
                           style={{ transform: `translate(calc(-50% + ${hlShift}px), 0)` }}
+                          onMouseEnter={() => !menuState?.isMobile && setShowHlOptions(true)}
+                          onMouseLeave={() => !menuState?.isMobile && setShowHlOptions(false)}
                         >
                             <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
                             {(Object.keys(HL_COLORS) as HlColorKey[]).map(cKey => (
@@ -1632,18 +1678,21 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                     doActionAndSave('highlight', () => doFormat('highlight', cKey));
                                     setShowHlOptions(false);
                                   }}
-                                  className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${hlColor === cKey ? 'border-zinc-400' : 'border-transparent'}`}
-                                  style={{ backgroundColor: HL_COLORS[cKey].hex }}
+                                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:scale-110 ${hlColor === cKey ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
                                   title={HL_COLORS[cKey].label}
-                                />
+                                >
+                                    <Highlighter size={18} color={HL_COLORS[cKey].hex} />
+                                </button>
                             ))}
                         </div>
                     )}
                     {showTagOptions && (
                         <div 
                           ref={tagMenuRef}
-                          className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 z-[100] animate-fadeIn"
+                          className="absolute bottom-full left-1/2 mb-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 z-[100] animate-fadeIn"
                           style={{ transform: `translate(calc(-50% + ${tagShift}px), 0)` }}
+                          onMouseEnter={() => !menuState?.isMobile && setShowTagOptions(true)}
+                          onMouseLeave={() => !menuState?.isMobile && setShowTagOptions(false)}
                         >
                             <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
                             <div className="flex items-center gap-1">
@@ -1666,7 +1715,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                     {showMoreOptions && (
                         <div 
                             ref={moreMenuRef}
-                            className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1 flex flex-row items-center gap-0.5 z-[100] animate-fadeIn"
+                            className="absolute bottom-full left-1/2 mb-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1 flex flex-row items-center gap-0.5 z-[100] animate-fadeIn"
                             style={{ transform: `translate(calc(-50% + ${moreShift}px), 0)` }}
                             onMouseEnter={() => !menuState?.isMobile && setShowMoreOptions(true)}
                             onMouseLeave={() => !menuState?.isMobile && setShowMoreOptions(false)}
