@@ -1428,25 +1428,26 @@ function App() {
                       >
                       {sortNotesArray(activeGroup.notes, noteSortMode)
                         .map(note => {
-                        const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
-                        const isFocused = focusedNoteId === note.id;
-                        
-                        // --- LÓGICA DE BÚSQUEDA ---
-                        const query = currentSearchQuery.trim().toLowerCase();
-                        const titleMatch = query && note.title?.toLowerCase().includes(query);
-                        const contentMatch = query && !titleMatch && note.content?.toLowerCase().includes(query);
-                        const isSearchActive = titleMatch || contentMatch;
+                          const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
+                          const isFocused = focusedNoteId === note.id;
+                          const isSelected = isFocused || (!focusedNoteId && activeNoteId === note.id);
 
-                        // Helper para resaltar texto si coincide
-                        const highlightTitle = (text: string) => {
-                          if (!query || !text.toLowerCase().includes(query)) return text;
-                          const parts = text.split(new RegExp(`(${query})`, 'gi'));
-                          return parts.map((part, i) => 
-                            part.toLowerCase() === query 
-                              ? <mark key={i} className="bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 font-bold rounded-sm px-0.5">{part}</mark> 
-                              : part
-                          );
-                        };
+                          // --- LÓGICA DE BÚSQUEDA ---
+                          const query = currentSearchQuery.trim().toLowerCase();
+                          const titleMatch = query && note.title?.toLowerCase().includes(query);
+                          const contentMatch = query && !titleMatch && note.content?.toLowerCase().includes(query);
+                          const isSearchActive = titleMatch || contentMatch;
+
+                          // Helper para resaltar texto si coincide
+                          const highlightTitle = (text: string) => {
+                            if (!query || !text.toLowerCase().includes(query)) return text;
+                            const parts = text.split(new RegExp(`(${query})`, 'gi'));
+                            return parts.map((part, i) => 
+                              part.toLowerCase() === query 
+                                ? <mark key={i} className="bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 font-bold rounded-sm px-0.5">{part}</mark> 
+                                : part
+                            );
+                          };
 
                           const linkedTask = globalTasks?.find(t => t.id === note.id);
                           let dotColorClass = null;
@@ -1477,7 +1478,7 @@ function App() {
                                 }
                               }}
                               className={`relative flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 ${
-                                isFocused
+                                isSelected
                                   ? `bg-[#4940D9] text-white border-[#4940D9] shadow-sm shadow-[#4940D9]/20 scale-[1.02] ${isSearchActive ? 'ring-2 ring-amber-400' : ''}`
                                   : isSearchActive
                                     ? 'bg-amber-100 dark:bg-amber-900 border-amber-500 text-amber-900 dark:text-amber-100 shadow-sm ring-1 ring-amber-500/50'

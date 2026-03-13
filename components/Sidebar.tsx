@@ -28,7 +28,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectDockedNote,
   focusedNoteId,
 }) => {
-  const { dockedGroupIds, closeGroup, globalView, setGlobalView, activeTimersCount, overdueRemindersCount, overdueRemindersList, imminentRemindersCount, lastAppView, kanbanTodoCount, kanbanInProgressCount, kanbanDoneCount, lastUsedApp, globalTasks } = useUIStore();
+  const { dockedGroupIds, closeGroup, globalView, setGlobalView, activeTimersCount, overdueRemindersCount, overdueRemindersList, imminentRemindersCount, lastAppView, kanbanTodoCount, kanbanInProgressCount, kanbanDoneCount, lastUsedApp, globalTasks, lastActiveNoteByGroup } = useUIStore();
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
   const { t } = useTranslation();
 
