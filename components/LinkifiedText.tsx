@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ExternalLink, Highlighter, Languages, Loader2, X, Heading1, Bold, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { ExternalLink, Highlighter, Languages, Loader2, X, Heading1, Bold, Trash2, Maximize2, MoreHorizontal, Strikethrough, Link as LinkIcon } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 import TextareaAutosize from 'react-textarea-autosize';
 
@@ -11,7 +11,7 @@ interface LinkifiedTextProps {
 }
 
 interface Segment {
-  type: 'text' | 'link' | 'highlight' | 'translation' | 'bold' | 'italic' | 'marker';
+  type: 'text' | 'link' | 'highlight' | 'translation' | 'bold' | 'italic' | 'marker' | 'strikethrough';
   content: string;
   raw?: string;
   id?: string; // used for translation id
@@ -96,8 +96,8 @@ const highlightSegment = (text: string, highlight?: string): React.ReactNode => 
 };
 
 const parseAugmentedText = (text: string): Segment[] => {
-    const regex = /(https?:\/\/[^\s]+)|\{=(.+?)=\}|\[\[tr:([^|]+)\|(.+?)\]\]|\[\[(ins|idea|op|duda|wow|pat|yo|ruido):([^|]+)\|([^\]]+)\]\]|\*\*([^*]+)\*\*|\*([^*]+)\*/g;
-    const parts = [];
+    const regex = /(https?:\/\/[^\s]+)|\{=(.+?)=\}|\[\[tr:([^|]+)\|(.+?)\]\]|\[\[(ins|idea|op|duda|wow|pat|yo|ruido):([^|]+)\|([^\]]+)\]\]|\*\*([^*]+)\*\*|\*([^*]+)\*|~~([^~]+)~~/g;
+    const parts: Segment[] = [];
     let lastIndex = 0;
     let match;
 
@@ -111,6 +111,7 @@ const parseAugmentedText = (text: string): Segment[] => {
         else if (match[5]) parts.push({ type: 'marker', meta: match[5], timestamp: match[6], content: match[7], raw: match[0] });
         else if (match[8]) parts.push({ type: 'bold', content: match[8], raw: match[0] });
         else if (match[9]) parts.push({ type: 'italic', content: match[9], raw: match[0] });
+        else if (match[10]) parts.push({ type: 'strikethrough', content: match[10], raw: match[0] });
         lastIndex = regex.lastIndex;
     }
     if (lastIndex < text.length) {
@@ -242,12 +243,46 @@ const InlineEditor = ({
 export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, searchQuery, onUpdate }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [selectionMenu, setSelectionMenu] = useState<{ text: string; top: number; left: number; selectionState?: { startOffset: number, endOffset: number } } | null>(null);
-    const [showMarkerMenu, setShowMarkerMenu] = useState(false);
     const [isTranslating, setIsTranslating] = useState(false);
     const [translationsMap, setTranslationsMap] = useState<Record<string, string>>({});
     const [hasFetchedTranslations, setHasFetchedTranslations] = useState(false);
 
     const [editingLine, setEditingLine] = useState<{ index: number, offset?: number } | null>(null);
+    const [showHlOptions, setShowHlOptions] = useState(false);
+    const [showTagOptions, setShowTagOptions] = useState(false);
+    const [showMoreOptions, setShowMoreOptions] = useState(false);
+    const [showLinkInput, setShowLinkInput] = useState(false);
+    const [linkUrl, setLinkUrl] = useState('');
+
+    // Refs para posicionamiento dinámico de submenús
+    const hlMenuRef = useRef<HTMLDivElement>(null);
+    const tagMenuRef = useRef<HTMLDivElement>(null);
+    const moreMenuRef = useRef<HTMLDivElement>(null);
+    const [hlShift, setHlShift] = useState(0);
+    const [tagShift, setTagShift] = useState(0);
+    const [moreShift, setMoreShift] = useState(0);
+
+    const adjustMenuPosition = (isOpen: boolean, menuRef: React.RefObject<HTMLDivElement>, containerRef: React.RefObject<HTMLDivElement>, setShift: React.Dispatch<React.SetStateAction<number>>) => {
+        useLayoutEffect(() => {
+            if (isOpen && menuRef.current && containerRef.current) {
+                const menuRect = menuRef.current.getBoundingClientRect();
+                const containerRect = containerRef.current.getBoundingClientRect();
+                const margin = 8;
+                
+                // 🎯 Solo ajustamos si se sale por la DERECHA del contenedor del editor
+                if (menuRect.right > containerRect.right - margin) {
+                    const diff = (containerRect.right - margin) - menuRect.right;
+                    setShift(prev => prev + diff);
+                }
+            } else {
+                setShift(0);
+            }
+        }, [isOpen]);
+    };
+
+    adjustMenuPosition(showHlOptions, hlMenuRef, containerRef, setHlShift);
+    adjustMenuPosition(showTagOptions, tagMenuRef, containerRef, setTagShift);
+    adjustMenuPosition(showMoreOptions, moreMenuRef, containerRef, setMoreShift);
 
     useEffect(() => {
         const fetchTranslations = async () => {
@@ -322,13 +357,14 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
 
 
     const handleMouseUp = () => {
+        const isMobile = window.innerWidth < 768;
         setTimeout(() => {
             const selection = window.getSelection();
             if (selection && !selection.isCollapsed) {
                 const text = selection.toString().trim();
 
                 // Verificamos si la selección está dentro de nuestro contenedor
-                if (text && containerRef.current && containerRef.current.contains(selection.anchorNode) && containerRef.current.contains(selection.focusNode)) {
+                if (text && containerRef.current && containerRef.current.contains(selection.anchorNode)) {
                     let range;
                     try {
                         range = selection.getRangeAt(0);
@@ -345,20 +381,33 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
 
                     const rects = range.getClientRects();
                     if (rects.length > 0) {
-                        // Usamos el primer rectángulo visualmente para colocar el menú en la parte superior izquierda
-                        // de la selección, funciona mejor para múltiples líneas
+                        const containerRect = containerRef.current.getBoundingClientRect();
                         const rect = rects[0];
+                        
+                        // 🚀 CÁLCULO RELATIVO: Resolvemos el problema de "vuelo" a la esquina
+                        const relativeTop = rect.top - containerRect.top;
+                        const relativeLeft = (rect.left + rect.width / 2) - containerRect.left;
+
+                        // Clamping horizontal (evitar que el menú se salga por los lados)
+                        const isMobile = window.innerWidth < 768;
+                        const menuWidth = isMobile ? 120 : 140; // 🎯 Mas ajustado a su tamaño real
+                        const halfMenu = menuWidth / 2;
+                        let finalLeft = relativeLeft;
+
+                        if (finalLeft < halfMenu + 10) finalLeft = halfMenu + 10;
+                        if (finalLeft > containerRect.width - halfMenu - 10) finalLeft = containerRect.width - halfMenu - 10;
+
                         setSelectionMenu({
                             text,
                             selectionState: { startOffset, endOffset },
-                            top: rect.top - 55,
-                            left: rect.left + (rect.width > 100 ? 50 : rect.width / 2)
+                            top: relativeTop - 12, // 🚀 Ajustado: El margen real se da con el transform translateY
+                            left: finalLeft
                         });
                         return;
                     }
                 }
             }
-        }, 50); // Aumentado ligeramente para dar más tiempo al nav tras selección múltiple
+        }, isMobile ? 400 : 50);
     };
 
     const executeDelete = () => {
@@ -449,9 +498,12 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
             } else {
                 // Al hacer mousedown dentro del contenedor, esperamos a que el usuario termine la selección
                 // pero por precaución ocultamos el menú si el usuario hace clic simple (para escribir)
+                const isMobile = window.innerWidth < 768;
                 timeoutId = setTimeout(() => {
                     const sel = window.getSelection();
-                    if (!sel || sel.isCollapsed) setSelectionMenu(null);
+                    // 🚀 FIX: En móvil NO cerramos el menú simplemente por un colapso post-clic, 
+                    // porque los handles disparan eventos que pueden parecer clics.
+                    if (!sel || (sel.isCollapsed && !isMobile)) setSelectionMenu(null);
                 }, 100);
             }
         };
@@ -475,7 +527,7 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
         executeDelete();
     };
 
-    const doFormat = (type: 'highlight' | 'bold' | 'h1' | MarkerType) => {
+    const doFormat = (type: 'highlight' | 'bold' | 'h1' | 'strikethrough' | 'link' | MarkerType) => {
         if (!selectionMenu) return;
         let newContent = content;
 
@@ -515,6 +567,17 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
         }
         else if (type === 'bold') {
             newContent = newContent.replace(targetTextToReplace, `**${innerClean}**`);
+        }
+        else if (type === 'strikethrough') {
+            newContent = newContent.replace(targetTextToReplace, `~~${innerClean}~~`);
+        }
+        else if (type === 'link') {
+            const url = prompt("Introduce la URL:", "https://");
+            if (url) {
+                newContent = newContent.replace(targetTextToReplace, `[${innerClean}](${url})`);
+            } else {
+              return; // Cancelado
+            }
         }
         else if (type in MARKER_TYPES) {
             const ts = generateMarkerTimestamp();
@@ -665,6 +728,9 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
                     </a>
                 );
             }
+            if (segment.type === 'strikethrough') {
+                return <del key={idx} className="line-through text-zinc-500">{highlightSegment(segment.content, searchQuery)}</del>;
+            }
             if (segment.type === 'bold') {
                 return <strong key={idx} className="font-bold text-zinc-900 dark:text-white">{highlightSegment(segment.content, searchQuery)}</strong>;
             }
@@ -743,7 +809,14 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
 
     return (
         <>
-            <div ref={containerRef} onClick={handleContainerClick} onMouseUp={handleMouseUp} onTouchEnd={handleMouseUp} className="whitespace-pre-wrap break-words overflow-hidden relative py-2 pb-24 cursor-text">
+            <div 
+                ref={containerRef} 
+                onClick={handleContainerClick} 
+                onMouseUp={handleMouseUp} 
+                onTouchEnd={handleMouseUp} 
+                className="whitespace-pre-wrap break-words overflow-visible relative py-2 pb-24 cursor-text select-text touch-auto"
+                style={{ WebkitUserSelect: 'text', userSelect: 'text' } as any}
+            >
                 {content.split('\n').map((line, lineIndex) => {
 
                     if (editingLine?.index === lineIndex) {
@@ -763,13 +836,13 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
                     }
 
                     // Línea Vacía (Usa un espacio invisible para mantener el salto sin aplastarse)
-                    if (line === '') {
-                        return (
-                            <div key={lineIndex} data-lineindex={lineIndex} onClick={(e) => handleBlockClick(lineIndex, e)} style={EXACT_STYLES} className="cursor-text text-zinc-800 dark:text-zinc-200 font-sans">
-                                {'\u200B'}
-                            </div>
-                        );
-                    }
+                        if (line === '') {
+                            return (
+                                <div key={lineIndex} data-lineindex={lineIndex} onClick={(e) => handleBlockClick(lineIndex, e)} style={EXACT_STYLES} className="cursor-text text-zinc-800 dark:text-zinc-200 font-sans select-text">
+                                    {'\u200B'}
+                                </div>
+                            );
+                        }
 
                     // Separador
                     if (line.trim() === '---') {
@@ -795,7 +868,7 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
 
                     // Todo lo demás (Listas y Párrafos Normales) fluyen nativamente como texto
                     return (
-                        <div key={lineIndex} data-lineindex={lineIndex} onClick={(e) => handleBlockClick(lineIndex, e)} style={EXACT_STYLES} className="cursor-text text-zinc-800 dark:text-zinc-200 font-sans">
+                        <div key={lineIndex} data-lineindex={lineIndex} onClick={(e) => handleBlockClick(lineIndex, e)} style={EXACT_STYLES} className="cursor-text text-zinc-800 dark:text-zinc-200 font-sans select-text">
                             {renderSegments(line)}
                         </div>
                     );
@@ -805,66 +878,189 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
             {/* MENÚ FLOTANTE ALTO CONTRASTE */}
             {selectionMenu && (
                 <div
-                    className="floating-menu-container fixed z-[100] bg-white dark:bg-zinc-900 text-zinc-800 dark:text-white p-1.5 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex items-center gap-1 border border-zinc-200 dark:border-zinc-700 animate-fadeIn origin-bottom"
-                    style={{ top: selectionMenu.top, left: selectionMenu.left, transform: 'translateX(-50%)' }}
+                    className="floating-menu-container absolute z-[500] bg-white dark:bg-zinc-900 text-zinc-800 dark:text-white p-1.5 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex items-center gap-1 border border-zinc-200 dark:border-zinc-700 animate-fadeIn origin-bottom"
+                    style={{ top: selectionMenu.top, left: selectionMenu.left, transform: 'translate(-50%, -100%)' }}
                 >
+                    {/* Menú Principal — aparece directamente al seleccionar */}
                     {isTranslating ? (
                         <div className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-blue-500">
                             <Loader2 size={16} className="animate-spin" /> Traduciendo...
                         </div>
                     ) : (
                         <>
-                            <button onClick={() => doFormat('h1')} className="p-2 text-zinc-400 hover:text-zinc-800 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Convertir en Título">
-                                <Heading1 size={16} />
-                            </button>
-                            <button onClick={() => doFormat('bold')} className="p-2 text-zinc-400 hover:text-zinc-800 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Negrita">
-                                <Bold size={16} />
-                            </button>
-                            <button onClick={doDelete} className="p-2 text-red-400 hover:text-white hover:bg-red-500/20 rounded-lg transition-colors" title="Eliminar Texto">
-                                <Trash2 size={16} />
-                            </button>
 
-                            <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
 
-                            {/* Resaltar simple */}
-                            <button onClick={() => doFormat('highlight')} className="p-2 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Resaltar">
-                                <Highlighter size={16} className="text-[#6B8E23] dark:text-[#ccff00]" />
-                            </button>
-
-                            {/* Botón marcador → abre sub-menú compacto */}
-                            <div className="relative">
-                                <button
-                                    onClick={() => setShowMarkerMenu(p => !p)}
-                                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold transition-colors active:scale-95 ${showMarkerMenu ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-white' : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
-                                    title="Etiquetar"
+                            {/* RESALTADOR */}
+                            <div 
+                              className="relative group/hl flex items-center"
+                              onMouseEnter={() => window.innerWidth >= 768 && setShowHlOptions(true)}
+                              onMouseLeave={() => window.innerWidth >= 768 && setShowHlOptions(false)}
+                            >
+                                <button 
+                                    onClick={() => {
+                                        if (window.innerWidth < 768) {
+                                            setShowHlOptions(!showHlOptions);
+                                            setShowTagOptions(false);
+                                            setShowMoreOptions(false);
+                                        } else {
+                                            doFormat('highlight');
+                                        }
+                                    }}
+                                    title="Resaltar"
+                                    className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${showHlOptions ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
                                 >
-                                    <span>🏷️</span>
+                                    <Highlighter size={18} className="text-[#6B8E23] dark:text-[#ccff00]" />
                                 </button>
-                                {showMarkerMenu && (
-                                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-1.5 grid grid-cols-2 gap-0.5 w-[160px] z-[110]">
-                                        {(Object.entries(MARKER_TYPES) as [MarkerType, typeof MARKER_TYPES[MarkerType]][]).map(([key, cfg]) => (
-                                            <button
-                                                key={key}
-                                                onClick={() => { doFormat(key); setShowMarkerMenu(false); }}
-                                                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left whitespace-nowrap"
-                                                style={{ color: cfg.color }}
-                                            >
-                                                <span>{cfg.emoji}</span>
-                                                <span>{cfg.label}</span>
-                                            </button>
-                                        ))}
+                                {showHlOptions && (
+                                    <div 
+                                        ref={hlMenuRef}
+                                        className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 z-[100] animate-fadeIn"
+                                        style={{ transform: `translate(calc(-50% + ${hlShift}px), 0)` }}
+                                    >
+                                        <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
+                                        <button onClick={() => { doFormat('highlight'); setShowHlOptions(false); }} className="w-8 h-8 rounded-full border-2 border-zinc-400 bg-[#FACC15] transition-transform hover:scale-110" />
                                     </div>
                                 )}
                             </div>
 
-                            <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5"></div>
+                            {/* ETIQUETAS */}
+                            <div 
+                              className="relative group/tags flex items-center"
+                              onMouseEnter={() => window.innerWidth >= 768 && setShowTagOptions(true)}
+                              onMouseLeave={() => window.innerWidth >= 768 && setShowTagOptions(false)}
+                            >
+                                <button 
+                                    onClick={() => {
+                                        if (window.innerWidth < 768) {
+                                            setShowTagOptions(!showTagOptions);
+                                            setShowHlOptions(false);
+                                            setShowMoreOptions(false);
+                                        }
+                                    }}
+                                    className={`w-10 h-10 rounded-lg flex items-center justify-center text-zinc-500 transition-colors ${showTagOptions ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                                    title="Etiquetar"
+                                >
+                                    <span>🏷️</span>
+                                </button>
 
-                            <button onClick={() => doTranslate('es', 'en')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-500 dark:text-blue-400 active:scale-95" title="Traducir a Inglés">
-                                <Languages size={14} /> EN
-                            </button>
-                            <button onClick={() => doTranslate('en', 'es')} className="flex items-center gap-1 px-3 py-2 bg-blue-500/10 dark:bg-blue-500/20 hover:bg-blue-500/20 dark:hover:bg-blue-500/40 rounded-lg text-xs font-bold transition-colors text-blue-500 dark:text-blue-400 active:scale-95" title="Traducir a Español">
-                                ES
-                            </button>
+                                {showTagOptions && (
+                                    <div 
+                                        ref={tagMenuRef}
+                                        className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 z-[100] animate-fadeIn min-w-[160px]"
+                                        style={{ transform: `translate(calc(-50% + ${tagShift}px), 0)` }}
+                                    >
+                                        <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
+                                        <div className="grid grid-cols-2 gap-0.5">
+                                            {(Object.entries(MARKER_TYPES) as [MarkerType, typeof MARKER_TYPES[MarkerType]][]).map(([key, cfg]) => (
+                                                <button
+                                                    key={key}
+                                                    onClick={() => { doFormat(key); setShowTagOptions(false); }}
+                                                    className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                                                    style={{ color: cfg.color }}
+                                                >
+                                                    <span>{cfg.emoji}</span>
+                                                    <span>{cfg.label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* MÁS (Revelar, Link, Tachado, Título, Traducción) */}
+                            <div className="relative group/more flex items-center">
+                                <button 
+                                    onClick={() => {
+                                        setShowMoreOptions(!showMoreOptions);
+                                        setShowHlOptions(false);
+                                        setShowTagOptions(false);
+                                    }}
+                                    onMouseEnter={() => window.innerWidth >= 768 && setShowMoreOptions(true)}
+                                    onMouseLeave={() => window.innerWidth >= 768 && setShowMoreOptions(false)}
+                                    className={`w-10 h-10 rounded-lg flex items-center justify-center text-zinc-500 transition-colors ${showMoreOptions ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                                    title="Más opciones"
+                                >
+                                    <MoreHorizontal size={18} />
+                                </button>
+
+                                {showMoreOptions && (
+                                    <div 
+                                        ref={moreMenuRef}
+                                        className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1 flex flex-row items-center gap-0.5 z-[100] animate-fadeIn"
+                                        style={{ transform: `translate(calc(-50% + ${moreShift}px), 0)` }}
+                                    >
+                                        <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
+                                        
+                                        {/* REVELAR */}
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const lines = content.split('\n');
+                                                let charCount = 0;
+                                                let targetIndex = 0;
+                                                const startOffset = selectionMenu.selectionState?.startOffset ?? 0;
+                                                for(let i=0; i<lines.length; i++) {
+                                                    charCount += lines[i].length + 1;
+                                                    if (charCount > startOffset) { targetIndex = i; break; }
+                                                }
+                                                setEditingLine({ index: targetIndex });
+                                                setSelectionMenu(null);
+                                                setShowMoreOptions(false);
+                                            }} 
+                                            className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-indigo-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                            title="Revelar Markdown"
+                                        >
+                                            <Maximize2 size={16} />
+                                        </button>
+
+                                        <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
+
+                                        {/* NEGRITA */}
+                                        <button onClick={() => { doFormat('bold'); setShowMoreOptions(false); }}
+                                            className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                            title="Negrita"
+                                        >
+                                            <Bold size={16} />
+                                        </button>
+
+                                        {/* ENLACE */}
+                                        <button onClick={() => { doFormat('link'); setShowMoreOptions(false); }}
+                                            className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                            title="Enlace"
+                                        >
+                                            <LinkIcon size={16} />
+                                        </button>
+
+                                        {/* TACHADO */}
+                                        <button onClick={() => { doFormat('strikethrough'); setShowMoreOptions(false); }}
+                                            className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                            title="Tachado"
+                                        >
+                                            <Strikethrough size={16} />
+                                        </button>
+
+                                        {/* TÍTULO */}
+                                        <button onClick={() => { doFormat('h1'); setShowMoreOptions(false); }}
+                                            className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                            title="Título"
+                                        >
+                                            <Heading1 size={16} />
+                                        </button>
+
+                                        <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
+
+                                        {/* TRADUCCIÓN */}
+                                        <div className="flex items-center gap-0.5 px-0.5">
+                                            <button onClick={() => { doTranslate('en', 'es'); setShowMoreOptions(false); }}
+                                                className="px-2 py-1.5 bg-blue-500/10 text-blue-500 rounded-md text-[10px] font-black hover:bg-blue-500/20 transition-colors"
+                                            >ES</button>
+                                            <button onClick={() => { doTranslate('es', 'en'); setShowMoreOptions(false); }}
+                                                className="px-2 py-1.5 bg-blue-500/10 text-blue-500 rounded-md text-[10px] font-black hover:bg-blue-500/20 transition-colors"
+                                            >EN</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </>
                     )}
                 </div>

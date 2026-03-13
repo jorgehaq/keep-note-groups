@@ -405,7 +405,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   };
 
   return (
-    <div className={`m-1 transition-all duration-300 flex-1 flex flex-col min-h-0 bg-white dark:bg-[#1A1A24] overflow-hidden rounded-2xl shadow-lg border ${
+    <div className={`m-1 transition-all duration-300 flex-1 flex flex-col min-h-0 bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border select-text ${
       isHighlightedBySearch
         ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50/30 dark:bg-amber-900/10'
         : 'border-zinc-200 dark:border-[#2D2D42] hover:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/50'
@@ -581,7 +581,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       {/* CONTENT */}
       <div
         ref={contentRef}
-        className="flex-1 flex flex-col overflow-hidden min-h-0 bg-transparent relative"
+        className="flex-1 flex flex-col min-h-0 bg-transparent relative select-text"
       >
         {showStickyTitle && (
           <div className="sticky top-4 left-0 right-0 z-[40] flex justify-center pointer-events-none animate-fadeIn px-4">

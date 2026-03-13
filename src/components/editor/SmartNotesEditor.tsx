@@ -1,12 +1,12 @@
 // src/components/editor/SmartNotesEditor.tsx
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useLayoutEffect } from 'react';
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { EditorView, ViewPlugin, Decoration, WidgetType, ViewUpdate, keymap, lineNumbers, showPanel, Panel } from '@codemirror/view';
 import { RangeSet, StateEffect, Prec, StateField } from '@codemirror/state'; 
 import { search, openSearchPanel, closeSearchPanel } from '@codemirror/search';
-import { Plus, Settings, Grid, X, Check, Trash2, List, Type, Languages, Highlighter, Tag, StickyNote, History, Info, ChevronRight, ChevronDown, ChevronLeft, Search, Loader2, Tags, Image, Link as LinkIcon, Maximize2, Minimize2, ExternalLink, Bold, Italic, Strikethrough, Heading } from 'lucide-react';
+import { Plus, Settings, Grid, X, Check, Trash2, List, Type, Languages, Highlighter, Tag, StickyNote, History, Info, ChevronRight, ChevronDown, ChevronLeft, Search, Loader2, Tags, Image, Link as LinkIcon, Maximize2, Minimize2, ExternalLink, Bold, Italic, Strikethrough, Heading, MoreHorizontal } from 'lucide-react';
 import { useImperativeHandle, forwardRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -710,10 +710,42 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         () => localStorage.getItem('sme-last-action') || 'highlight'
     );
     const [showLinkInput, setShowLinkInput] = useState(false);
+    const [showMoreOptions, setShowMoreOptions] = useState(false);
     const [linkUrl, setLinkUrl] = useState('');
     const linkInputRef = useRef<HTMLInputElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const linkUrlRef = useRef(linkUrl);
     const showLinkInputRef = useRef(showLinkInput);
+
+    // Refs para posicionamiento dinámico de submenús
+    const hlMenuRef = useRef<HTMLDivElement>(null);
+    const tagMenuRef = useRef<HTMLDivElement>(null);
+    const moreMenuRef = useRef<HTMLDivElement>(null);
+    const [hlShift, setHlShift] = useState(0);
+    const [tagShift, setTagShift] = useState(0);
+    const [moreShift, setMoreShift] = useState(0);
+
+    const adjustMenuPosition = (isOpen: boolean, menuRef: React.RefObject<HTMLDivElement>, containerRef: React.RefObject<HTMLDivElement>, setShift: React.Dispatch<React.SetStateAction<number>>) => {
+        useLayoutEffect(() => {
+            if (isOpen && menuRef.current && containerRef.current) {
+                const menuRect = menuRef.current.getBoundingClientRect();
+                const containerRect = containerRef.current.getBoundingClientRect();
+                const margin = 8;
+                
+                // 🎯 Solo ajustamos si se sale por la DERECHA del contenedor del editor
+                if (menuRect.right > containerRect.right - margin) {
+                    const diff = (containerRect.right - margin) - menuRect.right;
+                    setShift(prev => prev + diff);
+                }
+            } else {
+                setShift(0);
+            }
+        }, [isOpen]);
+    };
+
+    adjustMenuPosition(showHlOptions, hlMenuRef, containerRef, setHlShift);
+    adjustMenuPosition(showTagOptions, tagMenuRef, containerRef, setTagShift);
+    adjustMenuPosition(showMoreOptions, moreMenuRef, containerRef, setMoreShift);
     
     useEffect(() => { linkUrlRef.current = linkUrl; }, [linkUrl]);
     useEffect(() => { showLinkInputRef.current = showLinkInput; }, [showLinkInput]);
@@ -742,12 +774,20 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
     const closeMenus = () => {
         setMenuState(null);
         setShowLinkInput(false);
+        setShowMoreOptions(false);
+        setShowHlOptions(false);
+        setShowTagOptions(false);
+        setShowTrOptions(false);
         window.getSelection()?.removeAllRanges();
     };
 
     const closeMenusOnly = () => {
         setMenuState(null);
         setShowLinkInput(false);
+        setShowMoreOptions(false);
+        setShowHlOptions(false);
+        setShowTagOptions(false);
+        setShowTrOptions(false);
     };
 
     // Regenera el tema visual solo si cambias la fuente o el tamaño en los ajustes
@@ -896,16 +936,30 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
             // 3. Mostrar menú si hay selección
             if (!main.empty) {
                 const rect = update.view.coordsAtPos(main.from);
-                if (rect) {
+                if (rect && containerRef.current) {
+                    const containerRect = containerRef.current.getBoundingClientRect();
                     const isMobile = window.innerWidth < 768;
-                    setMenuState({ 
-                        top: isMobile ? 0 : rect.top - 8, 
-                        left: isMobile ? 0 : rect.left, 
-                        from: main.from, 
-                        to: main.to, 
-                        text: update.state.doc.sliceString(main.from, main.to),
-                        isMobile 
-                    });
+                    const relativeTop = rect.top - containerRect.top;
+                    const relativeLeft = rect.left - containerRect.left;
+
+                    const showMenu = () => {
+                        setMenuState({ 
+                            top: relativeTop - 8, 
+                            left: relativeLeft, 
+                            from: main.from, 
+                            to: main.to, 
+                            text: update.state.doc.sliceString(main.from, main.to),
+                            isMobile 
+                        });
+                    };
+
+                    // 🚀 FIX: Delay en móvil para no estorbar los tiradores de selección
+                    if (isMobile) {
+                        clearTimeout((window as any)[`__menu_delay_${noteId}`]);
+                        (window as any)[`__menu_delay_${noteId}`] = setTimeout(showMenu, 400);
+                    } else {
+                        showMenu();
+                    }
                 }
             }
         }
@@ -922,25 +976,28 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
             const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
             const { main } = view.state.selection;
 
-            // 🚀 FIX DEFINITIVO: Si el clic es dentro de una selección, colapsamos manualmente.
-            // Usamos preventDefault() para que el navegador no intente su propia lógica de selección/drag
-            // que es lo que causa el "secuestro" visual. Luego forzamos el foco.
+            // 🚀 FIX DEFINITIVO: Si el clic es dentro de una selección, colapsamos manualmente (SOLO DESKTOP).
+            // En móvil dejamos que el navegador gestione los tiradores de selección.
             if (pos !== null && !main.empty && pos >= main.from && pos <= main.to) {
+                const isMobile = window.innerWidth < 768;
+                if (isMobile) return false; 
+                
                 // 🚀 PROTECCIÓN EXTRA: Si el buscador está abierto, no forzamos foco manual al texto
                 if (view.dom.querySelector('.cm-search, .cm-panel')) return false;
 
                 e.preventDefault(); 
                 view.dispatch({
-                    selection: { anchor: pos, head: pos },
-                    scrollIntoView: false
+                    selection: { anchor: pos }
                 });
-                window.getSelection()?.removeAllRanges();
-                view.focus(); // Restaurar foco tras preventDefault
                 return true; 
             }
             return false; 
         },
         contextmenu: (e, view) => {
+            // 🚀 FIX: En móviles, long-press dispara contextmenu (button 0 o 1 frecuentemente).
+            // Solo revelamos markdown si es un Clic Derecho Real (button 2).
+            if (e.button !== 2) return false;
+
             e.preventDefault();
             view.focus();
             
@@ -995,7 +1052,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         }
     })), [noteId]);
 
-    const doFormat = (type: 'highlight' | 'link' | 'strikethrough' | 'heading' | MarkerType, color?: HlColorKey) => {
+    const doFormat = (type: 'highlight' | 'link' | 'strikethrough' | 'heading' | 'bold' | MarkerType, color?: HlColorKey) => {
         if (!menuState || !editorRef.current?.view) return;
 
         const targetColor = color || hlColor;
@@ -1042,13 +1099,16 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
             formatted = `[[hl:${ts}|${innerClean}|${targetColor}]]`;
         } else if (type === 'strikethrough') {
             formatted = `~~${innerClean}~~`;
+        } else if (type === 'bold') {
+            formatted = `**${innerClean}**`;
         } else {
             formatted = `[[${type}:${ts}|${innerClean}]]`;
         }
 
         editorRef.current.view.dispatch({ 
             changes: { from: menuState.from, to: menuState.to, insert: formatted }, 
-            selection: { anchor: menuState.from + formatted.length } 
+            selection: { anchor: menuState.from + formatted.length },
+            effects: [setRevealedLine.of(null), ForceRedrawEffect.of(null)] // 🚀 Limpiar modo markdown tras formatear
         });
         
         setMenuState(null);
@@ -1066,7 +1126,8 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         
         editorRef.current.view.dispatch({ 
             changes: { from: menuState.from, to: menuState.to, insert: replacement }, 
-            selection: { anchor: menuState.from + replacement.length } 
+            selection: { anchor: menuState.from + replacement.length },
+            effects: [setRevealedLine.of(null), ForceRedrawEffect.of(null)] // 🚀 Limpiar modo markdown tras link
         });
         
         setMenuState(null);
@@ -1122,7 +1183,8 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
             // 6. Actualizar editor
             editorRef.current.view.dispatch({ 
                 changes: { from: menuState.from, to: menuState.to, insert: replacement }, 
-                selection: { anchor: menuState.from + replacement.length } 
+                selection: { anchor: menuState.from + replacement.length },
+                effects: [setRevealedLine.of(null), ForceRedrawEffect.of(null)] // 🚀 Limpiar modo markdown tras traducción
             });
             setMenuState(null);
 
@@ -1188,15 +1250,18 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         }, 150);
     };
 
-    const menuWidth = 260; 
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const menuWidth = isMobile ? 110 : 130; 
     const subMenuWidth = 240; 
     const margin = 16;
     
     // Calcular left restringido para el menú principal
     let clampedLeft = menuState?.left ?? 0;
-    if (menuState && !menuState.isMobile) {
+    if (menuState && containerRef.current) {
+        const containerRect = containerRef.current.getBoundingClientRect();
         const halfWidth = menuWidth / 2;
-        clampedLeft = Math.max(halfWidth + margin, Math.min(window.innerWidth - halfWidth - margin, menuState.left));
+        // Clamping relativo al ancho del contenedor del editor
+        clampedLeft = Math.max(halfWidth + margin, Math.min(containerRect.width - halfWidth - margin, menuState.left));
     }
 
     // Calcular desplazamiento del submenú si se sale de la pantalla
@@ -1373,8 +1438,9 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
 
     return (
         <div 
-            className={`relative group/editor w-full ${autoHeight ? 'h-auto' : 'h-full min-h-0'} flex flex-col bg-transparent ${readOnly ? 'pointer-events-none' : ''}`}
-            onContextMenu={(e) => e.preventDefault()}
+            ref={containerRef}
+            className={`relative group/editor w-full ${autoHeight ? 'h-auto' : 'h-full min-h-0'} flex flex-col bg-transparent select-text touch-auto`}
+            style={{ WebkitUserSelect: 'text', userSelect: 'text' } as any}
         >
             <CodeMirror
                 key={`${noteId}-${String(showLineNumbers)}`}
@@ -1400,11 +1466,11 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
             )}
             {menuState && (
                 <div
-                    className="floating-menu-container fixed z-[100] flex flex-col items-center gap-1.5 animate-fadeIn origin-bottom pointer-events-auto"
+                    className="floating-menu-container absolute z-[500] flex flex-col items-center gap-1.5 animate-fadeIn origin-bottom pointer-events-auto"
                     style={{ 
-                        top: menuState.top, 
+                        top: menuState.top - 6, // 🚀 Un pequeño offset extra para no chocar
                         left: clampedLeft, 
-                        transform: menuState.isMobile ? 'translateX(-50%)' : 'translate(-50%, calc(-100% - 6px))' 
+                        transform: 'translate(-50%, -100%)' 
                     }}
                     onMouseDown={(e) => {
                         // IMPORTANTE: No dar preventDefault si es un INPUT para que gane el foco
@@ -1458,14 +1524,70 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                 </div>
                             ) : (
                                 <>
-                                    {/* Popover de Etiquetas */}
+
+
+                                    {/* RESALTADOR */}
                                     <div 
-                                      className="relative group/tags flex items-center"
-                                      onMouseEnter={() => setShowTagOptions(true)}
-                                      onMouseLeave={() => setShowTagOptions(false)}
+                                      className="relative group/hl flex items-center"
+                                      onMouseEnter={() => !menuState?.isMobile && setShowHlOptions(true)}
+                                      onMouseLeave={() => !menuState?.isMobile && setShowHlOptions(false)}
                                     >
                                         <button 
-                                            className="w-9 h-9 rounded-lg flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                            onClick={() => {
+                                                if (menuState?.isMobile) {
+                                                    setShowHlOptions(!showHlOptions);
+                                                    setShowTagOptions(false);
+                                                    setShowMoreOptions(false);
+                                                } else {
+                                                    doActionAndSave('highlight', () => doFormat('highlight'));
+                                                }
+                                            }}
+                                            title="Resaltar"
+                                            className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${showHlOptions ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                                            style={{ color: HL_COLORS[hlColor].hex }}
+                                        >
+                                            <Highlighter size={18} />
+                                        </button>
+
+                                        {showHlOptions && (
+                                            <div 
+                                              ref={hlMenuRef}
+                                              className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 flex gap-1 items-center animate-fadeIn z-[100]"
+                                              style={{ transform: `translate(calc(-50% + ${hlShift}px), 0)` }}
+                                            >
+                                                <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
+                                                {(Object.keys(HL_COLORS) as HlColorKey[]).map(cKey => (
+                                                    <button
+                                                      key={cKey}
+                                                      onClick={() => {
+                                                        setHlColor(cKey);
+                                                        doActionAndSave('highlight', () => doFormat('highlight', cKey));
+                                                        setShowHlOptions(false);
+                                                      }}
+                                                      className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${hlColor === cKey ? 'border-zinc-400' : 'border-transparent'}`}
+                                                      style={{ backgroundColor: HL_COLORS[cKey].hex }}
+                                                      title={HL_COLORS[cKey].label}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* ETIQUETAS */}
+                                    <div 
+                                      className="relative group/tags flex items-center"
+                                      onMouseEnter={() => !menuState?.isMobile && setShowTagOptions(true)}
+                                      onMouseLeave={() => !menuState?.isMobile && setShowTagOptions(false)}
+                                    >
+                                        <button 
+                                            onClick={() => {
+                                                if (menuState?.isMobile) {
+                                                    setShowTagOptions(!showTagOptions);
+                                                    setShowHlOptions(false);
+                                                    setShowMoreOptions(false);
+                                                }
+                                            }}
+                                            className={`w-10 h-10 rounded-lg flex items-center justify-center text-zinc-500 transition-colors ${showTagOptions ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
                                             title="Tags y Marcadores"
                                         >
                                             <Tags size={18} />
@@ -1473,12 +1595,11 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
 
                                         {showTagOptions && (
                                             <div 
-                                              className="absolute bottom-full left-0 mb-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 z-[100] animate-fadeIn"
-                                              style={getSubMenuStyle(-85)}
+                                              ref={tagMenuRef}
+                                              className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 z-[100] animate-fadeIn"
+                                              style={{ transform: `translate(calc(-50% + ${tagShift}px), 0)` }}
                                             >
-                                                {/* Bridge overlay (padding 6px + margin 4px = 10px, use h-8 for safety) */}
-                                                <div className="absolute top-full left-0 w-full h-[8px] bg-transparent" />
-                                                
+                                                <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
                                                 <div className="flex items-center gap-1">
                                                     {(Object.keys(MARKER_TYPES) as MarkerType[]).map(key => {
                                                         const cfg = MARKER_TYPES[key];
@@ -1489,7 +1610,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                                                     setShowTagOptions(false);
                                                                 }}
                                                                 title={cfg.label}
-                                                                className="w-9 h-9 rounded-lg flex items-center justify-center text-base hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                                                className="w-10 h-10 rounded-lg flex items-center justify-center text-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                                                             >{cfg.emoji}</button>
                                                         );
                                                     })}
@@ -1498,103 +1619,96 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                         )}
                                     </div>
 
-                                    {/* Separador vertical */}
-                                    <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5" />
-                                    
-                                    {/* Resaltador (con su popover de colores) */}
-                                    <div 
-                                      className="relative group/hl flex items-center"
-                                      onMouseEnter={() => setShowHlOptions(true)}
-                                      onMouseLeave={() => setShowHlOptions(false)}
-                                    >
-                                        <button onClick={() => { doActionAndSave('highlight', () => { doFormat('highlight'); }); }}
-                                            title="Resaltar"
-                                            className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                                            style={{ color: HL_COLORS[hlColor].hex }}
-                                        >
-                                            <Highlighter size={18} />
-                                        </button>
-
-                                        {showHlOptions && (
-                                            <div 
-                                              className="absolute bottom-full left-0 mb-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 flex gap-1 items-center animate-fadeIn z-[100]"
-                                              style={getSubMenuStyle(-40)}
-                                            >
-                                                {/* Bridge overlay (padding 6px + margin 4px = 10px, use h-8 for safety) */}
-                                                <div className="absolute top-full left-0 w-full h-[8px] bg-transparent" />
-                                                
-                                                {(Object.keys(HL_COLORS) as HlColorKey[]).map(cKey => (
-                                                    <button
-                                                      key={cKey}
-                                                      onClick={() => {
-                                                        setHlColor(cKey);
-                                                        doActionAndSave('highlight', () => doFormat('highlight', cKey));
-                                                        setShowHlOptions(false);
-                                                      }}
-                                                      className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 ${hlColor === cKey ? 'border-zinc-400 font-bold' : 'border-transparent'}`}
-                                                      style={{ backgroundColor: HL_COLORS[cKey].hex }}
-                                                      title={HL_COLORS[cKey].label}
-                                                    />
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Traducción */}
-                                    <div 
-                                      className="relative group/tr flex items-center"
-                                      onMouseEnter={() => setShowTrOptions(true)}
-                                      onMouseLeave={() => setShowTrOptions(false)}
-                                    >
+                                    {/* BOTÓN "MÁS" (Revelar, Link, Tachado, Título, Traducción) */}
+                                    <div className="relative group/more flex items-center">
                                         <button 
-                                            className="w-9 h-9 rounded-lg flex items-center justify-center text-blue-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                                            title="Traducir selección"
+                                            onClick={() => {
+                                                setShowMoreOptions(!showMoreOptions);
+                                                setShowHlOptions(false);
+                                                setShowTagOptions(false);
+                                            }}
+                                            onMouseEnter={() => !menuState?.isMobile && setShowMoreOptions(true)}
+                                            onMouseLeave={() => !menuState?.isMobile && setShowMoreOptions(false)}
+                                            className={`w-10 h-10 rounded-lg flex items-center justify-center text-zinc-500 transition-colors ${showMoreOptions ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                                            title="Más opciones"
                                         >
-                                            <Languages size={18} />
+                                            <MoreHorizontal size={18} />
                                         </button>
 
-                                        {showTrOptions && (
+                                        {showMoreOptions && (
                                             <div 
-                                              className="absolute bottom-full left-0 mb-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 flex gap-1 items-center animate-fadeIn z-[100]"
-                                              style={getSubMenuStyle(5)}
+                                                ref={moreMenuRef}
+                                                className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1 flex flex-row items-center gap-0.5 z-[100] animate-fadeIn"
+                                                style={{ transform: `translate(calc(-50% + ${moreShift}px), 0)` }}
+                                                onMouseEnter={() => !menuState?.isMobile && setShowMoreOptions(true)}
+                                                onMouseLeave={() => !menuState?.isMobile && setShowMoreOptions(false)}
                                             >
-                                                {/* Bridge overlay (padding 6px + margin 4px = 10px, use h-8 for safety) */}
-                                                <div className="absolute top-full left-0 w-full h-[8px] bg-transparent" />
+                                                <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
                                                 
-                                                <button onClick={() => doActionAndSave('en', () => doTranslate('en'))}
-                                                    title="Traducir → EN"
-                                                    className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold text-blue-500 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 transition-colors">
-                                                    EN
+                                                {/* REVELAR */}
+                                                <button 
+                                                    onClick={(e) => {
+                                                        const view = editorRef.current?.view;
+                                                        if (view && menuState) {
+                                                            const line = view.state.doc.lineAt(menuState.from);
+                                                            view.dispatch({ effects: [setRevealedLine.of(line.number), ForceRedrawEffect.of(null)] });
+                                                        }
+                                                        closeMenusOnly();
+                                                    }}
+                                                    className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-indigo-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                                    title="Revelar Markdown"
+                                                >
+                                                    <Maximize2 size={16} />
                                                 </button>
-                                                <button onClick={() => doActionAndSave('es', () => doTranslate('es'))}
-                                                    title="Traducir → ES"
-                                                    className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold text-blue-500 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 transition-colors">
-                                                    ES
+                                                
+                                                <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
+
+                                                {/* NEGRITA */}
+                                                <button onClick={() => { doActionAndSave('bold', () => doFormat('bold')); setShowMoreOptions(false); }}
+                                                    className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                                    title="Negrita"
+                                                >
+                                                    <Bold size={16} />
                                                 </button>
+
+                                                {/* LINK */}
+                                                <button onClick={() => { setShowLinkInput(true); setShowMoreOptions(false); }}
+                                                    className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                                    title="Enlace"
+                                                >
+                                                    <LinkIcon size={16} />
+                                                </button>
+
+                                                {/* TACHADO */}
+                                                <button onClick={() => { doActionAndSave('strikethrough', () => doFormat('strikethrough')); setShowMoreOptions(false); }}
+                                                    className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                                    title="Tachado"
+                                                >
+                                                    <Strikethrough size={16} />
+                                                </button>
+
+                                                {/* TÍTULO */}
+                                                <button onClick={() => { doActionAndSave('heading', () => doFormat('heading')); setShowMoreOptions(false); }}
+                                                    className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                                    title="Título"
+                                                >
+                                                    <Heading size={16} />
+                                                </button>
+
+                                                <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
+
+                                                {/* TRADUCCIÓN (Compacta) */}
+                                                <div className="flex items-center gap-0.5 px-0.5">
+                                                    <button onClick={() => { doActionAndSave('es', () => doTranslate('es')); setShowMoreOptions(false); }}
+                                                        className="px-2 py-1.5 bg-blue-500/10 text-blue-500 rounded-md text-[10px] font-black hover:bg-blue-500/20 transition-colors"
+                                                    >ES</button>
+                                                    <button onClick={() => { doActionAndSave('en', () => doTranslate('en')); setShowMoreOptions(false); }}
+                                                        className="px-2 py-1.5 bg-blue-500/10 text-blue-500 rounded-md text-[10px] font-black hover:bg-blue-500/20 transition-colors"
+                                                    >EN</button>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
-
-                                    {/* Separador vertical */}
-                                    <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5" />
-
-                                    <button onClick={() => doActionAndSave('link', () => doFormat('link'))}
-                                        title="Link"
-                                        className="w-9 h-9 rounded-lg flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-                                        <LinkIcon size={18} />
-                                    </button>
-
-                                    <button onClick={() => doActionAndSave('strikethrough', () => doFormat('strikethrough'))}
-                                        title="Tachado"
-                                        className="w-9 h-9 rounded-lg flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-                                        <Strikethrough size={18} />
-                                    </button>
-
-                                    <button onClick={() => doActionAndSave('heading', () => doFormat('heading'))}
-                                        title="Título"
-                                        className="w-9 h-9 rounded-lg flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-                                        <Heading size={18} />
-                                    </button>
                                 </>
                             )}
                         </div>
