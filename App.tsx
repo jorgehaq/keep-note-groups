@@ -1430,7 +1430,7 @@ function App() {
                       <div 
                         ref={scrollContainerRef}
                         onScroll={checkScroll}
-                        className="flex flex-nowrap md:flex-wrap justify-start md:justify-center gap-2.5 overflow-x-auto hidden-scrollbar pb-1 md:pb-0 scroll-smooth px-2"
+                        className="flex flex-nowrap md:flex-wrap justify-start md:justify-center gap-2.5 overflow-x-auto hidden-scrollbar pt-2 pb-2 md:pb-1 scroll-smooth px-2"
                       >
                       {sortNotesArray(activeGroup.notes, noteSortMode)
                         .map(note => {
@@ -1483,7 +1483,7 @@ function App() {
                                   if (isOpen) toggleNote(activeGroup.id, note.id);
                                 }
                               }}
-                              className={`relative flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 ${
+                              className={`relative flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 my-0.5 ${
                                 isSelected
                                   ? `bg-[#4940D9] text-white border-[#4940D9] shadow-sm shadow-[#4940D9]/20 scale-[1.02] ${isSearchActive ? 'ring-2 ring-amber-400' : ''}`
                                   : isSearchActive
