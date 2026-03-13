@@ -510,6 +510,10 @@ function App() {
         focusedNoteByGroup: {
           ...state.focusedNoteByGroup,
           [newGroup.id]: newNote.id
+        },
+        lastActiveNoteByGroup: {
+          ...state.lastActiveNoteByGroup,
+          [newGroup.id]: newNote.id
         }
       }));
 
@@ -934,6 +938,8 @@ function App() {
               [activeGroupId]: [newNote.id]
           }
       });
+
+      setFocusedNoteId(newNote.id);
 
       if (store.noteSortMode) {
           applyManualSort(store.noteSortMode);
