@@ -105,6 +105,7 @@ const SummaryTabContent: React.FC<{
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showMobileWhiteboard, setShowMobileWhiteboard] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -139,6 +140,14 @@ const SummaryTabContent: React.FC<{
             </span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {/* Botón Pizarrón (Móvil) */}
+            <button
+              className="md:hidden p-1.5 rounded-lg text-zinc-500 hover:text-violet-300 hover:bg-violet-500/10 transition-colors flex items-center gap-1.5"
+              onClick={(e) => { e.stopPropagation(); setShowMobileWhiteboard(!showMobileWhiteboard); }}
+              title={showMobileWhiteboard ? "Ver Resumen" : "Ver Pizarrón"}
+            >
+              {showMobileWhiteboard ? <Sparkles size={14} /> : <PenLine size={14} />}
+            </button>
             <div className="relative" ref={menuRef}>
                <button 
                  onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
@@ -180,7 +189,7 @@ const SummaryTabContent: React.FC<{
             </div>
           </div>
         </div>
-        <div className="px-4 py-3 min-w-0">
+        <div className={`px-4 py-3 min-w-0 ${showMobileWhiteboard ? 'hidden md:block' : 'block'}`}>
           <SmartNotesEditor
             noteId={`summary_${summary.id}`}
             initialContent={summary.content || ''}
@@ -194,7 +203,7 @@ const SummaryTabContent: React.FC<{
         </div>
       </div>
 
-      <div className="flex flex-col flex-1 min-h-0">
+      <div className={`flex flex-col flex-1 min-h-0 ${!showMobileWhiteboard ? 'hidden md:flex' : 'flex'}`}>
         <div className="flex items-center gap-1.5 mb-1.5 px-1">
           <PenLine size={11} className="text-zinc-500" />
           <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Pizarrón</span>
