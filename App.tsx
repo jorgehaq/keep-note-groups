@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid, Maximize2, Minimize2, ChevronsDownUp, Bell, Pin, PanelLeft } from 'lucide-react';
+import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid, Maximize2, Minimize2, ChevronsDownUp, Bell, Pin, PanelLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Note, Group, Theme, NoteFont, Reminder, NoteSortMode, BrainDump } from './types';
 import { AccordionItem } from './components/AccordionItem';
 import { Sidebar } from './components/Sidebar';
@@ -109,6 +109,30 @@ function App() {
 
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(Math.ceil(scrollLeft + clientWidth) < scrollWidth - 1); // tolerance
+    }
+  };
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, [groups, activeGroupId, isGlobalNoteTrayOpen, globalView]);
+
+  const scrollTabs = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: direction === 'left' ? -200 : 200, behavior: 'smooth' });
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -955,13 +979,11 @@ function App() {
         groups={groups}
         activeGroupId={activeGroupId}
         onSelectGroup={(id) => { 
-          const store = useUIStore.getState();
-          const isReturningToRoot = store.activeGroupId === id && store.globalView === 'notes';
           setActiveGroup(id); 
           setGlobalView('notes');
-          if (isReturningToRoot) {
-            setFocusedNoteId(null);
-          }
+          // Al hacer clic en el grupo, le quitamos el foco a cualquier nota anclada
+          // para que la burbuja se apague (quede gris media) y el grupo se ilumine.
+          setFocusedNoteId(null);
         }}
         onAddGroup={() => { addGroup(); setIsGlobalNoteTrayOpen(true); }}
         onOpenSettings={() => setIsSettingsOpen(true)}
@@ -973,9 +995,9 @@ function App() {
           const isOpen = currentOpen.includes(noteId);
 
           if (isAlreadyFocused && globalView === 'notes') {
-            // Toggle OFF
-            setFocusedNoteId(null, groupId);
-            if (isOpen) toggleNote(groupId, noteId);
+            // ELIMINADO LOGICA DE TOGGLE OFF DESDE EL SIDEBAR
+            // Si ya está enfocada y estamos en la vista de notas, no hacemos nada.
+            return;
           } else {
             // Toggle ON or Switch
             setActiveGroup(groupId);
@@ -1387,8 +1409,22 @@ function App() {
 
                 {/* 2. FRANJA DE NOTAS (INTEGRADA EN EL ENCABEZADO) */}
                 {isGlobalNoteTrayOpen && activeGroup && (
-                  <div className="pt-[10px] px-[10px] pb-[10px] bg-[#FAFAFA] dark:bg-[#13131A]">
-                                                                  <div className="flex flex-wrap justify-center gap-2.5">
+                  <div className="pt-[10px] px-[10px] pb-[10px] bg-[#FAFAFA] dark:bg-[#13131A] relative group/tray">
+                      {/* Flecha Izquierda (solo visible en md:hidden cuando hay scroll) */}
+                      {canScrollLeft && (
+                        <div className="md:hidden absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#FAFAFA] dark:from-[#13131A] to-transparent z-10 flex items-center justify-start pl-1">
+                          <button onClick={() => scrollTabs('left')} className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-colors">
+                            <ChevronLeft size={16} />
+                          </button>
+                        </div>
+                      )}
+                      
+                      {/* Contenedor de Tabs con onScroll */}
+                      <div 
+                        ref={scrollContainerRef}
+                        onScroll={checkScroll}
+                        className="flex flex-nowrap md:flex-wrap justify-start md:justify-center gap-2.5 overflow-x-auto hidden-scrollbar pb-1 md:pb-0 scroll-smooth px-2"
+                      >
                       {sortNotesArray(activeGroup.notes, noteSortMode)
                         .map(note => {
                         const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
@@ -1466,7 +1502,16 @@ function App() {
                             </button>
                           );
                       })}
-                    </div>
+                      </div>
+                      
+                      {/* Flecha Derecha (solo visible en md:hidden cuando hay scroll) */}
+                      {canScrollRight && (
+                        <div className="md:hidden absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#FAFAFA] dark:from-[#13131A] to-transparent z-10 flex items-center justify-end pr-1">
+                          <button onClick={() => scrollTabs('right')} className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-colors">
+                            <ChevronRight size={16} />
+                          </button>
+                        </div>
+                      )}
                   </div>
                 )}
               </div>

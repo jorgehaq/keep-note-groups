@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell, Grid, ChevronsDownUp, MoreVertical, ListTodo, CheckSquare, Square, GripVertical, Search, X } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell, Grid, ChevronsDownUp, MoreVertical, ListTodo, CheckSquare, Square, GripVertical, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { KanbanSemaphore } from './KanbanSemaphore';
 import { supabase } from '../src/lib/supabaseClient';
@@ -141,6 +141,28 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
     const hasLoadedOnce = useRef(false);
     const [localSearchQuery, setLocalSearchQuery] = useState('');
 
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(false);
+
+    const checkScroll = () => {
+        if (scrollContainerRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+            setCanScrollLeft(scrollLeft > 0);
+            setCanScrollRight(Math.ceil(scrollLeft + clientWidth) < scrollWidth - 1); // tolerance
+        }
+    };
+
+    useEffect(() => {
+        checkScroll();
+        window.addEventListener('resize', checkScroll);
+        return () => window.removeEventListener('resize', checkScroll);
+    }, [dumps.length, isDumpTrayOpen]);
+
+    const scrollTabs = (direction: 'left' | 'right') => {
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollBy({ left: direction === 'left' ? -200 : 200, behavior: 'smooth' });
+        }
+    };
 
     // Close menu on outside click
     useEffect(() => {
@@ -306,8 +328,21 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
 
                 {/* FRANJA DE PIZARRONES (ACCESOS DIRECTOS) */}
                 {isDumpTrayOpen && pizarrones.length > 0 && (
-                    <div className="pt-3 px-4 pb-3 bg-[#FAFAFA] dark:bg-[#13131A]">
-                        <div className="flex flex-wrap justify-center gap-2.5">
+                    <div className="pt-3 px-4 pb-3 bg-[#FAFAFA] dark:bg-[#13131A] relative group/tray">
+                        {/* Flecha Izquierda (solo visible en md:hidden cuando hay scroll) */}
+                        {canScrollLeft && (
+                            <div className="md:hidden absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#FAFAFA] dark:from-[#13131A] to-transparent z-10 flex items-center justify-start pl-2">
+                                <button onClick={() => scrollTabs('left')} className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-amber-600 transition-colors">
+                                    <ChevronLeft size={16} />
+                                </button>
+                            </div>
+                        )}
+
+                        <div 
+                            ref={scrollContainerRef}
+                            onScroll={checkScroll}
+                            className="flex flex-nowrap md:flex-wrap justify-start md:justify-center gap-2.5 overflow-x-auto hidden-scrollbar pb-1 md:pb-0 scroll-smooth px-2"
+                        >
                              {pizarrones.map(p => {
                                  const isFocused = focusedDumpId === p.id;
                                  const isHighlighted = localSearchQuery.trim() && (p.title?.toLowerCase().includes(localSearchQuery.toLowerCase()) || p.content?.toLowerCase().includes(localSearchQuery.toLowerCase()));
@@ -348,6 +383,15 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                  );
                              })}
                         </div>
+
+                        {/* Flecha Derecha (solo visible en md:hidden cuando hay scroll) */}
+                        {canScrollRight && (
+                            <div className="md:hidden absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#FAFAFA] dark:from-[#13131A] to-transparent z-10 flex items-center justify-end pr-2">
+                                <button onClick={() => scrollTabs('right')} className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-amber-600 transition-colors">
+                                    <ChevronRight size={16} />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

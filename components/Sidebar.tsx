@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, Settings, Grid, X, LogOut, StickyNote, KanbanSquare, Clock, Bell, PenTool, Languages } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Plus, Settings, Grid, X, LogOut, StickyNote, KanbanSquare, Clock, Bell, PenTool, Languages, ChevronUp, ChevronDown } from 'lucide-react';
 import { Group } from '../types';
 import { GroupLauncher } from './GroupLauncher';
 import { useUIStore } from '../src/lib/store';
@@ -65,6 +65,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
     // ESTADO 3: MUERTO / INACTIVO (Gris Oscuro)
     return 'bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-700 hover:shadow-sm hover:scale-105 active:scale-95';
+  };
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+
+  const checkScroll = () => {
+    if (scrollContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+      setCanScrollUp(scrollTop > 0);
+      setCanScrollDown(Math.ceil(scrollTop + clientHeight) < scrollHeight - 1); // tolerance
+    }
+  };
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, [sortedDockedGroups.length, globalView, activeGroupId, focusedNoteId]);
+
+  const scrollGroups = (direction: 'up' | 'down') => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ top: direction === 'up' ? -150 : 150, behavior: 'smooth' });
+    }
   };
 
   return (
@@ -181,8 +205,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <div className="w-8 h-0.5 bg-zinc-300 dark:bg-[#2D2D42] rounded-full shrink-0"></div>
 
-        {/* Docked Groups List */}
-        <div className="flex flex-col gap-4 w-full items-center flex-1 overflow-y-auto hidden-scrollbar">
+        {/* CONTENEDOR DE GRUPOS CON FLECHAS */}
+        <div className="relative flex-1 w-full flex flex-col group/sidebar min-h-0 min-w-0">
+          
+          {/* Flecha Arriba */}
+          {canScrollUp && (
+            <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-zinc-200 dark:from-[#13131A] to-transparent z-10 flex items-start justify-center pt-1">
+              <button onClick={() => scrollGroups('up')} className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-colors">
+                <ChevronUp size={16} />
+              </button>
+            </div>
+          )}
+
+          {/* Docked Groups List */}
+          <div 
+            ref={scrollContainerRef}
+            onScroll={checkScroll}
+            className="flex flex-col gap-4 w-full items-center flex-1 overflow-y-auto hidden-scrollbar pb-2 scroll-smooth"
+          >
           {sortedDockedGroups.map((group) => {
             const isGroupActive = activeGroupId === group.id;
             const isNotesView = globalView === 'notes';
@@ -236,13 +276,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                       // LOGICA DE COLOR Y RASTRO
                       const isFocused = note.id === focusedNoteId;
-
                       const isActiveFocus = isFocused && isNotesView;
                       
                       const bubbleClass = isActiveFocus
                         ? 'bg-[#4940D9] hover:bg-[#3D35C0] text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 scale-[1.15] active:scale-95' // Activa enfocada
                         : isGroupActive
-                          ? 'bg-zinc-300 dark:bg-[#2D2D42] text-zinc-700 dark:text-zinc-200 shadow-inner ring-1 ring-zinc-400/30 scale-105 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:ring-0 hover:scale-110 active:scale-95' // Parte de grupo activo o rastro (Gris Medio)
+                          ? 'bg-zinc-300 dark:bg-[#2D2D42] text-zinc-700 dark:text-zinc-200 shadow-inner ring-1 ring-zinc-400/30 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:ring-0 hover:scale-110 active:scale-95' // Parte de grupo activo o rastro (Gris Medio)
                           : 'bg-zinc-200/80 dark:bg-zinc-800/50 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:scale-110 active:scale-95'; // Muerta / Inactiva
 
                       // NUEVO: LÓGICA DEL SEMÁFORO KANBAN
@@ -285,6 +324,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             );
           })}
+          </div>
+
+          {/* Flecha Abajo */}
+          {canScrollDown && (
+            <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-zinc-200 dark:from-[#13131A] to-transparent z-10 flex items-end justify-center pb-1">
+              <button onClick={() => scrollGroups('down')} className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-colors">
+                <ChevronDown size={16} />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Bottom Area: Settings */}
