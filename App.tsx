@@ -66,7 +66,7 @@ function App() {
     setImminentRemindersCount,
     groups, setGroups, updateNoteSync, deleteNoteSync, updateGroupSync, deleteGroupSync,
     setTranslations, setBrainDumps,
-    focusedNoteByGroup, setFocusedNoteId,
+    focusedNoteByGroup, lastActiveNoteByGroup, setFocusedNoteId,
     noteTrayOpenByGroup, setIsGlobalNoteTrayOpen
   } = useUIStore();
 
@@ -78,13 +78,14 @@ function App() {
   // Derive per-group values for the active group
   const activeGroup = groups.find(g => g.id === activeGroupId);
   const focusedNoteId = activeGroupId ? (focusedNoteByGroup[activeGroupId] ?? null) : null;
+  const activeNoteId = activeGroupId ? (lastActiveNoteByGroup[activeGroupId] ?? null) : null;
 
   // Preservar estado de las notas una vez montadas
   useEffect(() => {
-    if (focusedNoteId) {
-      setMountedNoteIds(prev => new Set([...prev, focusedNoteId]));
+    if (activeNoteId) {
+      setMountedNoteIds(prev => new Set([...prev, activeNoteId]));
     }
-  }, [focusedNoteId]);
+  }, [activeNoteId]);
 
   const isGlobalNoteTrayOpen = activeGroupId ? (noteTrayOpenByGroup[activeGroupId] ?? true) : false;
   const [searchQueries, setSearchQueries] = useState<Record<string, string>>({});
@@ -1529,9 +1530,9 @@ function App() {
                         ) : (
                           <div className="flex-1 flex flex-col min-h-0">
                             {activeGroup.notes
-                              .filter(n => mountedNoteIds.has(n.id) || n.id === focusedNoteId)
+                              .filter(n => mountedNoteIds.has(n.id) || n.id === activeNoteId)
                               .map(note => {
-                                const isVisible = note.id === focusedNoteId;
+                                const isVisible = note.id === activeNoteId;
                                 const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
                                 return (
                                   <div

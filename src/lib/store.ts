@@ -48,6 +48,7 @@ interface UIStore {
 
     // Persisted UI State (per-group for notes)
     focusedNoteByGroup: Record<string, string | null>;
+    lastActiveNoteByGroup: Record<string, string | null>;
     noteTrayOpenByGroup: Record<string, boolean>;
     focusedDumpId: string | null;
     isDumpTrayOpen: boolean;
@@ -155,6 +156,7 @@ export const useUIStore = create<UIStore>()(
             isTranslatorMaximized: false,
             showOverdueMarquee: false,
             focusedNoteByGroup: {},
+            lastActiveNoteByGroup: {},
             noteTrayOpenByGroup: {},
             aiPanelOpenByNote: {},
             activeTabByNote: {},
@@ -293,6 +295,9 @@ export const useUIStore = create<UIStore>()(
                         ...state.focusedNoteByGroup,
                         [gid]: id,
                     },
+                    lastActiveNoteByGroup: id 
+                        ? { ...state.lastActiveNoteByGroup, [gid]: id }
+                        : state.lastActiveNoteByGroup
                 }));
             },
             setIsGlobalNoteTrayOpen: (open, groupId) => {
@@ -419,6 +424,7 @@ export const useUIStore = create<UIStore>()(
                 isBraindumpMaximized: state.isBraindumpMaximized,
                 isTranslatorMaximized: state.isTranslatorMaximized,
                 focusedNoteByGroup: state.focusedNoteByGroup,
+                lastActiveNoteByGroup: state.lastActiveNoteByGroup,
                 noteTrayOpenByGroup: state.noteTrayOpenByGroup,
                 aiPanelOpenByNote: state.aiPanelOpenByNote,
                 activeTabByNote: state.activeTabByNote,
