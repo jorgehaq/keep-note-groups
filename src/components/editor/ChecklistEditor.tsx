@@ -82,16 +82,26 @@ const ChecklistItemRow = React.memo(({
     }, [item.text]);
 
     // Ajustar altura inicial y cuando cambie el texto remotamente
-    useEffect(() => {
+    const adjustHeight = useCallback(() => {
         if (inputRef.current) {
             inputRef.current.style.height = 'auto';
             inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
         }
-    }, [localText, isFocused]);
+    }, []);
+
+    // Asegurar que se mida al montar y cuando cambie el texto
+    useEffect(() => {
+        adjustHeight();
+        // A veces el renderizado inicial oculta elementos o no tienen dimensiones
+        // forzamos otro ajuste después de un micro tick
+        const timeout = setTimeout(adjustHeight, 10);
+        return () => clearTimeout(timeout);
+    }, [localText, adjustHeight]);
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setLocalText(e.target.value);
         onUpdateText(item.id, e.target.value);
+        // Ajustar altura inmediatamente mientras teclea
         e.target.style.height = 'auto';
         e.target.style.height = `${e.target.scrollHeight}px`;
     };
@@ -138,7 +148,7 @@ const ChecklistItemRow = React.memo(({
                             onBlur={() => setIsFocused(false)}
                             placeholder="Nuevo elemento..."
                             rows={1}
-                            className={`w-full bg-transparent outline-none resize-none overflow-hidden text-zinc-800 dark:text-[#CCCCCC] placeholder-zinc-400 dark:placeholder-zinc-600 transition-colors ${
+                            className={`w-full bg-transparent outline-none resize-none text-zinc-800 dark:text-[#CCCCCC] placeholder-zinc-400 dark:placeholder-zinc-600 transition-colors ${
                                 item.isChecked ? 'line-through text-zinc-500 dark:text-zinc-500' : ''
                             } ${
                                 noteFont === 'serif' ? 'font-serif' : noteFont === 'mono' ? 'font-mono' : 'font-sans'
