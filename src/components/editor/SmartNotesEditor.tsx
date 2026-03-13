@@ -732,9 +732,14 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                 const containerRect = containerRef.current.getBoundingClientRect();
                 const margin = 8;
                 
-                // 🎯 Solo ajustamos si se sale por la DERECHA del contenedor del editor
+                // 🎯 Ajuste por DERECHA del contenedor
                 if (menuRect.right > containerRect.right - margin) {
                     const diff = (containerRect.right - margin) - menuRect.right;
+                    setShift(prev => prev + diff);
+                }
+                // 🎯 Ajuste por IZQUIERDA del contenedor
+                else if (menuRect.left < containerRect.left + margin) {
+                    const diff = (containerRect.left + margin) - menuRect.left;
                     setShift(prev => prev + diff);
                 }
             } else {
@@ -935,17 +940,31 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
 
             // 3. Mostrar menú si hay selección
             if (!main.empty) {
-                const rect = update.view.coordsAtPos(main.from);
+                // 🎯 Determinar la posición basada en la dirección de la selección
+                const isWordSelection = (main.to - main.from) <= 30; // Selección corta = palabra
+                const isForward = main.head >= main.anchor; // L→R: head está al final
+                
+                let menuPos: number;
+                if (isWordSelection) {
+                    // Doble clic / palabra: usar el centro
+                    menuPos = Math.floor((main.from + main.to) / 2);
+                } else if (isForward) {
+                    // Selección L→R: menú en el extremo derecho (final)
+                    menuPos = main.to;
+                } else {
+                    // Selección R→L: menú en el extremo izquierdo (inicio)
+                    menuPos = main.from;
+                }
+                
+                const rect = update.view.coordsAtPos(menuPos);
                 if (rect && containerRef.current) {
                     const containerRect = containerRef.current.getBoundingClientRect();
                     const isMobile = window.innerWidth < 768;
-                    const relativeTop = rect.top - containerRect.top;
-                    const relativeLeft = rect.left - containerRect.left;
 
                     const showMenu = () => {
                         setMenuState({ 
-                            top: relativeTop - 8, 
-                            left: relativeLeft, 
+                            top: rect.top - 8, 
+                            left: rect.left, 
                             from: main.from, 
                             to: main.to, 
                             text: update.state.doc.sliceString(main.from, main.to),
@@ -1255,13 +1274,13 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
     const subMenuWidth = 240; 
     const margin = 16;
     
-    // Calcular left restringido para el menú principal
+    // Calcular left restringido para el menú principal (viewport coords ya que fixed)
     let clampedLeft = menuState?.left ?? 0;
     if (menuState && containerRef.current) {
         const containerRect = containerRef.current.getBoundingClientRect();
         const halfWidth = menuWidth / 2;
-        // Clamping relativo al ancho del contenedor del editor
-        clampedLeft = Math.max(halfWidth + margin, Math.min(containerRect.width - halfWidth - margin, menuState.left));
+        // Clamping dentro de los bordes del contenedor en coordenadas del viewport
+        clampedLeft = Math.max(containerRect.left + halfWidth + margin, Math.min(containerRect.right - halfWidth - margin, menuState.left));
     }
 
     // Calcular desplazamiento del submenú si se sale de la pantalla
@@ -1440,7 +1459,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         <div 
             ref={containerRef}
             className={`relative group/editor w-full ${autoHeight ? 'h-auto' : 'h-full min-h-0'} flex flex-col bg-transparent select-text touch-auto`}
-            style={{ WebkitUserSelect: 'text', userSelect: 'text' } as any}
+            style={{ WebkitUserSelect: 'text', userSelect: 'text', overflow: 'visible' } as any}
         >
             <CodeMirror
                 key={`${noteId}-${String(showLineNumbers)}`}
@@ -1466,7 +1485,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
             )}
             {menuState && (
                 <div
-                    className="floating-menu-container absolute z-[500] flex flex-col items-center gap-1.5 animate-fadeIn origin-bottom pointer-events-auto"
+                    className="floating-menu-container fixed z-[9990] flex flex-col items-center gap-1.5 animate-fadeIn origin-bottom pointer-events-auto"
                     style={{ 
                         top: menuState.top - 6, // 🚀 Un pequeño offset extra para no chocar
                         left: clampedLeft, 
@@ -1517,7 +1536,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
 
                     {/* Menú Principal — aparece directamente al seleccionar */}
                     {!showLinkInput ? (
-                        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-1 flex items-center gap-0.5 animate-fadeIn pointer-events-auto">
+                        <div className="relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-1 flex items-center gap-0.5 animate-fadeIn pointer-events-auto">
                             {isTranslating ? (
                                 <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-blue-500">
                                     <Loader2 size={13} className="animate-spin" /> Traduciendo...
@@ -1549,28 +1568,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                             <Highlighter size={18} />
                                         </button>
 
-                                        {showHlOptions && (
-                                            <div 
-                                              ref={hlMenuRef}
-                                              className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 flex gap-1 items-center animate-fadeIn z-[100]"
-                                              style={{ transform: `translate(calc(-50% + ${hlShift}px), 0)` }}
-                                            >
-                                                <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
-                                                {(Object.keys(HL_COLORS) as HlColorKey[]).map(cKey => (
-                                                    <button
-                                                      key={cKey}
-                                                      onClick={() => {
-                                                        setHlColor(cKey);
-                                                        doActionAndSave('highlight', () => doFormat('highlight', cKey));
-                                                        setShowHlOptions(false);
-                                                      }}
-                                                      className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${hlColor === cKey ? 'border-zinc-400' : 'border-transparent'}`}
-                                                      style={{ backgroundColor: HL_COLORS[cKey].hex }}
-                                                      title={HL_COLORS[cKey].label}
-                                                    />
-                                                ))}
-                                            </div>
-                                        )}
+
                                     </div>
 
                                     {/* ETIQUETAS */}
@@ -1593,30 +1591,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                             <Tags size={18} />
                                         </button>
 
-                                        {showTagOptions && (
-                                            <div 
-                                              ref={tagMenuRef}
-                                              className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 z-[100] animate-fadeIn"
-                                              style={{ transform: `translate(calc(-50% + ${tagShift}px), 0)` }}
-                                            >
-                                                <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
-                                                <div className="flex items-center gap-1">
-                                                    {(Object.keys(MARKER_TYPES) as MarkerType[]).map(key => {
-                                                        const cfg = MARKER_TYPES[key];
-                                                        return (
-                                                            <button key={key}
-                                                                onClick={() => {
-                                                                    doActionAndSave(key, () => doFormat(key));
-                                                                    setShowTagOptions(false);
-                                                                }}
-                                                                title={cfg.label}
-                                                                className="w-10 h-10 rounded-lg flex items-center justify-center text-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                                                            >{cfg.emoji}</button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        )}
+
                                     </div>
 
                                     {/* BOTÓN "MÁS" (Revelar, Link, Tachado, Título, Traducción) */}
@@ -1635,84 +1610,132 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                             <MoreHorizontal size={18} />
                                         </button>
 
-                                        {showMoreOptions && (
-                                            <div 
-                                                ref={moreMenuRef}
-                                                className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1 flex flex-row items-center gap-0.5 z-[100] animate-fadeIn"
-                                                style={{ transform: `translate(calc(-50% + ${moreShift}px), 0)` }}
-                                                onMouseEnter={() => !menuState?.isMobile && setShowMoreOptions(true)}
-                                                onMouseLeave={() => !menuState?.isMobile && setShowMoreOptions(false)}
-                                            >
-                                                <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
-                                                
-                                                {/* REVELAR */}
-                                                <button 
-                                                    onClick={(e) => {
-                                                        const view = editorRef.current?.view;
-                                                        if (view && menuState) {
-                                                            const line = view.state.doc.lineAt(menuState.from);
-                                                            view.dispatch({ effects: [setRevealedLine.of(line.number), ForceRedrawEffect.of(null)] });
-                                                        }
-                                                        closeMenusOnly();
-                                                    }}
-                                                    className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-indigo-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-                                                    title="Revelar Markdown"
-                                                >
-                                                    <Maximize2 size={16} />
-                                                </button>
-                                                
-                                                <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
 
-                                                {/* NEGRITA */}
-                                                <button onClick={() => { doActionAndSave('bold', () => doFormat('bold')); setShowMoreOptions(false); }}
-                                                    className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-                                                    title="Negrita"
-                                                >
-                                                    <Bold size={16} />
-                                                </button>
-
-                                                {/* LINK */}
-                                                <button onClick={() => { setShowLinkInput(true); setShowMoreOptions(false); }}
-                                                    className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-                                                    title="Enlace"
-                                                >
-                                                    <LinkIcon size={16} />
-                                                </button>
-
-                                                {/* TACHADO */}
-                                                <button onClick={() => { doActionAndSave('strikethrough', () => doFormat('strikethrough')); setShowMoreOptions(false); }}
-                                                    className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-                                                    title="Tachado"
-                                                >
-                                                    <Strikethrough size={16} />
-                                                </button>
-
-                                                {/* TÍTULO */}
-                                                <button onClick={() => { doActionAndSave('heading', () => doFormat('heading')); setShowMoreOptions(false); }}
-                                                    className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-                                                    title="Título"
-                                                >
-                                                    <Heading size={16} />
-                                                </button>
-
-                                                <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
-
-                                                {/* TRADUCCIÓN (Compacta) */}
-                                                <div className="flex items-center gap-0.5 px-0.5">
-                                                    <button onClick={() => { doActionAndSave('es', () => doTranslate('es')); setShowMoreOptions(false); }}
-                                                        className="px-2 py-1.5 bg-blue-500/10 text-blue-500 rounded-md text-[10px] font-black hover:bg-blue-500/20 transition-colors"
-                                                    >ES</button>
-                                                    <button onClick={() => { doActionAndSave('en', () => doTranslate('en')); setShowMoreOptions(false); }}
-                                                        className="px-2 py-1.5 bg-blue-500/10 text-blue-500 rounded-md text-[10px] font-black hover:bg-blue-500/20 transition-colors"
-                                                    >EN</button>
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
                                 </>
                             )}
                         </div>
                     ) : null}
+                    {/* SUB-MENUS — centrados respecto a la barra principal */}
+                    {showHlOptions && (
+                        <div 
+                          ref={hlMenuRef}
+                          className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 flex gap-1 items-center animate-fadeIn z-[100]"
+                          style={{ transform: `translate(calc(-50% + ${hlShift}px), 0)` }}
+                        >
+                            <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
+                            {(Object.keys(HL_COLORS) as HlColorKey[]).map(cKey => (
+                                <button
+                                  key={cKey}
+                                  onClick={() => {
+                                    setHlColor(cKey);
+                                    doActionAndSave('highlight', () => doFormat('highlight', cKey));
+                                    setShowHlOptions(false);
+                                  }}
+                                  className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${hlColor === cKey ? 'border-zinc-400' : 'border-transparent'}`}
+                                  style={{ backgroundColor: HL_COLORS[cKey].hex }}
+                                  title={HL_COLORS[cKey].label}
+                                />
+                            ))}
+                        </div>
+                    )}
+                    {showTagOptions && (
+                        <div 
+                          ref={tagMenuRef}
+                          className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 z-[100] animate-fadeIn"
+                          style={{ transform: `translate(calc(-50% + ${tagShift}px), 0)` }}
+                        >
+                            <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
+                            <div className="flex items-center gap-1">
+                                {(Object.keys(MARKER_TYPES) as MarkerType[]).map(key => {
+                                    const cfg = MARKER_TYPES[key];
+                                    return (
+                                        <button key={key}
+                                            onClick={() => {
+                                                doActionAndSave(key, () => doFormat(key));
+                                                setShowTagOptions(false);
+                                            }}
+                                            title={cfg.label}
+                                            className="w-10 h-10 rounded-lg flex items-center justify-center text-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                        >{cfg.emoji}</button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                    {showMoreOptions && (
+                        <div 
+                            ref={moreMenuRef}
+                            className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1 flex flex-row items-center gap-0.5 z-[100] animate-fadeIn"
+                            style={{ transform: `translate(calc(-50% + ${moreShift}px), 0)` }}
+                            onMouseEnter={() => !menuState?.isMobile && setShowMoreOptions(true)}
+                            onMouseLeave={() => !menuState?.isMobile && setShowMoreOptions(false)}
+                        >
+                            <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
+                            
+                            {/* REVELAR */}
+                            <button 
+                                onClick={(e) => {
+                                    const view = editorRef.current?.view;
+                                    if (view && menuState) {
+                                        const line = view.state.doc.lineAt(menuState.from);
+                                        view.dispatch({ effects: [setRevealedLine.of(line.number), ForceRedrawEffect.of(null)] });
+                                    }
+                                    closeMenusOnly();
+                                }}
+                                className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-indigo-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                title="Revelar Markdown"
+                            >
+                                <Maximize2 size={16} />
+                            </button>
+                            
+                            <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
+
+                            {/* NEGRITA */}
+                            <button onClick={() => { doActionAndSave('bold', () => doFormat('bold')); setShowMoreOptions(false); }}
+                                className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                title="Negrita"
+                            >
+                                <Bold size={16} />
+                            </button>
+
+                            {/* LINK */}
+                            <button onClick={() => { setShowLinkInput(true); setShowMoreOptions(false); }}
+                                className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                title="Enlace"
+                            >
+                                <LinkIcon size={16} />
+                            </button>
+
+                            {/* TACHADO */}
+                            <button onClick={() => { doActionAndSave('strikethrough', () => doFormat('strikethrough')); setShowMoreOptions(false); }}
+                                className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                title="Tachado"
+                            >
+                                <Strikethrough size={16} />
+                            </button>
+
+                            {/* TÍTULO */}
+                            <button onClick={() => { doActionAndSave('heading', () => doFormat('heading')); setShowMoreOptions(false); }}
+                                className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                title="Título"
+                            >
+                                <Heading size={16} />
+                            </button>
+
+                            <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
+
+                            {/* TRADUCCIÓN (Compacta) */}
+                            <div className="flex items-center gap-0.5 px-0.5">
+                                <button onClick={() => { doActionAndSave('es', () => doTranslate('es')); setShowMoreOptions(false); }}
+                                    className="px-2 py-1.5 bg-blue-500/10 text-blue-500 rounded-md text-[10px] font-black hover:bg-blue-500/20 transition-colors"
+                                >ES</button>
+                                <button onClick={() => { doActionAndSave('en', () => doTranslate('en')); setShowMoreOptions(false); }}
+                                    className="px-2 py-1.5 bg-blue-500/10 text-blue-500 rounded-md text-[10px] font-black hover:bg-blue-500/20 transition-colors"
+                                >EN</button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

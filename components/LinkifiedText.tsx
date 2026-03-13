@@ -269,9 +269,14 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
                 const containerRect = containerRef.current.getBoundingClientRect();
                 const margin = 8;
                 
-                // 🎯 Solo ajustamos si se sale por la DERECHA del contenedor del editor
+                // 🎯 Ajuste por DERECHA del contenedor
                 if (menuRect.right > containerRect.right - margin) {
                     const diff = (containerRect.right - margin) - menuRect.right;
+                    setShift(prev => prev + diff);
+                }
+                // 🎯 Ajuste por IZQUIERDA del contenedor
+                else if (menuRect.left < containerRect.left + margin) {
+                    const diff = (containerRect.left + margin) - menuRect.left;
                     setShift(prev => prev + diff);
                 }
             } else {
@@ -382,25 +387,48 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
                     const rects = range.getClientRects();
                     if (rects.length > 0) {
                         const containerRect = containerRef.current.getBoundingClientRect();
-                        const rect = rects[0];
                         
-                        // 🚀 CÁLCULO RELATIVO: Resolvemos el problema de "vuelo" a la esquina
-                        const relativeTop = rect.top - containerRect.top;
-                        const relativeLeft = (rect.left + rect.width / 2) - containerRect.left;
+                        // 🎯 Determinar dirección real de la selección
+                        // Range normaliza start/end, así que usamos anchor vs focus del Selection API
+                        const anchorOffset = getAbsoluteOffset(selection.anchorNode!, selection.anchorOffset, containerRef.current);
+                        const focusOffset = getAbsoluteOffset(selection.focusNode!, selection.focusOffset, containerRef.current);
+                        const isForward = focusOffset >= anchorOffset; // L→R: focus al final
+                        const isWordSelection = text.length <= 30; // Selección corta (palabra)
+                        
+                        let targetRect: DOMRect;
+                        if (isWordSelection) {
+                            // Doble clic / palabra: usar el rect del medio para centrar
+                            const midIdx = Math.floor(rects.length / 2);
+                            targetRect = rects[midIdx];
+                        } else if (isForward) {
+                            // L→R: el menú aparece al final (último rect)
+                            targetRect = rects[rects.length - 1];
+                        } else {
+                            // R→L: el menú aparece al principio (primer rect)
+                            targetRect = rects[0];
+                        }
+                        
+                        // 🚀 Viewport coords para position:fixed
+                        const viewportTop = targetRect.top;
+                        const viewportLeft = isWordSelection
+                            ? targetRect.left + targetRect.width / 2  // centrado en la palabra
+                            : isForward
+                                ? targetRect.right  // al final del rect
+                                : targetRect.left;  // al inicio del rect
 
                         // Clamping horizontal (evitar que el menú se salga por los lados)
                         const isMobile = window.innerWidth < 768;
-                        const menuWidth = isMobile ? 120 : 140; // 🎯 Mas ajustado a su tamaño real
+                        const menuWidth = isMobile ? 120 : 140;
                         const halfMenu = menuWidth / 2;
-                        let finalLeft = relativeLeft;
+                        let finalLeft = viewportLeft;
 
-                        if (finalLeft < halfMenu + 10) finalLeft = halfMenu + 10;
-                        if (finalLeft > containerRect.width - halfMenu - 10) finalLeft = containerRect.width - halfMenu - 10;
+                        if (finalLeft < containerRect.left + halfMenu + 10) finalLeft = containerRect.left + halfMenu + 10;
+                        if (finalLeft > containerRect.right - halfMenu - 10) finalLeft = containerRect.right - halfMenu - 10;
 
                         setSelectionMenu({
                             text,
                             selectionState: { startOffset, endOffset },
-                            top: relativeTop - 12, // 🚀 Ajustado: El margen real se da con el transform translateY
+                            top: viewportTop - 12,
                             left: finalLeft
                         });
                         return;
@@ -878,7 +906,7 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
             {/* MENÚ FLOTANTE ALTO CONTRASTE */}
             {selectionMenu && (
                 <div
-                    className="floating-menu-container absolute z-[500] bg-white dark:bg-zinc-900 text-zinc-800 dark:text-white p-1.5 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex items-center gap-1 border border-zinc-200 dark:border-zinc-700 animate-fadeIn origin-bottom"
+                    className="floating-menu-container fixed z-[9990] bg-white dark:bg-zinc-900 text-zinc-800 dark:text-white p-1.5 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex items-center gap-1 border border-zinc-200 dark:border-zinc-700 animate-fadeIn origin-bottom"
                     style={{ top: selectionMenu.top, left: selectionMenu.left, transform: 'translate(-50%, -100%)' }}
                 >
                     {/* Menú Principal — aparece directamente al seleccionar */}
@@ -911,16 +939,7 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
                                 >
                                     <Highlighter size={18} className="text-[#6B8E23] dark:text-[#ccff00]" />
                                 </button>
-                                {showHlOptions && (
-                                    <div 
-                                        ref={hlMenuRef}
-                                        className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 z-[100] animate-fadeIn"
-                                        style={{ transform: `translate(calc(-50% + ${hlShift}px), 0)` }}
-                                    >
-                                        <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
-                                        <button onClick={() => { doFormat('highlight'); setShowHlOptions(false); }} className="w-8 h-8 rounded-full border-2 border-zinc-400 bg-[#FACC15] transition-transform hover:scale-110" />
-                                    </div>
-                                )}
+
                             </div>
 
                             {/* ETIQUETAS */}
@@ -943,28 +962,7 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
                                     <span>🏷️</span>
                                 </button>
 
-                                {showTagOptions && (
-                                    <div 
-                                        ref={tagMenuRef}
-                                        className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 z-[100] animate-fadeIn min-w-[160px]"
-                                        style={{ transform: `translate(calc(-50% + ${tagShift}px), 0)` }}
-                                    >
-                                        <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
-                                        <div className="grid grid-cols-2 gap-0.5">
-                                            {(Object.entries(MARKER_TYPES) as [MarkerType, typeof MARKER_TYPES[MarkerType]][]).map(([key, cfg]) => (
-                                                <button
-                                                    key={key}
-                                                    onClick={() => { doFormat(key); setShowTagOptions(false); }}
-                                                    className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left"
-                                                    style={{ color: cfg.color }}
-                                                >
-                                                    <span>{cfg.emoji}</span>
-                                                    <span>{cfg.label}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+
                             </div>
 
                             {/* MÁS (Revelar, Link, Tachado, Título, Traducción) */}
@@ -983,85 +981,119 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ noteId, content, s
                                     <MoreHorizontal size={18} />
                                 </button>
 
-                                {showMoreOptions && (
-                                    <div 
-                                        ref={moreMenuRef}
-                                        className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1 flex flex-row items-center gap-0.5 z-[100] animate-fadeIn"
-                                        style={{ transform: `translate(calc(-50% + ${moreShift}px), 0)` }}
-                                    >
-                                        <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
-                                        
-                                        {/* REVELAR */}
-                                        <button 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                const lines = content.split('\n');
-                                                let charCount = 0;
-                                                let targetIndex = 0;
-                                                const startOffset = selectionMenu.selectionState?.startOffset ?? 0;
-                                                for(let i=0; i<lines.length; i++) {
-                                                    charCount += lines[i].length + 1;
-                                                    if (charCount > startOffset) { targetIndex = i; break; }
-                                                }
-                                                setEditingLine({ index: targetIndex });
-                                                setSelectionMenu(null);
-                                                setShowMoreOptions(false);
-                                            }} 
-                                            className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-indigo-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-                                            title="Revelar Markdown"
-                                        >
-                                            <Maximize2 size={16} />
-                                        </button>
 
-                                        <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
-
-                                        {/* NEGRITA */}
-                                        <button onClick={() => { doFormat('bold'); setShowMoreOptions(false); }}
-                                            className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-                                            title="Negrita"
-                                        >
-                                            <Bold size={16} />
-                                        </button>
-
-                                        {/* ENLACE */}
-                                        <button onClick={() => { doFormat('link'); setShowMoreOptions(false); }}
-                                            className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-                                            title="Enlace"
-                                        >
-                                            <LinkIcon size={16} />
-                                        </button>
-
-                                        {/* TACHADO */}
-                                        <button onClick={() => { doFormat('strikethrough'); setShowMoreOptions(false); }}
-                                            className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-                                            title="Tachado"
-                                        >
-                                            <Strikethrough size={16} />
-                                        </button>
-
-                                        {/* TÍTULO */}
-                                        <button onClick={() => { doFormat('h1'); setShowMoreOptions(false); }}
-                                            className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-                                            title="Título"
-                                        >
-                                            <Heading1 size={16} />
-                                        </button>
-
-                                        <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
-
-                                        {/* TRADUCCIÓN */}
-                                        <div className="flex items-center gap-0.5 px-0.5">
-                                            <button onClick={() => { doTranslate('en', 'es'); setShowMoreOptions(false); }}
-                                                className="px-2 py-1.5 bg-blue-500/10 text-blue-500 rounded-md text-[10px] font-black hover:bg-blue-500/20 transition-colors"
-                                            >ES</button>
-                                            <button onClick={() => { doTranslate('es', 'en'); setShowMoreOptions(false); }}
-                                                className="px-2 py-1.5 bg-blue-500/10 text-blue-500 rounded-md text-[10px] font-black hover:bg-blue-500/20 transition-colors"
-                                            >EN</button>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         </>
+                    )}
+                    {/* SUB-MENUS — centrados respecto a la barra principal */}
+                    {showHlOptions && (
+                        <div 
+                            ref={hlMenuRef}
+                            className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 z-[100] animate-fadeIn"
+                            style={{ transform: `translate(calc(-50% + ${hlShift}px), 0)` }}
+                        >
+                            <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
+                            <button onClick={() => { doFormat('highlight'); setShowHlOptions(false); }} className="w-8 h-8 rounded-full border-2 border-zinc-400 bg-[#FACC15] transition-transform hover:scale-110" />
+                        </div>
+                    )}
+                    {showTagOptions && (
+                        <div 
+                            ref={tagMenuRef}
+                            className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 z-[100] animate-fadeIn min-w-[160px]"
+                            style={{ transform: `translate(calc(-50% + ${tagShift}px), 0)` }}
+                        >
+                            <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
+                            <div className="grid grid-cols-2 gap-0.5">
+                                {(Object.entries(MARKER_TYPES) as [MarkerType, typeof MARKER_TYPES[MarkerType]][]).map(([key, cfg]) => (
+                                    <button
+                                        key={key}
+                                        onClick={() => { doFormat(key); setShowTagOptions(false); }}
+                                        className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                                        style={{ color: cfg.color }}
+                                    >
+                                        <span>{cfg.emoji}</span>
+                                        <span>{cfg.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {showMoreOptions && (
+                        <div 
+                            ref={moreMenuRef}
+                            className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1 flex flex-row items-center gap-0.5 z-[100] animate-fadeIn"
+                            style={{ transform: `translate(calc(-50% + ${moreShift}px), 0)` }}
+                        >
+                            <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
+                            
+                            {/* REVELAR */}
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    const lines = content.split('\n');
+                                    let charCount = 0;
+                                    let targetIndex = 0;
+                                    const startOffset = selectionMenu.selectionState?.startOffset ?? 0;
+                                    for(let i=0; i<lines.length; i++) {
+                                        charCount += lines[i].length + 1;
+                                        if (charCount > startOffset) { targetIndex = i; break; }
+                                    }
+                                    setEditingLine({ index: targetIndex });
+                                    setSelectionMenu(null);
+                                    setShowMoreOptions(false);
+                                }} 
+                                className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-indigo-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                title="Revelar Markdown"
+                            >
+                                <Maximize2 size={16} />
+                            </button>
+
+                            <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
+
+                            {/* NEGRITA */}
+                            <button onClick={() => { doFormat('bold'); setShowMoreOptions(false); }}
+                                className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                title="Negrita"
+                            >
+                                <Bold size={16} />
+                            </button>
+
+                            {/* ENLACE */}
+                            <button onClick={() => { doFormat('link'); setShowMoreOptions(false); }}
+                                className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                title="Enlace"
+                            >
+                                <LinkIcon size={16} />
+                            </button>
+
+                            {/* TACHADO */}
+                            <button onClick={() => { doFormat('strikethrough'); setShowMoreOptions(false); }}
+                                className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                title="Tachado"
+                            >
+                                <Strikethrough size={16} />
+                            </button>
+
+                            {/* TÍTULO */}
+                            <button onClick={() => { doFormat('h1'); setShowMoreOptions(false); }}
+                                className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                title="Título"
+                            >
+                                <Heading1 size={16} />
+                            </button>
+
+                            <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
+
+                            {/* TRADUCCIÓN */}
+                            <div className="flex items-center gap-0.5 px-0.5">
+                                <button onClick={() => { doTranslate('en', 'es'); setShowMoreOptions(false); }}
+                                    className="px-2 py-1.5 bg-blue-500/10 text-blue-500 rounded-md text-[10px] font-black hover:bg-blue-500/20 transition-colors"
+                                >ES</button>
+                                <button onClick={() => { doTranslate('es', 'en'); setShowMoreOptions(false); }}
+                                    className="px-2 py-1.5 bg-blue-500/10 text-blue-500 rounded-md text-[10px] font-black hover:bg-blue-500/20 transition-colors"
+                                >EN</button>
+                            </div>
+                        </div>
                     )}
                 </div>
             )}
