@@ -3,8 +3,9 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
-import { EditorView, ViewPlugin, Decoration, WidgetType, ViewUpdate, keymap, lineNumbers } from '@codemirror/view';
+import { EditorView, ViewPlugin, Decoration, WidgetType, ViewUpdate, keymap, lineNumbers, showPanel, Panel } from '@codemirror/view';
 import { RangeSet, StateEffect, Prec, StateField } from '@codemirror/state'; 
+import { search, openSearchPanel, closeSearchPanel } from '@codemirror/search';
 import { Plus, Settings, Grid, X, Check, Trash2, List, Type, Languages, Highlighter, Tag, StickyNote, History, Info, ChevronRight, ChevronDown, ChevronLeft, Search, Loader2, Tags, Image, Link as LinkIcon, Maximize2, Minimize2, ExternalLink, Bold, Italic, Strikethrough, Heading } from 'lucide-react';
 import { useImperativeHandle, forwardRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
@@ -230,7 +231,7 @@ const clipboardExtension = EditorView.domEventHandlers({
     }
 });
 
-const createVisualMarkupPlugin = (translationsMapRef: React.MutableRefObject<Record<string, string>>, searchQueryRef: React.MutableRefObject<string>) => ViewPlugin.fromClass(class {
+const visualMarkupPluginFactory = (translationsMapRef: React.MutableRefObject<Record<string, string>>, searchQueryRef: React.MutableRefObject<string>) => ViewPlugin.fromClass(class {
     decorations;
     constructor(view: EditorView) { this.decorations = this.buildDecorations(view); }
     update(update: ViewUpdate) {
@@ -480,10 +481,6 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         "&.cm-focused": {
             outline: "none !important"
         },
-        ".cm-scroller": {
-            fontFamily: fontFamily,
-            fontSize: fontSize,
-        },
         ".cm-content": {
             fontFamily: fontFamily,
             fontSize: fontSize,
@@ -492,6 +489,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             whiteSpace: "pre-wrap !important",
             overflowWrap: "anywhere !important",
             wordBreak: "break-word !important",
+            paddingBottom: "20px !important", // 🚀 ESPACIO DE RESPIRACIÓN: Ajustado a 20px según preferencia
         },
         "&.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important", borderLeftWidth: "2px !important" },
         ".dark &.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important" },
@@ -585,6 +583,67 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             backgroundColor: "#f59e0b",
             borderRadius: "50%",
             boxShadow: "0 0 2px #f59e0b"
+        },
+        // 🚀 BÚSQUEDA PREMIUM (Modo Bottom)
+        ".cm-panels": {
+            backgroundColor: "#ffffff !important",
+            borderTop: "1px solid #e4e4e7 !important",
+            zIndex: "50 !important",
+        },
+        ".dark .cm-panels": {
+            backgroundColor: "#18181b !important",
+            borderTop: "1px solid #27272a !important",
+        },
+        ".cm-panels-bottom": {
+            borderTop: "1px solid #e4e4e7 !important",
+        },
+        ".cm-search": {
+            padding: "6px 10px !important",
+            display: "flex !important",
+            flexWrap: "wrap !important",
+            gap: "10px !important",
+            alignItems: "center !important",
+            fontSize: "13px !important",
+        },
+        ".cm-search label": {
+            display: "inline-flex !important",
+            alignItems: "center !important",
+            gap: "4px !important",
+            whiteSpace: "nowrap !important",
+            color: "inherit !important",
+        },
+        ".cm-search input": {
+            backgroundColor: "#ffffff !important",
+            border: "1px solid #d1d5db !important",
+            borderRadius: "4px !important",
+            padding: "2px 6px !important",
+            margin: "0 !important",
+            color: "#1f2937 !important",
+            outline: "none !important",
+        },
+        ".dark .cm-search input": {
+            backgroundColor: "#27272a !important",
+            border: "1px solid #4a4a4e !important",
+            color: "#ffffff !important",
+        },
+        ".cm-search button": {
+            backgroundColor: "#f3f4f6 !important",
+            border: "1px solid #d1d5db !important",
+            borderRadius: "4px !important",
+            padding: "2px 8px !important",
+            cursor: "pointer !important",
+            color: "#374151 !important",
+        },
+        ".dark .cm-search button": {
+            backgroundColor: "#3f3f46 !important",
+            border: "1px solid #4a4a4e !important",
+            color: "#eeeeee !important",
+        },
+        ".cm-search [name=close]": {
+            marginLeft: "auto !important",
+            cursor: "pointer !important",
+            color: "#ef4444 !important",
+            opacity: "0.7 !important",
         }
     });
 };
@@ -811,6 +870,10 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
     const selectionListener = useMemo(() => EditorView.updateListener.of((update) => {
         if (update.viewportChanged || update.docChanged) setTooltipState(null);
         if (update.selectionSet) {
+            // 🚀 PROTECCIÓN: Si el foco está en el buscador, no interferimos con la selección
+            const active = document.activeElement;
+            if (active && (active.closest('.cm-panel') || active.closest('.cm-search'))) return;
+
             const { main } = update.state.selection;
 
             // 1. Si la selección está vacía (clic simple), resetear menú
@@ -851,8 +914,8 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
     const clickHandlerExtension = useMemo(() => Prec.highest(EditorView.domEventHandlers({
         mousedown: (e, view) => {
             const target = e.target as HTMLElement;
-            if (target.closest('.floating-menu-container')) {
-                return; // Si el clic es en el menú, no cerramos nada aquí
+            if (target.closest('.floating-menu-container, .cm-panel, .cm-search')) {
+                return; // Si el clic es en el menú o panel, no cerramos nada aquí
             }
             closeMenusOnly();
             
@@ -863,6 +926,9 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
             // Usamos preventDefault() para que el navegador no intente su propia lógica de selección/drag
             // que es lo que causa el "secuestro" visual. Luego forzamos el foco.
             if (pos !== null && !main.empty && pos >= main.from && pos <= main.to) {
+                // 🚀 PROTECCIÓN EXTRA: Si el buscador está abierto, no forzamos foco manual al texto
+                if (view.dom.querySelector('.cm-search, .cm-panel')) return false;
+
                 e.preventDefault(); 
                 view.dispatch({
                     selection: { anchor: pos, head: pos },
@@ -1076,16 +1142,29 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
 
     const handleBlur = (e: any) => {
         const related = e.relatedTarget as HTMLElement;
-        const isFocusMovingToMenuImmediately = related && (related.closest('.floating-menu-container') || related.classList.contains('floating-menu-container'));
+        const isFocusStillInEditor = related && (
+            related.closest('.cm-editor') || 
+            related.closest('.floating-menu-container') || 
+            related.classList.contains('floating-menu-container') ||
+            related.closest('.cm-panel') ||
+            related.closest('.cm-search') ||
+            related.closest('.cm-search-marker-container')
+        );
         
-        if (isFocusMovingToMenuImmediately) {
-            return; // El foco se movió directamente al menú
+        if (isFocusStillInEditor) {
+            return; // El foco sigue dentro del ecosistema del editor
         }
 
         // Delay para verificar document.activeElement de forma definitiva (clics en input)
         setTimeout(() => {
             const active = document.activeElement;
-            const isInsideMenu = active && (active.closest('.floating-menu-container') || active.classList.contains('floating-menu-container'));
+            const isInsideMenu = active && (
+                active.closest('.floating-menu-container') || 
+                active.classList.contains('floating-menu-container') ||
+                active.closest('.cm-panel') ||
+                active.closest('.cm-search') ||
+                active.closest('.cm-search-marker-container')
+            );
             
             if (isInsideMenu) return; 
 
@@ -1188,13 +1267,117 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         else { await doActionAndSave('highlight', () => { doFormat('highlight'); }); }
     };
 
+    // Memoized basicSetup to prevent re-configurations
+    const basicSetup = useMemo(() => ({
+        lineNumbers: false, 
+        foldGutter: false, 
+        highlightActiveLine: false, 
+        highlightActiveLineGutter: false, 
+        syntaxHighlighting: false, 
+        drawSelection: true,
+        allowMultipleSelections: true
+    }), []);
+
+    // Memoized extensions to prevent CodeMirror resets
+    const searchExtension = useMemo(() => search({ top: false }), []);
+    const visualMarkupPlugin = useMemo(() => visualMarkupPluginFactory(translationsMapRef, searchQueryRef), [noteId, searchQuery]);
+
+    const extensions = useMemo(() => [
+        // 🚀 MAGIA ANTI-HIJACKING: Prec.highest toma el control absoluto del evento
+        Prec.highest(
+            keymap.of([
+                { 
+                    key: 'Tab', 
+                    preventDefault: true, 
+                    run: (view) => { 
+                        // replaceSelection inyecta en el cursor y lo mueve al final de la inserción automáticamente
+                        view.dispatch(view.state.replaceSelection('    ')); 
+                        return true; 
+                    } 
+                },
+                {
+                    key: 'Enter',
+                    run: (view) => {
+                        if (onEnterAction) {
+                            onEnterAction();
+                            return true; // Evitar el salto de línea por defecto
+                        }
+                        return false; // Deja que CodeMirror haga su salto normal
+                    },
+                    shift: () => false // Shift+Enter hace salto normal siempre
+                },
+                {
+                    key: 'Backspace',
+                    run: (view) => {
+                        if (onBackspaceEmpty && view.state.doc.length === 0) {
+                            onBackspaceEmpty();
+                            return true;
+                        }
+                        return false;
+                    }
+                },
+                {
+                    key: 'Escape',
+                    run: (view) => {
+                        // 🚀 PROTECCIÓN: Si el buscador está abierto, dejamos que CodeMirror lo gestione
+                        if (view.dom.querySelector('.cm-search, .cm-panel')) return false;
+
+                        // Limpiar selección de CodeMirror si existe
+                        if (!view.state.selection.main.empty) {
+                            view.dispatch({
+                                selection: { anchor: view.state.selection.main.head }
+                            });
+                        }
+                        
+                        // Limpiar selección nativa del navegador
+                        window.getSelection()?.removeAllRanges();
+
+                        // Cerrar menús y ocultar markdown revelado
+                        view.dispatch({
+                            effects: [setRevealedLine.of(null), ForceRedrawEffect.of(null)]
+                        });
+                        closeMenus();
+                        return true;
+                    }
+                }
+            ])
+        ),
+        
+        ...(showLineNumbers ? [lineNumbers()] : []),
+        searchExtension, // 🚀 CORE FIX: Garantiza que el buscador es estable y persistente
+        cursorDotPlugin,
+        markdown({ base: markdownLanguage, codeLanguages: languages }),
+        dynamicTheme,
+        revealedLineField,
+        editingLineField,
+        visualMarkupPlugin, 
+        clickHandlerExtension, 
+        hoverTooltipExtension, 
+        selectionListener, 
+        clipboardExtension, 
+        EditorView.lineWrapping, 
+        EditorView.editable.of(!readOnly)
+    ], [
+        showLineNumbers, 
+        searchExtension,
+        dynamicTheme, 
+        clickHandlerExtension, 
+        hoverTooltipExtension, 
+        selectionListener, 
+        readOnly,
+        onEnterAction,
+        onBackspaceEmpty,
+        noteId,
+        visualMarkupPlugin
+    ]);
+
     return (
         <div 
             className={`relative group/editor w-full ${autoHeight ? 'h-auto' : 'h-full min-h-0'} flex flex-col bg-transparent ${readOnly ? 'pointer-events-none' : ''}`}
             onContextMenu={(e) => e.preventDefault()}
         >
             <CodeMirror
-                key={String(showLineNumbers)}
+                key={`${noteId}-${String(showLineNumbers)}`}
                 ref={editorRef} 
                 value={content} 
                 onChange={handleChange} 
@@ -1203,74 +1386,8 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                 readOnly={readOnly} 
                 height={autoHeight ? "auto" : "100%"}
                 className={`w-full text-zinc-900 dark:text-[#CCCCCC] ${autoHeight ? '' : 'flex-1'}`} 
-                extensions={[
-                    // 🚀 MAGIA ANTI-HIJACKING: Prec.highest toma el control absoluto del evento
-                    Prec.highest(
-                        keymap.of([
-                            { 
-                                key: 'Tab', 
-                                preventDefault: true, 
-                                run: (view) => { 
-                                    // replaceSelection inyecta en el cursor y lo mueve al final de la inserción automáticamente
-                                    view.dispatch(view.state.replaceSelection('    ')); 
-                                    return true; 
-                                } 
-                            },
-                            {
-                                key: 'Enter',
-                                run: (view) => {
-                                    if (onEnterAction) {
-                                        onEnterAction();
-                                        return true; // Evitar el salto de línea por defecto
-                                    }
-                                    return false; // Deja que CodeMirror haga su salto normal
-                                },
-                                shift: () => false // Shift+Enter hace salto normal siempre
-                            },
-                            {
-                                key: 'Backspace',
-                                run: (view) => {
-                                    if (onBackspaceEmpty && view.state.doc.length === 0) {
-                                        onBackspaceEmpty();
-                                        return true;
-                                    }
-                                    return false;
-                                }
-                            },
-                            {
-                                key: 'Escape',
-                                run: (view) => {
-                                    // Limpiar selección de CodeMirror si existe
-                                    if (!view.state.selection.main.empty) {
-                                        view.dispatch({
-                                            selection: { anchor: view.state.selection.main.head }
-                                        });
-                                    }
-                                    
-                                    // Limpiar selección nativa del navegador
-                                    window.getSelection()?.removeAllRanges();
-
-                                    // Cerrar menús y ocultar markdown revelado
-                                    view.dispatch({
-                                        effects: [setRevealedLine.of(null), ForceRedrawEffect.of(null)]
-                                    });
-                                    closeMenus();
-                                    return true;
-                                }
-                            }
-                        ])
-                    ),
-                    
-                    ...(showLineNumbers ? [lineNumbers()] : []),
-                    cursorDotPlugin,
-                    markdown({ base: markdownLanguage, codeLanguages: languages }),
-                    dynamicTheme,
-                    revealedLineField,
-                    editingLineField,
-                    createVisualMarkupPlugin(translationsMapRef, searchQueryRef), 
-                    clickHandlerExtension, hoverTooltipExtension, selectionListener, clipboardExtension, EditorView.lineWrapping, EditorView.editable.of(!readOnly)
-                ]}
-                basicSetup={{ lineNumbers: false, foldGutter: false, highlightActiveLine: false, highlightActiveLineGutter: false, syntaxHighlighting: false, drawSelection: true }}
+                extensions={extensions}
+                basicSetup={basicSetup}
             />
             {!autoHeight && <SearchMarkers view={editorRef.current?.view || null} query={searchQuery || ''} />}
              {tooltipState && (

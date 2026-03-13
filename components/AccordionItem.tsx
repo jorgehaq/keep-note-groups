@@ -208,7 +208,10 @@ const SummaryTabContent: React.FC<{
           <PenLine size={11} className="text-zinc-500" />
           <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Pizarrón</span>
         </div>
-        <div onClick={() => scratchRef.current?.focus()}
+        <div onClick={(e) => {
+          if ((e.target as HTMLElement).closest('.cm-panel, .cm-search, .cm-search-marker-container')) return;
+          scratchRef.current?.focus();
+        }}
           className={`note-editor-scroll bg-zinc-50 dark:bg-[#242432] rounded-xl p-4 cursor-text flex-1 overflow-y-scroll min-h-[120px] border ${searchQuery?.trim() && localScratch?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ? 'border-amber-500' : 'border-zinc-200 dark:border-[#2D2D42]'}`}>
           <SmartNotesEditor
             ref={scratchRef}
@@ -665,7 +668,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 <ChecklistEditor ref={checklistRef} idPrefix={displayNoteId} initialContent={displayContent} onUpdate={handleUpdateContent} />
               </div>
             ) : (
-              <div onClick={() => editorRef.current?.focus()}
+              <div onClick={(e) => {
+                if ((e.target as HTMLElement).closest('.cm-panel, .cm-search, .cm-search-marker-container')) return;
+                editorRef.current?.focus();
+              }}
                 className={`note-editor-scroll bg-zinc-50 dark:bg-[#242432] rounded-xl p-4 cursor-text flex-1 overflow-y-scroll min-h-0 border ${searchQuery?.trim() && note.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ? 'border-amber-500' : 'border-zinc-200 dark:border-[#2D2D42]'}`}>
                 <SmartNotesEditor
                   ref={editorRef}
@@ -703,9 +709,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       {/* FOOTER */}
       <div className="flex items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-[#2D2D42]/50 rounded-b-2xl border-t border-zinc-200 dark:border-[#2D2D42] mt-auto">
         <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
-          {note.created_at && (<span>Creado: {formatCleanDate(note.created_at)}</span>)}
+          {note.created_at && (<span><span className="hidden md:inline text-zinc-500/80 mr-1">Creado:</span>{formatCleanDate(note.created_at)}</span>)}
           {note.updated_at && note.created_at && (new Date(note.updated_at).getTime() - new Date(note.created_at).getTime() > 60000) && (
-            <><span className="opacity-50">|</span><span>Editado: {formatCleanDate(note.updated_at)}</span></>
+            <><span className="opacity-50">|</span><span><span className="hidden md:inline text-zinc-500/80 mr-1">Editado:</span>{formatCleanDate(note.updated_at)}</span></>
           )}
           {syncStatus === 'saving' && (<span className="flex items-center gap-1 text-amber-500 animate-pulse ml-1"><Loader2 size={10} className="animate-spin" /> Guardando...</span>)}
           {syncStatus === 'saved' && (<span className="flex items-center gap-1 text-emerald-500 ml-1"><CloudCheck size={10} /> Sincronizado</span>)}
