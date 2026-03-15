@@ -57,6 +57,7 @@ interface UIStore {
     groups: Group[];
     translations: Translation[];
     brainDumps: BrainDump[];
+    summaryCounts: Record<string, number>;
 
     setGroups: (groups: Group[] | ((prev: Group[]) => Group[])) => void;
     setTranslations: (
@@ -64,6 +65,11 @@ interface UIStore {
     ) => void;
     setBrainDumps: (
         dumps: BrainDump[] | ((prev: BrainDump[]) => BrainDump[]),
+    ) => void;
+    setSummaryCounts: (
+        counts:
+            | Record<string, number>
+            | ((prev: Record<string, number>) => Record<string, number>),
     ) => void;
 
     // Helper to update a group in the list
@@ -162,6 +168,7 @@ export const useUIStore = create<UIStore>()(
             activeTabByNote: {},
             focusedDumpId: null,
             isDumpTrayOpen: false,
+            summaryCounts: {},
 
             setActiveGroup: (id) => set({ activeGroupId: id }),
 
@@ -336,6 +343,12 @@ export const useUIStore = create<UIStore>()(
                     brainDumps: typeof dumpsOrFn === "function"
                         ? dumpsOrFn(state.brainDumps)
                         : dumpsOrFn,
+                })),
+            setSummaryCounts: (countsOrFn) =>
+                set((state) => ({
+                    summaryCounts: typeof countsOrFn === "function"
+                        ? countsOrFn(state.summaryCounts)
+                        : countsOrFn,
                 })),
 
             updateGroupSync: (groupId, updates) =>

@@ -129,11 +129,10 @@ const PizarronTitleInput = ({ pizarron, onSave, searchQuery }: { pizarron: Brain
 };
 
 export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteFontSize?: string; noteLineHeight?: string; searchQuery?: string }> = ({ session, noteFont, noteFontSize, noteLineHeight = 'standard', searchQuery }) => {
-    const { isBraindumpMaximized, setIsBraindumpMaximized, brainDumps: dumps, setBrainDumps: setDumps, showOverdueMarquee, setShowOverdueMarquee, overdueRemindersCount, globalTasks, focusedDumpId, setFocusedDumpId, isDumpTrayOpen, setIsDumpTrayOpen } = useUIStore();
+    const { isBraindumpMaximized, setIsBraindumpMaximized, brainDumps: dumps, setBrainDumps: setDumps, showOverdueMarquee, setShowOverdueMarquee, overdueRemindersCount, globalTasks, focusedDumpId, setFocusedDumpId, isDumpTrayOpen, setIsDumpTrayOpen, summaryCounts } = useUIStore();
     const [loading, setLoading] = useState(false);
     
     const [expandedHistoryIds, setExpandedHistoryIds] = useState<Set<string>>(new Set());
-    const [summaryCounts, setSummaryCounts] = useState<Record<string, number>>({});
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -175,35 +174,13 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
 
     // Cargamos pizarras al montar si el store está vacío
     useEffect(() => {
-        if (dumps.length === 0) {
-            window.dispatchEvent(new CustomEvent('reload-app-data'));
-        } else {
+        if (dumps.length === 0 && !hasLoadedOnce.current) {
             hasLoadedOnce.current = true;
-        }
-    }, [dumps.length]);
-
-    const fetchSummaryCounts = useCallback(async () => {
-        try {
-            const { data, error } = await supabase.from('summaries').select('note_id');
-            if (error) throw error;
-            const counts: Record<string, number> = {};
-            data?.forEach(s => { counts[s.note_id] = (counts[s.note_id] || 0) + 1; });
-            setSummaryCounts(counts);
-        } catch (err) {
-            console.error('Error counts:', err);
+            window.dispatchEvent(new CustomEvent('reload-app-data'));
         }
     }, []);
 
-    useEffect(() => {
-        fetchSummaryCounts();
-        const channel = supabase
-            .channel('summaries-pizarron-sync')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'summaries' }, () => {
-                fetchSummaryCounts();
-            })
-            .subscribe();
-        return () => { supabase.removeChannel(channel); };
-    }, [fetchSummaryCounts]);
+    // Removed redundant summary-pizarron-sync channel. App.tsx now handles global summary updates.
 
     // Removed validation effect to prevent focus resets on app switch.
     // Deletion explicitly clears focusedDumpId inside deleteDump.

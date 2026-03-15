@@ -55,6 +55,9 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   const hasLoadedOnce = React.useRef(false);
+  const sessionRef = useRef(session);
+  useEffect(() => { sessionRef.current = session; }, [session]);
+  
   const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({}); 
   const pendingUpdatesRef = useRef<Record<string, any>>({});
   const [noteSaveStatus, setNoteSaveStatus] = useState<Record<string, 'saving' | 'saved' | 'idle'>>({});
@@ -68,6 +71,7 @@ function App() {
     setImminentRemindersCount,
     groups, setGroups, updateNoteSync, deleteNoteSync, updateGroupSync, deleteGroupSync,
     setTranslations, setBrainDumps,
+    summaryCounts, setSummaryCounts,
     focusedNoteByGroup, lastActiveNoteByGroup, setFocusedNoteId,
     noteTrayOpenByGroup, setIsGlobalNoteTrayOpen
   } = useUIStore();
@@ -101,7 +105,6 @@ function App() {
   // 🚀 NUEVO: Formatos de Fecha y Hora
   const [dateFormat, setDateFormat] = useState<string>(() => localStorage.getItem('app-date-format') || 'dd/mm/yyyy');
   const [timeFormat, setTimeFormat] = useState<string>(() => localStorage.getItem('app-time-format') || '12h');
-  const [summaryCounts, setSummaryCounts] = useState<Record<string, number>>({});
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
 
@@ -170,7 +173,7 @@ function App() {
     });
 
     return () => subscription.unsubscribe();
-  }, [session]);
+  }, []);
 
   // 🛡️ ACCIDENTAL REFRESH PROTECTION: Warning if there are pending saves
   useEffect(() => {
@@ -281,14 +284,14 @@ function App() {
   };
 
   const fetchTranslations = async () => {
-    if (!session) return;
-    const { data } = await supabase.from('translations').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false });
+    if (!sessionRef.current) return;
+    const { data } = await supabase.from('translations').select('*').eq('user_id', sessionRef.current.user.id).order('created_at', { ascending: false });
     if (data) setTranslations(data);
   };
 
   const fetchBrainDumps = async () => {
-    if (!session) return;
-    const { data } = await supabase.from('brain_dumps').select('*').eq('user_id', session.user.id).order('updated_at', { ascending: false });
+    if (!sessionRef.current) return;
+    const { data } = await supabase.from('brain_dumps').select('*').eq('user_id', sessionRef.current.user.id).order('updated_at', { ascending: false });
     if (data) setBrainDumps(data);
   };
 
@@ -405,15 +408,15 @@ function App() {
 
   useEffect(() => {
     const handleReload = () => {
+        // Redundant fetchTranslations/fetchBrainDumps were here; fetchData already calls them.
         fetchData();
-        fetchTranslations();
-        fetchBrainDumps();
     };
     window.addEventListener('reload-app-data', handleReload);
     return () => window.removeEventListener('reload-app-data', handleReload);
-  }, [session]);
+  }, []); // [] is now safe because handleReload calls fetchData/translations/dumps which use sessionRef (indirectly via their definitions) or current state if reactive.
 
   const fetchData = async () => {
+    if (!sessionRef.current) return;
     if (!hasLoadedOnce.current) setLoading(true);
     try {
       const { data: groupsData, error: groupsError } = await supabase.from('groups').select('*').order('created_at', { ascending: true });
