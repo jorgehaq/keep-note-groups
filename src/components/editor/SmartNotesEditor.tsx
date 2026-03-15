@@ -101,10 +101,9 @@ const blockMarkupField = StateField.define<RangeSet<Decoration>>({
         const totalLines = doc.lines;
 
         // Shared scanners from buildDecorations (optimized for StateField)
-        const isDark = document.documentElement.classList.contains('dark');
-        const cbHeaderClass = isDark ? 'cm-cb-header-dark' : 'cm-cb-header';
-        const cbLineClass = isDark ? 'cm-cb-line-dark' : 'cm-cb-line';
-        const cbFooterClass = isDark ? 'cm-cb-footer-dark' : 'cm-cb-footer';
+        const cbHeaderClass = 'cm-cb-header';
+        const cbLineClass = 'cm-cb-line';
+        const cbFooterClass = 'cm-cb-footer';
 
         let lineNum = 1;
         while (lineNum <= totalLines) {
@@ -431,6 +430,21 @@ const visualMarkupPluginFactory = (translationsMapRef: React.MutableRefObject<Re
             return inside;
         };
 
+        // Nueva: detecta si pos está en una línea con clase de cuerpo de code block
+        const isInsideCodeBlock = (pos: number) => {
+            const lineNum = view.state.doc.lineAt(pos).number;
+            let inside = false;
+            blockDecorations.between(
+                view.state.doc.line(lineNum).from,
+                view.state.doc.line(lineNum).from,
+                (from, to, deco) => {
+                    const cls = deco.spec?.class || '';
+                    if (cls === 'cm-cb-line' || cls === 'cm-cb-line-dark') inside = true;
+                }
+            );
+            return inside;
+        };
+
         for (let { from, to } of view.visibleRanges) {
             const textToSearch = view.state.doc.sliceString(from, to);
 
@@ -459,7 +473,7 @@ const visualMarkupPluginFactory = (translationsMapRef: React.MutableRefObject<Re
                 let match;
                 while ((match = rule.regex.exec(textToSearch)) !== null) {
                     const mFrom = from + match.index; const mTo = from + match.index + match[0].length;
-                    if (isCollapsedBlock(mFrom)) continue;
+                    if (isCollapsedBlock(mFrom) || isInsideCodeBlock(mFrom)) continue;
 
                     const matchLine = view.state.doc.lineAt(mFrom).number;
                     const isRevealed = matchLine === revealedLine;
@@ -593,7 +607,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             backgroundColor: "rgba(73, 64, 217, 0.35) !important",
             pointerEvents: "none !important" 
         },
-        ".dark &.cm-focused .cm-selectionBackground, .dark .cm-selectionBackground": {
+        ".dark &.cm-focused .cm-selectionBackground, .dark & .cm-selectionBackground": {
             backgroundColor: "rgba(139, 92, 246, 0.45) !important",
             pointerEvents: "none !important"
         },
@@ -606,7 +620,8 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         }, 
         ".cm-content *": { textDecoration: "none !important", boxShadow: "none !important" },
         ".cm-gutters": { backgroundColor: "transparent !important", border: "none !important", color: "#71717a" },
-        ".dark .cm-gutters": { color: "#52525b" },
+        ".dark & .cm-gutters": { color: "#52525b" },
+        ".cm-activeLine": { backgroundColor: "transparent !important" },
         ".cm-activeLineGutter": { backgroundColor: "transparent !important" },
         ".cm-lineNumbers .cm-gutterElement": { paddingRight: "10px !important", paddingLeft: "4px !important" },
         ".cm-line": { 
@@ -626,7 +641,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-hl-g": { backgroundColor: "#92D050 !important" },
         ".cm-custom-hl": { backgroundColor: "#FFFF00 !important" },
         ".cm-custom-tr": { position: "relative", backgroundColor: "#10B981 !important", color: "#000000 !important", border: "1px solid #00000030", padding: "0 2px", cursor: "help", borderRadius: "4px !important" },
-        ".dark .cm-custom-tr": { backgroundColor: "#10B981 !important", color: "#000000 !important", borderRadius: "4px !important" },
+        ".dark & .cm-custom-tr": { backgroundColor: "#10B981 !important", color: "#000000 !important", borderRadius: "4px !important" },
         ".cm-custom-h1": { fontSize: "1.4em", fontWeight: "bold", color: "inherit", lineHeight: "1.2" },
         ".cm-custom-bold": { fontWeight: "bold", color: "inherit" },
         ".cm-custom-strikethrough": { textDecoration: "line-through !important", color: "inherit", opacity: "0.6" },
@@ -644,16 +659,16 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-custom-mk-ruido":{ backgroundColor: "#F3F4F6 !important", color: "#374151 !important", border: "1px solid #D1D5DB", padding: "0 3px", borderRadius: "4px !important" },
 
         // DARK MODE - fondos sólidos oscuros
-        ".dark .cm-custom-mk-ins":  { backgroundColor: "#2E1065 !important", color: "#C4B5FD !important", border: "1px solid #4C1D95" },
-        ".dark .cm-custom-mk-idea": { backgroundColor: "#450A0A !important", color: "#FCA5A5 !important", border: "1px solid #7F1D1D" },
-        ".dark .cm-custom-mk-op":   { backgroundColor: "#1A2E05 !important", color: "#BEF264 !important", border: "1px solid #365314" },
-        ".dark .cm-custom-mk-duda": { backgroundColor: "#082F49 !important", color: "#7DD3FC !important", border: "1px solid #0C4A6E" },
-        ".dark .cm-custom-mk-wow":  { backgroundColor: "#500724 !important", color: "#F9A8D4 !important", border: "1px solid #831843" },
-        ".dark .cm-custom-mk-pat":  { backgroundColor: "#3B0764 !important", color: "#D8B4FE !important", border: "1px solid #581C87" },
-        ".dark .cm-custom-mk-yo":   { backgroundColor: "#451A03 !important", color: "#FCD34D !important", border: "1px solid #78350F" },
-        ".dark .cm-custom-mk-ruido":{ backgroundColor: "#1F2937 !important", color: "#9CA3AF !important", border: "1px solid #374151" },
+        ".dark & .cm-custom-mk-ins":  { backgroundColor: "#2E1065 !important", color: "#C4B5FD !important", border: "1px solid #4C1D95" },
+        ".dark & .cm-custom-mk-idea": { backgroundColor: "#450A0A !important", color: "#FCA5A5 !important", border: "1px solid #7F1D1D" },
+        ".dark & .cm-custom-mk-op":   { backgroundColor: "#1A2E05 !important", color: "#BEF264 !important", border: "1px solid #365314" },
+        ".dark & .cm-custom-mk-duda": { backgroundColor: "#082F49 !important", color: "#7DD3FC !important", border: "1px solid #0C4A6E" },
+        ".dark & .cm-custom-mk-wow":  { backgroundColor: "#500724 !important", color: "#F9A8D4 !important", border: "1px solid #831843" },
+        ".dark & .cm-custom-mk-pat":  { backgroundColor: "#3B0764 !important", color: "#D8B4FE !important", border: "1px solid #581C87" },
+        ".dark & .cm-custom-mk-yo":   { backgroundColor: "#451A03 !important", color: "#FCD34D !important", border: "1px solid #78350F" },
+        ".dark & .cm-custom-mk-ruido":{ backgroundColor: "#1F2937 !important", color: "#9CA3AF !important", border: "1px solid #374151" },
         ".cm-custom-hr": { display: "inline-block", verticalAlign: "middle", width: "calc(100% - 30px)", height: "1px", backgroundColor: "#d4d4d8", margin: "12px 0", borderRadius: "2px" },
-        ".dark .cm-custom-hr": { backgroundColor: "#3f3f3f" },
+        ".dark & .cm-custom-hr": { backgroundColor: "#3f3f3f" },
         ".cm-custom-hr-big": { display: "inline-block", verticalAlign: "middle", width: "calc(100% - 30px)", height: "3px", background: "linear-gradient(90deg, transparent, #8B5CF6, #6366f1, #8B5CF6, transparent)", margin: "12px 0", borderRadius: "4px" },
         ".cm-search-match": { backgroundColor: "rgba(245, 158, 11, 0.4) !important", borderBottom: "2px solid #f59e0b", color: "#000 !important" },
         ".cm-selectionMatch": { backgroundColor: "#518141 !important", color: "#000 !important" },
@@ -669,7 +684,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             overflowX: "auto",
             userSelect: "text !important"
         },
-        ".dark .cm-table-container": { backgroundColor: "rgba(255, 255, 255, 0.03)", border: "1px solid rgba(255,255,255,0.05)" },
+        ".dark & .cm-table-container": { backgroundColor: "rgba(255, 255, 255, 0.03)", border: "1px solid rgba(255,255,255,0.05)" },
         ".cm-rendered-table": { 
             width: "100%", 
             borderCollapse: "collapse", 
@@ -683,37 +698,45 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             border: "1px solid rgba(0,0,0,0.1)",
             fontWeight: "bold"
         },
-        ".dark .cm-rendered-table th": { backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" },
+        ".dark & .cm-rendered-table th": { backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" },
         ".cm-rendered-table td": { 
             padding: "8px 12px", 
             border: "1px solid rgba(0,0,0,0.1)" 
         },
-        ".dark .cm-rendered-table td": { border: "1px solid rgba(255,255,255,0.1)" },
+        ".dark & .cm-rendered-table td": { border: "1px solid rgba(255,255,255,0.1)" },
         ".cm-rendered-table tr:nth-child(even)": { backgroundColor: "rgba(0,0,0,0.01)" },
-        ".dark .cm-rendered-table tr:nth-child(even)": { backgroundColor: "rgba(255,255,255,0.01)" },
-        ".cm-cb-header-dark": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderBottom: "none", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#a1a1aa", position: "relative", padding: "0 8px", minHeight: "1.25rem", userSelect: "none !important" },
+        ".dark & .cm-rendered-table tr:nth-child(even)": { backgroundColor: "rgba(255,255,255,0.01)" },
+
+        // --- CODEBLOCKS ---
+        ".cm-cb-header": { backgroundColor: "#F1F1F4", border: "1px solid #D4D4D8", borderBottom: "none", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#52525b", position: "relative", padding: "0 8px", minHeight: "1.25rem" },
+        ".dark & .cm-cb-header": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", color: "#a1a1aa" },
+        
         ".cm-cb-line": { backgroundColor: "#F1F1F4", borderLeft: "1px solid #D4D4D8", borderRight: "1px solid #D4D4D8", fontFamily: fontFamily, color: "#312E81 !important", padding: "0 8px" },
-        ".cm-cb-line-dark": { backgroundColor: "#0D0D0F", borderLeft: "1px solid #3F3F46", borderRight: "1px solid #3F3F46", fontFamily: fontFamily, color: "#A78BFA !important", padding: "0 8px" },
-        ".cm-cb-line ::selection, .cm-cb-line-dark ::selection, .cm-cb-line .cm-selectionBackground, .cm-cb-line-dark .cm-selectionBackground": { 
-          backgroundColor: "#8B5CF6 !important", 
-          color: "#ffffff !important"           
-        },
-        ".cm-cb-line ::-moz-selection, .cm-cb-line-dark ::-moz-selection": { 
-          backgroundColor: "#8B5CF6 !important",
-          color: "#ffffff !important"
-        },
+        ".dark & .cm-cb-line": { backgroundColor: "#0D0D0F", borderLeft: "1px solid #3F3F46", borderRight: "1px solid #3F3F46", color: "#A78BFA !important" },
+        
         ".cm-cb-footer": { backgroundColor: "#F1F1F4", border: "1px solid #D4D4D8", borderTop: "none", borderRadius: "0 0 8px 8px", fontFamily: fontFamily, fontSize: "0.85em", color: "#52525b", padding: "0 8px", minHeight: "1.25rem", userSelect: "none !important" },
-        ".cm-cb-footer-dark": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderTop: "none", borderRadius: "0 0 8px 8px", fontFamily: fontFamily, fontSize: "0.85em", color: "#a1a1aa", padding: "0 8px", minHeight: "1.25rem", userSelect: "none !important" },
+        ".dark & .cm-cb-footer": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", color: "#a1a1aa" },
+
+        ".cm-cb-line ::selection, .cm-cb-line ::-moz-selection": {
+            backgroundColor: "#4338CA !important",
+            color: "#ffffff !important"
+        },
+        ".dark & .cm-cb-line ::selection, .dark & .cm-cb-line ::-moz-selection": {
+            backgroundColor: "#7C3AED !important",
+            color: "#ffffff !important"
+        },
+
         ".cm-codeblock-copy": { position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "4px", borderRadius: "4px", backgroundColor: "transparent", color: "#a1a1aa", cursor: "pointer", border: "none", transition: "all 0.15s", opacity: "0" },
-        ".cm-cb-header:hover .cm-codeblock-copy, .cm-cb-header-dark:hover .cm-codeblock-copy": { opacity: "1" },
+        ".cm-cb-header:hover .cm-codeblock-copy": { opacity: "1" },
         ".cm-codeblock-copy:hover": { backgroundColor: "#E4E4E7", color: "#52525b" },
-        ".dark .cm-codeblock-copy:hover": { backgroundColor: "#3F3F46", color: "#a1a1aa" },
+        ".dark & .cm-codeblock-copy:hover": { backgroundColor: "#3F3F46", color: "#a1a1aa" },
+        
+        // --- REMOVE BUTTON ---
         ".cm-remove-btn-wrapper": { display: "inline-block", width: "0px", overflow: "visible", verticalAlign: "baseline", position: "relative" },
         ".cm-remove-btn": { position: "absolute", display: "inline-flex", alignItems: "center", justifyContent: "center", backgroundColor: "#ef4444", border: "2px solid #ffffff", color: "white !important", width: "18px", height: "18px", left: "-6px", top: "-14px", borderRadius: "50%", fontSize: "14px", fontWeight: "bold", lineHeight: "1", cursor: "pointer !important", zIndex: "100", opacity: "0", transition: "opacity 0.15s", pointerEvents: "none" },
         ".cm-remove-btn-visible": { opacity: "1 !important", pointerEvents: "auto !important" },
         ".cm-remove-btn:hover": { opacity: "1 !important", pointerEvents: "auto !important", transform: "scale(1.1)" },
-        ".dark .cm-content": { color: "#CCCCCC !important" },
-        ".dark .cm-line": { color: "#CCCCCC !important" },
+        ".dark & .cm-line": { color: "#CCCCCC !important" },
         ".cm-search-marker-container": {
             position: "absolute",
             right: "2px",
@@ -1219,7 +1242,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         },
         mouseover: (e) => {
             const target = e.target as HTMLElement;
-            const hlNode = target.closest('[class*="cm-hl-"], .cm-custom-hl, .cm-custom-tr, .cm-custom-link');
+            const hlNode = target.closest('[class*="cm-hl-"], .cm-custom-hl, .cm-custom-tr, .cm-custom-link, [class*="cm-custom-mk-"]');
             if (hlNode) {
                 const span = hlNode as HTMLElement;
                 let sibling = span?.nextElementSibling;
@@ -1235,7 +1258,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         },
         mouseout: (e) => {
             const target = e.target as HTMLElement;
-            if (target.closest('[class*="cm-hl-"], .cm-custom-hl, .cm-custom-tr, .cm-custom-link')) {
+            if (target.closest('[class*="cm-hl-"], .cm-custom-hl, .cm-custom-tr, .cm-custom-link, [class*="cm-custom-mk-"]')) {
                 const line = target.closest('.cm-line');
                 if (line) line.querySelectorAll('.cm-remove-btn-visible').forEach(btn => btn.classList.remove('cm-remove-btn-visible'));
             }
@@ -1742,21 +1765,21 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                             }}
                                             onMouseEnter={() => !menuState?.isMobile && setShowMoreOptions(true)}
                                             onMouseLeave={() => !menuState?.isMobile && setShowMoreOptions(false)}
-                                            className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${showMoreOptions ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                                            className={`h-[26px] min-w-[32px] px-2 flex items-center justify-center rounded-md transition-colors bg-blue-500/10 hover:bg-blue-500/20 text-blue-500`}
                                             title="Más opciones"
                                         >
                                             {lastMoreAction === 'es' || lastMoreAction === 'en' ? (
-                                                <span className="text-[10px] font-black text-blue-500 uppercase">{lastMoreAction}</span>
+                                                <span className="text-[10px] font-black uppercase text-blue-500">{lastMoreAction}</span>
                                             ) : lastMoreAction === 'link' ? (
-                                                <LinkIcon size={18} className="text-zinc-500" />
+                                                <LinkIcon size={14} />
                                             ) : lastMoreAction === 'bold' ? (
-                                                <Bold size={18} className="text-zinc-500" />
+                                                <Bold size={14} />
                                             ) : lastMoreAction === 'strikethrough' ? (
-                                                <Strikethrough size={18} className="text-zinc-500" />
+                                                <Strikethrough size={14} />
                                             ) : lastMoreAction === 'heading' ? (
-                                                <Heading size={18} className="text-zinc-500" />
+                                                <Heading size={14} />
                                             ) : (
-                                                <MoreHorizontal size={18} className="text-zinc-500" />
+                                                <MoreHorizontal size={14} />
                                             )}
                                         </button>
                                     </div>
@@ -1778,10 +1801,10 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                                     doActionAndSave(lastTag, () => doFormat(lastTag));
                                                 }
                                             }}
-                                            className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${showTagOptions ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                                            className={`h-[26px] min-w-[32px] px-2 flex items-center justify-center rounded-md transition-colors bg-blue-500/10 hover:bg-blue-500/20 text-blue-500`}
                                             title={`Etiqueta: ${MARKER_TYPES[lastTag].label}`}
                                         >
-                                            <span className="text-lg">{MARKER_TYPES[lastTag].emoji}</span>
+                                            <span className="text-sm">{MARKER_TYPES[lastTag].emoji}</span>
                                         </button>
                                     </div>
 
@@ -1803,10 +1826,9 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                                 }
                                             }}
                                             title={`Resaltar (${HL_COLORS[hlColor].label})`}
-                                            className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${showHlOptions ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
-                                            style={{ color: HL_COLORS[hlColor].hex }}
+                                            className={`h-[26px] min-w-[32px] px-2 flex items-center justify-center rounded-md transition-colors bg-blue-500/10 hover:bg-blue-500/20`}
                                         >
-                                            <Highlighter size={18} />
+                                            <Highlighter size={14} style={{ color: HL_COLORS[hlColor].hex }} />
                                         </button>
                                     </div>
                                 </>
@@ -1831,10 +1853,10 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                     doActionAndSave('highlight', () => doFormat('highlight', cKey));
                                     setShowHlOptions(false);
                                   }}
-                                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:scale-110 ${hlColor === cKey ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                                  className={`h-[26px] min-w-[32px] px-2 rounded-md flex items-center justify-center transition-all bg-blue-500/10 hover:bg-blue-500/20`}
                                   title={HL_COLORS[cKey].label}
                                 >
-                                    <Highlighter size={18} color={HL_COLORS[cKey].hex} />
+                                    <Highlighter size={14} color={HL_COLORS[cKey].hex} />
                                 </button>
                             ))}
                         </div>
@@ -1858,7 +1880,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                                 setShowTagOptions(false);
                                             }}
                                             title={cfg.label}
-                                            className="w-10 h-10 rounded-lg flex items-center justify-center text-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                            className="h-[26px] min-w-[32px] px-2 rounded-md flex items-center justify-center text-sm bg-blue-500/10 hover:bg-blue-500/20 transition-colors"
                                         >{cfg.emoji}</button>
                                     );
                                 })}
@@ -1885,44 +1907,44 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                     }
                                     closeMenusOnly();
                                 }}
-                                className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-indigo-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                className="h-[26px] min-w-[32px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
                                 title="Revelar Markdown"
                             >
-                                <Maximize2 size={16} />
+                                <Maximize2 size={14} />
                             </button>
                             
                             <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
 
                             {/* NEGRITA */}
                             <button onClick={() => { doActionAndSave('bold', () => doFormat('bold')); setShowMoreOptions(false); }}
-                                className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                className="h-[26px] min-w-[32px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
                                 title="Negrita"
                             >
-                                <Bold size={16} />
+                                <Bold size={14} />
                             </button>
 
                             {/* LINK */}
                             <button onClick={() => { setShowLinkInput(true); setShowMoreOptions(false); }}
-                                className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                className="h-[26px] min-w-[32px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
                                 title="Enlace"
                             >
-                                <LinkIcon size={16} />
+                                <LinkIcon size={14} />
                             </button>
 
                             {/* TACHADO */}
                             <button onClick={() => { doActionAndSave('strikethrough', () => doFormat('strikethrough')); setShowMoreOptions(false); }}
-                                className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                className="h-[26px] min-w-[32px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
                                 title="Tachado"
                             >
-                                <Strikethrough size={16} />
+                                <Strikethrough size={14} />
                             </button>
 
                             {/* TÍTULO */}
                             <button onClick={() => { doActionAndSave('heading', () => doFormat('heading')); setShowMoreOptions(false); }}
-                                className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                className="h-[26px] min-w-[32px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
                                 title="Título"
                             >
-                                <Heading size={16} />
+                                <Heading size={14} />
                             </button>
 
                             <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
@@ -1930,10 +1952,10 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                             {/* TRADUCCIÓN (Compacta) */}
                             <div className="flex items-center gap-0.5 px-0.5">
                                 <button onClick={() => { doActionAndSave('es', () => doTranslate('es')); setShowMoreOptions(false); }}
-                                    className="px-2 py-1.5 bg-blue-500/10 text-blue-500 rounded-md text-[10px] font-black hover:bg-blue-500/20 transition-colors"
+                                    className="h-[26px] px-2 bg-blue-500/10 text-blue-500 rounded-md text-[10px] font-black hover:bg-blue-500/20 transition-colors"
                                 >ES</button>
                                 <button onClick={() => { doActionAndSave('en', () => doTranslate('en')); setShowMoreOptions(false); }}
-                                    className="px-2 py-1.5 bg-blue-500/10 text-blue-500 rounded-md text-[10px] font-black hover:bg-blue-500/20 transition-colors"
+                                    className="h-[26px] px-2 bg-blue-500/10 text-blue-500 rounded-md text-[10px] font-black hover:bg-blue-500/20 transition-colors"
                                 >EN</button>
                             </div>
                         </div>
