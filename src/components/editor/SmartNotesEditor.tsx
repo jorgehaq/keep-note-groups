@@ -236,6 +236,10 @@ class HrWidget extends WidgetType {
     toDOM() { const span = document.createElement("span"); span.className = "cm-custom-hr"; return span; }
 }
 
+class HrBigWidget extends WidgetType {
+    toDOM() { const span = document.createElement("span"); span.className = "cm-custom-hr-big"; return span; }
+}
+
 class CodeBlockCopyWidget extends WidgetType {
     constructor(readonly code: string) { super(); }
     eq(other: CodeBlockCopyWidget) { return other.code === this.code; }
@@ -447,7 +451,7 @@ const visualMarkupPluginFactory = (translationsMapRef: React.MutableRefObject<Re
                 { type: 'bold', regex: /\*\*([\s\S]*?)\*\*/g }, 
                 { type: 'strikethrough', regex: /~~([\s\S]*?)~~/g },
                 { type: 'italic_under', regex: /(?<!_)_([^_]+)_(?!_)/g }, { type: 'italic_star', regex: /(?<!\*)\*([^*]+)\*(?!\*)/g }, 
-                { type: 'hr', regex: /^---+$/gm }, { type: 'md-link', regex: /\[([^\]]*)\]\(([^)\n]*)\)/g },
+                { type: 'hr', regex: /^---+$/gm }, { type: 'hr-big', regex: /^===+$/gm }, { type: 'md-link', regex: /\[([^\]]*)\]\(([^)\n]*)\)/g },
                 { type: 'raw-link', regex: /(?<!\()(https?:\/\/[^\s\n)]+)/g }
             ];
 
@@ -506,6 +510,10 @@ const visualMarkupPluginFactory = (translationsMapRef: React.MutableRefObject<Re
                     }
                     else if (rule.type === 'hr') {
                         safeReplace(mFrom, mTo); decos.push(Decoration.widget({ widget: new HrWidget(), side: 0 }).range(mFrom, mFrom));
+                        decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, ""), side: 1 }).range(mTo, mTo));
+                    }
+                    else if (rule.type === 'hr-big') {
+                        safeReplace(mFrom, mTo); decos.push(Decoration.widget({ widget: new HrBigWidget(), side: 0 }).range(mFrom, mFrom));
                         decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, ""), side: 1 }).range(mTo, mTo));
                     }
                     else if (rule.type === 'h1') {
@@ -626,8 +634,9 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-custom-mk-pat":    { backgroundColor: "#6D28D933 !important", color: "#6D28D9 !important", border: "1px solid #6D28D955", padding: "0 2px", borderRadius: "4px !important" },
         ".cm-custom-mk-yo":     { backgroundColor: "#F59E0B33 !important", color: "#F59E0B !important", border: "1px solid #F59E0B55", padding: "0 2px", borderRadius: "4px !important" },
         ".cm-custom-mk-ruido":  { backgroundColor: "#6B728033 !important", color: "#6B7280 !important", border: "1px solid #6B728055", padding: "0 2px", borderRadius: "4px !important" },
-        ".cm-custom-hr": { display: "inline-block", verticalAlign: "middle", width: "calc(100% - 30px)", height: "2px", backgroundColor: "#d4d4d8", margin: "12px 0", borderRadius: "2px" },
+        ".cm-custom-hr": { display: "inline-block", verticalAlign: "middle", width: "calc(100% - 30px)", height: "1px", backgroundColor: "#d4d4d8", margin: "12px 0", borderRadius: "2px" },
         ".dark .cm-custom-hr": { backgroundColor: "#3f3f3f" },
+        ".cm-custom-hr-big": { display: "inline-block", verticalAlign: "middle", width: "calc(100% - 30px)", height: "3px", background: "linear-gradient(90deg, transparent, #8B5CF6, #6366f1, #8B5CF6, transparent)", margin: "12px 0", borderRadius: "4px" },
         ".cm-search-match": { backgroundColor: "rgba(245, 158, 11, 0.4) !important", borderBottom: "2px solid #f59e0b", color: "#000 !important" },
         ".cm-selectionMatch": { backgroundColor: "#518141 !important", color: "#000 !important" },
         ".cm-cb-header": { backgroundColor: "#F1F1F4", border: "1px solid #D4D4D8", borderBottom: "none", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#52525b", position: "relative", padding: "0 8px", minHeight: "1.25rem" },
