@@ -590,9 +590,16 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         "&.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important", borderLeftWidth: "2px !important" },
         ".dark &.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important" },
         "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": { 
-            backgroundColor: "rgba(73, 64, 217, 0.45) !important",
+            backgroundColor: "rgba(73, 64, 217, 0.35) !important",
             pointerEvents: "none !important" 
         },
+        ".dark &.cm-focused .cm-selectionBackground, .dark .cm-selectionBackground": {
+            backgroundColor: "rgba(139, 92, 246, 0.45) !important",
+            pointerEvents: "none !important"
+        },
+        // Forzar contraste del texto seleccionado nativamente dentro del editor
+        "& ::selection": { color: "#000000 !important" },
+        ".dark & ::selection": { color: "#ffffff !important" },
         "&.cm-focused .cm-selectionLayer, .cm-selectionLayer": { 
             zIndex: "0 !important",
             pointerEvents: "none !important" 
@@ -626,14 +633,25 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-custom-italic": { fontStyle: "italic", color: "inherit" },
         ".cm-url, .cm-link, .cm-custom-link, .cm-custom-link *": { color: "#60A5FA !important", textDecoration: "underline !important", cursor: "pointer !important", transition: "opacity 0.2s", opacity: "1 !important" },
         ".cm-custom-link:hover": { opacity: "0.8 !important" },
-        ".cm-custom-mk-ins":    { backgroundColor: "#7C3AED33 !important", color: "#7C3AED !important", border: "1px solid #7C3AED55", padding: "0 2px", borderRadius: "4px !important" },
-        ".cm-custom-mk-idea":   { backgroundColor: "#DC262633 !important", color: "#DC2626 !important", border: "1px solid #DC262655", padding: "0 2px", borderRadius: "4px !important" },
-        ".cm-custom-mk-op":     { backgroundColor: "#65A30D33 !important", color: "#65A30D !important", border: "1px solid #65A30D55", padding: "0 2px", borderRadius: "4px !important" },
-        ".cm-custom-mk-duda":   { backgroundColor: "#0EA5E933 !important", color: "#0EA5E9 !important", border: "1px solid #0EA5E955", padding: "0 2px", borderRadius: "4px !important" },
-        ".cm-custom-mk-wow":    { backgroundColor: "#DB277733 !important", color: "#DB2777 !important", border: "1px solid #DB277755", padding: "0 2px", borderRadius: "4px !important" },
-        ".cm-custom-mk-pat":    { backgroundColor: "#6D28D933 !important", color: "#6D28D9 !important", border: "1px solid #6D28D955", padding: "0 2px", borderRadius: "4px !important" },
-        ".cm-custom-mk-yo":     { backgroundColor: "#F59E0B33 !important", color: "#F59E0B !important", border: "1px solid #F59E0B55", padding: "0 2px", borderRadius: "4px !important" },
-        ".cm-custom-mk-ruido":  { backgroundColor: "#6B728033 !important", color: "#6B7280 !important", border: "1px solid #6B728055", padding: "0 2px", borderRadius: "4px !important" },
+        // LIGHT MODE - fondos sólidos claros
+        ".cm-custom-mk-ins":  { backgroundColor: "#EDE9FE !important", color: "#6D28D9 !important", border: "1px solid #C4B5FD", padding: "0 3px", borderRadius: "4px !important" },
+        ".cm-custom-mk-idea": { backgroundColor: "#FEE2E2 !important", color: "#B91C1C !important", border: "1px solid #FECACA", padding: "0 3px", borderRadius: "4px !important" },
+        ".cm-custom-mk-op":   { backgroundColor: "#ECFCCB !important", color: "#3F6212 !important", border: "1px solid #BEF264", padding: "0 3px", borderRadius: "4px !important" },
+        ".cm-custom-mk-duda": { backgroundColor: "#E0F2FE !important", color: "#0369A1 !important", border: "1px solid #7DD3FC", padding: "0 3px", borderRadius: "4px !important" },
+        ".cm-custom-mk-wow":  { backgroundColor: "#FCE7F3 !important", color: "#9D174D !important", border: "1px solid #F9A8D4", padding: "0 3px", borderRadius: "4px !important" },
+        ".cm-custom-mk-pat":  { backgroundColor: "#F3E8FF !important", color: "#6B21A8 !important", border: "1px solid #D8B4FE", padding: "0 3px", borderRadius: "4px !important" },
+        ".cm-custom-mk-yo":   { backgroundColor: "#FEF3C7 !important", color: "#92400E !important", border: "1px solid #FCD34D", padding: "0 3px", borderRadius: "4px !important" },
+        ".cm-custom-mk-ruido":{ backgroundColor: "#F3F4F6 !important", color: "#374151 !important", border: "1px solid #D1D5DB", padding: "0 3px", borderRadius: "4px !important" },
+
+        // DARK MODE - fondos sólidos oscuros
+        ".dark .cm-custom-mk-ins":  { backgroundColor: "#2E1065 !important", color: "#C4B5FD !important", border: "1px solid #4C1D95" },
+        ".dark .cm-custom-mk-idea": { backgroundColor: "#450A0A !important", color: "#FCA5A5 !important", border: "1px solid #7F1D1D" },
+        ".dark .cm-custom-mk-op":   { backgroundColor: "#1A2E05 !important", color: "#BEF264 !important", border: "1px solid #365314" },
+        ".dark .cm-custom-mk-duda": { backgroundColor: "#082F49 !important", color: "#7DD3FC !important", border: "1px solid #0C4A6E" },
+        ".dark .cm-custom-mk-wow":  { backgroundColor: "#500724 !important", color: "#F9A8D4 !important", border: "1px solid #831843" },
+        ".dark .cm-custom-mk-pat":  { backgroundColor: "#3B0764 !important", color: "#D8B4FE !important", border: "1px solid #581C87" },
+        ".dark .cm-custom-mk-yo":   { backgroundColor: "#451A03 !important", color: "#FCD34D !important", border: "1px solid #78350F" },
+        ".dark .cm-custom-mk-ruido":{ backgroundColor: "#1F2937 !important", color: "#9CA3AF !important", border: "1px solid #374151" },
         ".cm-custom-hr": { display: "inline-block", verticalAlign: "middle", width: "calc(100% - 30px)", height: "1px", backgroundColor: "#d4d4d8", margin: "12px 0", borderRadius: "2px" },
         ".dark .cm-custom-hr": { backgroundColor: "#3f3f3f" },
         ".cm-custom-hr-big": { display: "inline-block", verticalAlign: "middle", width: "calc(100% - 30px)", height: "3px", background: "linear-gradient(90deg, transparent, #8B5CF6, #6366f1, #8B5CF6, transparent)", margin: "12px 0", borderRadius: "4px" },
@@ -931,6 +949,17 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         setShowTrOptions(false);
     };
 
+    // 🚀 SYNC: Escuchar cambios de tema global para forzar re-renderizado de bloques (tablas/code)
+    useEffect(() => {
+        const handleThemeChange = () => {
+            editorRef.current?.view?.dispatch({ 
+                effects: [ForceRedrawEffect.of(null)] 
+            });
+        };
+        window.addEventListener('app-theme-changed', handleThemeChange);
+        return () => window.removeEventListener('app-theme-changed', handleThemeChange);
+    }, []);
+
     // Regenera el tema visual solo si cambias la fuente o el tamaño en los ajustes
     const dynamicTheme = useMemo(() => createNotesTheme(noteFont, noteFontSize, noteLineHeight), [noteFont, noteFontSize, noteLineHeight]);
 
@@ -1001,7 +1030,13 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                 // 1. Cursor: sin scrollIntoView para que no compita con el scroll
                 if (savedPos) {
                     const pos = Math.min(parseInt(savedPos, 10), view.state.doc.length);
-                    view.dispatch({ selection: { anchor: pos, head: pos } });
+                    view.dispatch({ 
+                        selection: { anchor: pos, head: pos },
+                        effects: [ForceRedrawEffect.of(null)] // 🚀 CORE FIX: Forzar renderizado inicial de bloques (tablas/code)
+                    });
+                } else {
+                    // Si no hay posición guardada, igual forzamos el renderizado inicial
+                    view.dispatch({ effects: [ForceRedrawEffect.of(null)] });
                 }
 
                 // 2. Scroll: siempre al final, sobreescribe cualquier scroll que haya hecho el cursor

@@ -477,6 +477,8 @@ function App() {
     } else {
       root.classList.add(theme);
     }
+    // Emitir evento para que componentes internos se enteren del cambio técnico de clase
+    window.dispatchEvent(new CustomEvent('app-theme-changed'));
   }, [theme]);
 
   const applyManualSort = (mode: NoteSortMode) => {
@@ -1112,11 +1114,11 @@ function App() {
           .dark .note-editor-scroll { scrollbar-color: #3f3f46 transparent; }
           
           ::selection {
-            background-color: rgba(73, 64, 217, 0.45);
+            background-color: rgba(73, 64, 217, 0.75);
             color: #ffffff !important;
           }
           ::-moz-selection {
-            background-color: rgba(73, 64, 217, 0.45);
+            background-color: rgba(73, 64, 217, 0.75);
             color: #ffffff !important;
           }
 
