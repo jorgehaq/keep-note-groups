@@ -135,7 +135,11 @@ const blockMarkupField = StateField.define<RangeSet<Decoration>>({
                     if (!isRevealed) builder.add(openObj.from, openObj.to, Decoration.replace({}));
                     
                     // 2. Copy button widget (Must be after header 'from' but before body lines)
-                    builder.add(openObj.to, openObj.to, Decoration.widget({ widget: new CodeBlockCopyWidget(codeContent), side: 1 }));
+                    builder.add(openObj.to, openObj.to, Decoration.widget({ 
+                        widget: new CodeBlockCopyWidget(codeContent), 
+                        side: 1,
+                        block: false // Ensure it doesn't break line flow
+                    }));
                     
                     // 3. Body
                     for (let cl = openLine + 1; cl < closeLine; cl++) {
@@ -626,15 +630,17 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".dark .cm-custom-hr": { backgroundColor: "#3f3f3f" },
         ".cm-search-match": { backgroundColor: "rgba(245, 158, 11, 0.4) !important", borderBottom: "2px solid #f59e0b", color: "#000 !important" },
         ".cm-selectionMatch": { backgroundColor: "#518141 !important", color: "#000 !important" },
-        ".cm-cb-header": { backgroundColor: "#F1F1F4", border: "1px solid #D4D4D8", borderBottom: "none", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#52525b", position: "relative", padding: "0 8px", minHeight: "2px" },
+        ".cm-cb-header": { backgroundColor: "#F1F1F4", border: "1px solid #D4D4D8", borderBottom: "none", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#52525b", position: "relative", padding: "0 8px", minHeight: "1.25rem" },
         // --- TABLAS RENDERIZADAS ---
         ".cm-table-container": { 
-            margin: "16px 0", 
-            padding: "8px", 
+            // 🚀 FIX: Use padding/display instead of margin to prevent CM6 measurement offsets
+            display: "block",
+            padding: "16px 8px", 
             backgroundColor: "rgba(255, 255, 255, 0.5)", 
             borderRadius: "8px", 
             border: "1px solid rgba(0,0,0,0.05)",
-            overflowX: "auto"
+            overflowX: "auto",
+            userSelect: "text !important"
         },
         ".dark .cm-table-container": { backgroundColor: "rgba(255, 255, 255, 0.03)", border: "1px solid rgba(255,255,255,0.05)" },
         ".cm-rendered-table": { 
@@ -658,9 +664,9 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".dark .cm-rendered-table td": { border: "1px solid rgba(255,255,255,0.1)" },
         ".cm-rendered-table tr:nth-child(even)": { backgroundColor: "rgba(0,0,0,0.01)" },
         ".dark .cm-rendered-table tr:nth-child(even)": { backgroundColor: "rgba(255,255,255,0.01)" },
-        ".cm-cb-header-dark": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderBottom: "none", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#a1a1aa", position: "relative", padding: "0 8px", minHeight: "2px" },
-        ".cm-cb-line": { backgroundColor: "#F1F1F4", borderLeft: "1px solid #D4D4D8", borderRight: "1px solid #D4D4D8", fontFamily: fontFamily, fontSize: "0.9em !important", color: "#312E81 !important", padding: "0 8px" },
-        ".cm-cb-line-dark": { backgroundColor: "#0D0D0F", borderLeft: "1px solid #3F3F46", borderRight: "1px solid #3F3F46", fontFamily: fontFamily, fontSize: "0.9em !important", color: "#A78BFA !important", padding: "0 8px" },
+        ".cm-cb-header-dark": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderBottom: "none", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#a1a1aa", position: "relative", padding: "0 8px", minHeight: "1.25rem", userSelect: "none !important" },
+        ".cm-cb-line": { backgroundColor: "#F1F1F4", borderLeft: "1px solid #D4D4D8", borderRight: "1px solid #D4D4D8", fontFamily: fontFamily, color: "#312E81 !important", padding: "0 8px" },
+        ".cm-cb-line-dark": { backgroundColor: "#0D0D0F", borderLeft: "1px solid #3F3F46", borderRight: "1px solid #3F3F46", fontFamily: fontFamily, color: "#A78BFA !important", padding: "0 8px" },
         ".cm-cb-line ::selection, .cm-cb-line-dark ::selection, .cm-cb-line .cm-selectionBackground, .cm-cb-line-dark .cm-selectionBackground": { 
           backgroundColor: "#8B5CF6 !important", 
           color: "#ffffff !important"           
@@ -669,8 +675,8 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
           backgroundColor: "#8B5CF6 !important",
           color: "#ffffff !important"
         },
-        ".cm-cb-footer": { backgroundColor: "#F1F1F4", border: "1px solid #D4D4D8", borderTop: "none", borderRadius: "0 0 8px 8px", fontFamily: fontFamily, fontSize: "0.85em", color: "#52525b", padding: "0 8px", minHeight: "2px" },
-        ".cm-cb-footer-dark": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderTop: "none", borderRadius: "0 0 8px 8px", fontFamily: fontFamily, fontSize: "0.85em", color: "#a1a1aa", padding: "0 8px", minHeight: "2px" },
+        ".cm-cb-footer": { backgroundColor: "#F1F1F4", border: "1px solid #D4D4D8", borderTop: "none", borderRadius: "0 0 8px 8px", fontFamily: fontFamily, fontSize: "0.85em", color: "#52525b", padding: "0 8px", minHeight: "1.25rem", userSelect: "none !important" },
+        ".cm-cb-footer-dark": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderTop: "none", borderRadius: "0 0 8px 8px", fontFamily: fontFamily, fontSize: "0.85em", color: "#a1a1aa", padding: "0 8px", minHeight: "1.25rem", userSelect: "none !important" },
         ".cm-codeblock-copy": { position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "4px", borderRadius: "4px", backgroundColor: "transparent", color: "#a1a1aa", cursor: "pointer", border: "none", transition: "all 0.15s", opacity: "0" },
         ".cm-cb-header:hover .cm-codeblock-copy, .cm-cb-header-dark:hover .cm-codeblock-copy": { opacity: "1" },
         ".cm-codeblock-copy:hover": { backgroundColor: "#E4E4E7", color: "#52525b" },
