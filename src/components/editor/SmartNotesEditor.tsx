@@ -4,11 +4,13 @@ import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { EditorView, ViewPlugin, Decoration, WidgetType, ViewUpdate, keymap, lineNumbers, showPanel, Panel } from '@codemirror/view';
-import { RangeSet, StateEffect, Prec, StateField } from '@codemirror/state'; 
+import { RangeSet, StateEffect, Prec, StateField, RangeSetBuilder } from '@codemirror/state'; 
 import { search, openSearchPanel, closeSearchPanel } from '@codemirror/search';
 import { Plus, Settings, Grid, X, Check, Trash2, List, Type, Languages, Highlighter, Tag, StickyNote, History, Info, ChevronRight, ChevronDown, ChevronLeft, Search, Loader2, Tags, Image, Link as LinkIcon, Maximize2, Minimize2, ExternalLink, Bold, Italic, Strikethrough, Heading, MoreHorizontal } from 'lucide-react';
 import { useImperativeHandle, forwardRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export interface SmartNotesEditorRef {
     focus: () => void;
@@ -71,13 +73,119 @@ const revealedLineField = StateField.define<number | null>({
         for (const e of tr.effects) {
             if (e.is(setRevealedLine)) return e.value;
         }
-        // Auto-clear when the cursor moves to a different line
         if (value !== null && tr.selection) {
             const cursorLine = tr.newDoc.lineAt(tr.selection.main.head).number;
             if (cursorLine !== value) return null;
         }
         return value;
     }
+});
+
+// 🚀 STABILITY FIX: Move layout-affecting decorations (tables, code blocks) to a StateField.
+// This prevents 'No tile at position' errors because decorations are stable during layout measurement.
+const blockMarkupField = StateField.define<RangeSet<Decoration>>({
+    create() { return RangeSet.empty; },
+    update(decos, tr) {
+        // Map existing decorations - essential for persistence during typing
+        decos = decos.map(tr.changes);
+        
+        // Only re-scan if document changed or revealed line changed
+        const revealedLine = tr.state.field(revealedLineField, false);
+        const oldRevealedLine = tr.startState.field(revealedLineField, false);
+        const forceRedraw = tr.effects.some(e => e.is(ForceRedrawEffect));
+
+        if (!tr.docChanged && revealedLine === oldRevealedLine && !forceRedraw) return decos;
+
+        const builder = new RangeSetBuilder<Decoration>();
+        const doc = tr.newDoc;
+        const totalLines = doc.lines;
+
+        // Shared scanners from buildDecorations (optimized for StateField)
+        const isDark = document.documentElement.classList.contains('dark');
+        const cbHeaderClass = isDark ? 'cm-cb-header-dark' : 'cm-cb-header';
+        const cbLineClass = isDark ? 'cm-cb-line-dark' : 'cm-cb-line';
+        const cbFooterClass = isDark ? 'cm-cb-footer-dark' : 'cm-cb-footer';
+
+        let lineNum = 1;
+        while (lineNum <= totalLines) {
+            const line = doc.line(lineNum);
+            const text = line.text;
+            
+            // 1. Code Blocks
+            if (text.startsWith('```') && (text.trimEnd() !== '```' ? /^```\w*$/.test(text.trimEnd()) : text.trimEnd() === '```')) {
+                const openLine = lineNum;
+                let closeLine = -1;
+                for (let s = openLine + 1; s <= totalLines; s++) {
+                    if (doc.line(s).text.trimEnd() === '```') { closeLine = s; break; }
+                }
+                if (closeLine > 0) {
+                    const openObj = doc.line(openLine);
+                    const closeObj = doc.line(closeLine);
+                    const isRevealed = revealedLine === openLine || revealedLine === closeLine;
+
+                    // Pre-scan code lines for the copy widget
+                    const codeLines: string[] = [];
+                    for (let cl = openLine + 1; cl < closeLine; cl++) {
+                        codeLines.push(doc.line(cl).text);
+                    }
+                    const codeContent = codeLines.join('\n').trimEnd();
+
+                    // 1. Header
+                    builder.add(openObj.from, openObj.from, Decoration.line({ class: cbHeaderClass }));
+                    if (!isRevealed) builder.add(openObj.from, openObj.to, Decoration.replace({}));
+                    
+                    // 2. Copy button widget (Must be after header 'from' but before body lines)
+                    builder.add(openObj.to, openObj.to, Decoration.widget({ widget: new CodeBlockCopyWidget(codeContent), side: 1 }));
+                    
+                    // 3. Body
+                    for (let cl = openLine + 1; cl < closeLine; cl++) {
+                        const clObj = doc.line(cl);
+                        builder.add(clObj.from, clObj.from, Decoration.line({ class: cbLineClass }));
+                    }
+
+                    // 4. Footer
+                    builder.add(closeObj.from, closeObj.from, Decoration.line({ class: cbFooterClass }));
+                    if (!isRevealed) builder.add(closeObj.from, closeObj.to, Decoration.replace({}));
+
+                    lineNum = closeLine + 1;
+                    continue;
+                }
+            }
+
+            // 2. Tables
+            const trimmed = text.trim();
+            if (trimmed.startsWith('|') && lineNum < totalLines) {
+                const nextLine = doc.line(lineNum + 1).text.trim();
+                if (nextLine.startsWith('|') && /^[|\s-:]+$/.test(nextLine) && nextLine.includes('-')) {
+                    const startLine = lineNum;
+                    let endLine = lineNum + 1;
+                    for (let s = lineNum + 2; s <= totalLines; s++) {
+                        if (doc.line(s).text.trim().startsWith('|')) endLine = s; else break;
+                    }
+                    const startObj = doc.line(startLine);
+                    const endObj = doc.line(endLine);
+                    
+                    let revealed = false;
+                    for (let r = startLine; r <= endLine; r++) if (revealedLine === r) { revealed = true; break; }
+
+                    if (!revealed) {
+                        const tableText = doc.sliceString(startObj.from, endObj.to);
+                        // block: true es vital para la estabilidad de redimensionado
+                        builder.add(startObj.from, endObj.to, Decoration.replace({ 
+                            widget: new TableHtmlWidget(tableText), 
+                            block: true 
+                        }));
+                    }
+                    lineNum = endLine + 1;
+                    continue;
+                }
+            }
+
+            lineNum++;
+        }
+        return builder.finish();
+    },
+    provide: f => EditorView.decorations.from(f)
 });
 
 // Tracks which line the user is actively typing on (docChanged only).
@@ -142,7 +250,66 @@ class CodeBlockCopyWidget extends WidgetType {
         return btn;
     }
 }
+class TableWidget extends WidgetType {
+    constructor(readonly content: string) { super(); }
+    eq(other: TableWidget) { return other.content === this.content; }
+    toDOM() {
+        const div = document.createElement("div");
+        div.className = "cm-table-widget-container prose dark:prose-invert max-w-none";
+        
+        // We use a separate root for ReactMarkdown if we wanted to use React, 
+        // but here it's easier to just use standard DOM for CodeMirror widgets
+        // OR we can use createRoot but it's overkill for a simple table.
+        // Actually, react-markdown can be used to generate HTML string or we can use a simpler approach.
+        // Let's use a dummy react root for the widget to keep it clean.
+        return div;
+    }
+    // We override updateDOM to actually render the React component
+    render(container: HTMLElement) {
+        // Since we are in a class and want to use React, we can't easily "render" into toDOM 
+        // without a stable root. But CodeMirror 6 supports React via wrappers.
+        // However, for this project, let's keep it simple: A simple HTML table generator 
+        // that handles the basic GFM table syntax detected.
+    }
+}
 
+const escapeHtml = (text: string) => {
+    return text.replace(/[&<>"']/g, (m) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    }[m] || m));
+};
+
+// Simple Markdown Table to HTML converter to avoid React root complexity inside CM6 widgets
+const renderMarkdownTable = (md: string): string => {
+    const lines = md.trim().split('\n');
+    if (lines.length < 2) return '';
+
+    let html = '<table class="cm-rendered-table"><thead>';
+    
+    // Header
+    const headerCells = lines[0].split('|').filter((_, i, arr) => i > 0 && i < arr.length - 1);
+    html += '<tr>' + headerCells.map(c => `<th>${escapeHtml(c.trim())}</th>`).join('') + '</tr></thead><tbody>';
+
+    // Rows (skip index 1 which is the separator |---|---|)
+    for (let i = 2; i < lines.length; i++) {
+        const cells = lines[i].split('|').filter((_, j, arr) => j > 0 && j < arr.length - 1);
+        html += '<tr>' + cells.map(c => `<td>${escapeHtml(c.trim())}</td>`).join('') + '</tr>';
+    }
+
+    html += '</tbody></table>';
+    return html;
+};
+
+class TableHtmlWidget extends WidgetType {
+    constructor(readonly content: string) { super(); }
+    eq(other: TableHtmlWidget) { return other.content === this.content; }
+    toDOM() {
+        const div = document.createElement("div");
+        div.className = "cm-table-container";
+        div.innerHTML = renderMarkdownTable(this.content);
+        return div;
+    }
+}
 const cursorDotPlugin = ViewPlugin.fromClass(class {
     decorations: RangeSet<Decoration>;
     constructor(view: EditorView) { this.decorations = this.build(view); }
@@ -241,7 +408,6 @@ const visualMarkupPluginFactory = (translationsMapRef: React.MutableRefObject<Re
     buildDecorations(view: EditorView) {
         const decos: any[] = [];
         const selection = view.state.selection.main;
-        const lineAtCursor = view.state.doc.lineAt(selection.head).number;
         const revealedLine = view.state.field(revealedLineField, false);
 
         const safeReplace = (from: number, to: number) => { if (from < to) decos.push(Decoration.replace({}).range(from, to)); };
@@ -249,80 +415,18 @@ const visualMarkupPluginFactory = (translationsMapRef: React.MutableRefObject<Re
             if (from < to) decos.push((attrs ? Decoration.mark({ class: className, attributes: attrs }) : Decoration.mark({ class: className })).range(from, to));
         };
 
+        const blockDecorations = view.state.field(blockMarkupField);
+        // Helper to detect if a position is inside a collapsed code block or table
+        const isCollapsedBlock = (pos: number) => {
+            let inside = false;
+            blockDecorations.between(pos, pos, (from, to, deco) => { if (deco.spec.replace) inside = true; });
+            return inside;
+        };
+
         for (let { from, to } of view.visibleRanges) {
             const textToSearch = view.state.doc.sliceString(from, to);
 
-            // --- STEP 1: Code blocks via LINE decorations (line-by-line scanner) ---
-            const codeBlockRanges: { from: number; to: number }[] = [];
-            const isDark = document.documentElement.classList.contains('dark');
-            const cbHeaderClass = isDark ? 'cm-cb-header-dark' : 'cm-cb-header';
-            const cbLineClass = isDark ? 'cm-cb-line-dark' : 'cm-cb-line';
-            const cbFooterClass = isDark ? 'cm-cb-footer-dark' : 'cm-cb-footer';
-            // Solo escanear líneas visibles + buffer de contexto para detectar bloques abiertos
-            const firstVisibleLine = view.state.doc.lineAt(view.visibleRanges[0]?.from ?? 0).number;
-            const lastVisibleLine = view.state.doc.lineAt(view.visibleRanges[view.visibleRanges.length - 1]?.to ?? 0).number;
-            const scanStart = Math.max(1, firstVisibleLine - 50);
-            const scanEnd = Math.min(view.state.doc.lines, lastVisibleLine + 10);
-            const totalLines = view.state.doc.lines;
-            let scanLine = scanStart;
-            while (scanLine <= scanEnd) {
-                const line = view.state.doc.line(scanLine);
-                const lineText = line.text;
-                // Check if line starts with ``` (opening fence)
-                if (lineText.startsWith('```') && lineText.trimEnd() !== '```' ? /^```\w*$/.test(lineText.trimEnd()) : lineText.trimEnd() === '```') {
-                    const openLine = scanLine;
-                    const rawLang = lineText.slice(3).trim().toLowerCase();
-                    // Look for closing ``` (must be exactly ``` on its own line)
-                    let closeLine = -1;
-                    for (let search = openLine + 1; search <= totalLines; search++) {
-                        if (view.state.doc.line(search).text.trimEnd() === '```') {
-                            closeLine = search;
-                            break;
-                        }
-                    }
-                    if (closeLine > 0) {
-                        const openLineObj = view.state.doc.line(openLine);
-                        const closeLineObj = view.state.doc.line(closeLine);
-                        codeBlockRanges.push({ from: openLineObj.from, to: closeLineObj.to });
-
-                        // Collect code content for copy
-                        const codeLines: string[] = [];
-                        for (let cl = openLine + 1; cl < closeLine; cl++) {
-                            codeLines.push(view.state.doc.line(cl).text);
-                        }
-                        const codeContent = codeLines.join('\n').trimEnd();
-
-                        // Apply line decorations + hide ``` when not focused
-                        const isRevealed = revealedLine === openLine || revealedLine === closeLine;
-
-                        decos.push(Decoration.line({ class: cbHeaderClass }).range(openLineObj.from));
-                        if (!isRevealed) {
-                            // Hide the ```lang text
-                            safeReplace(openLineObj.from, openLineObj.to);
-                        }
-                        decos.push(Decoration.widget({ widget: new CodeBlockCopyWidget(codeContent), side: 1 }).range(openLineObj.to, openLineObj.to));
-
-                        for (let cl = openLine + 1; cl < closeLine; cl++) {
-                            decos.push(Decoration.line({ class: cbLineClass }).range(view.state.doc.line(cl).from));
-                        }
-
-                        decos.push(Decoration.line({ class: cbFooterClass }).range(closeLineObj.from));
-                        if (!isRevealed) {
-                            // Hide the closing ```
-                            safeReplace(closeLineObj.from, closeLineObj.to);
-                        }
-
-                        scanLine = closeLine + 1;
-                        continue;
-                    }
-                }
-                scanLine++;
-            }
-
-            // Helper to skip inline formatting inside code blocks
-            const insideCB = (pos: number) => codeBlockRanges.some(r => pos >= r.from && pos < r.to);
-
-            // --- STEP 2: Inline formatting (skip inside code blocks) ---
+            // --- STEP 2: Inline formatting (skip inside collapsed blocks) ---
             const rules = [
                 { type: 'hl-new', regex: /\[\[hl:[^|]+\|([^|\]]+)\|([yrbg])\]\]/g },
                 { type: 'hl-old', regex: /\{=([\s\S]*?)=\}/g },
@@ -347,10 +451,7 @@ const visualMarkupPluginFactory = (translationsMapRef: React.MutableRefObject<Re
                 let match;
                 while ((match = rule.regex.exec(textToSearch)) !== null) {
                     const mFrom = from + match.index; const mTo = from + match.index + match[0].length;
-                    
-                    // Allow markers (hl, tr, mk-) even inside code blocks
-                    const isMarker = rule.type.startsWith('hl-') || rule.type === 'tr' || rule.type.startsWith('mk-');
-                    if (insideCB(mFrom) && !isMarker) continue;
+                    if (isCollapsedBlock(mFrom)) continue;
 
                     const matchLine = view.state.doc.lineAt(mFrom).number;
                     const isRevealed = matchLine === revealedLine;
@@ -377,23 +478,9 @@ const visualMarkupPluginFactory = (translationsMapRef: React.MutableRefObject<Re
                         const hrClass = `cm-hl-${colorCode}`;
                         if (isRevealed) safeMark(hrClass, mFrom, mTo);
                         else {
-                            // match[0] es [[hl:ts|text|c]]
-                            // match[1] es text
-                            // match[2] es c
-                            // El prefijo es [[hl:ts| (hasta el primer | antes del texto)
-                            const fullStr = match[0];
-                            const textStr = match[1];
-                            const colorStr = match[2];
-                            
-                            const firstPipe = fullStr.indexOf('|');
-                            const secondPipe = fullStr.lastIndexOf('|');
-                            
-                            const prefixLen = firstPipe + 1;
-                            const suffixLen = fullStr.length - secondPipe; // incluye el | antes del color
-                            
-                            safeReplace(mFrom, mFrom + prefixLen);
-                            safeMark(hrClass, mFrom + prefixLen, mTo - suffixLen);
-                            safeReplace(mTo - suffixLen, mTo);
+                            const fullStr = match[0]; const firstPipe = fullStr.indexOf('|'); const secondPipe = fullStr.lastIndexOf('|');
+                            const prefixLen = firstPipe + 1; const suffixLen = fullStr.length - secondPipe;
+                            safeReplace(mFrom, mFrom + prefixLen); safeMark(hrClass, mFrom + prefixLen, mTo - suffixLen); safeReplace(mTo - suffixLen, mTo);
                             decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, match[1]), side: 1 }).range(mTo, mTo));
                         }
                     }
@@ -405,16 +492,13 @@ const visualMarkupPluginFactory = (translationsMapRef: React.MutableRefObject<Re
                         }
                     }
                     else if (rule.type.startsWith('mk-')) {
-                      const mType = rule.type.replace('mk-', '');
-                      if (isRevealed) safeMark(`cm-custom-mk-${mType}`, mFrom, mTo);
-                      else {
-                        // Calcular longitud del prefijo [[tipo:timestamp|  y ocultar prefijo + sufijo ]]
-                        const prefixLen = mTo - mFrom - match[1].length - 2; // 2 = ]]
-                        safeReplace(mFrom, mFrom + prefixLen);                // ocultar [[tipo:timestamp|
-                        safeMark(`cm-custom-mk-${mType}`, mFrom + prefixLen, mTo - 2); // marcar solo el texto
-                        safeReplace(mTo - 2, mTo);                            // ocultar ]]
-                        decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, match[1]), side: 1 }).range(mTo, mTo));
-                      }
+                        const mType = rule.type.replace('mk-', '');
+                        if (isRevealed) safeMark(`cm-custom-mk-${mType}`, mFrom, mTo);
+                        else {
+                            const prefixLen = mTo - mFrom - match[1].length - 2;
+                            safeReplace(mFrom, mFrom + prefixLen); safeMark(`cm-custom-mk-${mType}`, mFrom + prefixLen, mTo - 2); safeReplace(mTo - 2, mTo);
+                            decos.push(Decoration.widget({ widget: new RemoveButtonWidget(mFrom, mTo, match[1]), side: 1 }).range(mTo, mTo));
+                        }
                     }
                     else if (rule.type === 'hr') {
                         safeReplace(mFrom, mTo); decos.push(Decoration.widget({ widget: new HrWidget(), side: 0 }).range(mFrom, mFrom));
@@ -543,6 +627,37 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-search-match": { backgroundColor: "rgba(245, 158, 11, 0.4) !important", borderBottom: "2px solid #f59e0b", color: "#000 !important" },
         ".cm-selectionMatch": { backgroundColor: "#518141 !important", color: "#000 !important" },
         ".cm-cb-header": { backgroundColor: "#F1F1F4", border: "1px solid #D4D4D8", borderBottom: "none", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#52525b", position: "relative", padding: "0 8px", minHeight: "2px" },
+        // --- TABLAS RENDERIZADAS ---
+        ".cm-table-container": { 
+            margin: "16px 0", 
+            padding: "8px", 
+            backgroundColor: "rgba(255, 255, 255, 0.5)", 
+            borderRadius: "8px", 
+            border: "1px solid rgba(0,0,0,0.05)",
+            overflowX: "auto"
+        },
+        ".dark .cm-table-container": { backgroundColor: "rgba(255, 255, 255, 0.03)", border: "1px solid rgba(255,255,255,0.05)" },
+        ".cm-rendered-table": { 
+            width: "100%", 
+            borderCollapse: "collapse", 
+            fontSize: "0.9em",
+            fontFamily: "inherit"
+        },
+        ".cm-rendered-table th": { 
+            backgroundColor: "rgba(0,0,0,0.03)", 
+            textAlign: "left", 
+            padding: "8px 12px", 
+            border: "1px solid rgba(0,0,0,0.1)",
+            fontWeight: "bold"
+        },
+        ".dark .cm-rendered-table th": { backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" },
+        ".cm-rendered-table td": { 
+            padding: "8px 12px", 
+            border: "1px solid rgba(0,0,0,0.1)" 
+        },
+        ".dark .cm-rendered-table td": { border: "1px solid rgba(255,255,255,0.1)" },
+        ".cm-rendered-table tr:nth-child(even)": { backgroundColor: "rgba(0,0,0,0.01)" },
+        ".dark .cm-rendered-table tr:nth-child(even)": { backgroundColor: "rgba(255,255,255,0.01)" },
         ".cm-cb-header-dark": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderBottom: "none", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#a1a1aa", position: "relative", padding: "0 8px", minHeight: "2px" },
         ".cm-cb-line": { backgroundColor: "#F1F1F4", borderLeft: "1px solid #D4D4D8", borderRight: "1px solid #D4D4D8", fontFamily: fontFamily, fontSize: "0.9em !important", color: "#312E81 !important", padding: "0 8px" },
         ".cm-cb-line-dark": { backgroundColor: "#0D0D0F", borderLeft: "1px solid #3F3F46", borderRight: "1px solid #3F3F46", fontFamily: fontFamily, fontSize: "0.9em !important", color: "#A78BFA !important", padding: "0 8px" },
@@ -1224,7 +1339,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
     const handleChange = (value: string) => {
         setContent(value); 
         if (debounceChangeTimerRef.current) clearTimeout(debounceChangeTimerRef.current);
-        debounceChangeTimerRef.current = setTimeout(() => onChange(value), 800); 
+        debounceChangeTimerRef.current = setTimeout(() => onChange(value), 300); 
     };
 
     const handleBlur = (e: any) => {
@@ -1451,6 +1566,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         dynamicTheme,
         revealedLineField,
         editingLineField,
+        blockMarkupField,
         visualMarkupPlugin, 
         clickHandlerExtension, 
         hoverTooltipExtension, 

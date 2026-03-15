@@ -33,6 +33,7 @@ interface AccordionItemProps {
   showLineNumbers?: boolean;
   onToggleLineNumbers?: () => void;
   session?: Session | null;
+  syncStatus?: 'idle' | 'saving' | 'saved';
 }
 
 const formatCleanDate = (isoString?: string) => {
@@ -249,6 +250,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   showLineNumbers = false,
   onToggleLineNumbers,
   session,
+  syncStatus: propSyncStatus = 'idle'
 }) => {
 
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
@@ -376,17 +378,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
     if (isEditingTitle && titleInputRef.current) titleInputRef.current.focus();
   }, [isEditingTitle]);
 
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   const handleUpdateContent = (newMarkdown: string) => {
-    if (newMarkdown === note.content) return;
-    setSyncStatus('saving');
     onUpdate(displayNoteId, { content: newMarkdown });
-    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-    syncTimeoutRef.current = setTimeout(() => {
-      setSyncStatus('saved');
-      setTimeout(() => setSyncStatus('idle'), 2000);
-    }, 5000);
   };
 
   const handleCancelTitle = () => {
@@ -713,8 +707,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           {note.updated_at && note.created_at && (new Date(note.updated_at).getTime() - new Date(note.created_at).getTime() > 60000) && (
             <><span className="opacity-50">|</span><span><span className="hidden md:inline text-zinc-500/80 mr-1">Editado:</span>{formatCleanDate(note.updated_at)}</span></>
           )}
-          {syncStatus === 'saving' && (<span className="flex items-center gap-1 text-amber-500 animate-pulse ml-1"><Loader2 size={10} className="animate-spin" /> Guardando...</span>)}
-          {syncStatus === 'saved' && (<span className="flex items-center gap-1 text-emerald-500 ml-1"><CloudCheck size={10} /> Sincronizado</span>)}
+          {propSyncStatus === 'saving' && (<span className="flex items-center gap-1 text-amber-500 animate-pulse ml-1"><Loader2 size={10} className="animate-spin" /> Guardando...</span>)}
+          {propSyncStatus === 'saved' && (<span className="flex items-center gap-1 text-emerald-500 ml-1"><CloudCheck size={10} /> Sincronizado</span>)}
         </div>
       </div>
 

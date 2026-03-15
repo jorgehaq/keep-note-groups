@@ -56,6 +56,8 @@ function App() {
 
   const hasLoadedOnce = React.useRef(false);
   const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({}); 
+  const pendingUpdatesRef = useRef<Record<string, any>>({});
+  const [noteSaveStatus, setNoteSaveStatus] = useState<Record<string, 'saving' | 'saved' | 'idle'>>({});
 
   const { 
     activeGroupId, setActiveGroup, openNotesByGroup, openGroup, dockedGroupIds, 
@@ -168,6 +170,19 @@ function App() {
     });
 
     return () => subscription.unsubscribe();
+  }, [session]);
+
+  // 🛡️ ACCIDENTAL REFRESH PROTECTION: Warning if there are pending saves
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        const hasPending = Object.keys(pendingUpdatesRef.current).length > 0;
+        if (hasPending) {
+            e.preventDefault();
+            e.returnValue = ''; // Standard way to show native confirmation dialog
+        }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
   // 📡 REALTIME SYNC - Listeners para sincronización entre dispositivos
@@ -738,29 +753,49 @@ function App() {
 
     if (Object.keys(dbUpdates).length === 0) return;
     
-    // 🚀 FIX: Los títulos se guardan inmediatamente. Solo el contenido usa debounce de 2s.
-    const isTitleOnly = updates.title !== undefined && updates.content === undefined;
-    const debounceTime = isTitleOnly ? 0 : 2000; 
+    // Acumular actualizaciones para no perder cambios intermedios (ej: título -> contenido rápido)
+    if (!pendingUpdatesRef.current[noteId]) pendingUpdatesRef.current[noteId] = {};
+    Object.assign(pendingUpdatesRef.current[noteId], dbUpdates);
+
+    // 🚀 FIX: Los títulos se guardan inmediatamente si no hay más cambios.
+    const pendingKeys = Object.keys(pendingUpdatesRef.current[noteId]).filter(k => k !== 'updated_at');
+    const isTitleOnly = updates.title !== undefined && !('content' in pendingUpdatesRef.current[noteId]) && pendingKeys.length === 1;
+    const debounceTime = isTitleOnly ? 0 : 1000; // Reducido de 2s a 1s para mejor UX
+
+    setNoteSaveStatus(prev => ({ ...prev, [noteId]: 'saving' }));
 
     if (saveTimeoutRef.current[noteId]) {
       clearTimeout(saveTimeoutRef.current[noteId]);
     }
 
     saveTimeoutRef.current[noteId] = setTimeout(async () => {
+      const finalUpdates = { ...pendingUpdatesRef.current[noteId] };
+      delete pendingUpdatesRef.current[noteId];
+
       try {
-        const { error } = await supabase.from('notes').update(dbUpdates).eq('id', noteId);
+        const { error } = await supabase.from('notes').update(finalUpdates).eq('id', noteId);
         if (error) throw error;
         
+        setNoteSaveStatus(prev => ({ ...prev, [noteId]: 'saved' }));
+        setTimeout(() => {
+            setNoteSaveStatus(prev => {
+                const newState = { ...prev };
+                if (newState[noteId] === 'saved') delete newState[noteId];
+                return newState;
+            });
+        }, 2000);
+
         // Sincronización dual hacia Kanban
-        if (dbUpdates.title !== undefined) {
+        if (finalUpdates.title !== undefined) {
             await supabase.from('tasks')
-                .update({ title: dbUpdates.title })
+                .update({ title: finalUpdates.title })
                 .eq('id', noteId);
             
             window.dispatchEvent(new CustomEvent('kanban-refetch'));
         }
       } catch (error: any) {
         console.error('Error updating note:', error.message);
+        setNoteSaveStatus(prev => ({ ...prev, [noteId]: 'idle' }));
       } finally {
         delete saveTimeoutRef.current[noteId];
       }
@@ -1579,6 +1614,7 @@ function App() {
                                       noteLineHeight={noteLineHeight}
                                       onCreateNote={createNoteFromAI}
                                       session={session}
+                                      syncStatus={noteSaveStatus[note.id] || 'idle'}
                                     />
                                   </div>
                                 );
