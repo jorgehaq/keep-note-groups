@@ -1676,54 +1676,6 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
 
 
                                     {/* RESALTADOR DINÁMICO */}
-                                    <div 
-                                      className="relative group/hl flex items-center"
-                                      onMouseEnter={() => !menuState?.isMobile && setShowHlOptions(true)}
-                                      onMouseLeave={() => !menuState?.isMobile && setShowHlOptions(false)}
-                                    >
-                                        <button 
-                                            onClick={() => {
-                                                if (menuState?.isMobile) {
-                                                    setShowHlOptions(!showHlOptions);
-                                                    setShowTagOptions(false);
-                                                    setShowMoreOptions(false);
-                                                } else {
-                                                    // Acción directa: el color actual ya está en hlColor
-                                                    doActionAndSave('highlight', () => doFormat('highlight', hlColor));
-                                                }
-                                            }}
-                                            title={`Resaltar (${HL_COLORS[hlColor].label})`}
-                                            className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${showHlOptions ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
-                                            style={{ color: HL_COLORS[hlColor].hex }}
-                                        >
-                                            <Highlighter size={18} />
-                                        </button>
-                                    </div>
-
-                                    {/* ETIQUETAS DINÁMICAS */}
-                                    <div 
-                                      className="relative group/tags flex items-center"
-                                      onMouseEnter={() => !menuState?.isMobile && setShowTagOptions(true)}
-                                      onMouseLeave={() => !menuState?.isMobile && setShowTagOptions(false)}
-                                    >
-                                        <button 
-                                            onClick={() => {
-                                                if (menuState?.isMobile) {
-                                                    setShowTagOptions(!showTagOptions);
-                                                    setShowHlOptions(false);
-                                                    setShowMoreOptions(false);
-                                                } else {
-                                                    // Acción directa: usar lastTag
-                                                    doActionAndSave(lastTag, () => doFormat(lastTag));
-                                                }
-                                            }}
-                                            className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${showTagOptions ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
-                                            title={`Etiqueta: ${MARKER_TYPES[lastTag].label}`}
-                                        >
-                                            <span className="text-lg">{MARKER_TYPES[lastTag].emoji}</span>
-                                        </button>
-                                    </div>
-
                                     {/* BOTÓN "MÁS" DINÁMICO */}
                                     <div className="relative group/more flex items-center">
                                         <button 
@@ -1762,6 +1714,55 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                             ) : (
                                                 <MoreHorizontal size={18} className="text-zinc-500" />
                                             )}
+                                        </button>
+                                    </div>
+
+                                    {/* ETIQUETAS DINÁMICAS */}
+                                    <div 
+                                      className="relative group/tags flex items-center"
+                                      onMouseEnter={() => !menuState?.isMobile && setShowTagOptions(true)}
+                                      onMouseLeave={() => !menuState?.isMobile && setShowTagOptions(false)}
+                                    >
+                                        <button 
+                                            onClick={() => {
+                                                if (menuState?.isMobile) {
+                                                    setShowTagOptions(!showTagOptions);
+                                                    setShowHlOptions(false);
+                                                    setShowMoreOptions(false);
+                                                } else {
+                                                    // Acción directa: usar lastTag
+                                                    doActionAndSave(lastTag, () => doFormat(lastTag));
+                                                }
+                                            }}
+                                            className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${showTagOptions ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                                            title={`Etiqueta: ${MARKER_TYPES[lastTag].label}`}
+                                        >
+                                            <span className="text-lg">{MARKER_TYPES[lastTag].emoji}</span>
+                                        </button>
+                                    </div>
+
+                                    {/* RESALTADOR */}
+                                    <div 
+                                      className="relative group/hl flex items-center"
+                                      onMouseEnter={() => !menuState?.isMobile && setShowHlOptions(true)}
+                                      onMouseLeave={() => !menuState?.isMobile && setShowHlOptions(false)}
+                                    >
+                                        <button 
+                                            onClick={() => {
+                                                if (menuState?.isMobile) {
+                                                    setShowHlOptions(!showHlOptions);
+                                                    setShowTagOptions(false);
+                                                    setShowMoreOptions(false);
+                                                } else {
+                                                    // Acción directa: el color actual ya está en hlColor
+                                                    doActionAndSave('highlight', () => doFormat('highlight', hlColor));
+                                                }
+                                            }}
+                                            title={`Resaltar (${HL_COLORS[hlColor].label})`}
+                                            className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${showHlOptions ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
+                                            style={{ color: HL_COLORS[hlColor].hex }}
+                                        >
+                                            <Highlighter size={18} />
                                         </button>
                                     </div>
                                 </>
