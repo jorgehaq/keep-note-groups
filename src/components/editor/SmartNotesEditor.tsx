@@ -1281,37 +1281,24 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         const textToTranslate = menuState.text.trim();
         if (!textToTranslate) return;
 
-        console.log("🚀 Iniciando traducción a través de Edge Function...");
+        console.log("🚀 Iniciando traducción (MyMemory)...");
         setIsTranslating(true);
-        
+
         try {
-            // 1. Obtener sesión para el historial
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("Debes iniciar sesión para traducir.");
 
             const sourceLang = targetLang === 'en' ? 'es' : 'en';
 
-            // 2. Llamada nativa a Supabase (Maneja CORS y JWT automáticamente)
-            const { data, error } = await supabase.functions.invoke('translateMyAppNotes', {
-                body: {
-                    sourceLang,
-                    targetLang,
-                    text: textToTranslate
-                },
-            });
+            const res = await fetch(
+                `https://api.mymemory.translated.net/get?q=${encodeURIComponent(textToTranslate)}&langpair=${sourceLang}|${targetLang}`
+            );
+            const json = await res.json();
+            const translatedText = json?.responseData?.translatedText;
+            if (!translatedText) throw new Error("MyMemory no devolvió traducción.");
 
-            // 3. Manejo de errores de la función
-            if (error) {
-                console.error("🚨 Error capturado por Supabase/Deno:", error);
-                throw new Error(error.message);
-            }
-
-            // 4. Éxito: Procesar traducción
-            console.log("✅ Traducción recibida:", data.translation);
-            const translatedText = data.translation;
             const replacement = `[[tr:${translatedText}|${textToTranslate}]]`;
-            
-            // 5. Guardar en el historial de traducciones
+
             await supabase.from('translations').insert([{
                 user_id: session.user.id,
                 source_text: textToTranslate,
@@ -1320,16 +1307,15 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                 target_lang: targetLang
             }]);
 
-            // 6. Actualizar editor
-            editorRef.current.view.dispatch({ 
-                changes: { from: menuState.from, to: menuState.to, insert: replacement }, 
+            editorRef.current.view.dispatch({
+                changes: { from: menuState.from, to: menuState.to, insert: replacement },
                 selection: { anchor: menuState.from + replacement.length },
-                effects: [setRevealedLine.of(null), ForceRedrawEffect.of(null)] // 🚀 Limpiar modo markdown tras traducción
+                effects: [setRevealedLine.of(null), ForceRedrawEffect.of(null)]
             });
             setMenuState(null);
 
         } catch (err: any) {
-            console.error("❌ Error fatal en traducción:", err);
+            console.error("❌ Error en traducción:", err);
             alert(`Error al traducir: ${err.message}`);
         } finally {
             setIsTranslating(false);
