@@ -926,6 +926,16 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
     const [tagShift, setTagShift] = useState(0);
     const [moreShift, setMoreShift] = useState(0);
 
+    // Wikipedia
+    const [wikiResult, setWikiResult] = useState<{
+        title: string;
+        extract: string;
+        description?: string;
+    } | null>(null);
+    const [isWikiLoading, setIsWikiLoading] = useState(false);
+    const [wikiTooltipVisible, setWikiTooltipVisible] = useState(false);
+    const wikiMenuRef = useRef<HTMLDivElement>(null);
+
     const adjustMenuPosition = (isOpen: boolean, menuRef: React.RefObject<HTMLDivElement>, containerRef: React.RefObject<HTMLDivElement>, setShift: React.Dispatch<React.SetStateAction<number>>) => {
         useLayoutEffect(() => {
             if (isOpen && menuRef.current && containerRef.current) {
@@ -994,6 +1004,9 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         setShowHlOptions(false);
         setShowTagOptions(false);
         setShowTrOptions(false);
+        setWikiResult(null);
+        setWikiTooltipVisible(false);
+        setIsWikiLoading(false);
     };
 
     // 🚀 SYNC: Escuchar cambios de tema global para forzar re-renderizado de bloques (tablas/code)
@@ -1419,6 +1432,55 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         }
     };
 
+    const fetchWikipedia = async (term: string) => {
+        if (!term.trim()) return;
+        setIsWikiLoading(true);
+        setWikiResult(null);
+        setWikiTooltipVisible(true);
+
+        try {
+            // Paso 1: buscar el título exacto
+            const searchUrl = `https://es.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(term)}&format=json&origin=*&srlimit=1`;
+            const searchRes = await fetch(searchUrl);
+            const searchData = await searchRes.json();
+            const hits = searchData?.query?.search;
+
+            if (!hits || hits.length === 0) {
+                // Intentar en inglés como fallback
+                const enUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(term.replace(/ /g, '_'))}`;
+                const enRes = await fetch(enUrl);
+                if (enRes.ok) {
+                    const enData = await enRes.json();
+                    setWikiResult({
+                        title: enData.title,
+                        extract: enData.extract || 'Sin descripción disponible.',
+                        description: enData.description,
+                    });
+                } else {
+                    setWikiResult({ title: term, extract: 'No encontrado en Wikipedia.', description: '' });
+                }
+                return;
+            }
+
+            // Paso 2: obtener el summary con el título exacto encontrado
+            const exactTitle = hits[0].title.replace(/ /g, '_');
+            const summaryUrl = `https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(exactTitle)}`;
+            const summaryRes = await fetch(summaryUrl);
+            const summaryData = await summaryRes.json();
+
+            setWikiResult({
+                title: summaryData.title || term,
+                extract: summaryData.extract || 'Sin descripción disponible.',
+                description: summaryData.description,
+            });
+
+        } catch {
+            setWikiResult({ title: term, extract: 'Error al consultar Wikipedia.', description: '' });
+        } finally {
+            setIsWikiLoading(false);
+        }
+    };
+
     const handleChange = (value: string) => {
         setContent(value); 
         if (debounceChangeTimerRef.current) clearTimeout(debounceChangeTimerRef.current);
@@ -1767,6 +1829,82 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
 
 
                                     {/* RESALTADOR DINÁMICO */}
+                                    {/* 🔍 WIKIPEDIA — primero en el menú, sin submenú */}
+                                    <div
+                                        className="relative flex items-center"
+                                        onMouseEnter={() => {
+                                            if (!menuState?.isMobile && menuState?.text && !wikiResult && !isWikiLoading) {
+                                                fetchWikipedia(menuState.text);
+                                            }
+                                            setWikiTooltipVisible(true);
+                                        }}
+                                        onMouseLeave={() => setWikiTooltipVisible(false)}
+                                    >
+                                        <button
+                                            onClick={() => {
+                                                if (menuState?.text) fetchWikipedia(menuState.text);
+                                            }}
+                                            className="h-[32px] min-w-[40px] px-2 flex items-center justify-center rounded-md transition-colors bg-amber-500/10 hover:bg-amber-500/20 text-amber-500"
+                                            title="Buscar en Wikipedia"
+                                        >
+                                            {isWikiLoading
+                                                ? <Loader2 size={13} className="animate-spin" />
+                                                : <Search size={16} />
+                                            }
+                                        </button>
+
+                                        {/* Tooltip Wikipedia — aparece al hover igual que las traducciones */}
+                                        {wikiTooltipVisible && wikiResult && (
+                                            <div
+                                                className="absolute bottom-full left-1/2 mb-2 w-72 bg-white dark:bg-zinc-900 border border-amber-500/30 rounded-xl shadow-2xl p-3 animate-fadeIn z-[100] pointer-events-auto"
+                                                style={{ transform: 'translateX(-50%)' }}
+                                                onMouseEnter={() => setWikiTooltipVisible(true)}
+                                                onMouseLeave={() => setWikiTooltipVisible(false)}
+                                            >
+                                                {/* Flecha decorativa */}
+                                                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0"
+                                                    style={{ borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid #f59e0b33' }}
+                                                />
+                                                <div className="flex items-start gap-2">
+                                                    <Search size={12} className="text-amber-500 mt-0.5 shrink-0" />
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-[11px] font-black text-amber-500 mb-1 truncate">{wikiResult.title}</p>
+                                                        {wikiResult.description && (
+                                                            <p className="text-[10px] text-zinc-400 mb-1.5 italic">{wikiResult.description}</p>
+                                                        )}
+                                                        <p className="text-[11px] text-zinc-700 dark:text-zinc-300 leading-relaxed line-clamp-5">
+                                                            {wikiResult.extract}
+                                                        </p>
+                                                        
+                                                        <a
+                                                            href={`https://es.wikipedia.org/wiki/${encodeURIComponent(wikiResult.title.replace(/ /g, '_'))}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            onMouseDown={(e) => e.stopPropagation()}
+                                                            className="mt-2 inline-flex items-center gap-1 text-[10px] text-amber-500 hover:text-amber-400 font-bold"
+                                                        >
+                                                            Ver en Wikipedia →
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Tooltip "cargando" */}
+                                        {wikiTooltipVisible && isWikiLoading && (
+                                            <div className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-amber-500/30 rounded-xl shadow-xl px-3 py-2 animate-fadeIn z-[100]"
+                                                style={{ transform: 'translateX(-50%)' }}
+                                            >
+                                                <span className="text-[11px] text-amber-500 flex items-center gap-1.5">
+                                                    <Loader2 size={10} className="animate-spin" /> Buscando...
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Separador visual */}
+                                    <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5" />
+
                                     {/* BOTÓN "MÁS" DINÁMICO */}
                                     <div className="relative group/more flex items-center">
                                         <button 
