@@ -1,5 +1,6 @@
 // src/components/editor/SmartNotesEditor.tsx
 import React, { useState, useEffect, useRef, useMemo, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
@@ -931,10 +932,23 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         title: string;
         extract: string;
         description?: string;
+        url?: string;
+        source?: 'npm' | 'pypi' | 'wikidata' | 'dictionary' | 'ddg' | 'wiki_es' | 'wiki_en' | 'none';
     } | null>(null);
     const [isWikiLoading, setIsWikiLoading] = useState(false);
     const [wikiTooltipVisible, setWikiTooltipVisible] = useState(false);
     const wikiMenuRef = useRef<HTMLDivElement>(null);
+    const wikiResultRef = useRef(wikiResult);
+    useEffect(() => { wikiResultRef.current = wikiResult; }, [wikiResult]);
+    const wikiCloseTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const wikiButtonRef = useRef<HTMLDivElement>(null);
+    const isInteractingWithWikiRef = useRef(false);
+
+    useEffect(() => {
+        const release = () => { isInteractingWithWikiRef.current = false; };
+        window.addEventListener('mouseup', release);
+        return () => window.removeEventListener('mouseup', release);
+    }, []);
 
     const adjustMenuPosition = (isOpen: boolean, menuRef: React.RefObject<HTMLDivElement>, containerRef: React.RefObject<HTMLDivElement>, setShift: React.Dispatch<React.SetStateAction<number>>) => {
         useLayoutEffect(() => {
@@ -1148,7 +1162,10 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         if (update.selectionSet) {
             // 🚀 PROTECCIÓN: Si el foco está en el buscador, no interferimos con la selección
             const active = document.activeElement;
-            if (active && (active.closest('.cm-panel') || active.closest('.cm-search'))) return;
+            if (active && (active.closest('.cm-panel') || active.closest('.cm-search') || active.closest('.wiki-selectable') || active.classList.contains('wiki-selectable'))) return;
+            
+            // Si el mouse está sobre el globo o interactuando con él, ignoramos cambios de selección del editor
+            if (isInteractingWithWikiRef.current || (wikiTooltipVisible && wikiMenuRef.current?.matches(':hover'))) return;
 
             const { main } = update.state.selection;
 
@@ -1432,50 +1449,233 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         }
     };
 
-    const fetchWikipedia = async (term: string) => {
+    // ── Limpiar texto seleccionado de markdown y caracteres especiales ──────────
+    const cleanSearchTerm = (raw: string): string => {
+        return raw.replace(/[*_#`~>|[\]()]/g, '').trim().slice(0, 80);
+    };
+
+    // ── 1. Stop words ES+EN a eliminar antes de buscar ─────────────────────────
+    const STOP_WORDS = new Set([
+        // Verbos acción ES
+        'activar','instalar','configurar','ejecutar','usar','hacer','crear',
+        'abrir','cerrar','iniciar','parar','correr','probar','ver','ir',
+        // Preposiciones/artículos ES
+        'el','la','los','las','un','una','de','del','en','con','para','por',
+        'que','como','cuando','donde','si','no','es','son','al','se',
+        // Verbos/artículos EN
+        'the','a','an','is','are','to','of','in','on','with','for','how',
+        'what','run','use','set','get','add','do','make','install','start',
+    ]);
+
+    // ── 2. Extraer términos candidatos por prioridad ────────────────────────────
+    const extractCandidates = (raw: string): string[] => {
+        const clean = raw.replace(/[*_#`~>|[\]()]/g, '').trim();
+        const words = clean.toLowerCase().split(/\s+/);
+        const meaningful = words.filter(w => w.length > 2 && !STOP_WORDS.has(w));
+
+        const candidates: string[] = [];
+        // Candidato 1: frase completa limpia
+        if (meaningful.length > 0) candidates.push(meaningful.join(' '));
+        // Candidato 2: primera palabra significativa sola
+        if (meaningful.length > 1) candidates.push(meaningful[0]);
+        // Candidato 3: última palabra significativa (ej: "pyvenv activar" → "pyvenv")
+        if (meaningful.length > 1) candidates.push(meaningful[meaningful.length - 1]);
+        // Candidato 4: frase original completa (fallback)
+        candidates.push(clean);
+
+        return [...new Set(candidates)].filter(Boolean);
+    };
+
+    // ── 3. Relevancia Jaccard con hard-reject si sujeto ausente ────────────────
+    const relevanceScore = (query: string, resultTitle: string): number => {
+        const qWords = [...new Set(query.toLowerCase().split(/\s+/).filter(w => w.length > 2))];
+        const tWords = [...new Set(resultTitle.toLowerCase().split(/\s+/).filter(w => w.length > 2))];
+        if (qWords.length === 0) return 0;
+        const firstQWord = qWords[0];
+        const firstWordPresent = tWords.some(t => t.includes(firstQWord) || firstQWord.includes(t));
+        if (!firstWordPresent) return 0;
+        const intersection = qWords.filter(w => tWords.some(t => t.includes(w) || w.includes(t))).length;
+        const union = new Set([...qWords, ...tWords]).size;
+        return union > 0 ? intersection / union : 0;
+    };
+
+    // ── 4. Detectores de dominio ───────────────────────────────────────────────
+    const looksLikePython = (t: string): boolean => {
+        const pyWords = ['py','python','pip','venv','pyvenv','django','flask',
+            'pandas','numpy','scipy','jupyter','conda','virtualenv','pytest'];
+        return pyWords.some(w => t.toLowerCase().includes(w));
+    };
+
+    const looksLikeJS = (t: string): boolean => {
+        const jsWords = ['react','vue','angular','node','npm','webpack','vite',
+            'typescript','javascript','js','ts','eslint','babel','rollup','next',
+            'nuxt','svelte','tool','tools','devtools','plugin','extension','sdk'];
+        return jsWords.some(w => t.toLowerCase().includes(w));
+    };
+
+    // ── 5. fetchDefinition — universal, multi-término ─────────────────────────
+    const fetchDefinition = async (term: string) => {
         if (!term.trim()) return;
+        const rawClean = term.replace(/[*_#`~>|[\]()]/g, '').trim().slice(0, 80);
+        if (!rawClean) return;
+
         setIsWikiLoading(true);
         setWikiResult(null);
         setWikiTooltipVisible(true);
 
-        try {
-            // Paso 1: buscar el título exacto
-            const searchUrl = `https://es.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(term)}&format=json&origin=*&srlimit=1`;
-            const searchRes = await fetch(searchUrl);
-            const searchData = await searchRes.json();
-            const hits = searchData?.query?.search;
+        const candidates = extractCandidates(rawClean);
 
-            if (!hits || hits.length === 0) {
-                // Intentar en inglés como fallback
-                const enUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(term.replace(/ /g, '_'))}`;
-                const enRes = await fetch(enUrl);
-                if (enRes.ok) {
-                    const enData = await enRes.json();
-                    setWikiResult({
-                        title: enData.title,
-                        extract: enData.extract || 'Sin descripción disponible.',
-                        description: enData.description,
-                    });
-                } else {
-                    setWikiResult({ title: term, extract: 'No encontrado en Wikipedia.', description: '' });
-                }
-                return;
+        const tryPyPI = async (t: string) => {
+            const slugs = [
+                t.toLowerCase().replace(/\s+/g, '-'),
+                t.toLowerCase().replace(/\s+/g, ''),
+                t.toLowerCase().split(/\s+/)[0],
+            ];
+            for (const slug of [...new Set(slugs)]) {
+                try {
+                    const res = await fetch(`https://pypi.org/pypi/${slug}/json`);
+                    if (!res.ok) continue;
+                    const d = await res.json();
+                    const desc = d.info?.summary;
+                    if (desc && desc.length > 10) {
+                        return {
+                            title: d.info.name,
+                            extract: `${desc}${d.info.version ? `\n\nVersión actual: ${d.info.version}` : ''}`,
+                            description: d.info.keywords?.split(/[,\s]+/).slice(0,4).join(' · ') || 'Python package',
+                            url: d.info.project_url || `https://pypi.org/project/${slug}`,
+                            source: 'pypi' as const,
+                        };
+                    }
+                } catch { /* continuar */ }
             }
+            return null;
+        };
 
-            // Paso 2: obtener el summary con el título exacto encontrado
-            const exactTitle = hits[0].title.replace(/ /g, '_');
-            const summaryUrl = `https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(exactTitle)}`;
-            const summaryRes = await fetch(summaryUrl);
-            const summaryData = await summaryRes.json();
+        const tryNPM = async (t: string) => {
+            const words = t.toLowerCase().split(/\s+/);
+            const slugs = [
+                t.toLowerCase().replace(/\s+/g, '-'),
+                `${words[0]}-devtools`,
+                `${words[0]}-tools`,
+                words.filter(w => !STOP_WORDS.has(w)).join('-'),
+            ];
+            for (const slug of [...new Set(slugs)]) {
+                try {
+                    const res = await fetch(`https://registry.npmjs.org/${slug}`);
+                    if (!res.ok) continue;
+                    const d = await res.json();
+                    if (d.description && d.description.length > 10) {
+                        return {
+                            title: d.name,
+                            extract: `${d.description}${d['dist-tags']?.latest ? `\n\nVersión actual: ${d['dist-tags'].latest}` : ''}`,
+                            description: d.keywords?.slice(0,4).join(' · ') || 'npm package',
+                            url: d.homepage || `https://www.npmjs.com/package/${slug}`,
+                            source: 'npm' as const,
+                        };
+                    }
+                } catch { /* continuar */ }
+            }
+            return null;
+        };
 
-            setWikiResult({
-                title: summaryData.title || term,
-                extract: summaryData.extract || 'Sin descripción disponible.',
-                description: summaryData.description,
-            });
+        const tryDictionary = async (t: string) => {
+            const word = t.split(/\s+/)[0];
+            if (!word || word.length < 3) return null;
+            try {
+                const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+                if (!res.ok) return null;
+                const d = await res.json();
+                const entry = Array.isArray(d) ? d[0] : null;
+                if (!entry) return null;
+                const meaning = entry.meanings?.[0];
+                const def = meaning?.definitions?.[0]?.definition;
+                if (!def) return null;
+                return {
+                    title: entry.word,
+                    extract: def,
+                    description: meaning?.partOfSpeech || 'Definición',
+                    url: `https://en.wiktionary.org/wiki/${encodeURIComponent(word)}`,
+                    source: 'dictionary' as const,
+                };
+            } catch { return null; }
+        };
 
+        const tryWikipedia = async (t: string, lang: 'en'|'es') => {
+            try {
+                const direct = await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(t.replace(/ /g,'_'))}`);
+                if (direct.ok) {
+                    const d = await direct.json();
+                    if (d.extract && relevanceScore(t, d.title) >= 0.4) {
+                        return {
+                            title: d.title,
+                            extract: d.extract,
+                            description: d.description ? `${lang.toUpperCase()} · ${d.description}` : `Wikipedia ${lang.toUpperCase()}`,
+                            url: d.content_urls?.desktop?.page,
+                            source: (lang === 'en' ? 'wiki_en' : 'wiki_es') as 'wiki_en' | 'wiki_es',
+                        };
+                    }
+                }
+                const search = await fetch(`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(t)}&format=json&origin=*&srlimit=5`);
+                if (!search.ok) return null;
+                const sd = await search.json();
+                const hits = (sd?.query?.search || []) as {title:string}[];
+                const best = hits.map(h => ({ ...h, score: relevanceScore(t, h.title) })).filter(h => h.score >= 0.5).sort((a,b) => b.score - a.score)[0];
+                if (!best) return null;
+                const sumRes = await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(best.title.replace(/ /g,'_'))}`);
+                if (!sumRes.ok) return null;
+                const d = await sumRes.json();
+                if (!d.extract) return null;
+                return {
+                    title: d.title,
+                    extract: d.extract,
+                    description: d.description ? `${lang.toUpperCase()} · ${d.description}` : `Wikipedia ${lang.toUpperCase()}`,
+                    url: d.content_urls?.desktop?.page,
+                            source: (lang === 'en' ? 'wiki_en' : 'wiki_es') as 'wiki_en' | 'wiki_es',
+                };
+            } catch { return null; }
+        };
+
+        const tryWikidata = async (t: string) => {
+            try {
+                const res = await fetch(`https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(t)}&language=en&format=json&origin=*&limit=3&type=item`);
+                const d = await res.json();
+                const hit = (d?.search || []).find((h:any) => h.label && relevanceScore(t, h.label) >= 0.6 && h.description);
+                if (!hit) return null;
+                return {
+                    title: hit.label,
+                    extract: hit.description,
+                    description: `Wikidata · ${hit.id}`,
+                    url: `https://www.wikidata.org/wiki/${hit.id}`,
+                    source: 'wikidata' as const,
+                };
+            } catch { return null; }
+        };
+
+        try {
+            for (const candidate of candidates) {
+                let result = null;
+                if (looksLikePython(candidate)) {
+                    result = await tryPyPI(candidate);
+                    if (result) { setWikiResult(result); return; }
+                }
+                if (looksLikeJS(candidate)) {
+                    result = await tryNPM(candidate);
+                    if (result) { setWikiResult(result); return; }
+                }
+                result = await tryWikipedia(candidate, 'en');
+                if (result) { setWikiResult(result); return; }
+                result = await tryWikipedia(candidate, 'es');
+                if (result) { setWikiResult(result); return; }
+                result = await tryWikidata(candidate);
+                if (result) { setWikiResult(result); return; }
+                if (candidate.split(/\s+/).length <= 2) {
+                    result = await tryDictionary(candidate);
+                    if (result) { setWikiResult(result); return; }
+                }
+            }
+            setWikiResult({ title: rawClean, extract: `No se encontró definición para "${rawClean}".`, source: 'none' });
         } catch {
-            setWikiResult({ title: term, extract: 'Error al consultar Wikipedia.', description: '' });
+            setWikiResult({ title: rawClean, extract: 'Error al buscar.', source: 'none' });
         } finally {
             setIsWikiLoading(false);
         }
@@ -1495,7 +1695,8 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
             related.classList.contains('floating-menu-container') ||
             related.closest('.cm-panel') ||
             related.closest('.cm-search') ||
-            related.closest('.cm-search-marker-container')
+            related.closest('.cm-search-marker-container') ||
+            isInteractingWithWikiRef.current
         );
         
         if (isFocusStillInEditor) {
@@ -1769,14 +1970,17 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                         left: clampedLeft, 
                         transform: 'translate(-50%, -100%)' 
                     }}
+                    onClick={(e) => e.stopPropagation()} // Bloquear clics al editor
                     onMouseDown={(e) => {
-                        if ((e.target as HTMLElement).tagName !== 'INPUT') {
+                        const target = e.target as HTMLElement;
+                        if (target.tagName !== 'INPUT' && !target.closest('.wiki-selectable')) {
                             e.preventDefault();
                         }
                         e.stopPropagation();
                     }}
                     onPointerDown={(e) => {
-                        if ((e.target as HTMLElement).tagName !== 'INPUT') {
+                        const target = e.target as HTMLElement;
+                        if (target.tagName !== 'INPUT' && !target.closest('.wiki-selectable')) {
                             e.preventDefault();
                         }
                         e.stopPropagation();
@@ -1831,18 +2035,30 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                     {/* RESALTADOR DINÁMICO */}
                                     {/* 🔍 WIKIPEDIA — primero en el menú, sin submenú */}
                                     <div
+                                        ref={wikiButtonRef}
                                         className="relative flex items-center"
                                         onMouseEnter={() => {
-                                            if (!menuState?.isMobile && menuState?.text && !wikiResult && !isWikiLoading) {
-                                                fetchWikipedia(menuState.text);
+                                            if (wikiCloseTimerRef.current) clearTimeout(wikiCloseTimerRef.current);
+                                            const termToSearch = cleanSearchTerm(menuState?.text || '');
+                                            if (!menuState?.isMobile && termToSearch && !wikiResult && !isWikiLoading) {
+                                                fetchDefinition(termToSearch);
                                             }
                                             setWikiTooltipVisible(true);
                                         }}
-                                        onMouseLeave={() => setWikiTooltipVisible(false)}
+                                        onMouseLeave={() => {
+                                            if (isInteractingWithWikiRef.current) return;
+                                            wikiCloseTimerRef.current = setTimeout(() => {
+                                                const sel = window.getSelection();
+                                                const isSelectingInside = sel && sel.toString() && sel.anchorNode?.parentElement?.closest('.wiki-selectable');
+                                                if (isSelectingInside && !sel.isCollapsed) return;
+                                                setWikiTooltipVisible(false);
+                                            }, 200);
+                                        }}
                                     >
                                         <button
                                             onClick={() => {
-                                                if (menuState?.text) fetchWikipedia(menuState.text);
+                                                const termToSearch = cleanSearchTerm(menuState?.text || '');
+                                                if (termToSearch) fetchDefinition(termToSearch);
                                             }}
                                             className="h-[32px] min-w-[40px] px-2 flex items-center justify-center rounded-md transition-colors bg-amber-500/10 hover:bg-amber-500/20 text-amber-500"
                                             title="Buscar en Wikipedia"
@@ -1853,41 +2069,98 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                             }
                                         </button>
 
-                                        {/* Tooltip Wikipedia — aparece al hover igual que las traducciones */}
-                                        {wikiTooltipVisible && wikiResult && (
+                                        {/* Tooltip Wikipedia — Renderizado vla Portal para aislamiento total */}
+                                        {wikiTooltipVisible && wikiResult && createPortal(
                                             <div
-                                                className="absolute bottom-full left-1/2 mb-2 w-72 bg-white dark:bg-zinc-900 border border-amber-500/30 rounded-xl shadow-2xl p-3 animate-fadeIn z-[100] pointer-events-auto"
-                                                style={{ transform: 'translateX(-50%)' }}
-                                                onMouseEnter={() => setWikiTooltipVisible(true)}
-                                                onMouseLeave={() => setWikiTooltipVisible(false)}
+                                                ref={wikiMenuRef}
+                                                className="fixed bg-white dark:bg-zinc-900 border border-amber-500/30 rounded-xl shadow-2xl p-3 animate-fadeIn z-[10000] pointer-events-auto select-text wiki-selectable"
+                                                style={{ 
+                                                    userSelect: 'text',
+                                                    WebkitUserSelect: 'text',
+                                                    // Calculamos posición basada en el botón de forma robusta
+                                                    top: (wikiButtonRef.current?.getBoundingClientRect().top || 0) - 12,
+                                                    left: (wikiButtonRef.current?.getBoundingClientRect().left || 0) + ((wikiButtonRef.current?.getBoundingClientRect().width || 0) / 2),
+                                                    transform: 'translate(-50%, -100%)',
+                                                    width: '18rem'
+                                                }}
+                                                tabIndex={-1}
+                                                onMouseEnter={() => {
+                                                    if (wikiCloseTimerRef.current) clearTimeout(wikiCloseTimerRef.current);
+                                                    setWikiTooltipVisible(true);
+                                                }}
+                                                onMouseLeave={() => {
+                                                    wikiCloseTimerRef.current = setTimeout(() => {
+                                                        const sel = window.getSelection();
+                                                        if (sel && sel.toString() && !sel.isCollapsed) return;
+                                                        setWikiTooltipVisible(false);
+                                                    }, 200);
+                                                }}
+                                                onMouseDown={(e) => {
+                                                    isInteractingWithWikiRef.current = true;
+                                                    e.currentTarget.focus();
+                                                    e.stopPropagation();
+                                                }}
+                                                onPointerDown={(e) => {
+                                                    isInteractingWithWikiRef.current = true;
+                                                    e.stopPropagation();
+                                                }}
+                                                onMouseUp={(e) => e.stopPropagation()}
+                                                onClick={(e) => e.stopPropagation()}
+                                                onContextMenu={(e) => e.stopPropagation()}
                                             >
-                                                {/* Flecha decorativa */}
-                                                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0"
-                                                    style={{ borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid #f59e0b33' }}
+                                                {/* Puente invisible */}
+                                                <div className="absolute top-full left-0 right-0 h-4 wiki-selectable" 
+                                                     onMouseDown={(e) => e.stopPropagation()} 
                                                 />
-                                                <div className="flex items-start gap-2">
+
+                                                {/* Botón de cierre manual */}
+                                                <button 
+                                                    onClick={() => setWikiTooltipVisible(false)}
+                                                    className="absolute top-2 right-2 p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-600 transition-colors"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+
+                                                <div className="flex items-start gap-2 pr-4">
                                                     <Search size={12} className="text-amber-500 mt-0.5 shrink-0" />
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-[11px] font-black text-amber-500 mb-1 truncate">{wikiResult.title}</p>
+                                                        <p className="text-[11px] font-black text-amber-500 mb-1 truncate select-text">{wikiResult.title}</p>
                                                         {wikiResult.description && (
-                                                            <p className="text-[10px] text-zinc-400 mb-1.5 italic">{wikiResult.description}</p>
+                                                            <p className="text-[10px] text-zinc-400 mb-1.5 italic select-text">{wikiResult.description}</p>
                                                         )}
-                                                        <p className="text-[11px] text-zinc-700 dark:text-zinc-300 leading-relaxed line-clamp-5">
+                                                        <p className="text-[11px] text-zinc-700 dark:text-zinc-300 leading-relaxed line-clamp-5 select-text cursor-text">
                                                             {wikiResult.extract}
                                                         </p>
                                                         
-                                                        <a
-                                                            href={`https://es.wikipedia.org/wiki/${encodeURIComponent(wikiResult.title.replace(/ /g, '_'))}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            onMouseDown={(e) => e.stopPropagation()}
-                                                            className="mt-2 inline-flex items-center gap-1 text-[10px] text-amber-500 hover:text-amber-400 font-bold"
-                                                        >
-                                                            Ver en Wikipedia →
-                                                        </a>
+                                                        {/* Badge de fuente */}
+                                                        <div className="flex items-center justify-between mt-2 select-text">
+                                                            <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 select-text">
+                                                                {wikiResult.source === 'npm' && '📦 npm Registry'}
+                                                                {wikiResult.source === 'pypi' && '🐍 PyPI'}
+                                                                {wikiResult.source === 'wikidata' && '🔷 Wikidata'}
+                                                                {wikiResult.source === 'dictionary' && '📝 Dictionary'}
+                                                                {wikiResult.source === 'ddg' && '⚡ DuckDuckGo'}
+                                                                {wikiResult.source === 'wiki_es' && '📖 Wikipedia ES'}
+                                                                {wikiResult.source === 'wiki_en' && '📖 Wikipedia EN'}
+                                                                {wikiResult.source === 'none' && '❓ Sin definición'}
+                                                            </span>
+                                                            
+                                                            {wikiResult.url && wikiResult.url !== '#' && (
+                                                                <a
+                                                                    href={wikiResult.url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    onMouseDown={(e) => e.stopPropagation()}
+                                                                    className="text-[10px] text-amber-500 hover:text-amber-400 font-bold select-text"
+                                                                >
+                                                                    Ver más →
+                                                                </a>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
+                                            </div>,
+                                            document.body
                                         )}
 
                                         {/* Tooltip "cargando" */}
@@ -1895,6 +2168,9 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                             <div className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-amber-500/30 rounded-xl shadow-xl px-3 py-2 animate-fadeIn z-[100]"
                                                 style={{ transform: 'translateX(-50%)' }}
                                             >
+                                                {/* Puente invisible */}
+                                                <div className="absolute top-full left-0 right-0 h-4" />
+                                                
                                                 <span className="text-[11px] text-amber-500 flex items-center gap-1.5">
                                                     <Loader2 size={10} className="animate-spin" /> Buscando...
                                                 </span>
