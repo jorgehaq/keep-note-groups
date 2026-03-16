@@ -32,14 +32,15 @@ interface SmartNotesEditorProps {
 }
 
 const MARKER_TYPES = {
-  ins:   { label: 'Insight',   light: '#7C3AED', dark: '#A78BFA', emoji: '💡' },
-  idea:  { label: 'Idea',      light: '#DC2626', dark: '#F87171', emoji: '🔥' },
-  op:    { label: 'Opinión',   light: '#4D7C0F', dark: '#A3E635', emoji: '🌱' },
-  duda:  { label: 'Duda',      light: '#0284C7', dark: '#38BDF8', emoji: '💧' },
-  wow:   { label: 'Sorpresa',  light: '#C026D3', dark: '#F472B6', emoji: '✨' },
-  pat:   { label: 'Patrón',    light: '#6D28D9', dark: '#C084FC', emoji: '🌀' },
-  yo:    { label: 'Yo',        light: '#B45309', dark: '#FBBF24', emoji: '⭐' },
-  ruido: { label: 'Ruido',     light: '#4B5563', dark: '#9CA3AF', emoji: '🔇' },
+  ins:    { label: 'Insight',   light: '#7C3AED', dark: '#A78BFA', emoji: '🧐' },
+  duda:   { label: 'Duda',      light: '#0284C7', dark: '#38BDF8', emoji: '🤔' },
+  idea:   { label: 'Idea',      light: '#DC2626', dark: '#F87171', emoji: '🤩' },
+  op:     { label: 'Opinión',   light: '#4D7C0F', dark: '#A3E635', emoji: '😤' },
+  wow:    { label: 'Sorpresa',  light: '#C026D3', dark: '#F472B6', emoji: '😮' },
+  pat:    { label: 'Patrón',    light: '#6D28D9', dark: '#C084FC', emoji: '👀' },
+  yo:     { label: 'Yo',        light: '#B45309', dark: '#FBBF24', emoji: '🥹' },
+  ruido:  { label: 'Ruido',     light: '#4B5563', dark: '#9CA3AF', emoji: '🥱' },
+  contra: { label: 'Contradicción', light: '#991B1B', dark: '#EF4444', emoji: '😈' },
 } as const;
 
 const HL_COLORS = {
@@ -461,6 +462,7 @@ const visualMarkupPluginFactory = (translationsMapRef: React.MutableRefObject<Re
                 { type: 'mk-pat',    regex: /\[\[pat:[^\|]+\|([^\]]+)\]\]/g },
                 { type: 'mk-yo',     regex: /\[\[yo:[^\|]+\|([^\]]+)\]\]/g },
                 { type: 'mk-ruido',  regex: /\[\[ruido:[^\|]+\|([^\]]+)\]\]/g },
+                { type: 'mk-contra', regex: /\[\[contra:[^\|]+\|([^\]]+)\]\]/g },
                 { type: 'h1', regex: /^(#{1,6})\s+(.*)/gm }, 
                 { type: 'bold', regex: /\*\*([\s\S]*?)\*\*/g }, 
                 { type: 'strikethrough', regex: /~~([\s\S]*?)~~/g },
@@ -657,6 +659,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-custom-mk-pat":  { backgroundColor: "#F3E8FF !important", color: "#6B21A8 !important", border: "1px solid #D8B4FE", padding: "0 3px", borderRadius: "4px !important" },
         ".cm-custom-mk-yo":   { backgroundColor: "#FEF3C7 !important", color: "#92400E !important", border: "1px solid #FCD34D", padding: "0 3px", borderRadius: "4px !important" },
         ".cm-custom-mk-ruido":{ backgroundColor: "#F3F4F6 !important", color: "#374151 !important", border: "1px solid #D1D5DB", padding: "0 3px", borderRadius: "4px !important" },
+        ".cm-custom-mk-contra":{ backgroundColor: "#FEE2E2 !important", color: "#991B1B !important", border: "1px solid #FCA5A5", padding: "0 3px", borderRadius: "4px !important" },
 
         // DARK MODE - fondos sólidos oscuros
         ".dark & .cm-custom-mk-ins":  { backgroundColor: "#2E1065 !important", color: "#C4B5FD !important", border: "1px solid #4C1D95" },
@@ -667,15 +670,37 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".dark & .cm-custom-mk-pat":  { backgroundColor: "#3B0764 !important", color: "#D8B4FE !important", border: "1px solid #581C87" },
         ".dark & .cm-custom-mk-yo":   { backgroundColor: "#451A03 !important", color: "#FCD34D !important", border: "1px solid #78350F" },
         ".dark & .cm-custom-mk-ruido":{ backgroundColor: "#1F2937 !important", color: "#9CA3AF !important", border: "1px solid #374151" },
+        ".dark & .cm-custom-mk-contra":{ backgroundColor: "#450A0A !important", color: "#EF4444 !important", border: "1px solid #991B1B" },
         ".cm-custom-hr": { display: "inline-block", verticalAlign: "middle", width: "calc(100% - 30px)", height: "1px", backgroundColor: "#d4d4d8", margin: "12px 0", borderRadius: "2px" },
         ".dark & .cm-custom-hr": { backgroundColor: "#3f3f3f" },
         ".cm-custom-hr-big": { display: "inline-block", verticalAlign: "middle", width: "calc(100% - 30px)", height: "3px", background: "linear-gradient(90deg, transparent, #8B5CF6, #6366f1, #8B5CF6, transparent)", margin: "12px 0", borderRadius: "4px" },
         ".cm-search-match": { backgroundColor: "rgba(245, 158, 11, 0.4) !important", borderBottom: "2px solid #f59e0b", color: "#000 !important" },
         ".cm-selectionMatch": { backgroundColor: "#518141 !important", color: "#000 !important" },
         ".cm-cb-header": { backgroundColor: "#F1F1F4", border: "1px solid #D4D4D8", borderBottom: "none", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#52525b", position: "relative", padding: "0 8px", minHeight: "1.25rem" },
+        // --- MARKERS HOVER ---
+        "[class*='cm-custom-mk-']": { position: "relative" },
+        "[class*='cm-custom-mk-']::before": { 
+            marginRight: "4px", 
+            display: "inline-block", 
+            opacity: "0", 
+            width: "0", 
+            overflow: "hidden", 
+            transition: "all 0.2s ease",
+            verticalAlign: "middle"
+        },
+        "[class*='cm-custom-mk-']:hover::before": { opacity: "1", width: "1.2em", marginRight: "6px" },
+        ".cm-custom-mk-ins::before":  { content: "'🧐'" },
+        ".cm-custom-mk-duda::before": { content: "'🤔'" },
+        ".cm-custom-mk-idea::before": { content: "'🤩'" },
+        ".cm-custom-mk-op::before":   { content: "'😤'" },
+        ".cm-custom-mk-wow::before":  { content: "'😮'" },
+        ".cm-custom-mk-pat::before":  { content: "'👀'" },
+        ".cm-custom-mk-yo::before":   { content: "'🥹'" },
+        ".cm-custom-mk-ruido::before":{ content: "'🥱'" },
+        ".cm-custom-mk-contra::before":{ content: "'😈'" },
+
         // --- TABLAS RENDERIZADAS ---
         ".cm-table-container": { 
-            // 🚀 FIX: Use padding/display instead of margin to prevent CM6 measurement offsets
             display: "block",
             padding: "16px 8px", 
             backgroundColor: "rgba(255, 255, 255, 0.5)", 
@@ -708,7 +733,6 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".dark & .cm-rendered-table tr:nth-child(even)": { backgroundColor: "rgba(255,255,255,0.01)" },
 
         // --- CODEBLOCKS ---
-        ".cm-cb-header": { backgroundColor: "#F1F1F4", border: "1px solid #D4D4D8", borderBottom: "none", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#52525b", position: "relative", padding: "0 8px", minHeight: "1.25rem" },
         ".dark & .cm-cb-header": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", color: "#a1a1aa" },
         
         ".cm-cb-line": { backgroundColor: "#F1F1F4", borderLeft: "1px solid #D4D4D8", borderRight: "1px solid #D4D4D8", fontFamily: fontFamily, color: "#312E81 !important", padding: "0 8px" },
@@ -1276,7 +1300,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
             .replace(/\[\[hl:[^|]+\|([^|\]]+)\|[yrbg]\]\]/g, '$1')
             .replace(/\{=([\s\S]*?)=\}/g, '$1')
             .replace(/~~([\s\S]*?)~~/g, '$1')
-            .replace(/\[\[(ins|idea|op|duda|wow|pat|yo|ruido):[^\|]+\|([^\]]+)\]\]/g, '$2');
+            .replace(/\[\[(ins|idea|op|duda|wow|pat|yo|ruido|contra):[^\|]+\|([^\]]+)\]\]/g, '$2');
 
         if (type === 'link') {
             if (showLinkInput) return;
@@ -1330,7 +1354,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
 
     const confirmLink = () => {
         if (!menuState || !editorRef.current?.view) return;
-        const textToLink = menuState.text.replace(/\[\[(ins|idea|op|duda|wow|pat|yo|ruido):[^\|]+\|([^\]]+)\]\]/g, '$2').trim();
+        const textToLink = menuState.text.replace(/\[\[(ins|idea|op|duda|wow|pat|yo|ruido|contra):[^\|]+\|([^\]]+)\]\]/g, '$2').trim();
         // Usamos la ref si estamos en un contexto asíncrono (como blur)
         const currentUrl = linkUrlRef.current.trim();
         
@@ -1765,7 +1789,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                             }}
                                             onMouseEnter={() => !menuState?.isMobile && setShowMoreOptions(true)}
                                             onMouseLeave={() => !menuState?.isMobile && setShowMoreOptions(false)}
-                                            className={`h-[26px] min-w-[32px] px-2 flex items-center justify-center rounded-md transition-colors bg-blue-500/10 hover:bg-blue-500/20 text-blue-500`}
+                                            className={`h-[32px] min-w-[40px] px-2 flex items-center justify-center rounded-md transition-colors bg-blue-500/10 hover:bg-blue-500/20 text-blue-500`}
                                             title="Más opciones"
                                         >
                                             {lastMoreAction === 'es' || lastMoreAction === 'en' ? (
@@ -1801,10 +1825,10 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                                     doActionAndSave(lastTag, () => doFormat(lastTag));
                                                 }
                                             }}
-                                            className={`h-[26px] min-w-[32px] px-2 flex items-center justify-center rounded-md transition-colors bg-blue-500/10 hover:bg-blue-500/20 text-blue-500`}
+                                            className={`h-[32px] min-w-[40px] px-2 flex items-center justify-center rounded-md transition-colors bg-blue-500/10 hover:bg-blue-500/20 text-blue-500`}
                                             title={`Etiqueta: ${MARKER_TYPES[lastTag].label}`}
                                         >
-                                            <span className="text-sm">{MARKER_TYPES[lastTag].emoji}</span>
+                                            <span className="text-base">{MARKER_TYPES[lastTag].emoji}</span>
                                         </button>
                                     </div>
 
@@ -1826,9 +1850,9 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                                 }
                                             }}
                                             title={`Resaltar (${HL_COLORS[hlColor].label})`}
-                                            className={`h-[26px] min-w-[32px] px-2 flex items-center justify-center rounded-md transition-colors bg-blue-500/10 hover:bg-blue-500/20`}
+                                            className={`h-[32px] min-w-[40px] px-2 flex items-center justify-center rounded-md transition-colors bg-blue-500/10 hover:bg-blue-500/20`}
                                         >
-                                            <Highlighter size={14} style={{ color: HL_COLORS[hlColor].hex }} />
+                                            <Highlighter size={16} style={{ color: HL_COLORS[hlColor].hex }} />
                                         </button>
                                     </div>
                                 </>
@@ -1853,10 +1877,10 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                     doActionAndSave('highlight', () => doFormat('highlight', cKey));
                                     setShowHlOptions(false);
                                   }}
-                                  className={`h-[26px] min-w-[32px] px-2 rounded-md flex items-center justify-center transition-all bg-blue-500/10 hover:bg-blue-500/20`}
+                                  className={`h-[32px] min-w-[40px] px-2 rounded-md flex items-center justify-center transition-all bg-blue-500/10 hover:bg-blue-500/20`}
                                   title={HL_COLORS[cKey].label}
                                 >
-                                    <Highlighter size={14} color={HL_COLORS[cKey].hex} />
+                                    <Highlighter size={16} color={HL_COLORS[cKey].hex} />
                                 </button>
                             ))}
                         </div>
@@ -1880,7 +1904,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                                 setShowTagOptions(false);
                                             }}
                                             title={cfg.label}
-                                            className="h-[26px] min-w-[32px] px-2 rounded-md flex items-center justify-center text-sm bg-blue-500/10 hover:bg-blue-500/20 transition-colors"
+                                            className="h-[32px] min-w-[40px] px-2 rounded-md flex items-center justify-center text-base bg-blue-500/10 hover:bg-blue-500/20 transition-colors"
                                         >{cfg.emoji}</button>
                                     );
                                 })}
@@ -1907,44 +1931,44 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                     }
                                     closeMenusOnly();
                                 }}
-                                className="h-[26px] min-w-[32px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
+                                className="h-[32px] min-w-[40px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
                                 title="Revelar Markdown"
                             >
-                                <Maximize2 size={14} />
+                                <Maximize2 size={16} />
                             </button>
                             
                             <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
 
                             {/* NEGRITA */}
                             <button onClick={() => { doActionAndSave('bold', () => doFormat('bold')); setShowMoreOptions(false); }}
-                                className="h-[26px] min-w-[32px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
+                                className="h-[32px] min-w-[40px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
                                 title="Negrita"
                             >
-                                <Bold size={14} />
+                                <Bold size={16} />
                             </button>
 
                             {/* LINK */}
                             <button onClick={() => { setShowLinkInput(true); setShowMoreOptions(false); }}
-                                className="h-[26px] min-w-[32px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
+                                className="h-[32px] min-w-[40px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
                                 title="Enlace"
                             >
-                                <LinkIcon size={14} />
+                                <LinkIcon size={16} />
                             </button>
 
                             {/* TACHADO */}
                             <button onClick={() => { doActionAndSave('strikethrough', () => doFormat('strikethrough')); setShowMoreOptions(false); }}
-                                className="h-[26px] min-w-[32px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
+                                className="h-[32px] min-w-[40px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
                                 title="Tachado"
                             >
-                                <Strikethrough size={14} />
+                                <Strikethrough size={16} />
                             </button>
 
                             {/* TÍTULO */}
                             <button onClick={() => { doActionAndSave('heading', () => doFormat('heading')); setShowMoreOptions(false); }}
-                                className="h-[26px] min-w-[32px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
+                                className="h-[32px] min-w-[40px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
                                 title="Título"
                             >
-                                <Heading size={14} />
+                                <Heading size={16} />
                             </button>
 
                             <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
@@ -1952,10 +1976,10 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                             {/* TRADUCCIÓN (Compacta) */}
                             <div className="flex items-center gap-0.5 px-0.5">
                                 <button onClick={() => { doActionAndSave('es', () => doTranslate('es')); setShowMoreOptions(false); }}
-                                    className="h-[26px] px-2 bg-blue-500/10 text-blue-500 rounded-md text-[10px] font-black hover:bg-blue-500/20 transition-colors"
+                                    className="h-[32px] px-2 bg-blue-500/10 text-blue-500 rounded-md text-[12px] font-black hover:bg-blue-500/20 transition-colors"
                                 >ES</button>
                                 <button onClick={() => { doActionAndSave('en', () => doTranslate('en')); setShowMoreOptions(false); }}
-                                    className="h-[26px] px-2 bg-blue-500/10 text-blue-500 rounded-md text-[10px] font-black hover:bg-blue-500/20 transition-colors"
+                                    className="h-[32px] px-2 bg-blue-500/10 text-blue-500 rounded-md text-[12px] font-black hover:bg-blue-500/20 transition-colors"
                                 >EN</button>
                             </div>
                         </div>
