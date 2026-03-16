@@ -933,7 +933,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         extract: string;
         description?: string;
         url?: string;
-        source?: 'npm' | 'pypi' | 'wikidata' | 'dictionary' | 'ddg' | 'wiki_es' | 'wiki_en' | 'none';
+        source?: 'npm' | 'pypi' | 'wikidata' | 'google_kg' | 'dictionary' | 'ddg' | 'wiki_es' | 'wiki_en' | 'none';
     } | null>(null);
     const [isWikiLoading, setIsWikiLoading] = useState(false);
     const [wikiTooltipVisible, setWikiTooltipVisible] = useState(false);
@@ -1464,8 +1464,28 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         'que','como','cuando','donde','si','no','es','son','al','se',
         // Verbos/artículos EN
         'the','a','an','is','are','to','of','in','on','with','for','how',
-        'what','run','use','set','get','add','do','make','install','start',
     ]);
+
+    // ── 1.5. Partir palabras compuestas ───────────────────────────────────────
+    const splitCompoundWord = (word: string): string[] => {
+        const results: string[] = [word];
+        // CamelCase → "FlameGraph" → "Flame Graph"
+        const camel = word.replace(/([a-z])([A-Z])/g, '$1 $2');
+        if (camel !== word) results.push(camel.toLowerCase());
+        // PascalCase → igual
+        const pascal = word.replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
+        if (pascal !== word) results.push(pascal.toLowerCase());
+        // Compound heuristic — split en el punto de mayor entropía
+        const lower = word.toLowerCase();
+        for (let i = 3; i < lower.length - 2; i++) {
+            const a = lower.slice(0, i);
+            const b = lower.slice(i);
+            if (a.length >= 3 && b.length >= 3) {
+                results.push(`${a} ${b}`);
+            }
+        }
+        return [...new Set(results)];
+    };
 
     // ── 2. Extraer términos candidatos por prioridad ────────────────────────────
     const extractCandidates = (raw: string): string[] => {
@@ -1476,6 +1496,13 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         const candidates: string[] = [];
         // Candidato 1: frase completa limpia
         if (meaningful.length > 0) candidates.push(meaningful.join(' '));
+        
+        // Si es una sola palabra, intentar splits de palabras compuestas
+        if (meaningful.length === 1 && meaningful[0].length > 5) {
+            const splits = splitCompoundWord(meaningful[0]);
+            splits.forEach(s => { if (s !== meaningful[0]) candidates.push(s); });
+        }
+
         // Candidato 2: primera palabra significativa sola
         if (meaningful.length > 1) candidates.push(meaningful[0]);
         // Candidato 3: última palabra significativa (ej: "pyvenv activar" → "pyvenv")
@@ -1494,7 +1521,19 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         const firstQWord = qWords[0];
         const firstWordPresent = tWords.some(t => t.includes(firstQWord) || firstQWord.includes(t));
         if (!firstWordPresent) return 0;
-        const intersection = qWords.filter(w => tWords.some(t => t.includes(w) || w.includes(t))).length;
+        const intersection = qWords.filter(qw => 
+            tWords.some(tw => {
+                // Match exacto o substring
+                if (tw.includes(qw) || qw.includes(tw)) return true;
+                // Fuzzy: qw es prefijo significativo de tw o viceversa (min 4 chars)
+                const minLen = Math.min(qw.length, tw.length);
+                if (minLen >= 4) {
+                    const prefix = qw.slice(0, minLen - 1);
+                    if (tw.startsWith(prefix) || qw.startsWith(tw.slice(0, minLen - 1))) return true;
+                }
+                return false;
+            })
+        ).length;
         const union = new Set([...qWords, ...tWords]).size;
         return union > 0 ? intersection / union : 0;
     };
@@ -1524,6 +1563,29 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         setWikiTooltipVisible(true);
 
         const candidates = extractCandidates(rawClean);
+
+        const tryGoogleKG = async (t: string) => {
+            const GOOGLE_KG_KEY = (import.meta as any).env.VITE_GOOGLE_KG_KEY || '';
+            if (!GOOGLE_KG_KEY) return null;
+            try {
+                const res = await fetch(
+                    `https://kgsearch.googleapis.com/v1/entities:search?query=${encodeURIComponent(t)}&key=${GOOGLE_KG_KEY}&limit=3&indent=true`
+                );
+                if (!res.ok) return null;
+                const d = await res.json();
+                const item = d?.itemListElement?.[0]?.result;
+                if (!item) return null;
+                const desc = item.detailedDescription?.articleBody || item.description;
+                if (!desc) return null;
+                return {
+                    title: item.name || t,
+                    extract: desc,
+                    description: item['@type']?.filter((t:string) => t !== 'Thing').join(' · ') || 'Google Knowledge Graph',
+                    url: item.detailedDescription?.url || item.url,
+                    source: 'google_kg' as const,
+                };
+            } catch { return null; }
+        };
 
         const tryPyPI = async (t: string) => {
             const slugs = [
@@ -1654,6 +1716,11 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         try {
             for (const candidate of candidates) {
                 let result = null;
+
+                // Capa de Google Knowledge Graph (si hay Key)
+                result = await tryGoogleKG(candidate);
+                if (result) { setWikiResult(result); return; }
+
                 if (looksLikePython(candidate)) {
                     result = await tryPyPI(candidate);
                     if (result) { setWikiResult(result); return; }
@@ -2138,6 +2205,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                                                 {wikiResult.source === 'npm' && '📦 npm Registry'}
                                                                 {wikiResult.source === 'pypi' && '🐍 PyPI'}
                                                                 {wikiResult.source === 'wikidata' && '🔷 Wikidata'}
+                                                                {wikiResult.source === 'google_kg' && '🔍 Google'}
                                                                 {wikiResult.source === 'dictionary' && '📝 Dictionary'}
                                                                 {wikiResult.source === 'ddg' && '⚡ DuckDuckGo'}
                                                                 {wikiResult.source === 'wiki_es' && '📖 Wikipedia ES'}
