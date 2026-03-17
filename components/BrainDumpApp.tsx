@@ -429,12 +429,20 @@ export const BrainDumpApp: React.FC<{
                                                         
                                                         {!globalTasks?.some(t => t.id === pizarron.id) && (
                                                             <button onClick={async () => {
-                                                                await supabase.from('tasks').upsert({ 
+                                                                const { error } = await supabase.from('tasks').upsert({ 
                                                                     id: pizarron.id, 
                                                                     title: pizarron.title || 'Pizarrón sin título', 
                                                                     content: pizarron.content || '',
-                                                                    status: 'backlog' 
+                                                                    status: 'backlog',
+                                                                    user_id: session.user.id
                                                                 });
+
+                                                                if (error) {
+                                                                    console.error('Error adding to Kanban:', error);
+                                                                    alert('Error en producción: ' + error.message + '\n\nNota: Asegúrate de haber ejecutado las últimas migraciones en el panel de Supabase.');
+                                                                    return;
+                                                                }
+
                                                                 window.dispatchEvent(new CustomEvent('kanban-updated'));
                                                                 setOpenMenuId(null);
                                                             }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors">
