@@ -438,7 +438,14 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   const checklistRef = useRef<ChecklistEditorRef>(null);
   const fontClass = noteFont === 'serif' ? 'font-serif' : noteFont === 'mono' ? 'font-mono text-xs' : 'font-sans';
 
-  const { aiPanelOpenByNote, activeTabByNote, setAiPanelOpen, setActiveTab: setStoreActiveTab } = useUIStore();
+  const { 
+    aiPanelOpenByNote, 
+    activeTabByNote, 
+    pizarronVisibleByNoteAndTab,
+    setAiPanelOpen, 
+    setActiveTab: setStoreActiveTab,
+    setPizarronVisible
+  } = useUIStore();
   const { activeNoteId, activeNote, breadcrumbPath, navigate } = useNoteTree(note.id);
   const isRootLevel = !activeNoteId || activeNoteId === note.id;
   const displayContent = isRootLevel ? note.content : (activeNote?.content ?? '');
@@ -514,12 +521,11 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
     return () => window.removeEventListener('kanban-updated', handleUpdate);
   }, [note.id]);
 
-  // ── PIZARRON DE LA NOTA ORIGINAL ──────────────────────────────────────────
-  const [scratchOpenByTab, setScratchOpenByTab] = useState<Record<string, boolean>>({});
-  const showNoteScratch = scratchOpenByTab[activeTab] ?? false;
+  // ── PIZARRON DE LA NOTA ORIGINAL (PERSISTENTE) ──────────────────────────────
+  const showNoteScratch = pizarronVisibleByNoteAndTab[displayNoteId]?.[activeTab] ?? false;
   const setShowNoteScratch = (val: boolean | ((v: boolean) => boolean)) => {
     const next = typeof val === 'function' ? val(showNoteScratch) : val;
-    setScratchOpenByTab(prev => ({ ...prev, [activeTab]: next }));
+    setPizarronVisible(displayNoteId, activeTab, next);
   };
   const [localNoteScratch, setLocalNoteScratch] = useState(note.scratchpad || '');
   const noteScratchRef = useRef<SmartNotesEditorRef>(null);

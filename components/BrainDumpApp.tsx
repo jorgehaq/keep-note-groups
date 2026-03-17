@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell, Grid, ChevronsDownUp, MoreVertical, ListTodo, CheckSquare, Square, GripVertical, Search, X, ChevronLeft, ChevronRight, ArrowUpRight, Download } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell, Grid, ChevronsDownUp, MoreVertical, ListTodo, CheckSquare, Square, GripVertical, Search, X, ChevronLeft, ChevronRight, ArrowUpRight, Download, ArrowUpDown, Calendar, Type, Check } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { KanbanSemaphore } from './KanbanSemaphore';
 import { PizarronLinkerModal } from './PizarronLinkerModal';
@@ -132,6 +132,11 @@ export const BrainDumpApp: React.FC<{
     const [loading, setLoading] = useState(false);
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [linkingPizarron, setLinkingPizarron] = useState<BrainDump | null>(null);
+    const [sortMode, setSortMode] = useState<'date-desc' | 'date-asc' | 'created-desc' | 'created-asc' | 'alpha-asc' | 'alpha-desc'>(() => {
+        return (localStorage.getItem('pizarronSortMode') as any) || 'date-desc';
+    });
+    const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+    const sortMenuRef = useRef<HTMLDivElement>(null);
     
     const [expandedHistoryIds, setExpandedHistoryIds] = useState<Set<string>>(new Set());
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -168,10 +173,16 @@ export const BrainDumpApp: React.FC<{
     useEffect(() => {
         const handler = (e: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpenMenuId(null);
+            if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) setIsSortMenuOpen(false);
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
     }, []);
+
+    // Persist sortMode
+    useEffect(() => {
+        localStorage.setItem('pizarronSortMode', sortMode);
+    }, [sortMode]);
 
     // Cargamos pizarras al montar si el store está vacío
     useEffect(() => {
@@ -220,8 +231,37 @@ export const BrainDumpApp: React.FC<{
 
     if (loading) return <div className="p-10 text-center animate-pulse text-zinc-500">Cargando Pizarrón...</div>;
 
-    // 🚀 FIX: Fusión lógica. Todo lo que no está en el archivo, es un Pizarrón activo.
-    const pizarrones = dumps.filter(d => d.status !== 'history');
+    // 🚀 Lógica de ordenamiento y filtrado
+    const pizarrones = useMemo(() => {
+        let result = dumps.filter(d => d.status !== 'history');
+        if (localSearchQuery.trim()) {
+            result = result.filter(p => 
+                (p.title || '').toLowerCase().includes(localSearchQuery.toLowerCase()) ||
+                p.content.toLowerCase().includes(localSearchQuery.toLowerCase())
+            );
+        }
+
+        result.sort((a, b) => {
+            switch (sortMode) {
+                case 'date-desc':
+                    return new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime();
+                case 'date-asc':
+                    return new Date(a.updated_at || 0).getTime() - new Date(b.updated_at || 0).getTime();
+                case 'created-desc':
+                    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+                case 'created-asc':
+                    return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+                case 'alpha-asc':
+                    return (a.title || 'Z').localeCompare(b.title || 'Z');
+                case 'alpha-desc':
+                    return (b.title || 'Z').localeCompare(a.title || 'Z');
+                default:
+                    return 0;
+            }
+        });
+        return result;
+    }, [dumps, localSearchQuery, sortMode]);
+
     const archivo = dumps.filter(d => d.status === 'history');
 
     return (
@@ -291,6 +331,51 @@ export const BrainDumpApp: React.FC<{
                       )}
                     </div>
 
+                    <div className="relative" ref={sortMenuRef}>
+                        <button 
+                            onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} 
+                            className="h-9 w-9 flex items-center justify-center text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors border border-zinc-200 dark:border-[#2D2D42]"
+                            title="Ordenar pizarrones"
+                        >
+                            <ArrowUpDown size={18} />
+                        </button>
+                        
+                        {isSortMenuOpen && (
+                            <div className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-zinc-800 shadow-xl rounded-xl border border-zinc-200 dark:border-zinc-700 p-1.5 flex flex-col gap-0.5 min-w-[200px] animate-fadeIn">
+                                <div className="px-2 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1 border-b border-zinc-100 dark:border-zinc-700">Ordenar por</div>
+                                
+                                <button onClick={() => { setSortMode('date-desc'); setIsSortMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${sortMode === 'date-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                    <Calendar size={14} /> Fecha (Recientes)
+                                    {sortMode === 'date-desc' && <Check size={14} className="ml-auto" />}
+                                </button>
+                                
+                                <button onClick={() => { setSortMode('date-asc'); setIsSortMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${sortMode === 'date-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                    <Calendar size={14} /> Fecha (Antiguos)
+                                    {sortMode === 'date-asc' && <Check size={14} className="ml-auto" />}
+                                </button>
+
+                                <button onClick={() => { setSortMode('created-desc'); setIsSortMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${sortMode === 'created-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                    <Calendar size={14} /> Creación (reciente)
+                                    {sortMode === 'created-desc' && <Check size={14} className="ml-auto" />}
+                                </button>
+                                <button onClick={() => { setSortMode('created-asc'); setIsSortMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${sortMode === 'created-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                    <Calendar size={14} /> Creación (antigua)
+                                    {sortMode === 'created-asc' && <Check size={14} className="ml-auto" />}
+                                </button>
+                                
+                                <button onClick={() => { setSortMode('alpha-asc'); setIsSortMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${sortMode === 'alpha-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                    <Type size={14} /> Nombre (A-Z)
+                                    {sortMode === 'alpha-asc' && <Check size={14} className="ml-auto" />}
+                                </button>
+                                
+                                <button onClick={() => { setSortMode('alpha-desc'); setIsSortMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${sortMode === 'alpha-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                    <Type size={14} /> Nombre (Z-A)
+                                    {sortMode === 'alpha-desc' && <Check size={14} className="ml-auto" />}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
                     <button
                       onClick={() => setIsBraindumpMaximized(!isBraindumpMaximized)}
                       className="h-9 p-2 bg-white dark:bg-[#2D2D42] border border-zinc-200 dark:border-[#2D2D42] rounded-xl text-zinc-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400 transition-all active:scale-95 shrink-0"
@@ -306,7 +391,7 @@ export const BrainDumpApp: React.FC<{
 
                 {/* FRANJA DE PIZARRONES (ACCESOS DIRECTOS) */}
                 {isDumpTrayOpen && pizarrones.length > 0 && (
-                    <div className="pt-3 px-4 pb-3 bg-[#FAFAFA] dark:bg-[#13131A] relative group/tray">
+                    <div className="pt-4 px-4 pb-4 bg-[#FAFAFA] dark:bg-[#13131A] relative group/tray">
                         {/* Flecha Izquierda (solo visible en md:hidden cuando hay scroll) */}
                         {canScrollLeft && (
                             <div className="md:hidden absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#FAFAFA] dark:from-[#13131A] to-transparent z-10 flex items-center justify-start pl-2">
@@ -319,7 +404,7 @@ export const BrainDumpApp: React.FC<{
                         <div 
                             ref={scrollContainerRef}
                             onScroll={checkScroll}
-                            className="flex flex-nowrap md:flex-wrap justify-start md:justify-center gap-2.5 overflow-x-auto hidden-scrollbar pb-1 md:pb-0 scroll-smooth px-2"
+                            className="flex flex-nowrap md:flex-wrap justify-start md:justify-center gap-2.5 overflow-x-auto hidden-scrollbar pt-2 pb-2 md:pb-1 scroll-smooth px-2"
                         >
                              {pizarrones.map(p => {
                                  const isFocused = focusedDumpId === p.id;
@@ -339,7 +424,7 @@ export const BrainDumpApp: React.FC<{
                                      <button
                                          key={p.id}
                                          onClick={() => setFocusedDumpId(isFocused ? null : p.id)}
-                                         className={`relative flex items-center justify-center px-4 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 ${
+                                         className={`relative flex items-center justify-center px-4 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 my-0.5 ${
                                              isFocused
                                                  ? 'bg-[#FFD700] text-amber-950 border-amber-300 scale-[1.02]'
                                                  : isHighlighted
@@ -352,11 +437,11 @@ export const BrainDumpApp: React.FC<{
                                              {summaryCounts[p.id] > 0 && ` (${summaryCounts[p.id]})`}
                                          </span>
                                          {dotColorClass && (
-                                             <div 
-                                               className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border border-[#9F9FA8]/50 z-10 shadow-sm transition-transform hover:scale-110 ${dotColorClass}`} 
-                                               title={`Estado Kanban`}
-                                             />
-                                         )}
+                                              <div 
+                                                className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full border border-white dark:border-[#13131A] z-[20] shadow-sm transition-transform hover:scale-110 ${dotColorClass}`} 
+                                                title={`Estado Kanban`}
+                                              />
+                                          )}
                                      </button>
                                  );
                              })}

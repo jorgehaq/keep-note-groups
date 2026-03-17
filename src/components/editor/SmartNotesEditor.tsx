@@ -681,15 +681,15 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         // --- MARKERS HOVER ---
         "[class*='cm-custom-mk-']": { position: "relative" },
         "[class*='cm-custom-mk-']::before": { 
-            marginRight: "4px", 
+            marginRight: "6px", 
             display: "inline-block", 
-            opacity: "0", 
-            width: "0", 
+            opacity: "1", 
+            width: "1.2em", 
             overflow: "hidden", 
             transition: "all 0.2s ease",
             verticalAlign: "middle"
         },
-        "[class*='cm-custom-mk-']:hover::before": { opacity: "1", width: "1.2em", marginRight: "6px" },
+        "[class*='cm-custom-mk-']:hover::before": { transform: "scale(1.2)" },
         ".cm-custom-mk-ins::before":  { content: "'🧐'" },
         ".cm-custom-mk-duda::before": { content: "'🤔'" },
         ".cm-custom-mk-idea::before": { content: "'🤩'" },
@@ -1588,64 +1588,69 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         };
 
         const tryPyPI = async (t: string) => {
-            const slugs = [
-                t.toLowerCase().replace(/\s+/g, '-'),
-                t.toLowerCase().replace(/\s+/g, ''),
-                t.toLowerCase().split(/\s+/)[0],
-            ];
-            for (const slug of [...new Set(slugs)]) {
-                try {
-                    const res = await fetch(`https://pypi.org/pypi/${slug}/json`);
-                    if (!res.ok) continue;
-                    const d = await res.json();
-                    const desc = d.info?.summary;
-                    if (desc && desc.length > 10) {
-                        return {
-                            title: d.info.name,
-                            extract: `${desc}${d.info.version ? `\n\nVersión actual: ${d.info.version}` : ''}`,
-                            description: d.info.keywords?.split(/[,\s]+/).slice(0,4).join(' · ') || 'Python package',
-                            url: d.info.project_url || `https://pypi.org/project/${slug}`,
-                            source: 'pypi' as const,
-                        };
-                    }
-                } catch { /* continuar */ }
-            }
+            const query = t.trim().toLowerCase();
+            if (query.length < 3) return null;
+
+            try {
+                // PyPI no tiene una API de búsqueda JSON trivial sin 404s para slugs, 
+                // pero podemos usar el buscador de Google o simplemente ser más estrictos.
+                // Intentamos una búsqueda limitada o validamos el slug.
+                const slug = query.replace(/\s+/g, '-');
+                
+                // 🚀 Nota: Para PyPI, si no hay API de búsqueda "limpia", 
+                // al menos filtramos términos que claramente no son paquetes.
+                if (/[^a-z0-9\-_]/.test(slug)) return null;
+
+                const res = await fetch(`https://pypi.org/pypi/${slug}/json`);
+                if (!res.ok) return null;
+                const d = await res.json();
+                const desc = d.info?.summary;
+                if (desc && desc.length > 10) {
+                    return {
+                        title: d.info.name,
+                        extract: `${desc}${d.info.version ? `\n\nVersión actual: ${d.info.version}` : ''}`,
+                        description: d.info.keywords?.split(/[,\s]+/).slice(0,4).join(' · ') || 'Python package',
+                        url: d.info.project_url || `https://pypi.org/project/${slug}`,
+                        source: 'pypi' as const,
+                    };
+                }
+            } catch { /* silencio */ }
             return null;
         };
 
         const tryNPM = async (t: string) => {
-            const words = t.toLowerCase().split(/\s+/);
-            const slugs = [
-                t.toLowerCase().replace(/\s+/g, '-'),
-                `${words[0]}-devtools`,
-                `${words[0]}-tools`,
-                words.filter(w => !STOP_WORDS.has(w)).join('-'),
-            ];
-            for (const slug of [...new Set(slugs)]) {
-                try {
-                    const res = await fetch(`https://registry.npmjs.org/${slug}`);
-                    if (!res.ok) continue;
-                    const d = await res.json();
-                    if (d.description && d.description.length > 10) {
-                        return {
-                            title: d.name,
-                            extract: `${d.description}${d['dist-tags']?.latest ? `\n\nVersión actual: ${d['dist-tags'].latest}` : ''}`,
-                            description: d.keywords?.slice(0,4).join(' · ') || 'npm package',
-                            url: d.homepage || `https://www.npmjs.com/package/${slug}`,
-                            source: 'npm' as const,
-                        };
-                    }
-                } catch { /* continuar */ }
-            }
+            const query = t.trim().toLowerCase();
+            if (query.length < 3) return null;
+
+            try {
+                // 🚀 SEARCH-FIRST: Usar la API de búsqueda de NPM que devuelve 200 siempre.
+                const res = await fetch(`https://registry.npmjs.org/-/v1/search?text=${encodeURIComponent(query)}&size=1`);
+                if (!res.ok) return null;
+                const data = await res.json();
+                const best = data.objects?.[0]?.package;
+
+                if (best && (best.name.includes(query) || query.includes(best.name))) {
+                    return {
+                        title: best.name,
+                        extract: `${best.description}${best.version ? `\n\nVersión actual: ${best.version}` : ''}`,
+                        description: best.keywords?.slice(0,4).join(' · ') || 'npm package',
+                        url: best.links?.npm || `https://www.npmjs.com/package/${best.name}`,
+                        source: 'npm' as const,
+                    };
+                }
+            } catch { /* silencio */ }
             return null;
         };
 
         const tryDictionary = async (t: string) => {
-            const word = t.split(/\s+/)[0];
-            if (!word || word.length < 3) return null;
+            const word = t.trim().split(/\s+/)[0];
+            // Solo buscar si es una sola palabra mayor a 2 caracteres y no contiene caracteres especiales
+            if (!word || word.length < 3 || /[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(word)) return null;
+            
             try {
                 const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
-                if (!res.ok) return null;
+                if (!res.ok) return null; // El 404 de red es inevitable si no existe el término, pero filtramos candidatos inválidos arriba.
+                
                 const d = await res.json();
                 const entry = Array.isArray(d) ? d[0] : null;
                 if (!entry) return null;
@@ -1664,35 +1669,32 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
 
         const tryWikipedia = async (t: string, lang: 'en'|'es') => {
             try {
-                const direct = await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(t.replace(/ /g,'_'))}`);
-                if (direct.ok) {
-                    const d = await direct.json();
-                    if (d.extract && relevanceScore(t, d.title) >= 0.4) {
-                        return {
-                            title: d.title,
-                            extract: d.extract,
-                            description: d.description ? `${lang.toUpperCase()} · ${d.description}` : `Wikipedia ${lang.toUpperCase()}`,
-                            url: d.content_urls?.desktop?.page,
-                            source: (lang === 'en' ? 'wiki_en' : 'wiki_es') as 'wiki_en' | 'wiki_es',
-                        };
-                    }
-                }
-                const search = await fetch(`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(t)}&format=json&origin=*&srlimit=5`);
-                if (!search.ok) return null;
-                const sd = await search.json();
+                // 🚀 SEARCH-FIRST: Realizar búsqueda primero para validar títulos existentes y evitar peticiones 400/404 innecesarias.
+                const searchRes = await fetch(`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(t)}&format=json&origin=*&srlimit=5`);
+                if (!searchRes.ok) return null;
+                
+                const sd = await searchRes.json();
                 const hits = (sd?.query?.search || []) as {title:string}[];
-                const best = hits.map(h => ({ ...h, score: relevanceScore(t, h.title) })).filter(h => h.score >= 0.5).sort((a,b) => b.score - a.score)[0];
+                
+                // Encontrar el mejor hit usando el score de relevancia (mínimo 0.4)
+                const best = hits.map(h => ({ ...h, score: relevanceScore(t, h.title) }))
+                                 .filter(h => h.score >= 0.4)
+                                 .sort((a,b) => b.score - a.score)[0];
+                
                 if (!best) return null;
+
+                // Ahora que tenemos un título confirmado, consultamos el summary de forma segura.
                 const sumRes = await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(best.title.replace(/ /g,'_'))}`);
                 if (!sumRes.ok) return null;
                 const d = await sumRes.json();
+                
                 if (!d.extract) return null;
                 return {
                     title: d.title,
                     extract: d.extract,
                     description: d.description ? `${lang.toUpperCase()} · ${d.description}` : `Wikipedia ${lang.toUpperCase()}`,
                     url: d.content_urls?.desktop?.page,
-                            source: (lang === 'en' ? 'wiki_en' : 'wiki_es') as 'wiki_en' | 'wiki_es',
+                    source: (lang === 'en' ? 'wiki_en' : 'wiki_es') as 'wiki_en' | 'wiki_es',
                 };
             } catch { return null; }
         };
@@ -2001,6 +2003,21 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         visualMarkupPlugin
     ]);
 
+    // 🚀 LAYOUT STABILITY FIX: Detect container resize and force CodeMirror to recalibrate.
+    // This prevents "deformity" when side panels (like Pizarrón) are toggled or window resizes.
+    useLayoutEffect(() => {
+        if (!containerRef.current || !editorRef.current?.view) return;
+        
+        const view = editorRef.current.view;
+        const resizeObserver = new ResizeObserver(() => {
+            // requestMeasure is more efficient than a full dispatch/refresh
+            view.requestMeasure();
+        });
+        
+        resizeObserver.observe(containerRef.current);
+        return () => resizeObserver.disconnect();
+    }, [noteId]); // Re-bind if noteId changes (CodeMirror usually remounts anyway)
+
     return (
         <div 
             ref={containerRef}
@@ -2106,10 +2123,6 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                         className="relative flex items-center"
                                         onMouseEnter={() => {
                                             if (wikiCloseTimerRef.current) clearTimeout(wikiCloseTimerRef.current);
-                                            const termToSearch = cleanSearchTerm(menuState?.text || '');
-                                            if (!menuState?.isMobile && termToSearch && !wikiResult && !isWikiLoading) {
-                                                fetchDefinition(termToSearch);
-                                            }
                                             setWikiTooltipVisible(true);
                                         }}
                                         onMouseLeave={() => {

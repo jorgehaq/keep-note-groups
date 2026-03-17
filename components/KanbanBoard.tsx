@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Task, TaskStatus, Group } from '../types';
 import { useTranslation } from 'react-i18next';
-import { Archive, Inbox, Trash2, GripVertical, Link as LinkIcon, Pencil, MoreVertical, ArrowRight, Maximize2, Minimize2, History } from 'lucide-react';
+import { Archive, Inbox, Trash2, GripVertical, Link as LinkIcon, Pencil, MoreVertical, ArrowRight, Maximize2, Minimize2, History, Eye } from 'lucide-react';
 import { KanbanLinkerModal } from './KanbanLinkerModal';
+import { KanbanTaskViewerModal } from './KanbanTaskViewerModal';
 
 interface KanbanBoardProps {
     tasks: Task[];
@@ -44,6 +45,8 @@ const formatCustomDate = (isoString: string, dateFormat: string, timeFormat: str
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], onOpenNote, onUpdate, onDelete, onEdit, dateFormat = 'dd/mm/yyyy', timeFormat = '12h' }) => {
     const { t } = useTranslation();
+    const [viewingTask, setViewingTask] = useState<Task | null>(null);
+
     const getColumnTasks = (status: TaskStatus) =>
         tasks.filter(t => t.status === status).sort((a, b) => a.position - b.position);
 
@@ -130,6 +133,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], on
                                                             onUpdate={onUpdate}
                                                             onDelete={onDelete}
                                                             onEdit={onEdit}
+                                                            onView={setViewingTask}
                                                             groups={groups}
                                                             onOpenNote={onOpenNote}
                                                             dateFormat={dateFormat}
@@ -151,6 +155,17 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], on
                     );
                 })}
             </div>
+
+            {viewingTask && (
+                <KanbanTaskViewerModal 
+                    task={viewingTask}
+                    onClose={() => setViewingTask(null)}
+                    onEdit={(task) => {
+                        setViewingTask(null);
+                        onEdit?.(task);
+                    }}
+                />
+            )}
         </DragDropContext>
     );
 };
@@ -164,13 +179,14 @@ interface TaskCardProps {
     onUpdate: (id: string, updates: Partial<Task>) => void;
     onDelete: (id: string) => void;
     onEdit?: (task: Task) => void;
+    onView: (task: Task) => void;
     groups?: Group[];
     onOpenNote?: (groupId: string, noteId: string) => void;
     dateFormat?: string;
     timeFormat?: string;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnStatus, onUpdate, onDelete, onEdit, groups = [], onOpenNote, dateFormat = 'dd/mm/yyyy', timeFormat = '12h' }) => {
+const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnStatus, onUpdate, onDelete, onEdit, onView, groups = [], onOpenNote, dateFormat = 'dd/mm/yyyy', timeFormat = '12h' }) => {
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
 
     const linkedNote = React.useMemo(() => {
@@ -228,6 +244,13 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
                 </span>
 
                 <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => onView(task)}
+                        className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
+                        title="Ver Detalles"
+                    >
+                        <Maximize2 size={15} />
+                    </button>
                     <button
                         onClick={() => onEdit?.(task)}
                         className="p-1.5 text-zinc-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"

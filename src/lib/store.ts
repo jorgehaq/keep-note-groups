@@ -41,6 +41,7 @@ interface UIStore {
     isMaximized: boolean;
     isBraindumpMaximized: boolean;
     isTranslatorMaximized: boolean;
+    pizarronVisibleByNoteAndTab: Record<string, Record<string, boolean>>;
 
     // Persisted AI State (per-note)
     aiPanelOpenByNote: Record<string, boolean>;
@@ -96,6 +97,7 @@ interface UIStore {
     setIsTranslatorMaximized: (maximized: boolean) => void;
     setAiPanelOpen: (noteId: string, open: boolean) => void;
     setActiveTab: (noteId: string, tabId: string) => void;
+    setPizarronVisible: (noteId: string, tabId: string, visible: boolean) => void;
     setFocusedNoteId: (id: string | null, groupId?: string) => void;
     setIsGlobalNoteTrayOpen: (open: boolean, groupId?: string) => void;
     setFocusedDumpId: (id: string | null) => void;
@@ -168,6 +170,7 @@ export const useUIStore = create<UIStore>()(
             activeTabByNote: {},
             focusedDumpId: null,
             isDumpTrayOpen: false,
+            pizarronVisibleByNoteAndTab: {},
             summaryCounts: {},
 
             setActiveGroup: (id) => set({ activeGroupId: id }),
@@ -294,6 +297,19 @@ export const useUIStore = create<UIStore>()(
                         [noteId]: tabId,
                     },
                 })),
+            setPizarronVisible: (noteId, tabId, visible) =>
+                set((state) => {
+                    const noteStatus = state.pizarronVisibleByNoteAndTab[noteId] || {};
+                    return {
+                        pizarronVisibleByNoteAndTab: {
+                            ...state.pizarronVisibleByNoteAndTab,
+                            [noteId]: {
+                                ...noteStatus,
+                                [tabId]: visible
+                            }
+                        }
+                    };
+                }),
             setFocusedNoteId: (id, groupId) => {
                 const gid = groupId ?? get().activeGroupId;
                 if (!gid) return;
@@ -441,6 +457,7 @@ export const useUIStore = create<UIStore>()(
                 noteTrayOpenByGroup: state.noteTrayOpenByGroup,
                 aiPanelOpenByNote: state.aiPanelOpenByNote,
                 activeTabByNote: state.activeTabByNote,
+                pizarronVisibleByNoteAndTab: state.pizarronVisibleByNoteAndTab,
                 focusedDumpId: state.focusedDumpId,
                 isDumpTrayOpen: state.isDumpTrayOpen,
             }),
