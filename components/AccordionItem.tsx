@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash, Sparkles, FileText, PenLine, ArrowUpRight } from 'lucide-react';
+import { ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash, Sparkles, FileText, PenLine, ArrowUpRight, GitBranch, Plus } from 'lucide-react';
 import { Note, NoteFont } from '../types';
 import { SmartNotesEditor, SmartNotesEditorRef } from '../src/components/editor/SmartNotesEditor';
 import { ChecklistEditor, ChecklistEditorRef, parseMarkdownToChecklist, serializeChecklistToMarkdown, serializeChecklistToPlainMarkdown } from '../src/components/editor/ChecklistEditor';
@@ -34,6 +34,7 @@ interface AccordionItemProps {
   onToggleLineNumbers?: () => void;
   session?: Session | null;
   syncStatus?: 'idle' | 'saving' | 'saved';
+  groupNotes?: Note[];
 }
 
 const formatCleanDate = (isoString?: string) => {
@@ -231,6 +232,181 @@ const SummaryTabContent: React.FC<{
   );
 };
 
+const SubnoteTitle: React.FC<{
+  child: Note;
+  isActive: boolean;
+  onRename: (id: string, title: string) => void;
+}> = ({ child, isActive, onRename }) => {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(child.title || '');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setVal(child.title || ''); }, [child.title]);
+
+  const save = () => {
+    setEditing(false);
+    const trimmed = val.trim();
+    if (trimmed && trimmed !== child.title) onRename(child.id, trimmed);
+    else setVal(child.title || '');
+  };
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        value={val}
+        autoFocus
+        onChange={e => setVal(e.target.value)}
+        onBlur={save}
+        onKeyDown={e => {
+          if (e.key === 'Enter') save();
+          if (e.key === 'Escape') { setEditing(false); setVal(child.title || ''); }
+          e.stopPropagation();
+        }}
+        onClick={e => e.stopPropagation()}
+        onMouseDown={e => e.stopPropagation()}
+        className="w-24 bg-transparent outline-none border-b border-white/50 text-xs font-bold"
+        placeholder="Título..."
+      />
+    );
+  }
+
+  return (
+    <span
+      className="truncate max-w-[100px] cursor-pointer"
+      onDoubleClick={e => { e.stopPropagation(); if (isActive) setEditing(true); }}
+      title={isActive ? 'Doble clic para renombrar' : child.title || ''}
+    >
+      {child.title || 'Sin título'}
+    </span>
+  );
+};
+
+const SubnoteTabContent: React.FC<{
+  note: Note;
+  showScratch: boolean;
+  onUpdate: (id: string, updates: Partial<Note>) => void;
+  splitRatio: number;
+  onDividerMouseDown: (e: React.MouseEvent) => void;
+  splitContainerRef: React.RefObject<HTMLDivElement>;
+  noteFont: NoteFont;
+  noteFontSize: string;
+  noteLineHeight: string;
+  showLineNumbers: boolean;
+  searchQuery?: string;
+  onUpdateScratch: (text: string) => void;
+  onUpdateContent: (text: string) => void;
+  editorRef: React.RefObject<SmartNotesEditorRef>;
+  scratchRef: React.RefObject<SmartNotesEditorRef>;
+  checklistRef: React.RefObject<ChecklistEditorRef>;
+}> = ({
+  note,
+  showScratch,
+  splitRatio,
+  onDividerMouseDown,
+  splitContainerRef,
+  noteFont,
+  noteFontSize,
+  noteLineHeight,
+  showLineNumbers,
+  searchQuery,
+  onUpdateScratch,
+  onUpdateContent,
+  editorRef,
+  scratchRef,
+  checklistRef
+}) => {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const borderColor = note.parent_note_id ? 'border-emerald-500/30' : 'border-zinc-200 dark:border-[#2D2D42]';
+
+  return (
+    <div
+      ref={splitContainerRef}
+      className={`flex-1 flex min-h-0 ${isMobile ? 'flex-col' : 'flex-row'} gap-2 animate-fadeIn`}
+    >
+      <div
+        className={`min-h-0 overflow-hidden rounded-xl border ${borderColor} bg-zinc-50 dark:bg-[#242432]`}
+        style={showScratch
+          ? (isMobile
+              ? { height: `${splitRatio * 100}%`, flex: 'none' }
+              : { width: `${splitRatio * 100}%`, flex: 'none' })
+          : { flex: '1' }
+        }
+      >
+        {note.is_checklist ? (
+          <div className="p-4 h-full overflow-y-auto note-editor-scroll">
+            <ChecklistEditor ref={checklistRef} idPrefix={note.id} initialContent={note.content || ''} onUpdate={onUpdateContent} />
+          </div>
+        ) : (
+          <div
+            onClick={(e) => {
+              if ((e.target as HTMLElement).closest('.cm-panel, .cm-search')) return;
+              editorRef.current?.focus();
+            }}
+            className="p-4 h-full overflow-y-auto cursor-text note-editor-scroll"
+          >
+            <SmartNotesEditor
+              key={note.id}
+              ref={editorRef}
+              noteId={note.id}
+              initialContent={note.content || ''}
+              searchQuery={searchQuery}
+              onChange={onUpdateContent}
+              noteFont={noteFont}
+              noteFontSize={noteFontSize}
+              noteLineHeight={noteLineHeight}
+              showLineNumbers={showLineNumbers}
+            />
+          </div>
+        )}
+      </div>
+
+      {showScratch && (
+        <div
+          onMouseDown={onDividerMouseDown}
+          className={`shrink-0 flex items-center justify-center rounded-full cursor-col-resize select-none hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors ${
+            isMobile ? 'h-2 w-full cursor-row-resize' : 'w-2 h-full'
+          }`}
+          title="Arrastrar para redimensionar"
+        >
+          <div className={`rounded-full bg-zinc-300 dark:bg-zinc-600 ${isMobile ? 'h-1 w-8' : 'w-1 h-8'}`} />
+        </div>
+      )}
+
+      {showScratch && (
+        <div
+          className="min-h-0 overflow-hidden flex flex-col rounded-xl border border-zinc-200 dark:border-[#2D2D42] bg-zinc-50 dark:bg-[#1A1A24]"
+          style={{ flex: 1 }}
+        >
+          <div className="flex items-center gap-1.5 px-3 py-2 border-b border-zinc-200 dark:border-[#2D2D42] shrink-0">
+            <PenLine size={11} className="text-zinc-400" />
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex-1">Pizarrón</span>
+          </div>
+          <div
+            onClick={(e) => {
+              if ((e.target as HTMLElement).closest('.cm-panel, .cm-search')) return;
+              scratchRef.current?.focus();
+            }}
+            className="flex-1 p-4 overflow-y-auto cursor-text note-editor-scroll"
+          >
+            <SmartNotesEditor
+              key={`scratch_${note.id}`}
+              ref={scratchRef}
+              noteId={`scratch_note_${note.id}`}
+              initialContent={note.scratchpad || ''}
+              onChange={onUpdateScratch}
+              noteFont={noteFont}
+              noteFontSize={noteFontSize}
+              noteLineHeight={noteLineHeight}
+              showLineNumbers={showLineNumbers}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const AccordionItem: React.FC<AccordionItemProps> = ({
   note,
   onToggle,
@@ -250,7 +426,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   showLineNumbers = false,
   onToggleLineNumbers,
   session,
-  syncStatus: propSyncStatus = 'idle'
+  syncStatus: propSyncStatus = 'idle',
+  groupNotes = []
 }) => {
 
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
@@ -278,14 +455,29 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   const { summaries: aiSummaries, deleteSummary, updateScratchpad, updateSummaryContent, loading: summariesLoading, hasFetched } = useSummaries(displayNoteId);
   const completedSummaries = aiSummaries.filter(s => s.status === 'completed');
 
-  // Fallback to 'original' if the active tab summary is missing (ONLY after initial fetch completes)
+  const manualChildren = groupNotes.filter(n => n.parent_note_id === displayNoteId && !n.ai_generated);
+  const childrenLoaded = true; // Since we rely on global state
+
+  // Fallback to 'original' if the active tab summary/subnote is missing
   useEffect(() => {
     if (summariesLoading || !hasFetched) return;
-    if (activeTab !== 'original' && !completedSummaries.find(s => s.id === activeTab)) {
-      console.log(`Fallback to original for ${displayNoteId} (summary ${activeTab} not found)`);
-      setActiveTab('original');
+    if (activeTab === 'original') return;
+
+    const isSubnote = activeTab.startsWith('sub_');
+    if (isSubnote) {
+      const subId = activeTab.replace('sub_', '');
+      if (!manualChildren.find(c => c.id === subId)) {
+        console.log(`Fallback to original: subnote ${subId} not found`);
+        setActiveTab('original');
+      }
+    } else {
+      // It's a summary
+      if (!completedSummaries.find(s => s.id === activeTab)) {
+        console.log(`Fallback to original: summary ${activeTab} not found`);
+        setActiveTab('original');
+      }
     }
-  }, [completedSummaries.length, summariesLoading, hasFetched, activeTab, displayNoteId]);
+  }, [completedSummaries.length, manualChildren.length, summariesLoading, hasFetched, activeTab, displayNoteId]);
 
   // Auto-switch to newest summary ONLY when a NEW one arrives in the CURRENT session
   const prevCountRef = useRef<number | null>(null);
@@ -320,6 +512,30 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
     const handleUpdate = () => checkKanban();
     window.addEventListener('kanban-updated', handleUpdate);
     return () => window.removeEventListener('kanban-updated', handleUpdate);
+  }, [note.id]);
+
+  // ── PIZARRON DE LA NOTA ORIGINAL ──────────────────────────────────────────
+  const [scratchOpenByTab, setScratchOpenByTab] = useState<Record<string, boolean>>({});
+  const showNoteScratch = scratchOpenByTab[activeTab] ?? false;
+  const setShowNoteScratch = (val: boolean | ((v: boolean) => boolean)) => {
+    const next = typeof val === 'function' ? val(showNoteScratch) : val;
+    setScratchOpenByTab(prev => ({ ...prev, [activeTab]: next }));
+  };
+  const [localNoteScratch, setLocalNoteScratch] = useState(note.scratchpad || '');
+  const noteScratchRef = useRef<SmartNotesEditorRef>(null);
+  const scratchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ── AI INPUT COLAPSABLE ────────────────────────────────────────────────────
+  const [showAIInput, setShowAIInput] = useState(false);
+
+  // ── SPLIT RATIO (pizarron) ─────────────────────────────────────────────────
+  const [splitRatio, setSplitRatio] = useState(0.5); // 50/50 por defecto
+  const isDraggingRef = useRef(false);
+  const splitContainerRef = useRef<HTMLDivElement>(null);
+
+  // Sync scratchpad local con nota cuando cambia note.id
+  useEffect(() => {
+    setLocalNoteScratch(note.scratchpad || '');
   }, [note.id]);
 
   const handleDeleteSummary = (id: string) => {
@@ -377,6 +593,76 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   useEffect(() => {
     if (isEditingTitle && titleInputRef.current) titleInputRef.current.focus();
   }, [isEditingTitle]);
+
+  const handleNoteScratchChange = (text: string) => {
+    setLocalNoteScratch(text);
+    if (scratchDebounceRef.current) clearTimeout(scratchDebounceRef.current);
+    scratchDebounceRef.current = setTimeout(() => {
+      onUpdate(note.id, { scratchpad: text });
+    }, 1200);
+  };
+
+  const handleDividerMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    isDraggingRef.current = true;
+    const container = splitContainerRef.current;
+    if (!container) return;
+
+    const onMove = (ev: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      const rect = container.getBoundingClientRect();
+      const isMobile = window.innerWidth < 768;
+      if (isMobile) {
+        // En móvil: drag vertical
+        const ratio = (ev.clientY - rect.top) / rect.height;
+        setSplitRatio(Math.min(0.85, Math.max(0.15, ratio)));
+      } else {
+        // En desktop: drag horizontal
+        const ratio = (ev.clientX - rect.left) / rect.width;
+        setSplitRatio(Math.min(0.85, Math.max(0.15, ratio)));
+      }
+    };
+    const onUp = () => {
+      isDraggingRef.current = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+
+  const handleCreateSubnote = async () => {
+    if (!session?.user) return;
+    const title = `Nueva Nota`;
+    const { data, error } = await supabase.from('notes').insert([{
+      title,
+      content: '',
+      scratchpad: '',
+      group_id: note.group_id,
+      user_id: session.user.id,
+      parent_note_id: displayNoteId,
+      generation_level: (note.generation_level || 0) + 1,
+      ai_generated: false,
+      position: manualChildren.length,
+    }]).select().single();
+    if (!error && data) {
+      setActiveTab(`sub_${data.id}`);
+      // Actualizamos UIStore de forma optimista para que App.tsx vea la nueva nota de inmediato
+      const store = useUIStore.getState();
+      const currentGroups = store.groups;
+      const updatedGroups = currentGroups.map(g => {
+        if (g.id === note.group_id) {
+            return { ...g, notes: [...g.notes, { ...data, isOpen: false }] };
+        }
+        return g;
+      });
+      store.setGroups(updatedGroups);
+    }
+  };
+
+  const handleSaveChildTitle = async (childId: string, title: string) => {
+    onUpdate(childId, { title });
+  };
 
 
   const handleUpdateContent = (newMarkdown: string) => {
@@ -451,15 +737,18 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         </div>
 
         <div className="flex items-center gap-2 shrink-0 border border-transparent">
-          {/* Botón AI con badge */}
-          {session?.user && (
-            <AIBadge
-              count={completedSummaries.length}
-              hasPending={aiSummaries.some(s => s.status === 'pending' || s.status === 'processing')}
-              active={showAIPanel}
-              onClick={() => setShowAIPanel(v => !v)}
-            />
-          )}
+          {/* Botón pizarrón en header */}
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowNoteScratch(v => !v); }}
+            title={showNoteScratch ? 'Ocultar pizarrón' : 'Abrir pizarrón'}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+              showNoteScratch
+                ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                : 'text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/30 hover:text-amber-400'
+            }`}
+          >
+            <PenLine size={13} />
+          </button>
 
           {showLineNumbers && onToggleLineNumbers && (
             <button
@@ -602,101 +891,185 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             </div>
           )}
 
-          {/* TABS — chips unificados: pendientes + completados */}
-          {showAIPanel && (aiSummaries.length > 0) && (() => {
-            const q = searchQuery?.trim().toLowerCase() || '';
-            const originalMatches = q && (note.content?.toLowerCase().includes(q) || note.title?.toLowerCase().includes(q));
-            return (
-            <div className="flex items-center gap-2.5 overflow-x-auto flex-wrap p-[2px] shrink-0">
-              {/* Tab Original — solo si hay completados */}
-              {completedSummaries.length > 0 && (
-                <button
-                  onClick={() => setActiveTab('original')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all border shrink-0 ${
-                    activeTab === 'original'
-                      ? `bg-[#4940D9] text-white border-[#4940D9] shadow-sm shadow-[#4940D9]/20 ${originalMatches ? 'ring-2 ring-amber-400' : ''}`
-                      : originalMatches
-                        ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-500 ring-1 ring-amber-500/50'
-                        : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-zinc-400'
-                  }`}
-                >
-                  <FileText size={11} /> Original
-                </button>
-              )}
-              {/* Chips pendientes/processing — gestándose */}
+          {/* ── BARRA DE TABS UNIFICADA — siempre visible si hay hijos o summaries ── */}
+          {(manualChildren.length > 0 || aiSummaries.length > 0 || childrenLoaded) && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0">
+
+              {/* Tab Original */}
+              <button
+                onClick={() => setActiveTab('original')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all ${
+                  activeTab === 'original'
+                    ? 'bg-[#4940D9] text-white border-[#4940D9] shadow-sm'
+                    : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-zinc-400'
+                }`}
+              >
+                <FileText size={11} /> Original
+              </button>
+
+              {/* Tabs subnotas manuales — verdes */}
+              {manualChildren.map((child) => {
+                const isActive = activeTab === `sub_${child.id}`;
+                return (
+                  <div key={child.id} className="relative shrink-0 flex items-center group">
+                    <button
+                      onClick={() => setActiveTab(`sub_${child.id}`)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all max-w-[150px] ${
+                        isActive
+                          ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                          : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-emerald-500/50 hover:text-emerald-400'
+                      }`}
+                    >
+                      <GitBranch size={10} className="shrink-0" />
+                      <SubnoteTitle
+                        child={child}
+                        isActive={isActive}
+                        onRename={handleSaveChildTitle}
+                      />
+                    </button>
+                  </div>
+                );
+              })}
+
+              {/* Tabs AI summaries — violetas (procesando) */}
               {aiSummaries.filter(s => s.status === 'pending' || s.status === 'processing').map(s => (
                 <div key={s.id}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 max-w-[180px] bg-zinc-800/60 border-zinc-700 text-zinc-400 animate-pulse"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 max-w-[150px] bg-zinc-800/60 border-zinc-700 text-zinc-400 animate-pulse"
                 >
                   <Loader2 size={10} className="animate-spin shrink-0" />
                   <span className="truncate">{s.target_objective || 'Analizando...'}</span>
                 </div>
               ))}
-              {/* Chips completados */}
-              {completedSummaries.map(s => {
-                const summaryMatches = q && ((s.content?.toLowerCase().includes(q)) || (s.scratchpad?.toLowerCase().includes(q)) || (s.target_objective?.toLowerCase().includes(q)));
-                return (
+
+              {/* Tabs AI summaries — violetas (completados) */}
+              {completedSummaries.map(s => (
                 <button key={s.id}
                   onClick={() => setActiveTab(activeTab === s.id ? 'original' : s.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all border shrink-0 max-w-[180px] ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all max-w-[150px] ${
                     activeTab === s.id
-                      ? `bg-violet-600 text-white border-violet-500 shadow-sm shadow-violet-500/20 ${summaryMatches ? 'ring-2 ring-amber-400' : ''}`
-                      : summaryMatches
-                        ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-500 ring-1 ring-amber-500/50'
-                        : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/40 hover:text-violet-400'
+                      ? 'bg-violet-600 text-white border-violet-500 shadow-sm'
+                      : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/40 hover:text-violet-400'
                   }`}
                 >
                   <Sparkles size={10} className="shrink-0" />
                   <span className="truncate">{s.target_objective || 'Análisis'}</span>
                 </button>
-                );
-              })}
-            </div>
-            );
-          })()}
+              ))}
 
-          {/* CONTENIDO ACTIVO */}
-          {(!showAIPanel || activeTab === 'original') ? (
-            note.is_checklist ? (
-              <div className="bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4 flex-1 overflow-y-scroll min-h-0 note-editor-scroll">
-                <ChecklistEditor ref={checklistRef} idPrefix={displayNoteId} initialContent={displayContent} onUpdate={handleUpdateContent} />
-              </div>
-            ) : (
-              <div onClick={(e) => {
-                if ((e.target as HTMLElement).closest('.cm-panel, .cm-search, .cm-search-marker-container')) return;
-                editorRef.current?.focus();
-              }}
-                className={`note-editor-scroll bg-zinc-50 dark:bg-[#242432] rounded-xl p-4 cursor-text flex-1 overflow-y-scroll min-h-0 border ${searchQuery?.trim() && note.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ? 'border-amber-500' : 'border-zinc-200 dark:border-[#2D2D42]'}`}>
-                <SmartNotesEditor
-                  ref={editorRef}
-                  noteId={displayNoteId}
-                  initialContent={displayContent}
-                  searchQuery={searchQuery}
-                  onChange={handleUpdateContent}
-                  noteFont={noteFont}
-                  noteFontSize={noteFontSize}
-                  noteLineHeight={noteLineHeight}
-                  showLineNumbers={showLineNumbers}
-                />
-              </div>
-            )
-          ) : completedSummaries.find(s => s.id === activeTab) ? (
-            <div className="flex-1 flex flex-col min-h-0 animate-fadeIn">
-              <SummaryTabContent
-                key={activeTab}
-                summary={completedSummaries.find(s => s.id === activeTab)!}
+              {/* Botón + Subnota */}
+              {session?.user && (
+                <button
+                  onClick={handleCreateSubnote}
+                  title="Crear sub-nota"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold border shrink-0 text-emerald-400 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/15 transition-all"
+                >
+                  <Plus size={11} /> Sub
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ── CONTENIDO ACTIVO ─────────────────────────────────────────────────── */}
+          {(() => {
+            const activeSubnoteId = activeTab.startsWith('sub_') ? activeTab.replace('sub_', '') : null;
+            const activeSubnote = activeSubnoteId ? manualChildren.find(c => c.id === activeSubnoteId) : null;
+            const activeSummary = !activeSubnoteId && activeTab !== 'original'
+              ? completedSummaries.find(s => s.id === activeTab)
+              : null;
+
+            if (activeSummary) {
+              return (
+                <div className="flex-1 flex flex-col min-h-0 animate-fadeIn">
+                  <SummaryTabContent
+                    key={activeTab}
+                    summary={activeSummary}
+                    noteFont={noteFont}
+                    noteFontSize={noteFontSize}
+                    noteLineHeight={noteLineHeight}
+                    showLineNumbers={showLineNumbers}
+                    onDelete={handleDeleteSummary}
+                    onPromote={onCreateNote ? handlePromoteToNote : undefined}
+                    updateScratchpad={updateScratchpad}
+                    updateContent={updateSummaryContent}
+                    searchQuery={searchQuery}
+                  />
+                </div>
+              );
+            }
+
+            // Current target note context
+            const currentNote: Note = activeSubnote ? activeSubnote : {
+              ...note,
+              id: displayNoteId,
+              content: displayContent,
+              scratchpad: localNoteScratch
+            };
+
+            return (
+              <SubnoteTabContent
+                key={activeTab === 'original' ? displayNoteId : activeTab}
+                note={currentNote}
+                showScratch={showNoteScratch}
+                onUpdate={onUpdate}
+                splitRatio={splitRatio}
+                onDividerMouseDown={handleDividerMouseDown}
+                splitContainerRef={splitContainerRef}
                 noteFont={noteFont}
                 noteFontSize={noteFontSize}
                 noteLineHeight={noteLineHeight}
                 showLineNumbers={showLineNumbers}
-                onDelete={handleDeleteSummary}
-                onPromote={onCreateNote ? handlePromoteToNote : undefined}
-                updateScratchpad={updateScratchpad}
-                updateContent={updateSummaryContent}
                 searchQuery={searchQuery}
+                onUpdateContent={(text) => {
+                  if (activeSubnote) {
+                    onUpdate(activeSubnote.id, { content: text });
+                  } else {
+                    handleUpdateContent(text);
+                  }
+                }}
+                onUpdateScratch={(text) => {
+                  if (activeSubnote) {
+                    onUpdate(activeSubnote.id, { scratchpad: text });
+                  } else {
+                    handleNoteScratchChange(text);
+                  }
+                }}
+                editorRef={editorRef}
+                scratchRef={noteScratchRef}
+                checklistRef={checklistRef}
               />
+            );
+          })()}
+
+          {/* ── AI INPUT COLAPSABLE — siempre al fondo, expandible ─────────────────── */}
+          {session?.user && (
+            <div className="shrink-0">
+              {showAIInput ? (
+                <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 dark:bg-[#1A1A2E]/60 p-3 animate-fadeIn">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-bold text-violet-400 flex items-center gap-1.5">
+                      <Sparkles size={11} /> AI — basado en contenido activo
+                    </span>
+                    <button onClick={() => setShowAIInput(false)} className="text-zinc-400 hover:text-zinc-300 p-0.5">
+                      <X size={13} />
+                    </button>
+                  </div>
+                  <NoteAIPanel
+                    noteId={displayNoteId}
+                    userId={session.user.id}
+                    noteStatus={note.ai_summary_status ?? 'idle'}
+                    onPromoteToNote={onCreateNote ? handlePromoteToNote : undefined}
+                  />
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowAIInput(true)}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-violet-500/20 text-violet-400/60 hover:border-violet-500/40 hover:text-violet-400 hover:bg-violet-500/5 transition-all text-xs font-medium"
+                >
+                  <Sparkles size={12} /> Preguntar a la IA sobre esta nota...
+                </button>
+              )}
             </div>
-          ) : null}
+          )}
         </div>
       </div>
 

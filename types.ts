@@ -2,7 +2,7 @@ export interface Note {
   id: string;
   title: string;
   content: string;
-  isOpen: boolean; // UI state, not necessarily in DB (or mapped from is_open if we added it, but schema didn't have it, I'll keep it local or map it)
+  isOpen?: boolean; // UI state, not necessarily in DB (or mapped from is_open if we added it, but schema didn't have it, I'll keep it local or map it)
   // Schema has: id, user_id, group_id, title, content, position, created_at
   // We need to map DB -> UI
   created_at?: string;
@@ -29,6 +29,8 @@ export interface Note {
     | "done"
     | "error"
     | "stale";
+  scratchpad?: string;
+  children?: Note[];
 }
 
 export type NoteFont = "sans" | "serif" | "mono";

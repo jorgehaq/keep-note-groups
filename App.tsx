@@ -1472,7 +1472,7 @@ function App() {
                         onScroll={checkScroll}
                         className="flex flex-nowrap md:flex-wrap justify-start md:justify-center gap-2.5 overflow-x-auto hidden-scrollbar pt-2 pb-2 md:pb-1 scroll-smooth px-2"
                       >
-                      {sortNotesArray(activeGroup.notes, noteSortMode)
+                      {sortNotesArray(activeGroup.notes.filter(n => !n.parent_note_id), noteSortMode)
                         .map(note => {
                           const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
                           const isFocused = focusedNoteId === note.id;
@@ -1577,7 +1577,7 @@ function App() {
                         ) : (
                           <div className="flex-1 flex flex-col min-h-0">
                             {activeGroup.notes
-                              .filter(n => mountedNoteIds.has(n.id) || n.id === activeNoteId)
+                              .filter(n => (mountedNoteIds.has(n.id) || n.id === activeNoteId) && !n.parent_note_id)
                               .map(note => {
                                 const isVisible = note.id === activeNoteId;
                                 const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
@@ -1620,6 +1620,7 @@ function App() {
                                       onCreateNote={createNoteFromAI}
                                       session={session}
                                       syncStatus={noteSaveStatus[note.id] || 'idle'}
+                                      groupNotes={activeGroup.notes}
                                     />
                                   </div>
                                 );
