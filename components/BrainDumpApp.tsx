@@ -1,26 +1,17 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell, Grid, ChevronsDownUp, MoreVertical, ListTodo, CheckSquare, Square, GripVertical, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell, Grid, ChevronsDownUp, MoreVertical, ListTodo, CheckSquare, Square, GripVertical, Search, X, ChevronLeft, ChevronRight, ArrowUpRight, Download } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { KanbanSemaphore } from './KanbanSemaphore';
+import { PizarronLinkerModal } from './PizarronLinkerModal';
 import { supabase } from '../src/lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
+import { BrainDump, Group } from '../types';
 import { SmartNotesEditor } from '../src/components/editor/SmartNotesEditor';
 import { ChecklistEditor, parseMarkdownToChecklist, serializeChecklistToMarkdown, serializeChecklistToPlainMarkdown } from '../src/components/editor/ChecklistEditor';
 import { useUIStore } from '../src/lib/store';
 
 // --- TYPES ---
 type BrainDumpStatus = 'main' | 'active' | 'history';
-
-interface BrainDump {
-    id: string;
-    title?: string;
-    content: string;
-    is_checklist?: boolean;
-    status: BrainDumpStatus;
-    user_id: string;
-    created_at: string;
-    updated_at: string;
-}
 
 const formatCleanDate = (isoString: string) => {
     const d = new Date(isoString);
@@ -128,9 +119,19 @@ const PizarronTitleInput = ({ pizarron, onSave, searchQuery }: { pizarron: Brain
     );
 };
 
-export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteFontSize?: string; noteLineHeight?: string; searchQuery?: string }> = ({ session, noteFont, noteFontSize, noteLineHeight = 'standard', searchQuery }) => {
+export const BrainDumpApp: React.FC<{ 
+    session: Session; 
+    noteFont?: string; 
+    noteFontSize?: string; 
+    noteLineHeight?: string; 
+    searchQuery?: string;
+    groups?: Group[];
+    onOpenNote?: (groupId: string, noteId: string) => void;
+}> = ({ session, noteFont, noteFontSize, noteLineHeight = 'standard', searchQuery, groups = [], onOpenNote }) => {
     const { isBraindumpMaximized, setIsBraindumpMaximized, brainDumps: dumps, setBrainDumps: setDumps, showOverdueMarquee, setShowOverdueMarquee, overdueRemindersCount, globalTasks, focusedDumpId, setFocusedDumpId, isDumpTrayOpen, setIsDumpTrayOpen, summaryCounts } = useUIStore();
     const [loading, setLoading] = useState(false);
+    const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+    const [linkingPizarron, setLinkingPizarron] = useState<BrainDump | null>(null);
     
     const [expandedHistoryIds, setExpandedHistoryIds] = useState<Set<string>>(new Set());
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -226,14 +227,14 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
     return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
             <div className={`sticky top-0 z-30 bg-white/80 dark:bg-[#1A1A24]/90 backdrop-blur-md shrink-0 ${isDumpTrayOpen ? '' : 'border-b border-zinc-200 dark:border-[#2D2D42] shadow-sm'}`}>
-                <div className={`h-[72px] flex items-center justify-between px-4 md:px-6 py-4 ${isDumpTrayOpen ? 'border-b border-zinc-200 dark:border-[#2D2D42] shadow-sm' : ''}`}>
+                <div className={`flex flex-col md:flex-row md:items-center justify-between px-4 md:px-6 py-4 gap-4 ${isDumpTrayOpen ? 'border-b border-zinc-200 dark:border-[#2D2D42] shadow-sm' : ''}`}>
                     <h1 className="text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] flex items-center gap-3">
-                        <div className="h-9 p-2 bg-[#FFD700] rounded-lg text-amber-900 shadow-lg shadow-amber-500/20">
+                        <div className="h-9 p-2 bg-[#FFD700] rounded-lg text-amber-900 shadow-lg shadow-amber-500/20 shrink-0">
                             <PenTool size={20} />
                         </div>
-                        Pizarrón
+                        <span className="truncate">Pizarrón</span>
                     </h1>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 md:gap-3">
                     {/* Botón Toggle Reminder (siempre primero de izquierda a derecha) */}
                     <button
                       onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
@@ -275,10 +276,10 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                       <Search size={15} className={`absolute left-3 pointer-events-none transition-colors ${localSearchQuery.trim() ? 'text-amber-600 dark:text-amber-500 font-bold' : 'text-zinc-400'}`} />
                       <input
                         type="text"
-                        placeholder="Buscar pizarrones..."
+                        placeholder="Buscar..."
                         value={localSearchQuery}
                         onChange={(e) => setLocalSearchQuery(e.target.value)}
-                        className={`h-9 w-32 md:w-48 lg:w-64 pl-9 pr-8 text-xs rounded-xl border transition-all focus:outline-none ${localSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50' : 'border-zinc-200 dark:border-[#2D2D42] bg-white dark:bg-[#1A1A24] text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'}`}
+                        className={`h-9 flex-1 md:w-48 lg:w-64 pl-9 pr-8 text-xs rounded-xl border transition-all focus:outline-none ${localSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50' : 'border-zinc-200 dark:border-[#2D2D42] bg-white dark:bg-[#1A1A24] text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'}`}
                       />
                       {localSearchQuery.trim() && (
                         <button 
@@ -441,6 +442,37 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                                                             </button>
                                                         )}
                                                         <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
+                                                        
+                                                        <button 
+                                                            onClick={(e) => { 
+                                                                e.stopPropagation(); 
+                                                                setLinkingPizarron(pizarron);
+                                                                setIsLinkModalOpen(true);
+                                                                setOpenMenuId(null);
+                                                            }} 
+                                                            className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 transition-colors"
+                                                        >
+                                                            <ArrowUpRight size={14} /> Convertir a Nota
+                                                        </button>
+
+                                                        <button 
+                                                            onClick={(e) => { 
+                                                                e.stopPropagation(); 
+                                                                const element = document.createElement("a");
+                                                                const file = new Blob([pizarron.content], { type: 'text/markdown' });
+                                                                element.href = URL.createObjectURL(file);
+                                                                element.download = `${(pizarron.title || 'pizarron').replace(/\s+/g, '_')}.md`;
+                                                                document.body.appendChild(element);
+                                                                element.click();
+                                                                document.body.removeChild(element);
+                                                                setOpenMenuId(null);
+                                                            }} 
+                                                            className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"
+                                                        >
+                                                            <Download size={14} /> Descargar .md
+                                                        </button>
+
+                                                        <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
                                                         <button onClick={() => { changeStatus(pizarron.id, 'history'); setOpenMenuId(null); }} className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"><ArchiveIcon size={14} />Archivar</button>
                                                         <button onClick={() => { deleteDump(pizarron.id); setOpenMenuId(null); }} className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"><Trash2 size={14} />Eliminar</button>
                                                     </div>
@@ -546,6 +578,18 @@ export const BrainDumpApp: React.FC<{ session: Session; noteFont?: string; noteF
                     )}
                 </div>
             </div>
+
+            {isLinkModalOpen && linkingPizarron && (
+                <PizarronLinkerModal 
+                    pizarron={linkingPizarron}
+                    groups={groups}
+                    onClose={() => setIsLinkModalOpen(false)}
+                    onSuccess={(groupId, noteId) => {
+                        setIsLinkModalOpen(false);
+                        onOpenNote?.(groupId, noteId);
+                    }}
+                />
+            )}
         </div>
     );
 };

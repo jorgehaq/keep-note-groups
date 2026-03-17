@@ -1216,7 +1216,12 @@ function App() {
         ) :
          globalView === 'timers' ? <TimeTrackerApp session={session!} /> :
          globalView === 'reminders' ? <RemindersApp session={session!} dateFormat={dateFormat} timeFormat={timeFormat} /> :
-         globalView === 'braindump' ? <BrainDumpApp session={session!} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} searchQuery={currentSearchQuery} /> :
+         globalView === 'braindump' ? <BrainDumpApp session={session!} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} searchQuery={currentSearchQuery} groups={groups} onOpenNote={(groupId, noteId) => {
+           setActiveGroup(groupId);
+           setEditingNoteId(noteId);
+           setFocusedNoteId(noteId);
+           setGlobalView('notes');
+         }} /> :
          globalView === 'translator' ? <TranslatorApp session={session!} /> : (
           <>
             <div className={`sticky top-0 z-30 bg-white/80 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 ${isGlobalNoteTrayOpen ? '' : 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm'}`}>
