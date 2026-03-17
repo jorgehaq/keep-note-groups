@@ -42,6 +42,7 @@ export interface Group {
   color?: string; // Optional aesthetic color for the "window"
   user_id?: string;
   is_pinned?: boolean;
+  is_favorite?: boolean;
   last_accessed_at?: string;
 }
 

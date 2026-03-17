@@ -227,13 +227,18 @@ function App() {
               title: payload.new.name,
               user_id: payload.new.user_id,
               is_pinned: payload.new.is_pinned,
+              is_favorite: payload.new.is_favorite,
               last_accessed_at: payload.new.last_accessed_at,
               notes: []
             };
             return [...prev, newGroup];
           });
         } else if (payload.eventType === 'UPDATE') {
-          updateGroupSync(payload.new.id, { title: payload.new.name, is_pinned: payload.new.is_pinned });
+          updateGroupSync(payload.new.id, { 
+            title: payload.new.name, 
+            is_pinned: payload.new.is_pinned,
+            is_favorite: payload.new.is_favorite
+          });
         } else {
           fetchData(); 
         }
@@ -447,6 +452,7 @@ function App() {
           title: g.name,
           user_id: g.user_id,
           is_pinned: g.is_pinned,
+          is_favorite: g.is_favorite,
           last_accessed_at: g.last_accessed_at,
           notes: groupNotes
         };
@@ -581,6 +587,18 @@ function App() {
     } catch (error: any) {
       setGroups(groups.map(g => g.id === groupId ? { ...g, is_pinned: currentPinStatus } : g));
       alert('Error al actualizar pin: ' + error.message);
+    }
+  };
+
+  const toggleGroupFavorite = async (groupId: string, currentFavoriteStatus: boolean) => {
+    const newStatus = !currentFavoriteStatus;
+    setGroups(groups.map(g => g.id === groupId ? { ...g, is_favorite: newStatus } : g));
+    try {
+      const { error } = await supabase.from('groups').update({ is_favorite: newStatus }).eq('id', groupId);
+      if (error) throw error;
+    } catch (error: any) {
+      setGroups(groups.map(g => g.id === groupId ? { ...g, is_favorite: currentFavoriteStatus } : g));
+      alert('Error al actualizar favorito: ' + error.message);
     }
   };
 
@@ -1035,6 +1053,7 @@ function App() {
         onAddGroup={() => { addGroup(); setIsGlobalNoteTrayOpen(true); }}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onTogglePin={toggleGroupPin}
+        onToggleFavorite={toggleGroupFavorite}
         onLogout={handleLogout}
         onSelectDockedNote={(groupId, noteId) => {
           const isAlreadyFocused = focusedNoteByGroup[groupId] === noteId;
@@ -1665,10 +1684,8 @@ function App() {
         groups={groups}
         isOpen={isLauncherOpen}
         onClose={() => setIsLauncherOpen(false)}
-        onTogglePin={(id, status) => {
-           setGroups(prev => prev.map(g => g.id === id ? { ...g, is_pinned: !status } : g));
-           supabase.from('groups').update({ is_pinned: !status }).eq('id', id).then();
-        }}
+        onTogglePin={toggleGroupPin}
+        onToggleFavorite={toggleGroupFavorite}
       />
     </div>
   );

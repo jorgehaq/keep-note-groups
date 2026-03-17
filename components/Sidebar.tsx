@@ -12,6 +12,7 @@ interface SidebarProps {
   onAddGroup: () => void;
   onOpenSettings: () => void;
   onTogglePin: (groupId: string, currentStatus: boolean) => void;
+  onToggleFavorite: (groupId: string, currentStatus: boolean) => void;
   onLogout: () => void;
   onSelectDockedNote: (groupId: string, noteId: string) => void;
   focusedNoteId: string | null;
@@ -24,6 +25,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onAddGroup,
   onOpenSettings,
   onTogglePin,
+  onToggleFavorite,
   onLogout,
   onSelectDockedNote,
   focusedNoteId,
@@ -363,6 +365,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         isOpen={isLauncherOpen}
         onClose={() => setIsLauncherOpen(false)}
         onTogglePin={onTogglePin}
+        onToggleFavorite={onToggleFavorite}
       />
     </>
   );

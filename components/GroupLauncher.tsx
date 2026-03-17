@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Clock, List, Pin, FolderOpen, X } from 'lucide-react';
+import { Search, Clock, List, Pin, FolderOpen, X, Star } from 'lucide-react';
 import { Group } from '../types';
 import { useUIStore } from '../src/lib/store';
 
@@ -8,9 +8,10 @@ interface GroupLauncherProps {
     isOpen: boolean;
     onClose: () => void;
     onTogglePin: (groupId: string, currentStatus: boolean) => void;
+    onToggleFavorite: (groupId: string, currentStatus: boolean) => void;
 }
 
-export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, onClose, onTogglePin }) => {
+export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, onClose, onTogglePin, onToggleFavorite }) => {
     const {
         openGroup,
         lastLauncherTab,
@@ -206,9 +207,11 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
                                             }}
                                         >
                                             <span className={`text-sm font-medium leading-none truncate uppercase ${
-                                                dockedGroupIds.includes(group.id)
-                                                    ? 'text-[#4940D9]'
-                                                    : 'text-zinc-800 dark:text-[#CCCCCC]'
+                                                group.is_favorite 
+                                                    ? 'text-yellow-600 dark:text-yellow-400' 
+                                                    : dockedGroupIds.includes(group.id)
+                                                        ? 'text-[#4940D9]'
+                                                        : 'text-zinc-800 dark:text-[#CCCCCC]'
                                             }`}>
                                                 {highlightMatch(group.title)}
                                             </span>
@@ -224,6 +227,25 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
                                                 {dockedGroupIds.includes(group.id) && (
                                                     <FolderOpen size={14} className="text-[#4940D9] opacity-0 group-hover:opacity-100 transition-all shrink-0 fill-[#4940D9]" />
                                                 )}
+                                            </div>
+
+                                            {/* Action: Favorite (Star) */}
+                                            <div className="w-6 h-6 flex items-center justify-center">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onToggleFavorite(group.id, !!group.is_favorite);
+                                                    }}
+                                                    className={`
+                                                        p-1 rounded-md transition-all
+                                                        ${group.is_favorite
+                                                            ? 'text-yellow-500 bg-yellow-50 dark:bg-yellow-900/10 opacity-100'
+                                                            : 'text-zinc-400 hover:text-yellow-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 opacity-0 group-hover:opacity-100 focus:opacity-100'}
+                                                    `}
+                                                    title={group.is_favorite ? "Quitar de favoritos" : "Marcar como favorito"}
+                                                >
+                                                    <Star size={14} className={group.is_favorite ? 'fill-current' : ''} />
+                                                </button>
                                             </div>
 
                                             {/* Action: Pin */}
