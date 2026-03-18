@@ -143,6 +143,7 @@ interface UIStore {
     showOverdueMarquee: boolean;
     setShowOverdueMarquee: (show: boolean) => void;
     toggleZenMode: (appId: string) => void;
+    resetUIState: () => void;
 }
 
 export const useUIStore = create<UIStore>()(
@@ -366,6 +367,23 @@ export const useUIStore = create<UIStore>()(
                         [appId]: !state.isZenModeByApp[appId],
                     },
                 })),
+            resetUIState: () => set({
+                activeGroupId: null,
+                openNotesByGroup: {},
+                dockedGroupIds: [],
+                lastLauncherTab: "recent",
+                focusedNoteByGroup: {},
+                lastActiveNoteByGroup: {},
+                noteTrayOpenByGroup: {},
+                aiPanelOpenByNote: {},
+                activeTabByNote: {},
+                aiPanelOpenByBrainDump: {},
+                activeTabByBrainDump: {},
+                focusedDumpId: null,
+                isDumpTrayOpen: false,
+                pizarronVisibleByNoteAndTab: {},
+                isZenModeByApp: {},
+            }),
 
             // Realtime Sync Implementation
             groups: [],

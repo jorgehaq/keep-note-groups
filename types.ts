@@ -2,7 +2,8 @@ export interface Note {
   id: string;
   title: string;
   content: string;
-  isOpen?: boolean; // UI state, not necessarily in DB (or mapped from is_open if we added it, but schema didn't have it, I'll keep it local or map it)
+  isOpen?: boolean; // UI state (kept for compatibility)
+  is_open?: boolean; // DB state
   // Schema has: id, user_id, group_id, title, content, position, created_at
   // We need to map DB -> UI
   created_at?: string;

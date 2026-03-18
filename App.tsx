@@ -177,14 +177,15 @@ function App() {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && !hasLoadedOnce.current) {
+      if (event === 'SIGNED_IN') {
         setSession(session);
-        fetchData();
+        fetchData(session); // Fetch immediately with new session
       } else if (event === 'SIGNED_OUT') {
         setSession(null);
         setGroups([]);
         setBrainDumps([]);
         setTranslations([]);
+        useUIStore.getState().resetUIState(); // Clear persistent UI ids
         hasLoadedOnce.current = false;
         setLoading(false);
       }
@@ -294,7 +295,9 @@ function App() {
     };
   }, [session]);
 
-  const fetchSummaryCounts = async () => {
+  const fetchSummaryCounts = async (overrideSession?: Session | null) => {
+    const activeSession = overrideSession || sessionRef.current;
+    if (!activeSession) return;
     try {
       const { data, error } = await supabase.from('summaries').select('note_id');
       if (error) throw error;
@@ -306,15 +309,17 @@ function App() {
     }
   };
 
-  const fetchTranslations = async () => {
-    if (!sessionRef.current) return;
-    const { data } = await supabase.from('translations').select('*').eq('user_id', sessionRef.current.user.id).order('created_at', { ascending: false });
+  const fetchTranslations = async (overrideSession?: Session | null) => {
+    const activeSession = overrideSession || sessionRef.current;
+    if (!activeSession) return;
+    const { data } = await supabase.from('translations').select('*').eq('user_id', activeSession.user.id).order('created_at', { ascending: false });
     if (data) setTranslations(data);
   };
 
-  const fetchBrainDumps = async () => {
-    if (!sessionRef.current) return;
-    const { data } = await supabase.from('brain_dumps').select('*').eq('user_id', sessionRef.current.user.id).order('updated_at', { ascending: false });
+  const fetchBrainDumps = async (overrideSession?: Session | null) => {
+    const activeSession = overrideSession || sessionRef.current;
+    if (!activeSession) return;
+    const { data } = await supabase.from('brain_dumps').select('*').eq('user_id', activeSession.user.id).order('updated_at', { ascending: false });
     if (data) setBrainDumps(data);
   };
 
@@ -438,17 +443,18 @@ function App() {
     return () => window.removeEventListener('reload-app-data', handleReload);
   }, []); // [] is now safe because handleReload calls fetchData/translations/dumps which use sessionRef (indirectly via their definitions) or current state if reactive.
 
-  const fetchData = async () => {
-    if (!sessionRef.current) return;
+  const fetchData = async (overrideSession?: Session | null) => {
+    const activeSession = overrideSession || sessionRef.current;
+    if (!activeSession) return;
     if (!hasLoadedOnce.current) setLoading(true);
     try {
       const { data: groupsData, error: groupsError } = await supabase.from('groups').select('*').order('created_at', { ascending: true });
       if (groupsError) throw groupsError;
 
       // 📡 Carga inicial de Pizarrones y Traducciones
-      fetchBrainDumps();
-      fetchTranslations();
-      fetchSummaryCounts();
+      fetchBrainDumps(activeSession);
+      fetchTranslations(activeSession);
+      fetchSummaryCounts(activeSession);
 
       const { data: notesData, error: notesError } = await supabase.from('notes').select('*').order('position', { ascending: true });
       if (notesError) throw notesError;
@@ -458,10 +464,11 @@ function App() {
       const openNotes = store.openNotesByGroup;
 
       const mergedGroups: Group[] = (groupsData || []).map(g => {
-        const currentlyOpenIds = openNotes[g.id] || [];
+        // Use n.is_open from DB for initial load, then the store's openNotes state
+        const storedOpenIds = openNotes[g.id] || [];
         let groupNotes: Note[] = (notesData || []).filter(n => n.group_id === g.id).map(n => ({ 
           ...n, 
-          isOpen: currentlyOpenIds.includes(n.id) 
+          isOpen: !hasLoadedOnce.current ? !!n.is_open : storedOpenIds.includes(n.id) 
         }));
         groupNotes = sortNotesArray(groupNotes, currentSortPref);
 
@@ -755,11 +762,13 @@ function App() {
     const dbUpdates: any = {};
     if (updates.title !== undefined) dbUpdates.title = updates.title;
     if (updates.content !== undefined) dbUpdates.content = updates.content;
+    if (updates.scratchpad !== undefined) dbUpdates.scratchpad = updates.scratchpad;
+    if (updates.is_open !== undefined) dbUpdates.is_open = updates.is_open;
     if (updates.is_pinned !== undefined) dbUpdates.is_pinned = updates.is_pinned;
     if (updates.is_docked !== undefined) dbUpdates.is_docked = updates.is_docked;
     if (updates.is_checklist !== undefined) dbUpdates.is_checklist = updates.is_checklist;
 
-    const isTextUpdate = updates.title !== undefined || updates.content !== undefined;
+    const isTextUpdate = updates.title !== undefined || updates.content !== undefined || updates.scratchpad !== undefined;
     if (isTextUpdate) {
         dbUpdates.updated_at = new Date().toISOString();
     }
@@ -1659,7 +1668,12 @@ function App() {
                                         const store = useUIStore.getState();
                                         const currentOpen = store.openNotesByGroup[activeGroup.id] || [];
                                         const wasOpen = currentOpen.includes(note.id);
+                                        const willBeOpen = !wasOpen;
+
                                         toggleNote(activeGroup.id, note.id);
+                                        // 📡 Persistence: Sync open state to DB
+                                        handleUpdateNoteWrapper(note.id, { is_open: willBeOpen });
+
                                         if (wasOpen && store.noteSortMode) {
                                           applyManualSort(store.noteSortMode);
                                         }
