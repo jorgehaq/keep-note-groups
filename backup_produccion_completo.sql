@@ -120,7 +120,8 @@ CREATE TABLE IF NOT EXISTS "public"."groups" (
     "name" "text" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
     "is_pinned" boolean DEFAULT false,
-    "last_accessed_at" timestamp with time zone DEFAULT "now"()
+    "last_accessed_at" timestamp with time zone DEFAULT "now"(),
+    "is_favorite" boolean DEFAULT false
 );
 
 
@@ -144,7 +145,8 @@ CREATE TABLE IF NOT EXISTS "public"."notes" (
     "focus_prompt" "text",
     "generation_level" integer DEFAULT 0,
     "generation_status" "text" DEFAULT 'idle'::"text",
-    "parent_note_id" "uuid"
+    "parent_note_id" "uuid",
+    "scratchpad" "text" DEFAULT ''::"text"
 );
 
 
@@ -189,7 +191,8 @@ CREATE TABLE IF NOT EXISTS "public"."tasks" (
     "user_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
-    "source_id" "uuid"
+    "source_id" "uuid",
+    "content" "text"
 );
 
 
