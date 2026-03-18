@@ -570,15 +570,6 @@ export const BrainDumpApp: React.FC<{
                                     </div>
                                 </div>
                                  <div className="flex items-center gap-1.5 shrink-0">
-                                     {isInKanban && (
-                                         <div className="mr-1 shadow-sm">
-                                             <KanbanSemaphore 
-                                                 sourceType="board" 
-                                                 sourceId={displayDump.id} 
-                                                 sourceTitle={displayDump.title || 'Sin Título'} 
-                                             />
-                                         </div>
-                                     )}
                                      <button 
                                          onClick={() => setPizarronVisible(displayDump!.id, activeTab, !(pizarronVisibleByNoteAndTab[displayDump!.id]?.[activeTab]))} 
                                         className={`p-2 rounded-xl border transition-all ${pizarronVisibleByNoteAndTab[displayDump.id]?.[activeTab] ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : 'text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/30'}`}
@@ -595,10 +586,21 @@ export const BrainDumpApp: React.FC<{
                                     </button>
                                     
                                     <div className="relative" ref={openMenuId === displayDump.id ? menuRef : undefined}>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === displayDump.id ? null : displayDump.id); }}
-                                            className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-                                        ><MoreVertical size={16} /></button>
+                                        <div className="flex items-center gap-1.5">
+                                            {isInKanban && (
+                                                <div className="mr-0.5 shadow-sm">
+                                                    <KanbanSemaphore 
+                                                        sourceType="board" 
+                                                        sourceId={displayDump.id} 
+                                                        sourceTitle={displayDump.title || 'Sin Título'} 
+                                                    />
+                                                </div>
+                                            )}
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === displayDump.id ? null : displayDump.id); }}
+                                                className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                            ><MoreVertical size={16} /></button>
+                                        </div>
                                         
                                         {openMenuId === displayDump.id && (
                                             <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-[#1A1A24] shadow-xl rounded-lg border border-zinc-200 dark:border-[#2D2D42] p-1 flex flex-col gap-0.5 min-w-[200px] animate-fadeIn">
