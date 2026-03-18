@@ -1,176 +1,217 @@
 """
-TikTok Worker - Antigravity
-Procesa la cola tiktok_queue: descarga audio, analiza con Gemini 2.0 Flash, guarda en Supabase.
+tiktok_worker.py — Antigravity TikTok Worker
+Corre via GitHub Actions cada 8 minutos.
+- Lee tiktok_queue donde status = 'pending'
+- Descarga metadata + captions con yt-dlp (sin audio, sin AI)
+- Inserta en tiktok_videos
+- Actualiza tiktok_queue con el resultado
 
-Dependencias:
-    pip install yt-dlp google-generativeai supabase python-dotenv
+Usa SUPABASE_SERVICE_KEY para bypassear RLS (el worker no es un usuario autenticado).
 """
 
 import os
-import time
 import json
+import subprocess
 import tempfile
-import logging
-from pathlib import Path
+import traceback
+from datetime import datetime, timezone
 
-import yt_dlp
-import google.generativeai as genai
 from supabase import create_client, Client
-from dotenv import load_dotenv
 
-load_dotenv()
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-log = logging.getLogger("tiktok-worker")
-
-# ── Clientes ──────────────────────────────────────────────────────────────────
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-GEMINI_KEY = os.getenv("GEMINI_API_KEY")
-
-if not all([SUPABASE_URL, SUPABASE_KEY, GEMINI_KEY]):
-    log.error("Faltan variables de entorno (SUPABASE_URL, SUPABASE_SERVICE_KEY, GEMINI_API_KEY)")
-    exit(1)
+# ── Config ──────────────────────────────────────────────────────────────────
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]   # service key, NO anon key
+MAX_ITEMS    = 5                                     # procesar máximo 5 por ciclo
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-genai.configure(api_key=GEMINI_KEY)
-model = genai.GenerativeModel("gemini-2.0-flash")
 
 
-# ── Descarga ──────────────────────────────────────────────────────────────────
-def download_audio(url: str, output_dir: str) -> tuple[str, dict]:
-    """Descarga audio de TikTok. Retorna (ruta_mp3, info_del_video)."""
-    ydl_opts = {
-        "format": "bestaudio/best",
-        "outtmpl": f"{output_dir}/%(id)s.%(ext)s",
-        "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3"}],
-        "quiet": True,
-        "no_warnings": True,
-        "cookiefile": os.getenv("TIKTOK_COOKIES") if os.getenv("TIKTOK_COOKIES") else None,
-    }
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=True)
-        audio_path = f"{output_dir}/{info['id']}.mp3"
-        return audio_path, info
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
-# ── Análisis Gemini ───────────────────────────────────────────────────────────
-PROMPT = """Analiza este audio de TikTok.
-
-Devuelve SOLO un JSON válido (sin markdown, sin backticks) con esta estructura:
-{
-  "titulo": "título descriptivo y limpio del contenido",
-  "transcripcion": "transcripción completa y fiel del audio",
-  "resumen": "resumen conciso en 2-4 oraciones",
-  "puntos_clave": ["punto 1", "punto 2", "punto 3"],
-  "categoria": "categoría del contenido (ej: tecnología, humor, cocina, etc.)",
-  "idioma": "idioma detectado (ej: español, inglés)"
-}"""
+def mark_queue(queue_id: str, status: str, video_id: str = None, error: str = None):
+    """Actualiza el estado de un item en la cola."""
+    payload = {"status": status, "updated_at": now_iso()}
+    if video_id:
+        payload["video_id"] = video_id
+    if error:
+        payload["error_msg"] = error[:500]   # limitar longitud
+    supabase.table("tiktok_queue").update(payload).eq("id", queue_id).execute()
 
 
-def analyze_audio(audio_path: str) -> dict:
-    """Sube audio a Gemini Files API y obtiene análisis estructurado."""
-    log.info("Subiendo audio a Gemini Files API...")
-    uploaded = genai.upload_file(audio_path, mime_type="audio/mp3")
+def extract_captions(vtt_path: str) -> str:
+    """
+    Convierte un archivo .vtt a texto plano limpio.
+    Elimina timestamps, etiquetas y líneas duplicadas.
+    """
+    if not os.path.exists(vtt_path):
+        return ""
 
-    # Esperar a que el archivo sea procesado por la Files API si es necesario
-    # (Generalmente para audio corto es inmediato, pero por seguridad...)
-    
-    log.info("Generando análisis con Gemini 2.0 Flash...")
-    response = model.generate_content([uploaded, PROMPT])
+    lines = []
+    seen  = set()
 
-    # Limpieza del JSON
-    text = response.text.strip()
-    if text.startswith("```"):
-        text = text.split("```")[1]
-        if text.startswith("json"):
-            text = text[4:]
-    
-    try:
-        return json.loads(text.strip())
-    except Exception as e:
-        log.error(f"Error parseando JSON de Gemini: {text}")
-        raise e
+    with open(vtt_path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            # Saltar encabezado WEBVTT, timestamps y líneas vacías
+            if (not line
+                    or line.startswith("WEBVTT")
+                    or line.startswith("NOTE")
+                    or "-->" in line
+                    or line.isdigit()):
+                continue
+            # Eliminar etiquetas HTML residuales como <c>, </c>, <00:00>
+            import re
+            line = re.sub(r"<[^>]+>", "", line).strip()
+            if line and line not in seen:
+                seen.add(line)
+                lines.append(line)
+
+    return " ".join(lines)
 
 
-# ── Worker loop ───────────────────────────────────────────────────────────────
-def process_one(item: dict) -> None:
-    queue_id = item["id"]
-    url = item["url"]
-    user_id = item["user_id"]
+def download_video_info(url: str) -> dict:
+    """
+    Usa yt-dlp para extraer metadata y captions sin descargar el video.
+    Devuelve un dict con los campos que necesitamos.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        # Comando yt-dlp: solo metadata + subtítulos automáticos, sin video ni audio
+        cmd = [
+            "yt-dlp",
+            "--no-playlist",
+            "--write-auto-sub",          # subtítulos auto-generados (ASR)
+            "--write-sub",               # subtítulos manuales si existen
+            "--sub-lang", "es,en,es-419",
+            "--sub-format", "vtt",
+            "--skip-download",           # NO descargar video ni audio
+            "--dump-json",               # imprimir metadata como JSON en stdout
+            "--no-warnings",
+            "--quiet",
+            "-o", os.path.join(tmp, "%(id)s.%(ext)s"),
+            url,
+        ]
 
-    log.info(f"Procesando [{queue_id[:8]}]: {url}")
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
 
-    # Marcar como procesando
-    supabase.table("tiktok_queue").update({"status": "processing"}).eq("id", queue_id).execute()
+        if result.returncode != 0:
+            raise RuntimeError(f"yt-dlp error: {result.stderr[:300]}")
 
-    try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            # 1. Descargar audio
-            audio_path, info = download_audio(url, tmpdir)
-            title_raw = info.get("title", "Sin título")
-            log.info(f"Audio descargado: {title_raw}")
+        # Parsear metadata
+        meta = {}
+        if result.stdout.strip():
+            try:
+                meta = json.loads(result.stdout.strip().splitlines()[-1])
+            except json.JSONDecodeError:
+                pass
 
-            # 2. Analizar con Gemini
-            analysis = analyze_audio(audio_path)
+        # Buscar archivo .vtt descargado (puede haber varios idiomas)
+        transcript = ""
+        for lang in ["es", "es-419", "en"]:
+            vtt_candidate = os.path.join(tmp, f"{meta.get('id', 'video')}.{lang}.vtt")
+            if os.path.exists(vtt_candidate):
+                transcript = extract_captions(vtt_candidate)
+                break
 
-        # 3. Guardar video procesado
-        video_data = {
-            "user_id": user_id,
-            "url": url,
-            "title": analysis.get("titulo") or title_raw,
-            "author": info.get("uploader", ""),
-            "duration": info.get("duration", 0),
-            "thumbnail": info.get("thumbnail", ""),
-            "view_count": info.get("view_count", 0),
-            "like_count": info.get("like_count", 0),
-            "transcript": analysis.get("transcripcion", ""),
-            "summary": analysis.get("resumen", ""),
-            "key_points": analysis.get("puntos_clave", []),
-            "category": analysis.get("categoria", ""),
-            "language": analysis.get("idioma", ""),
+        # Si no hay VTT por nombre exacto, buscar cualquier .vtt en tmp
+        if not transcript:
+            import glob
+            vtts = glob.glob(os.path.join(tmp, "*.vtt"))
+            if vtts:
+                transcript = extract_captions(vtts[0])
+
+        # Construir resultado normalizado
+        return {
+            "title"      : meta.get("title") or meta.get("fulltitle") or "",
+            "author"     : meta.get("uploader") or meta.get("creator") or meta.get("channel") or "",
+            "duration"   : int(meta.get("duration") or 0),
+            "thumbnail"  : meta.get("thumbnail") or "",
+            "view_count" : int(meta.get("view_count") or 0),
+            "like_count" : int(meta.get("like_count") or 0),
+            "description": (meta.get("description") or "")[:2000],   # limitar
+            "language"   : meta.get("language") or "",
+            "transcript" : transcript,
         }
-        video_result = supabase.table("tiktok_videos").insert(video_data).execute()
-        video_id = video_result.data[0]["id"]
-
-        # 4. Completar en queue
-        supabase.table("tiktok_queue").update({
-            "status": "completed",
-            "video_id": video_id,
-        }).eq("id", queue_id).execute()
-
-        log.info(f"✅ Completado satisfactoriamente: {video_data['title']}")
-
-    except Exception as e:
-        log.error(f"❌ Error procesando {url}: {e}")
-        supabase.table("tiktok_queue").update({
-            "status": "error",
-            "error_msg": str(e)[:500],
-        }).eq("id", queue_id).execute()
 
 
-def run():
-    log.info("🎵 Antigravity TikTok Worker arrancando...")
-    poll_interval = int(os.getenv("POLL_INTERVAL_SECONDS", "5"))
+# ── Main ──────────────────────────────────────────────────────────────────────
 
-    while True:
+def process_queue():
+    print(f"[{now_iso()}] Worker iniciado.")
+
+    # 1. Leer items pendientes (máximo MAX_ITEMS)
+    response = (
+        supabase.table("tiktok_queue")
+        .select("id, url, user_id")
+        .eq("status", "pending")
+        .order("created_at", desc=False)
+        .limit(MAX_ITEMS)
+        .execute()
+    )
+
+    items = response.data or []
+    print(f"  → {len(items)} item(s) en cola.")
+
+    if not items:
+        print("  Cola vacía. Fin.")
+        return
+
+    for item in items:
+        queue_id = item["id"]
+        url      = item["url"]
+        user_id  = item["user_id"]
+
+        print(f"  Procesando: {url[:60]}...")
+
+        # 2. Marcar como 'processing' para evitar doble procesamiento
+        mark_queue(queue_id, "processing")
+
         try:
-            result = (
-                supabase.table("tiktok_queue")
-                .select("*")
-                .eq("status", "pending")
-                .order("created_at")
-                .limit(1)
+            # 3. Descargar metadata y captions
+            info = download_video_info(url)
+
+            # 4. Insertar en tiktok_videos
+            video_payload = {
+                "user_id"    : user_id,
+                "url"        : url,
+                "title"      : info["title"],
+                "author"     : info["author"],
+                "duration"   : info["duration"],
+                "thumbnail"  : info["thumbnail"],
+                "view_count" : info["view_count"],
+                "like_count" : info["like_count"],
+                "transcript" : info["transcript"],
+                "language"   : info["language"],
+                # content y scratchpad los rellena el usuario desde la app
+                "content"    : info["description"],   # descripción como contenido inicial
+                "status"     : "inbox",
+                "ai_summary_status": "idle",
+                "created_at" : now_iso(),
+                "updated_at" : now_iso(),
+            }
+
+            video_res = (
+                supabase.table("tiktok_videos")
+                .insert(video_payload)
                 .execute()
             )
 
-            if result.data:
-                process_one(result.data[0])
-            else:
-                time.sleep(poll_interval)
+            video_id = video_res.data[0]["id"]
+
+            # 5. Marcar cola como completada con referencia al video
+            mark_queue(queue_id, "completed", video_id=video_id)
+            print(f"  ✓ Completado. video_id={video_id}")
+
         except Exception as e:
-            log.error(f"Error en loop principal: {e}")
-            time.sleep(10)
+            error_detail = traceback.format_exc()
+            print(f"  ✗ Error: {e}")
+            mark_queue(queue_id, "error", error=str(e))
+
+    print(f"[{now_iso()}] Worker finalizado.")
 
 
 if __name__ == "__main__":
-    run()
+    process_queue()
