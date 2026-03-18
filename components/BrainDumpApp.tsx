@@ -294,6 +294,7 @@ export const BrainDumpApp: React.FC<{
     // El dump que estamos visualizando actualmente (la raíz o un sub-pizarrón)
     const displayDump = isRootLevel ? (dumps.find(d => d.id === focusedDumpId)) : activeDump;
     const currentDumpId = displayDump?.id || focusedDumpId;
+    const isInKanban = displayDump ? globalTasks?.some(t => t.id === displayDump.id) : false;
 
     const showAIPanel = currentDumpId ? (aiPanelOpenByBrainDump[currentDumpId] || false) : false;
     const activeTab = currentDumpId ? (activeTabByBrainDump[currentDumpId] || 'original') : 'original';
@@ -506,9 +507,14 @@ export const BrainDumpApp: React.FC<{
 
             {isDumpTrayOpen && pizarrones.length > 0 && !isZenMode && (
                 <div className="pt-5 px-4 pb-5 bg-[#FAFAFA] dark:bg-[#13131A] relative group/tray">
-                    <div ref={scrollContainerRef} className="flex flex-nowrap md:flex-wrap justify-start md:justify-center gap-2.5 overflow-x-auto hidden-scrollbar scroll-smooth">
+                    <div ref={scrollContainerRef} className="flex flex-nowrap md:flex-wrap justify-start md:justify-center gap-2.5 overflow-x-auto hidden-scrollbar scroll-smooth pt-2 px-2">
                         {pizarrones.map(p => (
-                            <button key={p.id} onClick={() => setFocusedDumpId(focusedDumpId === p.id ? null : p.id)} className={`px-4 py-1.5 rounded-lg text-xs font-bold border transition-all my-0.5 ${focusedDumpId === p.id ? 'bg-[#FFD700] text-amber-950 border-amber-300 shadow-sm scale-[1.02]' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/40 hover:text-amber-600'}`}>{p.title || 'Sin Título'}</button>
+                            <button key={p.id} onClick={() => setFocusedDumpId(focusedDumpId === p.id ? null : p.id)} className={`relative flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold border transition-all my-0.5 ${focusedDumpId === p.id ? 'bg-[#FFD700] text-amber-950 border-amber-300 shadow-sm scale-[1.02]' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/40 hover:text-amber-600'}`}>
+                                {globalTasks?.some(t => t.id === p.id) && (
+                                    <div className="absolute -top-1.5 -right-1.5 z-10"><KanbanSemaphore sourceId={p.id} sourceTitle={p.title || ''} /></div>
+                                )}
+                                {p.title || 'Sin Título'}
+                            </button>
                         ))}
                     </div>
                 </div>
@@ -544,25 +550,31 @@ export const BrainDumpApp: React.FC<{
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-1.5 shrink-0">
-                                    <button 
-                                        onClick={() => setPizarronVisible(displayDump.id, activeTab, !(pizarronVisibleByNoteAndTab[displayDump.id]?.[activeTab]))} 
-                                        className={`p-2 rounded-xl border transition-all ${pizarronVisibleByNoteAndTab[displayDump.id]?.[activeTab] ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : 'text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/30'}`}
-                                        title="Pizarrón / Borrador"
-                                    >
-                                        <PenLine size={13} />
-                                    </button>
-                                    <button 
-                                        onClick={() => toggleZenMode('braindump')} 
-                                        className={`p-2 rounded-xl border transition-all ${isZenMode ? 'bg-amber-100 border-amber-300 text-amber-600 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-400 font-bold' : 'text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/30'}`}
-                                        title={isZenMode ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
-                                    >
-                                        <Wind size={13} />
-                                    </button>
+                                            <button 
+                                                onClick={() => setPizarronVisible(displayDump!.id, activeTab, !(pizarronVisibleByNoteAndTab[displayDump!.id]?.[activeTab]))} 
+                                                className={`p-2 rounded-xl border transition-all ${pizarronVisibleByNoteAndTab[displayDump.id]?.[activeTab] ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : 'text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/30'}`}
+                                                title="Pizarrón / Borrador"
+                                            >
+                                                <PenLine size={13} />
+                                            </button>
+                                            <button 
+                                                onClick={() => toggleZenMode('braindump')} 
+                                                className={`p-2 rounded-xl border transition-all ${isZenMode ? 'bg-amber-100 border-amber-300 text-amber-600 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-400 font-bold' : 'text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/30'}`}
+                                                title={isZenMode ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
+                                            >
+                                                <Wind size={13} />
+                                            </button>
+                                            
+                                            {isInKanban && (
+                                                <div className="shrink-0 flex items-center">
+                                                    <KanbanSemaphore sourceId={displayDump!.id} sourceTitle={displayDump!.title || 'Sin título'} />
+                                                </div>
+                                            )}
                                     
                                     <div className="relative" ref={openMenuId === displayDump.id ? menuRef : undefined}>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === displayDump.id ? null : displayDump.id); }}
-                                            className="p-2 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] rounded-xl border border-zinc-200 dark:border-zinc-700 transition-colors"
+                                            className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
                                         ><MoreVertical size={16} /></button>
                                         
                                         {openMenuId === displayDump.id && (
@@ -642,14 +654,23 @@ export const BrainDumpApp: React.FC<{
 
                                 {/* TABS UNIFICADAS */}
                                 {(manualChildren.length > 0 || completedSummaries.length > 0 || true) && (
-                                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0">
-                                        <button onClick={() => setActiveTab('original')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all ${activeTab === 'original' ? 'bg-[#4940D9] text-white border-[#4940D9]' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-indigo-400'}`}><FileText size={11} /> Original</button>
+                                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0 pt-2 px-2">
+                                        <button onClick={() => setActiveTab('original')} className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all ${activeTab === 'original' ? 'bg-[#4940D9] text-white border-[#4940D9]' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-indigo-400'}`}>
+                                            <FileText size={11} /> 
+                                            {globalTasks?.some(t => t.id === focusedDumpId) && (
+                                                <div className="absolute -top-1.5 -right-1.5 z-10"><KanbanSemaphore sourceId={focusedDumpId!} sourceTitle="Pizarrón Original" /></div>
+                                            )}
+                                            Original
+                                        </button>
                                         
                                         {manualChildren.map(child => {
                                             const isActive = activeTab === `sub_${child.id}`;
                                             return (
                                                 <div key={child.id} className="relative shrink-0 flex items-center group">
-                                                    <button onClick={() => setActiveTab(`sub_${child.id}`)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all max-w-[150px] ${isActive ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-emerald-400 font-bold'}`}>
+                                                    <button onClick={() => setActiveTab(`sub_${child.id}`)} className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all max-w-[150px] ${isActive ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-emerald-400 font-bold'}`}>
+                                                        {globalTasks?.some(t => t.id === child.id) && (
+                                                            <div className="absolute -top-1.5 -right-1.5 z-10"><KanbanSemaphore sourceId={child.id} sourceTitle={child.title || ''} /></div>
+                                                        )}
                                                         <span onClick={(e) => { e.stopPropagation(); navigate(child.id); }} className="p-0.5 -ml-1 hover:bg-white/20 rounded-md transition-colors cursor-pointer" title="Entrar a este pizarrón"><GitBranch size={10} /></span>
                                                         <SubnoteTitle child={child} isActive={isActive} onRename={(id, title) => autoSave(id, { title })} />
                                                     </button>
@@ -696,20 +717,46 @@ export const BrainDumpApp: React.FC<{
 
                     {!focusedDumpId && (
                         <>
-                            <div className="space-y-4 opacity-70 px-0">
-                                <div className="flex items-center gap-2 text-zinc-400 font-bold uppercase tracking-widest text-xs px-2"><ArchiveIcon size={16} /> Archivo ({archivo.length})</div>
-                                <div className="grid grid-cols-1 gap-2">
-                                    {archivo.map(a => (
-                                        <div key={a.id} className="p-3 bg-white dark:bg-[#1A1A24]/50 border border-zinc-200 dark:border-[#2D2D42] rounded-xl flex items-center justify-between">
-                                            <div className="flex items-center gap-3 truncate"><ArchiveIcon size={14} className="text-zinc-300" /><span className="text-sm font-bold text-zinc-700 dark:text-zinc-300 truncate">{a.title || 'Sin Título'}</span></div>
-                                            <div className="flex items-center gap-1 shrink-0">
-                                                <button onClick={() => changeStatus(a.id, 'main')} className="p-1.5 hover:text-indigo-500" title="Restaurar"><RotateCcw size={14}/></button>
-                                                <button onClick={() => deleteDump(a.id)} className="p-1.5 hover:text-red-500" title="Eliminar"><Trash2 size={14}/></button>
+                            {/* LISTA PRINCIPAL DE PIZARRONES */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {pizarrones.map(p => (
+                                    <div key={p.id} onClick={() => setFocusedDumpId(p.id)} className="group bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] rounded-2xl p-5 hover:shadow-xl hover:border-amber-500/30 transition-all cursor-pointer flex flex-col gap-3 relative">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <h3 className="font-bold text-zinc-800 dark:text-[#CCCCCC] truncate flex-1">{p.title || 'Sin Título'}</h3>
+                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <KanbanSemaphore sourceId={p.id} sourceTitle={p.title || ''} onInteract={() => setFocusedDumpId(p.id)} />
+                                                <button onClick={(e) => { e.stopPropagation(); changeStatus(p.id, 'history'); }} className="p-1.5 text-zinc-400 hover:text-amber-600 transition-colors"><ArchiveIcon size={14}/></button>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
+                                        <div className="text-xs text-zinc-500 line-clamp-3 leading-relaxed min-h-[4.5em]">{p.content || <span className="italic opacity-40">Pizarrón vacío...</span>}</div>
+                                        <div className="flex items-center justify-between pt-2 border-t border-zinc-50 dark:border-zinc-800/50 mt-auto">
+                                            <span className="text-[10px] font-bold text-zinc-400">{formatCleanDate(p.updated_at || p.created_at)}</span>
+                                            <div className="flex items-center gap-1.5">
+                                                {p.is_checklist && <ListTodo size={12} className="text-amber-500/60" />}
+                                                <div className="w-6 h-6 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center text-zinc-400 group-hover:bg-amber-500 group-hover:text-white transition-all"><ChevronRight size={14} /></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
+
+                            {/* ARCHIVO */}
+                            {archivo.length > 0 && (
+                                <div className="space-y-4 opacity-70 px-0">
+                                    <div className="flex items-center gap-2 text-zinc-400 font-bold uppercase tracking-widest text-xs px-2"><ArchiveIcon size={16} /> Archivo ({archivo.length})</div>
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {archivo.map(a => (
+                                            <div key={a.id} className="p-3 bg-white dark:bg-[#1A1A24]/50 border border-zinc-200 dark:border-[#2D2D42] rounded-xl flex items-center justify-between group">
+                                                <div className="flex items-center gap-3 truncate"><ArchiveIcon size={14} className="text-zinc-300" /><span className="text-sm font-bold text-zinc-700 dark:text-zinc-300 truncate">{a.title || 'Sin Título'}</span></div>
+                                                <div className="flex items-center gap-1 shrink-0">
+                                                    <button onClick={() => changeStatus(a.id, 'main')} className="p-1.5 hover:text-indigo-500" title="Restaurar"><RotateCcw size={14}/></button>
+                                                    <button onClick={() => deleteDump(a.id)} className="p-1.5 hover:text-red-500" title="Eliminar"><Trash2 size={14}/></button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
