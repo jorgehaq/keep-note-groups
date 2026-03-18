@@ -109,7 +109,7 @@ function App() {
 
   const isGlobalNoteTrayOpen = activeGroupId ? (noteTrayOpenByGroup[activeGroupId] ?? true) : false;
   const [searchQueries, setSearchQueries] = useState<Record<string, string>>({});
-  const currentSearchQuery = activeGroupId ? (searchQueries[activeGroupId] || '') : '';
+  const currentSearchQuery = globalView === 'braindump' ? (searchQueries['braindump'] || '') : (activeGroupId ? (searchQueries[activeGroupId] || '') : '');
   const [searchExemptNoteIds, setSearchExemptNoteIds] = useState<Set<string>>(new Set());
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('app-theme-preference') as Theme) || 'dark');
   const [noteFont, setNoteFont] = useState<NoteFont>(() => (localStorage.getItem('app-note-font') as NoteFont) || 'sans');
@@ -131,6 +131,7 @@ function App() {
 
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const [allGroupSummaries, setAllGroupSummaries] = useState<any[]>([]);
+  const [allPizarronSummaries, setAllPizarronSummaries] = useState<any[]>([]);
   const sortMenuRef = useRef<HTMLDivElement>(null);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -167,6 +168,18 @@ function App() {
     
     fetchAllSummaries();
   }, [activeGroupId, session, activeGroup?.notes.length]);
+
+  useEffect(() => {
+    if (!session || globalView !== 'braindump') {
+      setAllPizarronSummaries([]);
+      return;
+    }
+    const fetchAllPizarronSummaries = async () => {
+      const { data } = await supabase.from('summaries').select('*').not('brain_dump_id', 'is', null);
+      setAllPizarronSummaries(data || []);
+    };
+    fetchAllPizarronSummaries();
+  }, [session, globalView]);
 
   const scrollTabs = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
@@ -1363,12 +1376,26 @@ function App() {
         ) :
          globalView === 'timers' ? <TimeTrackerApp session={session!} /> :
          globalView === 'reminders' ? <RemindersApp session={session!} dateFormat={dateFormat} timeFormat={timeFormat} /> :
-         globalView === 'braindump' ? <BrainDumpApp session={session!} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} searchQuery={currentSearchQuery} groups={groups} onOpenNote={(groupId, noteId) => {
-           setActiveGroup(groupId);
-           setEditingNoteId(noteId);
-           setFocusedNoteId(noteId);
-           setGlobalView('notes');
-         }} /> :
+         globalView === 'braindump' ? <BrainDumpApp 
+            session={session!} 
+            noteFont={noteFont} 
+            noteFontSize={noteFontSize} 
+            noteLineHeight={noteLineHeight} 
+            searchQuery={currentSearchQuery} 
+            setSearchQuery={(q) => {
+              if (globalView === 'braindump') setSearchQueries(prev => ({ ...prev, ['braindump']: q }));
+              else if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: q }));
+              setSearchExemptNoteIds(new Set());
+            }}
+            allSummaries={allPizarronSummaries}
+            groups={groups} 
+            onOpenNote={(groupId, noteId) => {
+              setActiveGroup(groupId);
+              setEditingNoteId(noteId);
+              setFocusedNoteId(noteId);
+              setGlobalView('notes');
+            }} 
+          /> :
          globalView === 'translator' ? <TranslatorApp session={session!} /> : (
           <>
             {!isZenMode && (
@@ -1476,7 +1503,7 @@ function App() {
                                   placeholder={`Buscar...`}
                                   value={currentSearchQuery}
                                   onChange={(e) => {
-                                    if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: e.target.value }));
+                                     if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: e.target.value }));
                                     setSearchExemptNoteIds(new Set());
                                   }}
                                   className={`h-[26px] w-32 md:w-32 lg:w-40 pl-7 pr-8 text-xs rounded-lg border transition-all focus:outline-none ${currentSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50' : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'}`}

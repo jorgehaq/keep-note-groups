@@ -9,6 +9,7 @@
 ## Funcionalidades Recientes
 - **Borrado de Sub-pizarrones**: Disponible desde la pestaña activa del sub-pizarrón (icono Trash2).
 - **Descarga Markdown v2 (Recursiva)**: El botón de exportación genera un .md con la concatenación del contenido principal, el borrador (scratchpad) y todos los niveles de sub-pizarrones hijos.
+- **Deep Search Parity (Búsqueda Profunda)**: Búsqueda recursiva en títulos, contenidos, scratchpads y resúmenes con resaltado visual ámbar y persistencia de accesos en bandeja.
 
 ## BrainDump Schema (types.ts & DB: brain_dumps)
 - status: main | active | history
@@ -42,3 +43,9 @@
 - **Consumo de Estados**: Se prefiere el uso del store global para estados compartidos (tareas, pizarrones visibles) para evitar race conditions entre fetches locales y Realtime.
 - La relación summaries ↔ brain_dump: summaries.brain_dump_id (NOT summaries.note_id).
 - NO mezclar lógica de notas y pizarrones: son entidades paralelas con hooks propios.
+
+## Reglas de UI - Deep Search
+- **Persistencia de Bandeja**: Los botones de acceso (tray) nunca desaparecen durante la búsqueda. Solo la grilla principal filtra elementos.
+- **Iluminación Ámbar**: Las pestañas (bandeja, internas, sub-pizarrones, resúmenes) y tarjetas deben usar `ring-amber-500` y `shadow-glow` (ámbar) si contienen coincidencias internas.
+- **Resaltado de Texto**: Títulos de accesos y editores deben usar `highlightText` con la `searchQuery` actual.
+- **Unificación de Estado**: Pizarrón NO tiene buscador interno propio; debe usar la prop `searchQuery` y `setSearchQuery` vinculada al estado de `App.tsx` (key: 'braindump').

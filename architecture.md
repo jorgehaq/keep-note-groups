@@ -3,7 +3,7 @@
 ## Árbol de Dependencias Principal
 App.tsx
 ├── Zustand (useUIStore) — estado UI global persistido
-├── Supabase Realtime — channels: global-sync, summaries-global-sync
+├── Supabase Realtime — channels: global-sync, summaries-global-sync, pizarron-summaries-sync
 ├── Sub-apps (switch por globalView):
 │   ├── [notes]      → AccordionItem > NoteContent > SmartEditor > SmartNotesEditor
 │   │                                              > ChecklistEditor
@@ -14,6 +14,7 @@ App.tsx
 │   ├── [braindump]  → BrainDumpApp > BrainDumpAIPanel, BrainDumpBreadcrumb
 │   └── [translator] → TranslatorApp
 └── Sidebar (siempre visible, muestra contadores de Kanban/Reminders/Timers)
+└── Global Search (App.tsx) — Estado unificado en searchQueries (keys: activeGroupId o 'braindump')
 
 ## Esquema Supabase (tablas relevantes)
 - Revisa supabase/schema.context.md para ver el esquema exacto de la base de datos.
