@@ -17,10 +17,10 @@ interface KanbanBoardProps {
     timeFormat?: string;
 }
 
-const COLUMNS: { status: TaskStatus; label: string; accent: string }[] = [
-    { status: 'todo', label: 'Pendiente', accent: 'bg-[#FBC02D]' },
-    { status: 'in_progress', label: 'En Proceso', accent: 'bg-[#1E88E5]' },
-    { status: 'done', label: 'Terminado', accent: 'bg-[#43A047]' },
+const COLUMNS: { status: TaskStatus; label: string; accent: string; hex: string }[] = [
+    { status: 'todo', label: 'Pendiente', accent: 'bg-[#FFD60A]', hex: '#FFD60A' },
+    { status: 'in_progress', label: 'En Proceso', accent: 'bg-[#38BDF8]', hex: '#38BDF8' },
+    { status: 'done', label: 'Terminado', accent: 'bg-[#4ADE80]', hex: '#4ADE80' },
 ];
 
 const formatCustomDate = (isoString: string, dateFormat: string, timeFormat: string): string => {
@@ -102,7 +102,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], on
                         <div key={col.status} className="w-[72vw] shrink-0 sm:w-auto sm:shrink sm:flex-1 min-w-[220px] max-w-[400px] flex flex-col snap-center">
                             {/* Column Header */}
                             <div className="flex items-center gap-2 mb-4 px-1">
-                                <div className={`w-3.5 h-3.5 rounded-full ${col.accent}`}></div>
+                                <div 
+                                    className={`w-3.5 h-3.5 rounded-full ${col.accent}`}
+                                    style={{ boxShadow: `0 0 6px ${col.hex}88` }}
+                                ></div>
                                 <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                                     {col.label}
                                 </h3>

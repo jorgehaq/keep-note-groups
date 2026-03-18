@@ -24,3 +24,11 @@
 ## Reglas
 - Drag & drop de columnas usa position (int). Al reordenar, actualizar position en DB.
 - Las tasks vinculadas a notas/pizarrones muestran un badge de link — no romper esta relación al editar.
+
+## Reglas de UI - Kanban Glow
+- **Paleta Oficial (Tailwind 400)**:
+  - Pendiente (`todo`): `#FFD60A`
+  - En Proceso (`in_progress`): `#38BDF8`
+  - Terminado (`done`): `#4ADE80`
+- **Efecto de Brillo**: Todos los indicadores circulares (Semaphore, Sidebar dots, Tablero) deben incluir `box-shadow: 0 0 6px [HEX]88`.
+- **Sincronización Global**: Cualquier cambio en el color base debe replicarse en `KanbanSemaphore.tsx`, `KanbanBoard.tsx`, `KanbanTaskModal.tsx`, `Sidebar.tsx` y `App.tsx`.

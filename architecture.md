@@ -26,6 +26,10 @@ App.tsx
 - 'reload-app-data'      → fetchData() completo
 - 'app-theme-changed'    → componentes internos reaccionan al cambio de clase en html
 
+## Estándares de UI - Parity & Glow
+- **Global Search Parity**: Buscador ámbar con `highlightText` y tray persistent.
+- **Kanban Glow Standard**: Los estados `todo`, `in_progress` y `done` deben usar colores de la familia Tailwind-400 con un `box-shadow` de 6px (opacidad 0.5) para legibilidad en Dark Mode.
+
 ## Alias de Paths
 - '@/' apunta a la raíz del proyecto (vite.config.ts resolve.alias)
 

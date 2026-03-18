@@ -1690,10 +1690,10 @@ function App() {
                           let dotColorClass = null;
                           if (linkedTask) {
                             switch (linkedTask.status) {
-                                case 'backlog': dotColorClass = 'bg-[#9E9E9E]'; break;
-                                case 'todo': dotColorClass = 'bg-[#FBC02D]'; break;
-                                case 'in_progress': dotColorClass = 'bg-[#1E88E5]'; break;
-                                case 'done': dotColorClass = 'bg-[#43A047]'; break;
+                                case 'backlog': dotColorClass = { bg: 'bg-[#9E9E9E]', hex: '#9E9E9E' }; break;
+                                case 'todo': dotColorClass = { bg: 'bg-[#FFD60A]', hex: '#FFD60A' }; break;
+                                case 'in_progress': dotColorClass = { bg: 'bg-[#38BDF8]', hex: '#38BDF8' }; break;
+                                case 'done': dotColorClass = { bg: 'bg-[#4ADE80]', hex: '#4ADE80' }; break;
                             }
                           }
 
@@ -1734,7 +1734,8 @@ function App() {
                               )}
                               {dotColorClass && (
                                 <div 
-                                  className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full border border-[#9F9FA8]/50 z-10 shadow-sm transition-transform hover:scale-110 ${dotColorClass}`} 
+                                  className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full border border-[#9F9FA8]/50 z-10 shadow-sm transition-transform hover:scale-110 ${(dotColorClass as any).bg}`} 
+                                  style={{ boxShadow: `0 0 6px ${(dotColorClass as any).hex}88` }}
                                   title={`Estado Kanban`}
                                 />
                               )}

@@ -11,11 +11,11 @@ interface KanbanTaskModalProps {
     isNew?: boolean;
 }
 
-const STATUS_OPTIONS: { value: TaskStatus; label: string; accent: string }[] = [
-    { value: 'backlog', label: 'Backlog', accent: 'bg-zinc-100 text-zinc-600 border-zinc-200' },
-    { value: 'todo', label: 'Pendiente', accent: 'bg-amber-50 text-amber-700 border-amber-200' },
-    { value: 'in_progress', label: 'En Proceso', accent: 'bg-blue-50 text-blue-700 border-blue-200' },
-    { value: 'done', label: 'Terminado', accent: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+const STATUS_OPTIONS: { value: TaskStatus; label: string; hex: string }[] = [
+    { value: 'backlog', label: 'Backlog', hex: '#9E9E9E' },
+    { value: 'todo', label: 'Pendiente', hex: '#FFD60A' },
+    { value: 'in_progress', label: 'En Proceso', hex: '#38BDF8' },
+    { value: 'done', label: 'Terminado', hex: '#4ADE80' },
 ];
 
 export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({ task, onClose, onSave, isNew = false }) => {
@@ -108,9 +108,14 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({ task, onClose,
                                     onClick={() => setStatus(opt.value)}
                                     className={`px-3 py-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${
                                         status === opt.value 
-                                            ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20 scale-[1.02]' 
+                                            ? 'text-white scale-[1.02]' 
                                             : 'bg-white dark:bg-[#101018] border-zinc-200 dark:border-[#2D2D42] text-zinc-500 dark:text-zinc-500 hover:border-emerald-500/40'
                                     }`}
+                                    style={status === opt.value ? { 
+                                        backgroundColor: opt.hex, 
+                                        borderColor: opt.hex,
+                                        boxShadow: `0 10px 15px -3px ${opt.hex}33, 0 4px 6px -4px ${opt.hex}33`
+                                    } : {}}
                                 >
                                     {status === opt.value && <Check size={14} />}
                                     {opt.label}

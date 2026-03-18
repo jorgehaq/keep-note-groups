@@ -141,7 +141,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 flex items-center gap-px">
               {kanbanTodoCount > 0 && (
                 <div 
-                  className="bg-[#FBC02D] text-amber-950 text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#FBC02D]/50 z-30" 
+                  className="bg-[#FFD60A] text-amber-950 text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#FFD60A]/50 z-30" 
+                  style={{ boxShadow: '0 0 6px #FFD60A88' }}
                   title={t('sidebar.pending')}
                 >
                   {kanbanTodoCount}
@@ -149,7 +150,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               )}
               {kanbanInProgressCount > 0 && (
                 <div 
-                  className="bg-[#1E88E5] text-white brightness-110 drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)] text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#1E88E5]/50 z-20" 
+                  className="bg-[#38BDF8] text-white brightness-110 drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)] text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#38BDF8]/50 z-20" 
+                  style={{ boxShadow: '0 0 6px #38BDF888' }}
                   title={t('sidebar.in_progress')}
                 >
                   {kanbanInProgressCount}
@@ -157,7 +159,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               )}
               {kanbanDoneCount > 0 && (
                 <div 
-                  className="bg-[#43A047] text-white brightness-110 drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)] text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#43A047]/50 z-10" 
+                  className="bg-[#4ADE80] text-white brightness-110 drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)] text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#4ADE80]/50 z-10" 
+                  style={{ boxShadow: '0 0 6px #4ADE8088' }}
                   title={t('sidebar.done')}
                 >
                   {kanbanDoneCount}
@@ -292,11 +295,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       
                       if (linkedTask) {
                           switch (linkedTask.status) {
-                              case 'backlog': dotColorClass = 'bg-[#9E9E9E]'; break;
-                              case 'todo': dotColorClass = 'bg-[#FBC02D]'; break;
-                              case 'in_progress': dotColorClass = 'bg-[#1E88E5]'; break;
-                              case 'done': dotColorClass = 'bg-[#43A047]'; break;
-                              // 'archived' ignora el color como solicitaste
+                              case 'backlog': dotColorClass = { bg: 'bg-[#9E9E9E]', hex: '#9E9E9E' }; break;
+                              case 'todo': dotColorClass = { bg: 'bg-[#FFD60A]', hex: '#FFD60A' }; break;
+                              case 'in_progress': dotColorClass = { bg: 'bg-[#38BDF8]', hex: '#38BDF8' }; break;
+                              case 'done': dotColorClass = { bg: 'bg-[#4ADE80]', hex: '#4ADE80' }; break;
                           }
                       }
 
@@ -313,7 +315,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           {/* El punto flotante del Kanban */}
                           {dotColorClass && (
                               <div 
-                                className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border border-[#9F9FA8]/50 z-10 shadow-sm transition-transform hover:scale-110 ${dotColorClass}`} 
+                                className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border border-[#9F9FA8]/50 z-10 shadow-sm transition-transform hover:scale-110 ${(dotColorClass as any).bg}`} 
+                                style={{ boxShadow: `0 0 6px ${(dotColorClass as any).hex}88` }}
                                 title={`Estado Kanban`}
                               />
                           )}

@@ -12,11 +12,11 @@ interface KanbanSemaphoreProps {
 
 // Configuración de los 5 estados (incluyendo "Quitar" en Negro)
 const STATUS_CONFIG = [
-    { status: 'remove', label: 'Quitar de este Pizarrón/Nota', color: 'bg-zinc-800 dark:bg-black ring-1 ring-zinc-500' },
-    { status: 'backlog', label: 'Backlog', color: 'bg-[#9E9E9E]' },
-    { status: 'todo', label: 'Pendiente', color: 'bg-[#FBC02D]' },
-    { status: 'in_progress', label: 'En Proceso', color: 'bg-[#1E88E5]' },
-    { status: 'done', label: 'Terminado', color: 'bg-[#43A047]' },
+    { status: 'remove', label: 'Quitar de este Pizarrón/Nota', color: 'bg-zinc-800 dark:bg-black ring-1 ring-zinc-500', hex: '' },
+    { status: 'backlog', label: 'Backlog', color: 'bg-[#9E9E9E]', hex: '#9E9E9E' },
+    { status: 'todo', label: 'Pendiente', color: 'bg-[#FFD60A]', hex: '#FFD60A' },
+    { status: 'in_progress', label: 'En Proceso', color: 'bg-[#38BDF8]', hex: '#38BDF8' },
+    { status: 'done', label: 'Terminado', color: 'bg-[#4ADE80]', hex: '#4ADE80' },
 ];
 
 export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({ sourceId, sourceTitle, sourceType, onInteract }) => {
@@ -109,6 +109,9 @@ export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({ sourceId, sour
                     setIsOpen(!isOpen);
                 }}
                 className={`w-3.5 h-3.5 rounded-full transition-transform hover:scale-110 ${currentConfig.color}`}
+                style={{ 
+                    boxShadow: (currentConfig as any).hex ? `0 0 6px ${(currentConfig as any).hex}88` : 'none' 
+                }}
                 title={currentConfig.label}
             />
 

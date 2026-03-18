@@ -18,6 +18,7 @@
 - 2026-03-18: Implementado borrado de sub-notas en AccordionItem.tsx; exportación Markdown recursiva masiva (notas, sub-notas, scratchpads y summaries) tanto individual como por grupo en App.tsx.
 - 2026-03-18: Corregido clipping de burbujas Kanban en sidebar para pantallas pequeñas; implementado escalado responsivo de badges (fuente, tamaño y posición) preservando vista desktop (md+).
 - 2026-03-18: Implementada Búsqueda Profunda (Paridad) en Pizarrón: recursión en sub-pizarrones/resúmenes, iluminación ámbar global, persistencia de bandeja y unificación de estado con App.tsx.
+- 2026-03-18: Recalibración estética de estados Kanban (Pendiente, Proceso, Terminado) con colores Tailwind-400 vibrantes y efecto Glow estandarizado en Sidebar, App y Tablero.
 - Ejemplo: "2024-03-18: Corregido scroll position en SmartNotesEditor usando localStorage key 'scroll-{noteId}'"
 
 ## ⚠️ GAPS CRÍTICOS: DB Real vs types.ts (Verificado del SQL de producción)
