@@ -9,6 +9,12 @@
 - LinkifiedText.tsx    → Renderiza texto con URLs clicables + markers (highlight #FACC15, translation #10B981).
 - MoveToGroupModal.tsx → Modal para mover nota a otro grupo.
 
+## Funcionalidades Recientes
+- **Borrado de Sub-notas**: Botón `Trash2` añadido a las pestañas de sub-notas en `AccordionItem.tsx` para eliminación directa desde la pestaña activa.
+- **Exportación Markdown v2 (Recursiva)**: 
+  - `downloadNoteAsMarkdown`: Genera un .md completo con el contenido de la nota, su `scratchpad`, todos sus `summaries` asociados (con sus propios pizarrones) y todas las sub-notas anidadas.
+  - `downloadGroupAsMarkdown`: Aplica la lógica recursiva a todas las notas raíz del grupo, consolidando todo el conocimiento (incluidos análisis AI y pizarrones) en un único archivo.
+
 ## Editor Stack
 - src/components/editor/SmartNotesEditor.tsx → CodeMirror. Es el editor principal plain-text.
   - Tiene: scroll persistence (localStorage 'scroll-{noteId}'), line numbers toggle, cursor position indicator via Decoration.line().
@@ -32,6 +38,7 @@
 - src/lib/useSummaries.ts  → CRUD de summaries para una nota. Llama a Gemini para generar.
 
 ## Reglas Críticas
+- **Exportación**: Se utiliza el helper `getRecursiveNoteMarkdown` en `App.tsx` para recorrer el árbol. IMPORTANTE: Los resúmenes se filtran por `note_id`.
 - NO tocar parent_note_id ni generation_level sin entender el árbol completo.
 - summaryCounts en store es solo un contador de badges — la data real está en useSummaries.
 - El panel NoteAIPanel tiene su propio estado persistido: aiPanelOpenByNote y activeTabByNote en store.

@@ -900,45 +900,105 @@ function App() {
     return markers;
   };
 
-  const downloadGroupAsMarkdown = () => {
-    if (!activeGroup) return;
-    const sortedNotes = [...activeGroup.notes].sort((a, b) => {
-      const titleA = a.title || 'Sin título';
-      const titleB = b.title || 'Sin título';
-      return titleA.localeCompare(titleB);
-    });
+  const getRecursiveNoteMarkdown = async (noteId: string, depth: number, allNotes: Note[], allSummaries: any[]): Promise<string> => {
+    const note = allNotes.find(n => n.id === noteId);
+    if (!note) return "";
 
     const formatNoteDate = (dateString?: string) => {
       if (!dateString) return 'Desconocida';
       return new Date(dateString).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
-    const mdContent = sortedNotes.map(note => {
-      return `titulo: ${note.title || 'Sin título'}\nfecha creacion: ${formatNoteDate(note.created_at)}\nfecha ultima edicion: ${formatNoteDate(note.updated_at || note.created_at)}\ncontenido de la nota:\n${cleanMarkdownForExport(note.content || '')}`;
-    }).join('\n\n---\n\n');
+    let md = `${"#".repeat(depth)} ${note.title || 'Sin título'}\n\n`;
+    md += `Fecha creación: ${formatNoteDate(note.created_at)}\n`;
+    md += `Última edición: ${formatNoteDate(note.updated_at || note.created_at)}\n\n`;
+    
+    const content = cleanMarkdownForExport(note.content || '');
+    if (content) md += `${content}\n\n`;
 
-    const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8;' });
+    // Pizarrón (scratchpad) de esta nota
+    if (note.scratchpad && note.scratchpad.trim()) {
+      md += `${"#".repeat(depth + 1)} Pizarrón de: ${note.title || 'Sin título'}\n\n`;
+      md += `${note.scratchpad}\n\n`;
+    }
+
+    // Resúmenes AI vinculados a esta nota
+    const summaries = allSummaries.filter(s => s.note_id === noteId);
+    for (const s of summaries) {
+      md += `${"#".repeat(depth + 1)} Análisis: ${s.target_objective || 'Sin objetivo'}\n\n`;
+      md += `${s.content}\n\n`;
+      if (s.scratchpad && s.scratchpad.trim()) {
+        md += `${"#".repeat(depth + 2)} Pizarrón del Análisis\n\n`;
+        md += `${s.scratchpad}\n\n`;
+      }
+    }
+
+    // Subnotas (recursivo)
+    const subnotes = allNotes.filter(n => n.parent_note_id === noteId)
+      .sort((a, b) => (a.position || 0) - (b.position || 0));
+    
+    for (const sub of subnotes) {
+      md += "\n---\n\n";
+      md += await getRecursiveNoteMarkdown(sub.id, depth + 1, allNotes, allSummaries);
+    }
+
+    return md;
+  };
+
+  const downloadGroupAsMarkdown = async () => {
+    if (!activeGroup) return;
+    
+    const allGroupNotes = activeGroup.notes;
+    const rootNotes = allGroupNotes.filter(n => !n.parent_note_id).sort((a, b) => {
+        const titleA = a.title || 'Sin título';
+        const titleB = b.title || 'Sin título';
+        return titleA.localeCompare(titleB);
+    });
+
+    const noteIds = allGroupNotes.map(n => n.id);
+    const { data: allSummaries } = await supabase.from('summaries').select('*').in('note_id', noteIds);
+
+    let fullMd = `# Grupo: ${activeGroup.title}\n\n`;
+    
+    for (const note of rootNotes) {
+        fullMd += await getRecursiveNoteMarkdown(note.id, 1, allGroupNotes, allSummaries || []);
+        fullMd += "\n\n================================================================================\n\n";
+    }
+
+    const blob = new Blob([fullMd], { type: 'text/markdown;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `${activeGroup.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`);
+    link.setAttribute('download', `${activeGroup.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_completo.md`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
 
-  const downloadNoteAsMarkdown = (note: Note) => {
-    const formatNoteDate = (dateString?: string) => {
-      if (!dateString) return 'Desconocida';
-      return new Date(dateString).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const downloadNoteAsMarkdown = async (note: Note) => {
+    if (!activeGroupId) return;
+    
+    // Obtener todas las notas del grupo para tener el árbol completo
+    const currentGroup = groups.find(g => g.id === activeGroupId);
+    const allGroupNotes = currentGroup?.notes || [];
+    
+    // Obtener IDs de todas las notas en el árbol de esta nota (recursivo)
+    const getChildrenIds = (id: string): string[] => {
+      const children = allGroupNotes.filter(n => n.parent_note_id === id);
+      return [id, ...children.flatMap(c => getChildrenIds(c.id))];
     };
-    const mdContent = `titulo: ${note.title || 'Sin título'}\nfecha creacion: ${formatNoteDate(note.created_at)}\nfecha ultima edicion: ${formatNoteDate(note.updated_at || note.created_at)}\ncontenido de la nota:\n${cleanMarkdownForExport(note.content || '')}`;
+    const treeIds = getChildrenIds(note.id);
+    
+    // Buscar todos los summaries de estas notas
+    const { data: allSummaries } = await supabase.from('summaries').select('*').in('note_id', treeIds);
+
+    const mdContent = await getRecursiveNoteMarkdown(note.id, 1, allGroupNotes, allSummaries || []);
     const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `${(note.title || 'nota').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`);
+    link.setAttribute('download', `${(note.title || 'nota_completa').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

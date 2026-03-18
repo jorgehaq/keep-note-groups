@@ -937,6 +937,15 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                         isActive={isActive}
                         onRename={handleSaveChildTitle}
                       />
+                      {isActive && (
+                        <span 
+                          onClick={(e) => { e.stopPropagation(); if (confirm('¿Borrar esta sub-nota?')) onDelete(child.id); }} 
+                          className="ml-1 p-0.5 hover:bg-black/20 rounded transition-colors text-white/70 hover:text-white" 
+                          title="Borrar sub-nota"
+                        >
+                          <Trash2 size={10} />
+                        </span>
+                      )}
                     </button>
                   </div>
                 );
