@@ -37,6 +37,13 @@ type GlobalAppView = 'notes' | 'kanban' | 'timers' | 'reminders' | 'braindump' |
 - 'app-show-line-numbers'   → true | false (CodeMirror)
 - 'app-language'            → i18next locale key
 
+## Sidebar y Badges Responsivos
+- **Comportamiento**: Los badges de notificaciones (Kanban, Recordatorios, Timers) escalan su tamaño según el ancho del sidebar.
+- **Reglas de UI Estrictas**:
+  - **Desktop (md+)**: Mantener `h-5`, `min-w-[20px]`, `text-[12px]`, `px-1.5`. NO modificar este estado ya que es el diseño base aprobado.
+  - **Mobile/Small**: Reducir a `h-4`, `min-w-[16px]`, `text-[10px]` y ajustar posición (`-top-1 -right-1`) para evitar clipping en el sidebar `w-12`.
+- **Kanban Stack**: Las 3 burbujas de colores deben permanecer alineadas (`flex items-center gap-px`) y visibles.
+
 ## Reglas
 - El Sidebar siempre está visible (NO se desmonta con globalView).
 - Zen Mode (isZenModeByApp) oculta elementos del layout por app — respetar en nuevas apps.

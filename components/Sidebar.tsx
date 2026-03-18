@@ -105,7 +105,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <Bell size={20} />
           {overdueRemindersList.length > 0 && (
-            <div className="absolute -top-2 -right-2 bg-[#DC2626] text-white brightness-110 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)] text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-red-600/50 animate-pulse z-30"
+            <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 bg-[#DC2626] text-white brightness-110 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)] text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-red-600/50 animate-pulse z-30"
               style={{ animationDuration: '1s' }}
             >
               {overdueRemindersList.length}
@@ -122,7 +122,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Clock size={20} />
           {activeTimersCount > 0 && (
             <div
-              className="absolute -top-2 -right-2 bg-[#DC2626] text-white brightness-110 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)] text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-red-600/50 animate-pulse z-30"
+              className="absolute -top-1 -right-1 md:-top-2 md:-right-2 bg-[#DC2626] text-white brightness-110 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)] text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-red-600/50 animate-pulse z-30"
               style={{ animationDuration: '1s' }}
             >
               {activeTimersCount}
@@ -138,10 +138,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <KanbanSquare size={20} />
           {(kanbanTodoCount > 0 || kanbanInProgressCount > 0 || kanbanDoneCount > 0) && (
-            <div className="absolute -top-2 -right-2 flex items-center gap-px">
+            <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 flex items-center gap-px">
               {kanbanTodoCount > 0 && (
                 <div 
-                  className="bg-[#FBC02D] text-amber-950 text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#FBC02D]/50 z-30" 
+                  className="bg-[#FBC02D] text-amber-950 text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#FBC02D]/50 z-30" 
                   title={t('sidebar.pending')}
                 >
                   {kanbanTodoCount}
@@ -149,7 +149,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               )}
               {kanbanInProgressCount > 0 && (
                 <div 
-                  className="bg-[#1E88E5] text-white brightness-110 drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)] text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#1E88E5]/50 z-20" 
+                  className="bg-[#1E88E5] text-white brightness-110 drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)] text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#1E88E5]/50 z-20" 
                   title={t('sidebar.in_progress')}
                 >
                   {kanbanInProgressCount}
@@ -157,7 +157,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               )}
               {kanbanDoneCount > 0 && (
                 <div 
-                  className="bg-[#43A047] text-white brightness-110 drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)] text-[12px] font-bold min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#43A047]/50 z-10" 
+                  className="bg-[#43A047] text-white brightness-110 drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)] text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#43A047]/50 z-10" 
                   title={t('sidebar.done')}
                 >
                   {kanbanDoneCount}
