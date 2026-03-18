@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../src/lib/supabaseClient';
 import { TaskStatus } from '../types';
+import { useUIStore } from '../src/lib/store';
 
 interface KanbanSemaphoreProps {
     sourceId: string;
@@ -19,42 +20,16 @@ const STATUS_CONFIG = [
 ];
 
 export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({ sourceId, sourceTitle, sourceType, onInteract }) => {
-    const [currentStatus, setCurrentStatus] = useState<TaskStatus | 'none'>('none');
+    const { globalTasks } = useUIStore();
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    // Consultar el estado actual en la base de datos al cargar
-    useEffect(() => {
-        const fetchStatus = async () => {
-            // Buscamos si existe una tarea donde el ID sea el sourceId, 
-            // O esté vinculada como nota o como pizarrón
-            const query = supabase.from('tasks').select('id, status');
-            
-            if (sourceType === 'note') {
-                query.or(`id.eq.${sourceId},linked_note_id.eq.${sourceId}`);
-            } else {
-                query.or(`id.eq.${sourceId},linked_board_id.eq.${sourceId}`);
-            }
-            
-            const { data } = await query.maybeSingle();
-            
-            if (data) {
-                setCurrentStatus(data.status as TaskStatus);
-            } else {
-                setCurrentStatus('none');
-            }
-        };
-        fetchStatus();
-
-        // Realtime listen to tasks table
-        const channel = supabase.channel(`task-semaphore-${sourceId}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
-                fetchStatus();
-            })
-            .subscribe();
-            
-        return () => { supabase.removeChannel(channel); };
-    }, [sourceId, sourceType]);
+    // 🚀 SINCRONIZACIÓN TOTAL: Usamos la lista global de tareas del Store
+    const task = globalTasks?.find(t => 
+        (sourceType === 'note' && (t.id === sourceId || t.linked_note_id === sourceId)) ||
+        (sourceType === 'board' && (t.id === sourceId || t.linked_board_id === sourceId))
+    );
+    const currentStatus = task ? (task.status as TaskStatus) : 'none';
 
     // Cerrar la paleta si se hace clic afuera
     useEffect(() => {
@@ -82,7 +57,6 @@ export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({ sourceId, sour
         const { data: existing } = await query.maybeSingle();
 
         if (status === 'remove') {
-            setCurrentStatus('none');
             if (existing) {
                 if (existing.id === sourceId) {
                     // LEGACY: Creada via upsert con id=noteId → eliminar para que isInKanban vuelva a false
@@ -96,7 +70,6 @@ export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({ sourceId, sour
                 }
             }
         } else {
-            setCurrentStatus(status as TaskStatus);
             const user = (await supabase.auth.getUser()).data.user;
             
             if (existing) {

@@ -401,6 +401,7 @@ export const BrainDumpApp: React.FC<{
             return;
         }
 
+        setOpenMenuId(null); // 🚀 FIX: Cerrar menú tras añadir
         window.dispatchEvent(new CustomEvent('kanban-updated'));
     };
 
@@ -639,10 +640,38 @@ export const BrainDumpApp: React.FC<{
                                                 <button 
                                                     onClick={(e) => { 
                                                         e.stopPropagation(); 
+                                                        
+                                                        const getRecursiveContent = (dumpId: string, depth: number): string => {
+                                                            const target = dumps.find(d => d.id === dumpId);
+                                                            if (!target) return "";
+
+                                                            let md = `${"#".repeat(depth)} ${target.title || 'Sin Título'}\n\n`;
+                                                            if (target.content) md += `${target.content}\n\n`;
+                                                            
+                                                            // Pizarrón (scratchpad) de este nivel
+                                                            const hasScratch = target.scratchpad && target.scratchpad.trim().length > 0;
+                                                            if (hasScratch) {
+                                                                md += `${"#".repeat(depth + 1)} Pizarrón de: ${target.title || 'Sin Título'}\n\n`;
+                                                                md += `${target.scratchpad}\n\n`;
+                                                            }
+
+                                                            // Sub-pizarrones
+                                                            const subNodes = dumps.filter(d => d.parent_id === dumpId)
+                                                                .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+                                                            
+                                                            for (const sub of subNodes) {
+                                                                md += "\n---\n\n"; // Separador visual entre niveles
+                                                                md += getRecursiveContent(sub.id, depth + 1);
+                                                            }
+
+                                                            return md;
+                                                        };
+
+                                                        const fullMarkdown = getRecursiveContent(displayDump.id, 1);
                                                         const element = document.createElement("a");
-                                                        const file = new Blob([displayDump.content], { type: 'text/markdown' });
+                                                        const file = new Blob([fullMarkdown], { type: 'text/markdown' });
                                                         element.href = URL.createObjectURL(file);
-                                                        element.download = `${(displayDump.title || 'pizarron').replace(/\s+/g, '_')}.md`;
+                                                        element.download = `${(displayDump.title || 'pizarron_completo').replace(/\s+/g, '_')}.md`;
                                                         document.body.appendChild(element);
                                                         element.click();
                                                         document.body.removeChild(element);
@@ -650,7 +679,7 @@ export const BrainDumpApp: React.FC<{
                                                     }} 
                                                     className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"
                                                 >
-                                                    <Download size={14} /> Descargar .md
+                                                    <Download size={14} /> Descargar .md Completo
                                                 </button>
  
                                                 <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
@@ -685,6 +714,15 @@ export const BrainDumpApp: React.FC<{
                                                         )}
                                                         <span onClick={(e) => { e.stopPropagation(); navigate(child.id); }} className="p-0.5 -ml-1 hover:bg-white/20 rounded-md transition-colors cursor-pointer" title="Entrar a este pizarrón"><GitBranch size={10} /></span>
                                                         <SubnoteTitle child={child} isActive={isActive} onRename={(id, title) => autoSave(id, { title })} />
+                                                        {isActive && (
+                                                            <span 
+                                                                onClick={(e) => { e.stopPropagation(); deleteDump(child.id); }} 
+                                                                className="ml-1 p-0.5 hover:bg-black/20 rounded transition-colors text-white/70 hover:text-white" 
+                                                                title="Borrar sub-pizarrón"
+                                                            >
+                                                                <Trash2 size={10} />
+                                                            </span>
+                                                        )}
                                                     </button>
                                                 </div>
                                             );

@@ -14,7 +14,7 @@
 - i18n solo tiene 'es' y 'en'. No agregar más idiomas sin pedirlo.
 
 ### Bugs Conocidos / Fixes Recientes
-- [Llenar con decisiones de la sesión actual]
+- 2026-03-18: Corregido cierre automático de menú Kanban en Pizarrón; sincronización de semáforos unificada vía UIStore (removiendo fetches redundantes); implementado borrado de sub-pizarrones y descarga Markdown recursiva completa.
 - Ejemplo: "2024-03-18: Corregido scroll position en SmartNotesEditor usando localStorage key 'scroll-{noteId}'"
 
 ## ⚠️ GAPS CRÍTICOS: DB Real vs types.ts (Verificado del SQL de producción)
