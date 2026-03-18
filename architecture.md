@@ -13,7 +13,7 @@ App.tsx
 │   ├── [reminders]  → RemindersApp
 │   ├── [braindump]  → BrainDumpApp > BrainDumpAIPanel, BrainDumpBreadcrumb
 │   ├── [translator] → TranslatorApp
-│   └── [tiktok]     → TikTokApp
+│   └── [tiktok]     → TikTokApp (Worker Externo en scripts/tiktok_worker.py)
 └── Sidebar (siempre visible, muestra contadores de Kanban/Reminders/Timers)
 └── Global Search (App.tsx) — Estado unificado en searchQueries (keys: activeGroupId o 'braindump')
 
@@ -26,6 +26,10 @@ App.tsx
 - 'timer-changed'        → recalcula activeTimersCount
 - 'reload-app-data'      → fetchData() completo
 - 'app-theme-changed'    → componentes internos reaccionan al cambio de clase en html
+- 'tiktok-updated'       → (implícito via Realtime) recarga videos procesados en TikTokApp
+
+## Servicios Externos & Workers
+- **TikTok Worker** (`scripts/tiktok_worker.py`): Corre cada 8 minutos en GitHub Actions. Usa `yt-dlp` para extraer transcripciones (sin descargar video) y actualizar la tabla `tiktok_videos`.
 
 ## Estándares de UI - Parity & Glow
 - **Global Search Parity**: Buscador ámbar con `highlightText` y tray persistent.
@@ -36,5 +40,6 @@ App.tsx
 
 ## AI / Gemini
 - API Key: process.env.GEMINI_API_KEY (inyectado por Vite desde .env)
-- Traducción: supabase edge function translateMyAppNotes (Deno, IS_DEV bypass para local)
+- **Traducción Independiente**: Standalone `TranslatorApp` utiliza `MyMemory API` (HTTP) con debounce de 800ms para rapidez; el historial reside en la tabla `translations` sincronizada vía Realtime.
+- **Traducción de Notas**: Supabase edge function `translateMyAppNotes` (Deno) para procesos de fondo en el editor.
 - Summaries/Generación: llamadas cliente directo a Gemini Flash desde hooks useSummaries / useBrainDumpSummaries

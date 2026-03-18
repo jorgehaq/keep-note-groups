@@ -74,33 +74,24 @@ def extract_captions(vtt_path: str) -> str:
 
 
 def download_video_info(url: str) -> dict:
-    """
-    Usa yt-dlp para extraer metadata y captions sin descargar el video.
-    Devuelve un dict con los campos que necesitamos.
-    """
     with tempfile.TemporaryDirectory() as tmp:
-        # Comando yt-dlp: solo metadata + subtítulos automáticos, sin video ni audio
         cmd = [
             "yt-dlp",
             "--no-playlist",
-            "--write-auto-sub",          # subtítulos auto-generados (ASR)
-            "--write-sub",               # subtítulos manuales si existen
-            "--sub-lang", "es,en,es-419",
-            "--sub-format", "vtt",
-            "--skip-download",           # NO descargar video ni audio
-            "--dump-json",               # imprimir metadata como JSON en stdout
+            "--write-auto-sub",
+            "--write-sub",
+            "--sub-lang", "es,en,es-419,en-orig",
+            "--sub-format", "vtt/best",
+            "--skip-download",
+            "--dump-json",
+            "--extractor-args", "tiktok:api_hostname=api16-normal-c-useast1a.tiktokv.com",
             "--no-warnings",
-            "--quiet",
             "-o", os.path.join(tmp, "%(id)s.%(ext)s"),
             url,
         ]
 
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
 
-        if result.returncode != 0:
-            raise RuntimeError(f"yt-dlp error: {result.stderr[:300]}")
-
-        # Parsear metadata
         meta = {}
         if result.stdout.strip():
             try:
@@ -108,22 +99,45 @@ def download_video_info(url: str) -> dict:
             except json.JSONDecodeError:
                 pass
 
-        # Buscar archivo .vtt descargado (puede haber varios idiomas)
+        # Intentar extraer captions del JSON embebido en metadata
         transcript = ""
-        for lang in ["es", "es-419", "en"]:
-            vtt_candidate = os.path.join(tmp, f"{meta.get('id', 'video')}.{lang}.vtt")
-            if os.path.exists(vtt_candidate):
-                transcript = extract_captions(vtt_candidate)
+        
+        # Opción 1: subtítulos automáticos embebidos en el JSON
+        automatic_captions = meta.get("automatic_captions", {})
+        subtitles = meta.get("subtitles", {})
+        
+        for lang_dict in [subtitles, automatic_captions]:
+            for lang in ["es", "es-419", "en", "en-orig"]:
+                if lang in lang_dict:
+                    for fmt in lang_dict[lang]:
+                        if fmt.get("ext") in ["vtt", "srv3", "json3"]:
+                            # Descargar el caption directamente desde la URL
+                            cap_url = fmt.get("url", "")
+                            if cap_url:
+                                try:
+                                    import urllib.request
+                                    with urllib.request.urlopen(cap_url, timeout=15) as r:
+                                        raw = r.read().decode("utf-8")
+                                        transcript = extract_captions_from_text(raw)
+                                        if transcript:
+                                            break
+                                except:
+                                    pass
+                    if transcript:
+                        break
+            if transcript:
                 break
 
-        # Si no hay VTT por nombre exacto, buscar cualquier .vtt en tmp
+        # Opción 2: buscar archivos .vtt descargados en disco
         if not transcript:
             import glob
             vtts = glob.glob(os.path.join(tmp, "*.vtt"))
             if vtts:
                 transcript = extract_captions(vtts[0])
 
-        # Construir resultado normalizado
+        # Opción 3: descripción como fallback de contenido
+        description = meta.get("description") or meta.get("title") or ""
+
         return {
             "title"      : meta.get("title") or meta.get("fulltitle") or "",
             "author"     : meta.get("uploader") or meta.get("creator") or meta.get("channel") or "",
@@ -131,10 +145,27 @@ def download_video_info(url: str) -> dict:
             "thumbnail"  : meta.get("thumbnail") or "",
             "view_count" : int(meta.get("view_count") or 0),
             "like_count" : int(meta.get("like_count") or 0),
-            "description": (meta.get("description") or "")[:2000],   # limitar
+            "description": description[:2000],
             "language"   : meta.get("language") or "",
             "transcript" : transcript,
         }
+
+
+def extract_captions_from_text(raw: str) -> str:
+    """Limpia captions en formato VTT o SRV3 desde texto crudo."""
+    import re
+    lines = []
+    seen = set()
+    for line in raw.splitlines():
+        line = line.strip()
+        if (not line or line.startswith("WEBVTT") or line.startswith("NOTE")
+                or "-->" in line or line.isdigit()):
+            continue
+        line = re.sub(r"<[^>]+>", "", line).strip()
+        if line and line not in seen:
+            seen.add(line)
+            lines.append(line)
+    return " ".join(lines)
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -186,7 +217,8 @@ def process_queue():
                 "transcript" : info["transcript"],
                 "language"   : info["language"],
                 # content y scratchpad los rellena el usuario desde la app
-                "content"    : info["description"],   # descripción como contenido inicial
+                "content"    : info["description"],
+                "description": info["description"],   # descripción duplicada para retrocompatibilidad
                 "status"     : "inbox",
                 "ai_summary_status": "idle",
                 "created_at" : now_iso(),

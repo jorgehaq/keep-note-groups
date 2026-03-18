@@ -14,12 +14,13 @@
 - i18n solo tiene 'es' y 'en'. No agregar más idiomas sin pedirlo.
 
 ### Bugs Conocidos / Fixes Recientes
+- 2026-03-18: Finalizada implementación de `TranslatorApp` con traducción automática vía MyMemory API (debounce 800ms) e historial persistente con sincronización Realtime; se priorizó speed-to-result sobre complejidad de backend (MyMemory público).
 - 2026-03-18: Corregido cierre automático de menú Kanban en Pizarrón; sincronización de semáforos unificada vía UIStore; implementado borrado de sub-pizarrones y descarga Markdown recursiva completa.
 - 2026-03-18: Implementado borrado de sub-notas en AccordionItem.tsx; exportación Markdown recursiva masiva (notas, sub-notas, scratchpads y summaries) tanto individual como por grupo en App.tsx.
 - 2026-03-18: Corregido clipping de burbujas Kanban en sidebar para pantallas pequeñas; implementado escalado responsivo de badges (fuente, tamaño y posición) preservando vista desktop (md+).
 - 2026-03-18: Implementada Búsqueda Profunda (Paridad) en Pizarrón: recursión en sub-pizarrones/resúmenes, iluminación ámbar global, persistencia de bandeja y unificación de estado con App.tsx.
 - 2026-03-18: Estandarización de headers y botón Bell convergente (blanco sobre rojo para contraste); reordenamiento estricto (Bell-Tray-Maximize-Sort-Search) y desacoplamiento del botón Sort en App.tsx para paridad total con Pizarrón.
-- 2026-03-18: Implementación del módulo "TikTok a Notas": Worker Python con Gemini 2.0 Flash para análisis de audio, cola de procesamiento en Supabase y UI reactiva para creación de notas desde videos.
+- 2026-03-18: Implementación del módulo "TikTok a Notas": Worker Python con yt-dlp y Gemini 2.0 Flash para análisis, cola de procesamiento en Supabase (`tiktok_queue`) y UI reactiva (8-min cycles).
 - Ejemplo: "2024-03-18: Corregido scroll position en SmartNotesEditor usando localStorage key 'scroll-{noteId}'"
 
 ## ⚠️ GAPS CRÍTICOS: DB Real vs types.ts (Verificado del SQL de producción)
