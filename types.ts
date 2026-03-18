@@ -85,6 +85,8 @@ export interface Task {
   updated_at: string;
   content?: string;
   source_id?: string;
+  linked_note_id?: string;
+  linked_board_id?: string;
 }
 
 export type GlobalAppView =

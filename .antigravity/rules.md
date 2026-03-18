@@ -1,0 +1,1 @@
+Stack: React, Vite (Puerto 3000), Supabase, Zustand, Lucide-react. Prohibido usar clases CSS inline sin Tailwind (si aplica) o alterar la estructura de base de datos sin un plan previo
