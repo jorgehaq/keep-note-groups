@@ -1,0 +1,35 @@
+# ANTIGRAVITY — CURSOR RULES
+
+## Stack
+- React 18 + TypeScript (Vite, puerto 3000)
+- Zustand (store.ts) para estado UI persistido en localStorage
+- Supabase (supabaseClient.ts) para BD y Realtime
+- Gemini Flash (vía process.env.GEMINI_API_KEY, NO fetch directo a /v1beta salvo en edge functions)
+- i18n: i18next con fallback 'es'
+
+## Reglas Absolutas
+- NUNCA borrar imports sin verificar que ningún archivo los use.
+- NUNCA refactorizar más de 1 archivo por request salvo que se indique explícitamente.
+- NUNCA agregar librerías nuevas sin preguntarlo primero.
+- NUNCA reemplazar Zustand por context/useState para estado global.
+- NUNCA mover archivos de carpeta sin confirmación.
+- NUNCA modificar types.ts sin leer TODOS los campos del tipo afectado primero.
+
+## Convenciones Clave
+- DB usa snake_case. UI usa camelCase. El mapeo ocurre en App.tsx (fetchData).
+- `group.title` en UI = `groups.name` en DB.
+- `note.isOpen` (UI) ≠ `note.is_open` (DB) — son campos distintos.
+- Auto-save: debounce de 800ms por nota via saveTimeoutRef + pendingUpdatesRef en App.tsx.
+- Realtime: Supabase channels en App.tsx emiten eventos custom (window.dispatchEvent) para que sub-apps reaccionen sin prop drilling.
+
+## Paleta Dark Mode (Obsidian-inspired, NO cambiar)
+- Fondo base:    #13131A
+- Superficie 1:  #1A1A24
+- Superficie 2:  #242432
+- Superficie 3:  #2D2D42
+- text-selection color definido en index.html <head> con !important
+
+## Arquitectura de Vistas
+- GlobalAppView: 'notes' | 'kanban' | 'timers' | 'reminders' | 'braindump' | 'translator'
+- El switch de vistas vive en App.tsx. Cada vista es una sub-app aislada.
+- Zen Mode: isZenModeByApp[globalView] — toggle con Escape.

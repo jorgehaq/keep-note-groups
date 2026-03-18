@@ -1,0 +1,49 @@
+# MEMORIA ACTIVA — DECISIONES RECIENTES
+
+## Estado Actual (actualizar con cada sesión relevante)
+
+### Decisiones Arquitectónicas Vigentes
+- SmartNotesEditor usa CodeMirror (NO Tiptap para notas plain-text). Tiptap solo en NoteEditor.tsx (src/components/).
+- El editor activo por defecto es SmartNotesEditor; ChecklistEditor se activa cuando note.is_checklist = true.
+- summaryCounts en store: Record<note_id, number> — se hidrata en fetchSummaryCounts() y se actualiza vía Realtime en summaries-global-sync.
+- pizarronVisibleByNoteAndTab en store: controla si el panel de pizarrones (subnota tipo board) está visible por nota y tab.
+
+### Deuda Técnica Consciente
+- App.tsx tiene demasiada lógica (fetchData, sort, CRUD, Realtime) — candidato a custom hooks pero NO refactorizar sin pedirlo.
+- Reminder.targets es JSONB en DB pero se tipea como `any[]` en el cliente — no agregar validación de schema sin coordinarlo.
+- i18n solo tiene 'es' y 'en'. No agregar más idiomas sin pedirlo.
+
+### Bugs Conocidos / Fixes Recientes
+- [Llenar con decisiones de la sesión actual]
+- Ejemplo: "2024-03-18: Corregido scroll position en SmartNotesEditor usando localStorage key 'scroll-{noteId}'"
+
+## ⚠️ GAPS CRÍTICOS: DB Real vs types.ts (Verificado del SQL de producción)
+
+### brain_dumps — La DB NO tiene estos campos (son solo tipos fantasma):
+  - parent_id, generation_level, ai_summary_status, generation_status, scratchpad, focus_prompt
+  - En DB solo existe: id, user_id, content, status, title, is_checklist, created_at, updated_at
+  - NUNCA hacer INSERT/UPDATE de esos campos en brain_dumps hasta migrarlos.
+
+### summaries — La DB difiere del tipo Summary en types.ts:
+  - NO existe: brain_dump_id, scratchpad, user_id en la tabla real.
+  - El enum de status en DB es: pending | processing | completed | FAILED (no 'error').
+  - types.ts dice 'error' → el valor real en DB es 'failed'. Cuidado con los filtros.
+
+### tasks — La DB NO tiene:
+  - linked_note_id, linked_board_id (solo existe source_id).
+  - Si el agente los usa, fallará silenciosamente (columna inexistente).
+
+### timers — La DB tiene campos EXTRA que types.ts no declara:
+  - content: text, laps: jsonb (array), accumulated_ms: bigint
+  - Usar accumulated_ms para precisión milisegundos si se necesita.
+
+### Tablas en DB que NO están en types.ts (sin tipo declarado):
+  - yo_memoria: id, user_id, temas[], marcadores_frecuentes(jsonb), patrones[],
+                preguntas_abiertas[], palabras_clave[], total_notas_procesadas, updated_at
+  - yo_perfil:  id, user_id, yo_json(jsonb), updated_at
+  - timer_logs: id, timer_id, user_id, duration_seconds, created_at
+  - Estas tablas tienen RLS activo. Solo las ve el user_id dueño.
+
+### Realtime publication — Tablas habilitadas:
+  brain_dumps, groups, notes, reminders, summaries, tasks, translations
+  (timers, timer_logs, yo_memoria, yo_perfil NO están en supabase_realtime)

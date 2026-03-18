@@ -1,79 +1,34 @@
-# Arquitectura de Keep Note Groups
+# ARQUITECTURA ANTIGRAVITY
 
-Este documento describe la estructura de componentes, los tipos de datos y la integración con Supabase del proyecto.
+## Árbol de Dependencias Principal
+App.tsx
+├── Zustand (useUIStore) — estado UI global persistido
+├── Supabase Realtime — channels: global-sync, summaries-global-sync
+├── Sub-apps (switch por globalView):
+│   ├── [notes]      → AccordionItem > NoteContent > SmartEditor > SmartNotesEditor
+│   │                                              > ChecklistEditor
+│   │                  NoteAIPanel, NoteBreadcrumb, LinkifiedText
+│   ├── [kanban]     → KanbanApp > KanbanBoard > KanbanList > KanbanTaskModal
+│   ├── [timers]     → TimeTrackerApp
+│   ├── [reminders]  → RemindersApp
+│   ├── [braindump]  → BrainDumpApp > BrainDumpAIPanel, BrainDumpBreadcrumb
+│   └── [translator] → TranslatorApp
+└── Sidebar (siempre visible, muestra contadores de Kanban/Reminders/Timers)
 
-## 1. Árbol de Componentes (Desde App.tsx)
+## Esquema Supabase (tablas relevantes)
+- Revisa supabase/schema.context.md para ver el esquema exacto de la base de datos.
 
-La aplicación utiliza un sistema de vistas globales (`globalView`) para alternar entre los diferentes módulos.
+## Eventos Custom (window.dispatchEvent)
+- 'kanban-updated'       → recarga tasks en KanbanApp
+- 'reminder-attended'    → actualiza overdueRemindersList optimísticamente
+- 'timer-changed'        → recalcula activeTimersCount
+- 'reload-app-data'      → fetchData() completo
+- 'app-theme-changed'    → componentes internos reaccionan al cambio de clase en html
 
-```mermaid
-graph TD
-    App[App.tsx] --> Auth[Auth.tsx]
-    App --> Sidebar[Sidebar.tsx]
-    App --> Settings[SettingsWindow.tsx]
-    App --> Launcher[GroupLauncher.tsx]
-    App --> MainContent{Main Content Area}
+## Alias de Paths
+- '@/' apunta a la raíz del proyecto (vite.config.ts resolve.alias)
 
-    MainContent --> |view: notes| AccordionItem[AccordionItem.tsx]
-    MainContent --> |view: kanban| KanbanApp[KanbanApp.tsx]
-    MainContent --> |view: timers| TimeTrackerApp[TimeTrackerApp.tsx]
-    MainContent --> |view: reminders| RemindersApp[RemindersApp.tsx]
-    MainContent --> |view: braindump| BrainDumpApp[BrainDumpApp.tsx]
-    MainContent --> |view: translator| TranslatorApp[TranslatorApp.tsx]
-
-    AccordionItem --> SmartEditor[SmartEditor.tsx]
-    AccordionItem --> NoteAIPanel[NoteAIPanel.tsx]
-    AccordionItem --> NoteBreadcrumb[NoteBreadcrumb.tsx]
-
-    KanbanApp --> KanbanBoard[KanbanBoard.tsx]
-    KanbanBoard --> KanbanList[KanbanList.tsx]
-    KanbanList --> KanbanSemaphore[KanbanSemaphore.tsx]
-    KanbanApp --> KanbanTaskModal[KanbanTaskModal.tsx]
-
-    BrainDumpApp --> BrainDumpAIPanel[BrainDumpAIPanel.tsx]
-    BrainDumpApp --> BrainDumpBreadcrumb[BrainDumpBreadcrumb.tsx]
-```
-
-## 2. Entidades e Interfaces (`types.ts`)
-
-Las interfaces principales definen el modelo de datos utilizado en toda la aplicación:
-
-| Interface | Descripción |
-| :--- | :--- |
-| `Note` | Entidad central. Contiene `title`, `content` y metadatos de IA/UI. |
-| `Group` | Contenedor de notas (`Note[]`). Relacionado con `Note` vía `group_id`. |
-| `Task` | Tarea del tablero Kanban. Se vincula a notas por `id` (`source_id`). |
-| `Reminder` | Recordatorios con fecha de vencimiento (`due_at`) y estado. |
-| `Timer` | Seguimiento de tiempo (cronómetros y cuentas regresivas). |
-| `BrainDump` | Notas rápidas/borradores con jerarquía opcional. |
-| `Translation` | Registro de textos traducidos. |
-
-## 3. Cliente de Base de Datos (`src/lib/supabaseClient.ts`)
-
-- **Tecnología**: [Supabase](https://supabase.com/) (PostgreSQL + Realtime Sync).
-- **Configuración**: Utiliza variables de entorno `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
-- **Sincronización**: `App.tsx` implementa escuchadores de `postgres_changes` para mantener el estado local actualizado en tiempo real para todas las tablas (`notes`, `groups`, `tasks`, `reminders`, etc.).
-
-## 4. Relaciones entre Módulos
-
-### Notas & Grupos
-- Relación **uno-a-muchos**. Cada `Note` pertenece a un `Group`.
-- El `Sidebar` permite filtrar y navegar por grupos.
-
-### Kanban & Notas
-- Las notas pueden actuar como tareas en el Kanban.
-- Al actualizar el título de una nota en la vista principal, `App.tsx` sincroniza automáticamente el título en la tabla `tasks` si existe un ID coincidente.
-- `KanbanApp` permite abrir una nota directamente desde una tarjeta del tablero.
-
-### Recordatorios & UI
-- Existe una integración visual global: si hay recordatorios vencidos, aparece un banner (marquee) en la parte superior de la aplicación.
-- El `Sidebar` también muestra indicadores visuales de recordatorios pendientes/vencidos en los grupos correspondientes.
-
-### BrainDump & Kanban
-- Los `BrainDumps` son independientes de las notas estructuradas pero pueden vincularse al Kanban.
-- **Reglas de UI Inamovibles**:
-    - El **encabezado** del pizarrón debe permanecer limpio: **PROHIBIDO** añadir botones de "Vincular a Kanban" o iconos de estado (Semáforos) en el header principal.
-    - La gestión de vinculación se realiza **EXCLUSIVAMENTE** a través del menú de opciones (tres puntos).
-    - La opción "Añadir a Kanban" en el menú solo es visible si el pizarrón no está ya en el Kanban.
-    - La sincronización de títulos entre Pizarrón y Tarea de Kanban es automática mediante triggers de base de datos.
-    - No añadir opciones de "Cerrar Vista" en los menús internos si ya existe una navegación global clara.
+## AI / Gemini
+- API Key: process.env.GEMINI_API_KEY (inyectado por Vite desde .env)
+- Traducción: supabase edge function translateMyAppNotes (Deno, IS_DEV bypass para local)
+- Summaries/Generación: llamadas cliente directo a Gemini Flash desde hooks useSummaries / useBrainDumpSummaries
