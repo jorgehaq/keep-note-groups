@@ -140,4 +140,34 @@ export interface BrainDump {
   user_id: string;
   created_at: string;
   updated_at: string;
+  parent_id?: string | null;
+  generation_level?: number;
+  focus_prompt?: string | null;
+  ai_summary_status?:
+    | "idle"
+    | "queued"
+    | "processing"
+    | "done"
+    | "error";
+  generation_status?:
+    | "idle"
+    | "queued"
+    | "processing"
+    | "done"
+    | "error"
+    | "stale";
+  scratchpad?: string;
+  children?: BrainDump[];
+}
+
+export interface Summary {
+  id: string;
+  note_id?: string | null;
+  brain_dump_id?: string | null;
+  target_objective: string;
+  content: string;
+  scratchpad?: string;
+  status: 'pending' | 'processing' | 'completed' | 'error';
+  created_at: string;
+  user_id: string;
 }

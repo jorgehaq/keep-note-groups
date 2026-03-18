@@ -183,6 +183,8 @@ function App() {
       } else if (event === 'SIGNED_OUT') {
         setSession(null);
         setGroups([]);
+        setBrainDumps([]);
+        setTranslations([]);
         hasLoadedOnce.current = false;
         setLoading(false);
       }

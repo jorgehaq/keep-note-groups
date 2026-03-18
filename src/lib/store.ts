@@ -47,6 +47,8 @@ interface UIStore {
     // Persisted AI State (per-note)
     aiPanelOpenByNote: Record<string, boolean>;
     activeTabByNote: Record<string, string>;
+    aiPanelOpenByBrainDump: Record<string, boolean>;
+    activeTabByBrainDump: Record<string, string>;
 
     // Persisted UI State (per-group for notes)
     focusedNoteByGroup: Record<string, string | null>;
@@ -98,6 +100,8 @@ interface UIStore {
     setIsTranslatorMaximized: (maximized: boolean) => void;
     setAiPanelOpen: (noteId: string, open: boolean) => void;
     setActiveTab: (noteId: string, tabId: string) => void;
+    setAiPanelOpenByBrainDump: (dumpId: string, open: boolean) => void;
+    setActiveTabByBrainDump: (dumpId: string, tabId: string) => void;
     setPizarronVisible: (noteId: string, tabId: string, visible: boolean) => void;
     setFocusedNoteId: (id: string | null, groupId?: string) => void;
     setIsGlobalNoteTrayOpen: (open: boolean, groupId?: string) => void;
@@ -170,6 +174,8 @@ export const useUIStore = create<UIStore>()(
             noteTrayOpenByGroup: {},
             aiPanelOpenByNote: {},
             activeTabByNote: {},
+            aiPanelOpenByBrainDump: {},
+            activeTabByBrainDump: {},
             focusedDumpId: null,
             isDumpTrayOpen: false,
             pizarronVisibleByNoteAndTab: {},
@@ -298,6 +304,20 @@ export const useUIStore = create<UIStore>()(
                     activeTabByNote: {
                         ...state.activeTabByNote,
                         [noteId]: tabId,
+                    },
+                })),
+            setAiPanelOpenByBrainDump: (dumpId, open) =>
+                set((state) => ({
+                    aiPanelOpenByBrainDump: {
+                        ...state.aiPanelOpenByBrainDump,
+                        [dumpId]: open,
+                    },
+                })),
+            setActiveTabByBrainDump: (dumpId, tabId) =>
+                set((state) => ({
+                    activeTabByBrainDump: {
+                        ...state.activeTabByBrainDump,
+                        [dumpId]: tabId,
                     },
                 })),
             setPizarronVisible: (noteId, tabId, visible) =>
@@ -467,6 +487,8 @@ export const useUIStore = create<UIStore>()(
                 noteTrayOpenByGroup: state.noteTrayOpenByGroup,
                 aiPanelOpenByNote: state.aiPanelOpenByNote,
                 activeTabByNote: state.activeTabByNote,
+                aiPanelOpenByBrainDump: state.aiPanelOpenByBrainDump,
+                activeTabByBrainDump: state.activeTabByBrainDump,
                 pizarronVisibleByNoteAndTab: state.pizarronVisibleByNoteAndTab,
                 focusedDumpId: state.focusedDumpId,
                 isDumpTrayOpen: state.isDumpTrayOpen,
