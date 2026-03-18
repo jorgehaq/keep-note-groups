@@ -42,6 +42,7 @@ interface UIStore {
     isBraindumpMaximized: boolean;
     isTranslatorMaximized: boolean;
     pizarronVisibleByNoteAndTab: Record<string, Record<string, boolean>>;
+    isZenModeByApp: Record<string, boolean>; // Zen orientation per app
 
     // Persisted AI State (per-note)
     aiPanelOpenByNote: Record<string, boolean>;
@@ -137,6 +138,7 @@ interface UIStore {
     setImminentRemindersCount: (count: number) => void;
     showOverdueMarquee: boolean;
     setShowOverdueMarquee: (show: boolean) => void;
+    toggleZenMode: (appId: string) => void;
 }
 
 export const useUIStore = create<UIStore>()(
@@ -171,6 +173,7 @@ export const useUIStore = create<UIStore>()(
             focusedDumpId: null,
             isDumpTrayOpen: false,
             pizarronVisibleByNoteAndTab: {},
+            isZenModeByApp: {},
             summaryCounts: {},
 
             setActiveGroup: (id) => set({ activeGroupId: id }),
@@ -336,6 +339,13 @@ export const useUIStore = create<UIStore>()(
             setFocusedDumpId: (id) => set({ focusedDumpId: id }),
             setIsDumpTrayOpen: (open) => set({ isDumpTrayOpen: open }),
             setShowOverdueMarquee: (show) => set({ showOverdueMarquee: show }),
+            toggleZenMode: (appId) =>
+                set((state) => ({
+                    isZenModeByApp: {
+                        ...state.isZenModeByApp,
+                        [appId]: !state.isZenModeByApp[appId],
+                    },
+                })),
 
             // Realtime Sync Implementation
             groups: [],
@@ -460,6 +470,7 @@ export const useUIStore = create<UIStore>()(
                 pizarronVisibleByNoteAndTab: state.pizarronVisibleByNoteAndTab,
                 focusedDumpId: state.focusedDumpId,
                 isDumpTrayOpen: state.isDumpTrayOpen,
+                isZenModeByApp: state.isZenModeByApp,
             }),
         },
     ),

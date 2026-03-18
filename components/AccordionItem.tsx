@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash, Sparkles, FileText, PenLine, ArrowUpRight, GitBranch, Plus } from 'lucide-react';
+import { ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash, Sparkles, FileText, PenLine, ArrowUpRight, GitBranch, Plus, Wind } from 'lucide-react';
 import { Note, NoteFont } from '../types';
 import { SmartNotesEditor, SmartNotesEditorRef } from '../src/components/editor/SmartNotesEditor';
 import { ChecklistEditor, ChecklistEditorRef, parseMarkdownToChecklist, serializeChecklistToMarkdown, serializeChecklistToPlainMarkdown } from '../src/components/editor/ChecklistEditor';
@@ -754,6 +754,19 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             }`}
           >
             <PenLine size={13} />
+          </button>
+
+          {/* Botón Zen */}
+          <button
+            onClick={(e) => { e.stopPropagation(); useUIStore.getState().toggleZenMode('notes'); }}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+              useUIStore.getState().isZenModeByApp['notes']
+                ? 'bg-amber-100 border-amber-300 text-amber-600 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-400 font-bold' 
+                : 'text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/30 hover:text-amber-400'
+            }`}
+            title={useUIStore.getState().isZenModeByApp['notes'] ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
+          >
+            <Wind size={13} />
           </button>
 
           {showLineNumbers && onToggleLineNumbers && (

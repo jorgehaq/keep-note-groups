@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid, Maximize2, Minimize2, ChevronsDownUp, Bell, Pin, PanelLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid, Maximize2, Minimize2, ChevronsDownUp, Bell, Pin, PanelLeft, ChevronLeft, ChevronRight, Wind } from 'lucide-react';
 import { Note, Group, Theme, NoteFont, Reminder, NoteSortMode, BrainDump } from './types';
 import { AccordionItem } from './components/AccordionItem';
 import { Sidebar } from './components/Sidebar';
@@ -73,7 +73,8 @@ function App() {
     setTranslations, setBrainDumps,
     summaryCounts, setSummaryCounts,
     focusedNoteByGroup, lastActiveNoteByGroup, setFocusedNoteId,
-    noteTrayOpenByGroup, setIsGlobalNoteTrayOpen
+    noteTrayOpenByGroup, setIsGlobalNoteTrayOpen,
+    isZenModeByApp, toggleZenMode
   } = useUIStore();
 
   const [showLineNumbers, setShowLineNumbers] = useState<boolean>(
@@ -87,6 +88,19 @@ function App() {
   const activeNoteId = activeGroupId ? (lastActiveNoteByGroup[activeGroupId] ?? null) : null;
 
   // Preservar estado de las notas una vez montadas
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        const { isZenModeByApp, toggleZenMode, globalView } = useUIStore.getState();
+        if (isZenModeByApp[globalView]) {
+          toggleZenMode(globalView);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   useEffect(() => {
     if (activeNoteId) {
       setMountedNoteIds(prev => new Set([...prev, activeNoteId]));
@@ -109,6 +123,8 @@ function App() {
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
 
   const [tempGroupName, setTempGroupName] = useState<string | null>(null);
+  const isZenMode = isZenModeByApp[globalView] || false;
+  const realShowOverdueMarquee = showOverdueMarquee && !isZenMode;
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const mainRef = useRef<HTMLElement>(null);
   const [groupTitleSyncStatus, setGroupTitleSyncStatus] = useState<'saved' | 'saving' | ''>('');
@@ -1161,7 +1177,7 @@ function App() {
         <div className="flex flex-col z-50 shrink-0">
           
           {/* 1. BANNER DE RECORDATORIOS VENCIDOS (BARRA PLANA BORDERLESS) */}
-          {showOverdueMarquee && overdueRemindersList.length > 0 && (
+          {!isZenMode && realShowOverdueMarquee && overdueRemindersList.length > 0 && (
             <div className="w-full bg-[#FAFAFA] dark:bg-[#13131A] overflow-hidden shrink-0 border-b border-zinc-200 dark:border-zinc-800">
               <div className="py-2.5 flex items-center">
                 <div className="flex-1 overflow-hidden relative h-6 flex items-center">
@@ -1243,7 +1259,9 @@ function App() {
          }} /> :
          globalView === 'translator' ? <TranslatorApp session={session!} /> : (
           <>
-            <div className={`sticky top-0 z-30 bg-white/80 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 ${isGlobalNoteTrayOpen ? '' : 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm'}`}>
+            {!isZenMode && (
+              <div className="flex flex-col shrink-0">
+                <div className={`sticky top-0 z-30 bg-white/80 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 ${isGlobalNoteTrayOpen ? '' : 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm'}`}>
                <div className={`min-h-[72px] h-auto flex flex-col lg:flex-row lg:items-center justify-between px-4 md:px-6 py-3 gap-3 ${isGlobalNoteTrayOpen ? 'border-b border-zinc-200 dark:border-zinc-800 shadow-sm' : ''}`}>
                  {activeGroup ? (
                     <>
@@ -1403,6 +1421,18 @@ function App() {
                                 )}
                               </div>
 
+                              {/* Modo ZEN Button */}
+                              <button
+                                onClick={() => toggleZenMode(globalView)}
+                                className={`h-9 w-9 flex items-center justify-center rounded-xl transition-all active:scale-95 border ${
+                                  isZenMode 
+                                    ? 'bg-amber-100 border-amber-300 text-amber-600 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-400 font-bold' 
+                                    : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/10'
+                                }`}
+                                title={isZenMode ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
+                              >
+                                <Wind size={18} />
+                              </button>
 
                               <button 
                                   onClick={downloadGroupAsMarkdown} 
@@ -1584,12 +1614,13 @@ function App() {
                           </button>
                         </div>
                       )}
-                  </div>
-                )}
+                    </div>
+                  )}
               </div>
-
+            </div>
+          )}
               {/* AREA DE LA NOTA - OCUPA EL RESTO DEL ESPACIO */}
-              <main ref={mainRef} className={`flex-1 flex flex-col overflow-hidden px-4 pb-4 ${isGlobalNoteTrayOpen && activeGroup ? 'pt-0' : 'pt-5'}`}>
+              <main ref={mainRef} className={`flex-1 flex flex-col overflow-hidden px-4 pb-4 ${!isZenMode && isGlobalNoteTrayOpen && activeGroup ? 'pt-0' : 'pt-5'}`}>
                 <div className={`flex-1 flex flex-col min-h-0 ${isMaximized ? 'max-w-full' : 'max-w-6xl'} w-full mx-auto`}>
                   {activeGroup ? (
                      <div className="flex-1 flex flex-col min-h-0">
@@ -1687,6 +1718,7 @@ function App() {
         onTogglePin={toggleGroupPin}
         onToggleFavorite={toggleGroupFavorite}
       />
+
     </div>
   );
 }

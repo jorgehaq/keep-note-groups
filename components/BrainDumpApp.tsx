@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell, Grid, ChevronsDownUp, MoreVertical, ListTodo, CheckSquare, Square, GripVertical, Search, X, ChevronLeft, ChevronRight, ArrowUpRight, Download, ArrowUpDown, Calendar, Type, Check } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell, Grid, ChevronsDownUp, MoreVertical, ListTodo, CheckSquare, Square, GripVertical, Search, X, ChevronLeft, ChevronRight, ArrowUpRight, Download, ArrowUpDown, Calendar, Type, Check, Wind } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { KanbanSemaphore } from './KanbanSemaphore';
 import { PizarronLinkerModal } from './PizarronLinkerModal';
@@ -128,7 +128,8 @@ export const BrainDumpApp: React.FC<{
     groups?: Group[];
     onOpenNote?: (groupId: string, noteId: string) => void;
 }> = ({ session, noteFont, noteFontSize, noteLineHeight = 'standard', searchQuery, groups = [], onOpenNote }) => {
-    const { isBraindumpMaximized, setIsBraindumpMaximized, brainDumps: dumps, setBrainDumps: setDumps, showOverdueMarquee, setShowOverdueMarquee, overdueRemindersCount, globalTasks, focusedDumpId, setFocusedDumpId, isDumpTrayOpen, setIsDumpTrayOpen, summaryCounts } = useUIStore();
+    const { isBraindumpMaximized, setIsBraindumpMaximized, brainDumps: dumps, setBrainDumps: setDumps, showOverdueMarquee, setShowOverdueMarquee, overdueRemindersCount, globalTasks, focusedDumpId, setFocusedDumpId, isDumpTrayOpen, setIsDumpTrayOpen, summaryCounts, isZenModeByApp, toggleZenMode } = useUIStore();
+    const isZenMode = isZenModeByApp['braindump'];
     const [loading, setLoading] = useState(false);
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [linkingPizarron, setLinkingPizarron] = useState<BrainDump | null>(null);
@@ -266,200 +267,203 @@ export const BrainDumpApp: React.FC<{
 
     return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
-            <div className={`sticky top-0 z-30 bg-white/80 dark:bg-[#1A1A24]/90 backdrop-blur-md shrink-0 ${isDumpTrayOpen ? '' : 'border-b border-zinc-200 dark:border-[#2D2D42] shadow-sm'}`}>
-                <div className={`flex flex-col md:flex-row md:items-center justify-between px-4 md:px-6 py-4 gap-4 ${isDumpTrayOpen ? 'border-b border-zinc-200 dark:border-[#2D2D42] shadow-sm' : ''}`}>
-                    <h1 className="text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] flex items-center gap-3">
-                        <div className="h-9 p-2 bg-[#FFD700] rounded-lg text-amber-900 shadow-lg shadow-amber-500/20 shrink-0">
-                            <PenTool size={20} />
-                        </div>
-                        <span className="truncate">Pizarrón</span>
-                    </h1>
-                <div className="flex flex-wrap items-center gap-2 md:gap-3">
-                    {/* Botón Toggle Reminder (siempre primero de izquierda a derecha) */}
-                    <button
-                      onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
-                      disabled={overdueRemindersCount === 0}
-                      className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
-                        showOverdueMarquee 
-                          ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
-                          : overdueRemindersCount > 0
-                            ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
-                            : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
-                      }`}
-                      title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
-                    >
-                      <Bell size={18} className={overdueRemindersCount > 0 ? 'animate-pulse text-red-500' : ''} />
-                      {overdueRemindersCount > 0 && (
-                        <span className="text-xs font-bold whitespace-nowrap">
-                          {overdueRemindersCount}
-                        </span>
-                      )}
-                    </button>
-
-                    {/* Botón Toggle Bandeja de Pizarrones */}
-                    {pizarrones.length > 0 && (
+            {!isZenMode && (
+                <div className={`sticky top-0 z-30 bg-white/80 dark:bg-[#1A1A24]/90 backdrop-blur-md shrink-0 ${isDumpTrayOpen ? '' : 'border-b border-zinc-200 dark:border-[#2D2D42] shadow-sm'}`}>
+                    <div className={`flex flex-col md:flex-row md:items-center justify-between px-4 md:px-6 py-4 gap-4 ${isDumpTrayOpen ? 'border-b border-zinc-200 dark:border-[#2D2D42] shadow-sm' : ''}`}>
+                        <h1 className="text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] flex items-center gap-3">
+                            <div className="h-9 p-2 bg-[#FFD700] rounded-lg text-amber-900 shadow-lg shadow-amber-500/20 shrink-0">
+                                <PenTool size={20} />
+                            </div>
+                            <span className="truncate">Pizarrón</span>
+                        </h1>
+                    <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                        {/* Botón Toggle Reminder (siempre primero de izquierda a derecha) */}
                         <button
-                            onClick={() => setIsDumpTrayOpen(!isDumpTrayOpen)}
-                            className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
-                                isDumpTrayOpen 
-                                  ? 'bg-[#FFD700] border-amber-300 text-amber-950 shadow-sm shadow-[#FFD700]/20' 
-                                  : 'bg-amber-50 dark:bg-[#FFD700]/10 border-amber-200 dark:border-[#FFD700]/30 text-amber-500 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-[#FFD700]/20'
-                            }`}
-                            title={isDumpTrayOpen ? "Ocultar Pizarrones" : "Mostrar Pizarrones"}
+                          onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
+                          disabled={overdueRemindersCount === 0}
+                          className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
+                            showOverdueMarquee 
+                              ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
+                              : overdueRemindersCount > 0
+                                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
+                                : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
+                          }`}
+                          title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                         >
-                            <ChevronsDownUp size={18} className={`transition-transform duration-300 ${isDumpTrayOpen ? 'rotate-180' : ''}`} />
-                             <span className={`text-xs font-bold ${isDumpTrayOpen ? '' : 'text-amber-600 dark:text-[#FFD700]'}`}>{pizarrones.length}</span>
+                          <Bell size={18} className={overdueRemindersCount > 0 ? 'animate-pulse text-red-500' : ''} />
+                          {overdueRemindersCount > 0 && (
+                            <span className="text-xs font-bold whitespace-nowrap">
+                              {overdueRemindersCount}
+                            </span>
+                          )}
                         </button>
-                    )}
 
-                    <div className="relative flex items-center transition-all duration-300">
-                      <Search size={15} className={`absolute left-3 pointer-events-none transition-colors ${localSearchQuery.trim() ? 'text-amber-600 dark:text-amber-500 font-bold' : 'text-zinc-400'}`} />
-                      <input
-                        type="text"
-                        placeholder="Buscar..."
-                        value={localSearchQuery}
-                        onChange={(e) => setLocalSearchQuery(e.target.value)}
-                        className={`h-9 flex-1 md:w-48 lg:w-64 pl-9 pr-8 text-xs rounded-xl border transition-all focus:outline-none ${localSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50' : 'border-zinc-200 dark:border-[#2D2D42] bg-white dark:bg-[#1A1A24] text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'}`}
-                      />
-                      {localSearchQuery.trim() && (
-                        <button 
-                          onClick={() => setLocalSearchQuery('')} 
-                          className="absolute right-2 p-0.5 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 bg-amber-200/50 dark:bg-amber-800/50 hover:bg-amber-300/50 dark:hover:bg-amber-700/50 rounded-full transition-colors"
-                        >
-                          <X size={12} />
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="relative" ref={sortMenuRef}>
-                        <button 
-                            onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} 
-                            className="h-9 w-9 flex items-center justify-center text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors border border-zinc-200 dark:border-[#2D2D42]"
-                            title="Ordenar pizarrones"
-                        >
-                            <ArrowUpDown size={18} />
-                        </button>
-                        
-                        {isSortMenuOpen && (
-                            <div className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-zinc-800 shadow-xl rounded-xl border border-zinc-200 dark:border-zinc-700 p-1.5 flex flex-col gap-0.5 min-w-[200px] animate-fadeIn">
-                                <div className="px-2 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1 border-b border-zinc-100 dark:border-zinc-700">Ordenar por</div>
-                                
-                                <button onClick={() => { setSortMode('date-desc'); setIsSortMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${sortMode === 'date-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
-                                    <Calendar size={14} /> Fecha (Recientes)
-                                    {sortMode === 'date-desc' && <Check size={14} className="ml-auto" />}
-                                </button>
-                                
-                                <button onClick={() => { setSortMode('date-asc'); setIsSortMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${sortMode === 'date-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
-                                    <Calendar size={14} /> Fecha (Antiguos)
-                                    {sortMode === 'date-asc' && <Check size={14} className="ml-auto" />}
-                                </button>
-
-                                <button onClick={() => { setSortMode('created-desc'); setIsSortMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${sortMode === 'created-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
-                                    <Calendar size={14} /> Creación (reciente)
-                                    {sortMode === 'created-desc' && <Check size={14} className="ml-auto" />}
-                                </button>
-                                <button onClick={() => { setSortMode('created-asc'); setIsSortMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${sortMode === 'created-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
-                                    <Calendar size={14} /> Creación (antigua)
-                                    {sortMode === 'created-asc' && <Check size={14} className="ml-auto" />}
-                                </button>
-                                
-                                <button onClick={() => { setSortMode('alpha-asc'); setIsSortMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${sortMode === 'alpha-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
-                                    <Type size={14} /> Nombre (A-Z)
-                                    {sortMode === 'alpha-asc' && <Check size={14} className="ml-auto" />}
-                                </button>
-                                
-                                <button onClick={() => { setSortMode('alpha-desc'); setIsSortMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${sortMode === 'alpha-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
-                                    <Type size={14} /> Nombre (Z-A)
-                                    {sortMode === 'alpha-desc' && <Check size={14} className="ml-auto" />}
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-                    <button
-                      onClick={() => setIsBraindumpMaximized(!isBraindumpMaximized)}
-                      className="h-9 p-2 bg-white dark:bg-[#2D2D42] border border-zinc-200 dark:border-[#2D2D42] rounded-xl text-zinc-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400 transition-all active:scale-95 shrink-0"
-                      title={isBraindumpMaximized ? "Minimizar" : "Maximizar"}
-                    >
-                      {isBraindumpMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-                    </button>
-                    <button onClick={createNewDraft} className="h-9 bg-[#FFD700] hover:bg-[#E5C100] text-amber-950 px-4 py-2 rounded-xl shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2 active:scale-95 shrink-0">
-                        <Plus size={20} /> <span className="text-sm font-bold hidden sm:inline pr-2 text-amber-950">Nuevo Pizarrón</span>
-                    </button>
-                </div>
-                </div>
-
-                {/* FRANJA DE PIZARRONES (ACCESOS DIRECTOS) */}
-                {isDumpTrayOpen && pizarrones.length > 0 && (
-                    <div className="pt-4 px-4 pb-4 bg-[#FAFAFA] dark:bg-[#13131A] relative group/tray">
-                        {/* Flecha Izquierda (solo visible en md:hidden cuando hay scroll) */}
-                        {canScrollLeft && (
-                            <div className="md:hidden absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#FAFAFA] dark:from-[#13131A] to-transparent z-10 flex items-center justify-start pl-2">
-                                <button onClick={() => scrollTabs('left')} className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-amber-600 transition-colors">
-                                    <ChevronLeft size={16} />
-                                </button>
-                            </div>
+                        {/* Botón Toggle Bandeja de Pizarrones */}
+                        {pizarrones.length > 0 && (
+                            <button
+                                onClick={() => setIsDumpTrayOpen(!isDumpTrayOpen)}
+                                className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
+                                    isDumpTrayOpen 
+                                      ? 'bg-[#FFD700] border-amber-300 text-amber-950 shadow-sm shadow-[#FFD700]/20' 
+                                      : 'bg-amber-50 dark:bg-[#FFD700]/10 border-amber-200 dark:border-[#FFD700]/30 text-amber-500 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-[#FFD700]/20'
+                                }`}
+                                title={isDumpTrayOpen ? "Ocultar Pizarrones" : "Mostrar Pizarrones"}
+                            >
+                                <ChevronsDownUp size={18} className={`transition-transform duration-300 ${isDumpTrayOpen ? 'rotate-180' : ''}`} />
+                                 <span className={`text-xs font-bold ${isDumpTrayOpen ? '' : 'text-amber-600 dark:text-[#FFD700]'}`}>{pizarrones.length}</span>
+                            </button>
                         )}
 
-                        <div 
-                            ref={scrollContainerRef}
-                            onScroll={checkScroll}
-                            className="flex flex-nowrap md:flex-wrap justify-start md:justify-center gap-2.5 overflow-x-auto hidden-scrollbar pt-2 pb-2 md:pb-1 scroll-smooth px-2"
-                        >
-                             {pizarrones.map(p => {
-                                 const isFocused = focusedDumpId === p.id;
-                                 const isHighlighted = localSearchQuery.trim() && (p.title?.toLowerCase().includes(localSearchQuery.toLowerCase()) || p.content?.toLowerCase().includes(localSearchQuery.toLowerCase()));
-                                 const linkedTask = globalTasks?.find(t => t.id === p.id);
-                                 let dotColorClass = null;
-                                 if (linkedTask) {
-                                     switch (linkedTask.status) {
-                                         case 'backlog': dotColorClass = 'bg-[#9E9E9E]'; break;
-                                         case 'todo': dotColorClass = 'bg-[#FBC02D]'; break;
-                                         case 'in_progress': dotColorClass = 'bg-[#1E88E5]'; break;
-                                         case 'done': dotColorClass = 'bg-[#43A047]'; break;
-                                     }
-                                 }
-
-                                 return (
-                                     <button
-                                         key={p.id}
-                                         onClick={() => setFocusedDumpId(isFocused ? null : p.id)}
-                                         className={`relative flex items-center justify-center px-4 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 my-0.5 ${
-                                             isFocused
-                                                 ? 'bg-[#FFD700] text-amber-950 border-amber-300 scale-[1.02]'
-                                                 : isHighlighted
-                                                   ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500 ring-2 ring-amber-500/50 text-amber-700 dark:text-amber-300'
-                                                   : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-amber-400/50 hover:bg-amber-50 dark:hover:bg-amber-900/10'
-                                         }`}
-                                         >
-                                         <span className="whitespace-nowrap">
-                                             {localSearchQuery ? highlightText(p.title || 'Pizarrón Sin Título', localSearchQuery) : (p.title || 'Pizarrón Sin Título')}
-                                             {summaryCounts[p.id] > 0 && ` (${summaryCounts[p.id]})`}
-                                         </span>
-                                         {dotColorClass && (
-                                              <div 
-                                                className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full border border-white dark:border-[#13131A] z-[20] shadow-sm transition-transform hover:scale-110 ${dotColorClass}`} 
-                                                title={`Estado Kanban`}
-                                              />
-                                          )}
-                                     </button>
-                                 );
-                             })}
+                        <div className="relative flex items-center transition-all duration-300">
+                          <Search size={15} className={`absolute left-3 pointer-events-none transition-colors ${localSearchQuery.trim() ? 'text-amber-600 dark:text-amber-500 font-bold' : 'text-zinc-400'}`} />
+                          <input
+                            type="text"
+                            placeholder="Buscar..."
+                            value={localSearchQuery}
+                            onChange={(e) => setLocalSearchQuery(e.target.value)}
+                            className={`h-9 flex-1 md:w-48 lg:w-64 pl-9 pr-8 text-xs rounded-xl border transition-all focus:outline-none ${localSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50' : 'border-zinc-200 dark:border-[#2D2D42] bg-white dark:bg-[#1A1A24] text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'}`}
+                          />
+                          {localSearchQuery.trim() && (
+                            <button 
+                              onClick={() => setLocalSearchQuery('')} 
+                              className="absolute right-2 p-0.5 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 bg-amber-200/50 dark:bg-amber-800/50 hover:bg-amber-300/50 dark:hover:bg-amber-700/50 rounded-full transition-colors"
+                            >
+                              <X size={12} />
+                            </button>
+                          )}
                         </div>
 
-                        {/* Flecha Derecha (solo visible en md:hidden cuando hay scroll) */}
-                        {canScrollRight && (
-                            <div className="md:hidden absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#FAFAFA] dark:from-[#13131A] to-transparent z-10 flex items-center justify-end pr-2">
-                                <button onClick={() => scrollTabs('right')} className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-amber-600 transition-colors">
-                                    <ChevronRight size={16} />
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
+                        <div className="relative" ref={sortMenuRef}>
+                            <button 
+                                onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} 
+                                className="h-9 w-9 flex items-center justify-center text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors border border-zinc-200 dark:border-[#2D2D42]"
+                                title="Ordenar pizarrones"
+                            >
+                                <ArrowUpDown size={18} />
+                            </button>
+                            
+                            {isSortMenuOpen && (
+                                <div className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-zinc-800 shadow-xl rounded-xl border border-zinc-200 dark:border-zinc-700 p-1.5 flex flex-col gap-0.5 min-w-[200px] animate-fadeIn">
+                                    <div className="px-2 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1 border-b border-zinc-100 dark:border-zinc-700">Ordenar por</div>
+                                    
+                                    <button onClick={() => { setSortMode('date-desc'); setIsSortMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${sortMode === 'date-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                        <Calendar size={14} /> Fecha (Recientes)
+                                        {sortMode === 'date-desc' && <Check size={14} className="ml-auto" />}
+                                    </button>
+                                    
+                                    <button onClick={() => { setSortMode('date-asc'); setIsSortMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${sortMode === 'date-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                        <Calendar size={14} /> Fecha (Antiguos)
+                                        {sortMode === 'date-asc' && <Check size={14} className="ml-auto" />}
+                                    </button>
 
-            <div ref={scrollContainerRef} className={`flex-1 ${focusedDumpId ? 'overflow-hidden' : 'overflow-y-auto'} bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 ${isDumpTrayOpen && pizarrones.length > 0 ? 'pt-0' : 'pt-5'} hidden-scrollbar flex flex-col`}>
+                                    <button onClick={() => { setSortMode('created-desc'); setIsSortMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${sortMode === 'created-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                        <Calendar size={14} /> Creación (reciente)
+                                        {sortMode === 'created-desc' && <Check size={14} className="ml-auto" />}
+                                    </button>
+                                    <button onClick={() => { setSortMode('created-asc'); setIsSortMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${sortMode === 'created-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                        <Calendar size={14} /> Creación (antigua)
+                                        {sortMode === 'created-asc' && <Check size={14} className="ml-auto" />}
+                                    </button>
+                                    
+                                    <button onClick={() => { setSortMode('alpha-asc'); setIsSortMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${sortMode === 'alpha-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                        <Type size={14} /> Nombre (A-Z)
+                                        {sortMode === 'alpha-asc' && <Check size={14} className="ml-auto" />}
+                                    </button>
+                                    
+                                    <button onClick={() => { setSortMode('alpha-desc'); setIsSortMenuOpen(false); }} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${sortMode === 'alpha-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                        <Type size={14} /> Nombre (Z-A)
+                                        {sortMode === 'alpha-desc' && <Check size={14} className="ml-auto" />}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        <button
+                          onClick={() => setIsBraindumpMaximized(!isBraindumpMaximized)}
+                          className="h-9 p-2 bg-white dark:bg-[#2D2D42] border border-zinc-200 dark:border-[#2D2D42] rounded-xl text-zinc-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400 transition-all active:scale-95 shrink-0"
+                          title={isBraindumpMaximized ? "Minimizar" : "Maximizar"}
+                        >
+                          {isBraindumpMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                        </button>
+
+                        <button onClick={createNewDraft} className="h-9 bg-[#FFD700] hover:bg-[#E5C100] text-amber-950 px-4 py-2 rounded-xl shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2 active:scale-95 shrink-0">
+                            <Plus size={20} /> <span className="text-sm font-bold hidden sm:inline pr-2 text-amber-950">Nuevo Pizarrón</span>
+                        </button>
+                    </div>
+                    </div>
+
+                    {/* FRANJA DE PIZARRONES (ACCESOS DIRECTOS) */}
+                    {isDumpTrayOpen && pizarrones.length > 0 && (
+                        <div className="pt-4 px-4 pb-4 bg-[#FAFAFA] dark:bg-[#13131A] relative group/tray">
+                            {/* Flecha Izquierda (solo visible en md:hidden cuando hay scroll) */}
+                            {canScrollLeft && (
+                                <div className="md:hidden absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#FAFAFA] dark:from-[#13131A] to-transparent z-10 flex items-center justify-start pl-2">
+                                    <button onClick={() => scrollTabs('left')} className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-amber-600 transition-colors">
+                                        <ChevronLeft size={16} />
+                                    </button>
+                                </div>
+                            )}
+
+                            <div 
+                                ref={scrollContainerRef}
+                                onScroll={checkScroll}
+                                className="flex flex-nowrap md:flex-wrap justify-start md:justify-center gap-2.5 overflow-x-auto hidden-scrollbar pt-2 pb-2 md:pb-1 scroll-smooth px-2"
+                            >
+                                 {pizarrones.map(p => {
+                                     const isFocused = focusedDumpId === p.id;
+                                     const isHighlighted = localSearchQuery.trim() && (p.title?.toLowerCase().includes(localSearchQuery.toLowerCase()) || p.content?.toLowerCase().includes(localSearchQuery.toLowerCase()));
+                                     const linkedTask = globalTasks?.find(t => t.id === p.id);
+                                     let dotColorClass = null;
+                                     if (linkedTask) {
+                                         switch (linkedTask.status) {
+                                             case 'backlog': dotColorClass = 'bg-[#9E9E9E]'; break;
+                                             case 'todo': dotColorClass = 'bg-[#FBC02D]'; break;
+                                             case 'in_progress': dotColorClass = 'bg-[#1E88E5]'; break;
+                                             case 'done': dotColorClass = 'bg-[#43A047]'; break;
+                                         }
+                                     }
+
+                                     return (
+                                         <button
+                                             key={p.id}
+                                             onClick={() => setFocusedDumpId(isFocused ? null : p.id)}
+                                             className={`relative flex items-center justify-center px-4 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 my-0.5 ${
+                                                 isFocused
+                                                     ? 'bg-[#FFD700] text-amber-950 border-amber-300 scale-[1.02]'
+                                                     : isHighlighted
+                                                       ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500 ring-2 ring-amber-500/50 text-amber-700 dark:text-amber-300'
+                                                       : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-amber-400/50 hover:bg-amber-50 dark:hover:bg-amber-900/10'
+                                             }`}
+                                             >
+                                             <span className="whitespace-nowrap">
+                                                 {localSearchQuery ? highlightText(p.title || 'Pizarrón Sin Título', localSearchQuery) : (p.title || 'Pizarrón Sin Título')}
+                                                 {summaryCounts[p.id] > 0 && ` (${summaryCounts[p.id]})`}
+                                             </span>
+                                             {dotColorClass && (
+                                                  <div 
+                                                    className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full border border-white dark:border-[#13131A] z-[20] shadow-sm transition-transform hover:scale-110 ${dotColorClass}`} 
+                                                    title={`Estado Kanban`}
+                                                  />
+                                              )}
+                                         </button>
+                                     );
+                                 })}
+                            </div>
+
+                            {/* Flecha Derecha (solo visible en md:hidden cuando hay scroll) */}
+                            {canScrollRight && (
+                                <div className="md:hidden absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#FAFAFA] dark:from-[#13131A] to-transparent z-10 flex items-center justify-end pr-2">
+                                    <button onClick={() => scrollTabs('right')} className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-amber-600 transition-colors">
+                                        <ChevronRight size={16} />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            <div ref={scrollContainerRef} className={`flex-1 ${focusedDumpId ? 'overflow-hidden' : 'overflow-y-auto'} bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 ${!isZenMode && isDumpTrayOpen && pizarrones.length > 0 ? 'pt-0' : 'pt-5'} hidden-scrollbar flex flex-col`}>
                 <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto flex flex-col ${focusedDumpId ? 'gap-0 pb-0 flex-1 w-full min-h-0' : 'gap-12 pb-20'}`}>
                     
                     {/* 1. PIZARRONES (PERSISTENTES - FILTRADO POR FOCO) */}
@@ -493,6 +497,19 @@ export const BrainDumpApp: React.FC<{
                                             {globalTasks?.some(t => t.id === pizarron.id) && (
                                                 <KanbanSemaphore sourceId={pizarron.id} sourceTitle={pizarron.title || 'Pizarrón sin título'} />
                                             )}
+                                            
+                                            {/* Botón Zen */}
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); toggleZenMode('braindump'); }}
+                                              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                                                isZenMode
+                                                  ? 'bg-amber-100 border-amber-300 text-amber-600 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-400 font-bold' 
+                                                  : 'text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/30 hover:text-amber-400'
+                                              }`}
+                                              title={isZenMode ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
+                                            >
+                                              <Wind size={13} />
+                                            </button>
                                             <div className="relative" ref={openMenuId === pizarron.id ? menuRef : undefined}>
                                                 <button
                                                     onClick={() => setOpenMenuId(openMenuId === pizarron.id ? null : pizarron.id)}
