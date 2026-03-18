@@ -423,8 +423,28 @@ export const BrainDumpApp: React.FC<{
         }
         result.sort((a, b) => {
             switch (sortMode) {
-                case 'date-desc': return new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime();
-                case 'alpha-asc': return (a.title || 'Z').localeCompare(b.title || 'Z');
+                case 'date-desc': {
+                    const dateB = new Date(b.updated_at || b.created_at || 0).getTime();
+                    const dateA = new Date(a.updated_at || a.created_at || 0).getTime();
+                    return dateB - dateA;
+                }
+                case 'date-asc': {
+                    const dateA = new Date(a.updated_at || a.created_at || 0).getTime();
+                    const dateB = new Date(b.updated_at || b.created_at || 0).getTime();
+                    return dateA - dateB;
+                }
+                case 'created-desc': {
+                    const dateB = new Date(b.created_at || 0).getTime();
+                    const dateA = new Date(a.created_at || 0).getTime();
+                    return dateB - dateA;
+                }
+                case 'created-asc': {
+                    const dateA = new Date(a.created_at || 0).getTime();
+                    const dateB = new Date(b.created_at || 0).getTime();
+                    return dateA - dateB;
+                }
+                case 'alpha-asc': return (a.title || '').toLowerCase().localeCompare((b.title || '').toLowerCase());
+                case 'alpha-desc': return (b.title || '').toLowerCase().localeCompare((a.title || '').toLowerCase());
                 default: return 0;
             }
         });
@@ -453,12 +473,16 @@ export const BrainDumpApp: React.FC<{
                                 {isSortMenuOpen && (
                                     <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#1C1C26] border border-zinc-200 dark:border-[#2D2D42] rounded-xl shadow-xl z-50 py-1 animate-fadeIn">
                                         {[
-                                            { id: 'date-desc', label: 'Más recientes', icon: <Calendar size={14} /> },
+                                            { id: 'date-desc', label: 'Fecha (Recientes)', icon: <Calendar size={14} /> },
+                                            { id: 'date-asc', label: 'Fecha (Antiguos)', icon: <Calendar size={14} /> },
+                                            { id: 'created-desc', label: 'Creación (reciente)', icon: <Calendar size={14} /> },
+                                            { id: 'created-asc', label: 'Creación (antigua)', icon: <Calendar size={14} /> },
                                             { id: 'alpha-asc', label: 'Nombre (A-Z)', icon: <Type size={14} /> },
+                                            { id: 'alpha-desc', label: 'Nombre (Z-A)', icon: <Type size={14} /> },
                                         ].map(opt => (
-                                            <button key={opt.id} onClick={() => { setSortMode(opt.id as any); localStorage.setItem('pizarronSortMode', opt.id); setIsSortMenuOpen(false); }} className={`w-full px-4 py-2 text-left text-xs flex items-center gap-2 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 ${sortMode === opt.id ? 'text-amber-600 font-bold bg-amber-50/50 dark:bg-amber-900/20' : 'text-zinc-600 dark:text-zinc-400'}`}>
+                                            <button key={opt.id} onClick={() => { setSortMode(opt.id as any); localStorage.setItem('pizarronSortMode', opt.id); setIsSortMenuOpen(false); }} className={`w-full px-4 py-2 text-left text-xs flex items-center gap-2 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 ${sortMode === opt.id ? 'text-amber-600 font-bold bg-amber-50/50 dark:bg-amber-900/20' : 'text-zinc-600 dark:text-zinc-400 font-medium'}`}>
                                                 {opt.icon} {opt.label}
-                                                {sortMode === opt.id && <Check size={12} className="ml-auto" />}
+                                                {sortMode === opt.id && <Check size={14} className="ml-auto" />}
                                             </button>
                                         ))}
                                     </div>
