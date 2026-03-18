@@ -5,19 +5,20 @@ import { TaskStatus } from '../types';
 interface KanbanSemaphoreProps {
     sourceId: string;
     sourceTitle: string;
+    sourceType: 'note' | 'board';
     onInteract?: () => void;
 }
 
 // Configuración de los 5 estados (incluyendo "Quitar" en Negro)
 const STATUS_CONFIG = [
-    { status: 'remove', label: 'Quitar de Kanban', color: 'bg-zinc-800 dark:bg-black ring-1 ring-zinc-500' },
+    { status: 'remove', label: 'Quitar de este Pizarrón/Nota', color: 'bg-zinc-800 dark:bg-black ring-1 ring-zinc-500' },
     { status: 'backlog', label: 'Backlog', color: 'bg-[#9E9E9E]' },
     { status: 'todo', label: 'Pendiente', color: 'bg-[#FBC02D]' },
     { status: 'in_progress', label: 'En Proceso', color: 'bg-[#1E88E5]' },
     { status: 'done', label: 'Terminado', color: 'bg-[#43A047]' },
 ];
 
-export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({ sourceId, sourceTitle, onInteract }) => {
+export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({ sourceId, sourceTitle, sourceType, onInteract }) => {
     const [currentStatus, setCurrentStatus] = useState<TaskStatus | 'none'>('none');
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -27,11 +28,15 @@ export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({ sourceId, sour
         const fetchStatus = async () => {
             // Buscamos si existe una tarea donde el ID sea el sourceId, 
             // O esté vinculada como nota o como pizarrón
-            const { data } = await supabase
-                .from('tasks')
-                .select('id, status')
-                .or(`id.eq.${sourceId},linked_note_id.eq.${sourceId},linked_board_id.eq.${sourceId}`)
-                .maybeSingle();
+            const query = supabase.from('tasks').select('id, status');
+            
+            if (sourceType === 'note') {
+                query.or(`id.eq.${sourceId},linked_note_id.eq.${sourceId}`);
+            } else {
+                query.or(`id.eq.${sourceId},linked_board_id.eq.${sourceId}`);
+            }
+            
+            const { data } = await query.maybeSingle();
             
             if (data) {
                 setCurrentStatus(data.status as TaskStatus);
@@ -40,7 +45,16 @@ export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({ sourceId, sour
             }
         };
         fetchStatus();
-    }, [sourceId]);
+
+        // Realtime listen to tasks table
+        const channel = supabase.channel(`task-semaphore-${sourceId}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+                fetchStatus();
+            })
+            .subscribe();
+            
+        return () => { supabase.removeChannel(channel); };
+    }, [sourceId, sourceType]);
 
     // Cerrar la paleta si se hace clic afuera
     useEffect(() => {
@@ -59,16 +73,27 @@ export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({ sourceId, sour
         setIsOpen(false);
 
         // Primero buscamos la tarea existente
-        const { data: existing } = await supabase
-            .from('tasks')
-            .select('id')
-            .or(`id.eq.${sourceId},linked_note_id.eq.${sourceId},linked_board_id.eq.${sourceId}`)
-            .maybeSingle();
+        const query = supabase.from('tasks').select('id, linked_note_id, linked_board_id');
+        if (sourceType === 'note') {
+            query.or(`id.eq.${sourceId},linked_note_id.eq.${sourceId}`);
+        } else {
+            query.or(`id.eq.${sourceId},linked_board_id.eq.${sourceId}`);
+        }
+        const { data: existing } = await query.maybeSingle();
 
         if (status === 'remove') {
             setCurrentStatus('none');
             if (existing) {
-                await supabase.from('tasks').delete().eq('id', existing.id);
+                if (existing.id === sourceId) {
+                    // LEGACY: Creada via upsert con id=noteId → eliminar para que isInKanban vuelva a false
+                    await supabase.from('tasks').delete().eq('id', existing.id);
+                } else {
+                    // MODERN: Creada via KanbanLinkerModal con id diferente → solo quitar el FK
+                    const updates: any = {};
+                    if (sourceType === 'note') updates.linked_note_id = null;
+                    else updates.linked_board_id = null;
+                    await supabase.from('tasks').update(updates).eq('id', existing.id);
+                }
             }
         } else {
             setCurrentStatus(status as TaskStatus);
@@ -78,24 +103,16 @@ export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({ sourceId, sour
                 // Actualizar existente
                 await supabase.from('tasks').update({ status: status }).eq('id', existing.id);
             } else {
-                // Crear nueva vinculada (siempre lo vinculamos como Pizarrón por defecto en este contexto, 
-                // o intentamos detectar si el sourceId es de una Nota o Pizarrón)
-                // Usamos upsert con id: sourceId para mantener compatibilidad si no hay linked_ids
-                // Pero como ya existe el migration, mejor usamos las columnas nuevas.
-                // Para simplificar, si no existe y estamos en PizarrónApp, lo vinculamos como pizarrón.
-                // Nota: sourceTitle se pasa desde el componente padre.
+                // Crear nueva vinculada
                 const newTask: any = {
                     title: sourceTitle || 'Sin título',
                     status: status,
                     user_id: user?.id,
-                    linked_board_id: sourceId // Por defecto asumimos Pizarrón si viene de BrainDumpApp
                 };
                 
-                // Si preferimos mantener el ID igual (legacy), podemos hacerlo, pero es redundante ahora.
-                // Sin embargo, para evitar romper Lógica previa, usaremos la columna correspondiente.
-                // ¿Cómo sabemos si es nota o pizarrón? 
-                // Podríamos pasar un prop 'type', pero el sourceId suele ser suficiente para distinguir en BD si se consulta.
-                // Por ahora, vincularemos como board si no se especifica.
+                if (sourceType === 'note') newTask.linked_note_id = sourceId;
+                else newTask.linked_board_id = sourceId;
+
                 await supabase.from('tasks').insert([newTask]);
             }
         }
@@ -115,7 +132,7 @@ export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({ sourceId, sour
             <button
                 onClick={(e) => {
                     e.stopPropagation();
-                    if (onInteract) onInteract(); // Aquí le decimos a la nota que se abra
+                    if (onInteract) onInteract(); 
                     setIsOpen(!isOpen);
                 }}
                 className={`w-3.5 h-3.5 rounded-full transition-transform hover:scale-110 ${currentConfig.color}`}

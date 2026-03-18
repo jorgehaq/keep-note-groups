@@ -530,8 +530,8 @@ export const BrainDumpApp: React.FC<{
                     <div ref={scrollContainerRef} className="flex flex-nowrap md:flex-wrap justify-start md:justify-center gap-2.5 overflow-x-auto hidden-scrollbar scroll-smooth pt-2 px-2">
                         {pizarrones.map(p => (
                             <button key={p.id} onClick={() => setFocusedDumpId(focusedDumpId === p.id ? null : p.id)} className={`relative flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold border transition-all my-0.5 ${focusedDumpId === p.id ? 'bg-[#FFD700] text-amber-950 border-amber-300 shadow-sm scale-[1.02]' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/40 hover:text-amber-600'}`}>
-                                {globalTasks?.some(t => t.id === p.id) && (
-                                    <div className="absolute -top-1.5 -right-1.5 z-10"><KanbanSemaphore sourceId={p.id} sourceTitle={p.title || ''} /></div>
+                                {globalTasks?.some(t => t.id === p.id || t.linked_board_id === p.id) && (
+                                    <div className="absolute -top-1.5 -right-1.5 z-10"><KanbanSemaphore sourceType="board" sourceId={p.id} sourceTitle={p.title || ''} /></div>
                                 )}
                                 {p.title || 'Sin Título'}
                             </button>
@@ -569,9 +569,18 @@ export const BrainDumpApp: React.FC<{
                                         />
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-1.5 shrink-0">
-                                    <button 
-                                        onClick={() => setPizarronVisible(displayDump!.id, activeTab, !(pizarronVisibleByNoteAndTab[displayDump!.id]?.[activeTab]))} 
+                                 <div className="flex items-center gap-1.5 shrink-0">
+                                     {isInKanban && (
+                                         <div className="mr-1 shadow-sm">
+                                             <KanbanSemaphore 
+                                                 sourceType="board" 
+                                                 sourceId={displayDump.id} 
+                                                 sourceTitle={displayDump.title || 'Sin Título'} 
+                                             />
+                                         </div>
+                                     )}
+                                     <button 
+                                         onClick={() => setPizarronVisible(displayDump!.id, activeTab, !(pizarronVisibleByNoteAndTab[displayDump!.id]?.[activeTab]))} 
                                         className={`p-2 rounded-xl border transition-all ${pizarronVisibleByNoteAndTab[displayDump.id]?.[activeTab] ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : 'text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/30'}`}
                                         title="Pizarrón / Borrador"
                                     >
@@ -658,8 +667,8 @@ export const BrainDumpApp: React.FC<{
                                     <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0 pt-2 px-2">
                                         <button onClick={() => setActiveTab('original')} className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all ${activeTab === 'original' ? 'bg-[#4940D9] text-white border-[#4940D9]' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-indigo-400'}`}>
                                             <FileText size={11} /> 
-                                            {globalTasks?.some(t => t.id === focusedDumpId) && (
-                                                <div className="absolute -top-1.5 -right-1.5 z-10"><KanbanSemaphore sourceId={focusedDumpId!} sourceTitle="Pizarrón Original" /></div>
+                                            {globalTasks?.some(t => t.id === focusedDumpId || t.linked_board_id === focusedDumpId) && (
+                                                <div className="absolute -top-1.5 -right-1.5 z-10"><KanbanSemaphore sourceType="board" sourceId={focusedDumpId!} sourceTitle="Pizarrón Original" /></div>
                                             )}
                                             Original
                                         </button>
@@ -669,8 +678,8 @@ export const BrainDumpApp: React.FC<{
                                             return (
                                                 <div key={child.id} className="relative shrink-0 flex items-center group">
                                                     <button onClick={() => setActiveTab(`sub_${child.id}`)} className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all max-w-[150px] ${isActive ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-emerald-400 font-bold'}`}>
-                                                        {globalTasks?.some(t => t.id === child.id) && (
-                                                            <div className="absolute -top-1.5 -right-1.5 z-10"><KanbanSemaphore sourceId={child.id} sourceTitle={child.title || ''} /></div>
+                                                        {globalTasks?.some(t => t.id === child.id || t.linked_board_id === child.id) && (
+                                                            <div className="absolute -top-1.5 -right-1.5 z-10"><KanbanSemaphore sourceType="board" sourceId={child.id} sourceTitle={child.title || ''} /></div>
                                                         )}
                                                         <span onClick={(e) => { e.stopPropagation(); navigate(child.id); }} className="p-0.5 -ml-1 hover:bg-white/20 rounded-md transition-colors cursor-pointer" title="Entrar a este pizarrón"><GitBranch size={10} /></span>
                                                         <SubnoteTitle child={child} isActive={isActive} onRename={(id, title) => autoSave(id, { title })} />
@@ -725,7 +734,7 @@ export const BrainDumpApp: React.FC<{
                                         <div className="flex items-center justify-between gap-2">
                                             <h3 className="font-bold text-zinc-800 dark:text-[#CCCCCC] truncate flex-1">{p.title || 'Sin Título'}</h3>
                                             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <KanbanSemaphore sourceId={p.id} sourceTitle={p.title || ''} onInteract={() => setFocusedDumpId(p.id)} />
+                                                <KanbanSemaphore sourceType="board" sourceId={p.id} sourceTitle={p.title || ''} onInteract={() => setFocusedDumpId(p.id)} />
                                                 <button onClick={(e) => { e.stopPropagation(); changeStatus(p.id, 'history'); }} className="p-1.5 text-zinc-400 hover:text-amber-600 transition-colors"><ArchiveIcon size={14}/></button>
                                             </div>
                                         </div>

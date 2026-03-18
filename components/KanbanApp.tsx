@@ -112,8 +112,19 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
             setKanbanCounts(todo, inProgress, done);
             return next;
         });
-
+ 
         await supabase.from('tasks').update(updates).eq('id', id);
+        
+        // Sync título hacia la nota o pizarrón vinculado
+        if (updates.title !== undefined) {
+            const task = tasks.find(t => t.id === id);
+            const noteId = task?.linked_note_id || id;
+            const boardId = task?.linked_board_id || id;
+            // Actualización segura (si no existe el ID en la tabla, no hace nada)
+            await supabase.from('notes').update({ title: updates.title }).eq('id', noteId);
+            await supabase.from('brain_dumps').update({ title: updates.title }).eq('id', boardId);
+        }
+ 
         window.dispatchEvent(new CustomEvent('kanban-updated'));
     };
 

@@ -64,9 +64,21 @@ export const PizarronLinkerModal: React.FC<PizarronLinkerModalProps> = ({ pizarr
                 .select().single();
             
             if (noteError) throw noteError;
+ 
+            // 3. Sincronizar Vínculo de Kanban si existe
+            const { data: task } = await supabase
+                .from('tasks')
+                .select('id')
+                .eq('linked_board_id', pizarron.id)
+                .maybeSingle();
+            
+            if (task) {
+                await supabase.from('tasks').update({ linked_note_id: noteData.id }).eq('id', task.id);
+            }
 
             // Disparar refetch global y navegar
             window.dispatchEvent(new CustomEvent('reload-app-data'));
+            window.dispatchEvent(new CustomEvent('kanban-updated'));
             onSuccess(targetGroupId, noteData.id);
         } catch (error: any) {
             alert('Error en la creación: ' + error.message);
@@ -89,8 +101,20 @@ export const PizarronLinkerModal: React.FC<PizarronLinkerModalProps> = ({ pizarr
                 .eq('id', targetNoteId);
 
             if (error) throw error;
+ 
+            // Sincronizar Vínculo de Kanban si existe
+            const { data: task } = await supabase
+                .from('tasks')
+                .select('id')
+                .eq('linked_board_id', pizarron.id)
+                .maybeSingle();
+            
+            if (task) {
+                await supabase.from('tasks').update({ linked_note_id: targetNoteId }).eq('id', task.id);
+            }
 
             window.dispatchEvent(new CustomEvent('reload-app-data'));
+            window.dispatchEvent(new CustomEvent('kanban-updated'));
             onSuccess(targetGroupId, targetNoteId);
         } catch (error: any) {
             alert('Error al vincular: ' + error.message);

@@ -438,88 +438,80 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   const checklistRef = useRef<ChecklistEditorRef>(null);
   const fontClass = noteFont === 'serif' ? 'font-serif' : noteFont === 'mono' ? 'font-mono text-xs' : 'font-sans';
 
-  const { 
-    aiPanelOpenByNote, 
-    activeTabByNote, 
-    pizarronVisibleByNoteAndTab,
-    setAiPanelOpen, 
-    setActiveTab: setStoreActiveTab,
-    setPizarronVisible
-  } = useUIStore();
-  const { activeNoteId, activeNote, breadcrumbPath, navigate } = useNoteTree(note.id);
-  const isRootLevel = !activeNoteId || activeNoteId === note.id;
-  const displayContent = isRootLevel ? note.content : (activeNote?.content ?? '');
-  const displayNoteId = isRootLevel ? note.id : activeNoteId;
-
-  const showAIPanel = aiPanelOpenByNote[displayNoteId] || false;
-  const setShowAIPanel = (val: boolean | ((v: boolean) => boolean)) => {
-    const next = typeof val === 'function' ? val(showAIPanel) : val;
-    setAiPanelOpen(displayNoteId, next);
-  };
-
-  const activeTab = activeTabByNote[displayNoteId] || 'original';
-  const setActiveTab = (tabId: string) => setStoreActiveTab(displayNoteId, tabId);
-  const { summaries: aiSummaries, deleteSummary, updateScratchpad, updateSummaryContent, loading: summariesLoading, hasFetched } = useSummaries(displayNoteId);
-  const completedSummaries = aiSummaries.filter(s => s.status === 'completed');
-
-  const manualChildren = groupNotes.filter(n => n.parent_note_id === displayNoteId && !n.ai_generated);
-  const childrenLoaded = true; // Since we rely on global state
-
-  // Fallback to 'original' if the active tab summary/subnote is missing
-  useEffect(() => {
-    if (summariesLoading || !hasFetched) return;
-    if (activeTab === 'original') return;
-
-    const isSubnote = activeTab.startsWith('sub_');
-    if (isSubnote) {
-      const subId = activeTab.replace('sub_', '');
-      if (!manualChildren.find(c => c.id === subId)) {
-        console.log(`Fallback to original: subnote ${subId} not found`);
-        setActiveTab('original');
-      }
-    } else {
-      // It's a summary
-      if (!completedSummaries.find(s => s.id === activeTab)) {
-        console.log(`Fallback to original: summary ${activeTab} not found`);
-        setActiveTab('original');
-      }
-    }
-  }, [completedSummaries.length, manualChildren.length, summariesLoading, hasFetched, activeTab, displayNoteId]);
-
-  // Auto-switch to newest summary ONLY when a NEW one arrives in the CURRENT session
-  const prevCountRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (summariesLoading) {
-      prevCountRef.current = null; // Reset on note change/load
-      return;
-    }
-    
-    // First time loading completes for this note instance
-    if (prevCountRef.current === null) {
-      prevCountRef.current = completedSummaries.length;
-      return;
-    }
-
-    // Only auto-switch if count increased (new arrival) and panel is visible
-    if (completedSummaries.length > prevCountRef.current && showAIPanel) {
-      if (completedSummaries.length > 0) {
-        setActiveTab(completedSummaries[0].id);
-      }
-    }
-    prevCountRef.current = completedSummaries.length;
-  }, [completedSummaries.length, showAIPanel, summariesLoading, displayNoteId]);
-
-  const [isInKanban, setIsInKanban] = useState(false);
-  useEffect(() => {
-    const checkKanban = async () => {
-      const { data } = await supabase.from('tasks').select('id').eq('id', note.id).maybeSingle();
-      setIsInKanban(!!data);
-    };
-    checkKanban();
-    const handleUpdate = () => checkKanban();
-    window.addEventListener('kanban-updated', handleUpdate);
-    return () => window.removeEventListener('kanban-updated', handleUpdate);
-  }, [note.id]);
+ 
+   const { 
+     aiPanelOpenByNote, 
+     activeTabByNote, 
+     pizarronVisibleByNoteAndTab,
+     setAiPanelOpen, 
+     setActiveTab: setStoreActiveTab,
+     setPizarronVisible,
+     globalTasks
+   } = useUIStore();
+   const { activeNoteId, activeNote, breadcrumbPath, navigate } = useNoteTree(note.id);
+   const isRootLevel = !activeNoteId || activeNoteId === note.id;
+   const displayContent = isRootLevel ? note.content : (activeNote?.content ?? '');
+   const displayNoteId = isRootLevel ? note.id : activeNoteId;
+ 
+   const showAIPanel = aiPanelOpenByNote[displayNoteId] || false;
+   const setShowAIPanel = (val: boolean | ((v: boolean) => boolean)) => {
+     const next = typeof val === 'function' ? val(showAIPanel) : val;
+     setAiPanelOpen(displayNoteId, next);
+   };
+ 
+   const activeTab = activeTabByNote[displayNoteId] || 'original';
+   const setActiveTab = (tabId: string) => setStoreActiveTab(displayNoteId, tabId);
+   const { summaries: aiSummaries, deleteSummary, updateScratchpad, updateSummaryContent, loading: summariesLoading, hasFetched } = useSummaries(displayNoteId);
+   const completedSummaries = aiSummaries.filter(s => s.status === 'completed');
+ 
+   const manualChildren = groupNotes.filter(n => n.parent_note_id === displayNoteId && !n.ai_generated);
+   const childrenLoaded = true; // Since we rely on global state
+ 
+   // Fallback to 'original' if the active tab summary/subnote is missing
+   useEffect(() => {
+     if (summariesLoading || !hasFetched) return;
+     if (activeTab === 'original') return;
+ 
+     const isSubnote = activeTab.startsWith('sub_');
+     if (isSubnote) {
+       const subId = activeTab.replace('sub_', '');
+       if (!manualChildren.find(c => c.id === subId)) {
+         console.log(`Fallback to original: subnote ${subId} not found`);
+         setActiveTab('original');
+       }
+     } else {
+       // It's a summary
+       if (!completedSummaries.find(s => s.id === activeTab)) {
+         console.log(`Fallback to original: summary ${activeTab} not found`);
+         setActiveTab('original');
+       }
+     }
+   }, [completedSummaries.length, manualChildren.length, summariesLoading, hasFetched, activeTab, displayNoteId]);
+ 
+   // Auto-switch to newest summary ONLY when a NEW one arrives in the CURRENT session
+   const prevCountRef = useRef<number | null>(null);
+   useEffect(() => {
+     if (summariesLoading) {
+       prevCountRef.current = null; // Reset on note change/load
+       return;
+     }
+     
+     // First time loading completes for this note instance
+     if (prevCountRef.current === null) {
+       prevCountRef.current = completedSummaries.length;
+       return;
+     }
+ 
+     // Only auto-switch if count increased (new arrival) and panel is visible
+     if (completedSummaries.length > prevCountRef.current && showAIPanel) {
+       if (completedSummaries.length > 0) {
+         setActiveTab(completedSummaries[0].id);
+       }
+     }
+     prevCountRef.current = completedSummaries.length;
+   }, [completedSummaries.length, showAIPanel, summariesLoading, displayNoteId]);
+ 
+   const isInKanban = globalTasks?.some(t => t.id === note.id || t.linked_note_id === note.id) || false;
 
   // ── PIZARRON DE LA NOTA ORIGINAL (PERSISTENTE) ──────────────────────────────
   const showNoteScratch = pizarronVisibleByNoteAndTab[displayNoteId]?.[activeTab] ?? false;
@@ -800,8 +792,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           )}
 
           {isInKanban && (
-            <div className="shrink-0 flex items-center">
-              <KanbanSemaphore sourceId={note.id} sourceTitle={note.title || 'Sin título'} onInteract={() => {}} />
+            <div className="flex items-center gap-2">
+              <KanbanSemaphore sourceType="note" sourceId={note.id} sourceTitle={note.title || 'Sin título'} onInteract={() => {}} />
             </div>
           )}
 

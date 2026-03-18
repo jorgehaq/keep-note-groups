@@ -12,6 +12,7 @@ BEGIN
         -- Sincronizar hacia Note
         IF (NEW.linked_note_id IS NOT NULL) THEN
             UPDATE public.notes 
+       
             SET title = NEW.title 
             WHERE id = NEW.linked_note_id 
               AND (title IS DISTINCT FROM NEW.title);
