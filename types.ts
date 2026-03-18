@@ -95,7 +95,8 @@ export type GlobalAppView =
   | "timers"
   | "reminders"
   | "braindump"
-  | "translator";
+  | "translator"
+  | "tiktok";
 
 export type TimerType = "stopwatch" | "countdown";
 export type TimerStatus = "running" | "paused";
@@ -170,7 +171,40 @@ export interface Summary {
   target_objective: string;
   content: string;
   scratchpad?: string;
-  status: 'pending' | 'processing' | 'completed' | 'error';
+  status: "pending" | "processing" | "completed" | "error";
   created_at: string;
   user_id: string;
+}
+
+export interface TikTokVideo {
+  id: string;
+  user_id: string;
+  url: string;
+  title?: string;
+  author?: string;
+  duration: number;
+  thumbnail?: string;
+  view_count: number;
+  like_count: number;
+  transcript?: string;
+  description?: string;
+  content: string;
+  scratchpad?: string;
+  status: TaskStatus;
+  ai_summary_status?: "idle" | "queued" | "processing" | "completed" | "failed";
+  key_points?: string[];
+  summary?: string;
+  category?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TikTokQueueItem {
+  id: string;
+  user_id: string;
+  url: string;
+  status: "pending" | "processing" | "completed" | "error";
+  error_msg?: string;
+  video_id?: string;
+  created_at: string;
 }

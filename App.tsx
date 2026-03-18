@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid, Maximize2, Minimize2, ChevronsDownUp, Bell, Pin, PanelLeft, ChevronLeft, ChevronRight, Wind } from 'lucide-react';
-import { Note, Group, Theme, NoteFont, Reminder, NoteSortMode, BrainDump } from './types';
+import { Note, Group, Theme, NoteFont, Reminder, NoteSortMode, BrainDump, TikTokVideo, TikTokQueueItem } from './types';
 import { AccordionItem } from './components/AccordionItem';
 import { Sidebar } from './components/Sidebar';
 import { SettingsWindow } from './components/SettingsWindow';
@@ -9,6 +9,7 @@ import { TimeTrackerApp } from './components/TimeTrackerApp';
 import { RemindersApp } from './components/RemindersApp';
 import { BrainDumpApp } from './components/BrainDumpApp';
 import { TranslatorApp } from './components/TranslatorApp';
+import { TikTokApp } from './components/TikTokApp';
 import { GroupLauncher } from './components/GroupLauncher';
 import { supabase } from './src/lib/supabaseClient';
 import { Auth } from './components/Auth';
@@ -71,6 +72,7 @@ function App() {
     setImminentRemindersCount,
     groups, setGroups, updateNoteSync, deleteNoteSync, updateGroupSync, deleteGroupSync,
     setTranslations, setBrainDumps,
+    setTikTokVideos, setTikTokQueueItems,
     summaryCounts, setSummaryCounts,
     focusedNoteByGroup, lastActiveNoteByGroup, setFocusedNoteId,
     noteTrayOpenByGroup, setIsGlobalNoteTrayOpen,
@@ -354,6 +356,20 @@ function App() {
     if (data) setBrainDumps(data);
   };
 
+  const fetchTikTokVideos = async (overrideSession?: Session | null) => {
+    const activeSession = overrideSession || sessionRef.current;
+    if (!activeSession) return;
+    const { data } = await supabase.from('tiktok_videos').select('*').eq('user_id', activeSession.user.id).order('created_at', { ascending: false });
+    if (data) setTikTokVideos(data as TikTokVideo[]);
+  };
+
+  const fetchTikTokQueue = async (overrideSession?: Session | null) => {
+    const activeSession = overrideSession || sessionRef.current;
+    if (!activeSession) return;
+    const { data } = await supabase.from('tiktok_queue').select('*').eq('user_id', activeSession.user.id).order('created_at', { ascending: false });
+    if (data) setTikTokQueueItems(data as TikTokQueueItem[]);
+  };
+
 
   useEffect(() => {
     if (!session) return;
@@ -482,10 +498,12 @@ function App() {
       const { data: groupsData, error: groupsError } = await supabase.from('groups').select('*').order('created_at', { ascending: true });
       if (groupsError) throw groupsError;
 
-      // 📡 Carga inicial de Pizarrones y Traducciones
+      // 📡 Carga inicial de Pizarrones, Traducciones y TikTok
       fetchBrainDumps(activeSession);
       fetchTranslations(activeSession);
       fetchSummaryCounts(activeSession);
+      fetchTikTokVideos(activeSession);
+      fetchTikTokQueue(activeSession);
 
       const { data: notesData, error: notesError } = await supabase.from('notes').select('*').order('position', { ascending: true });
       if (notesError) throw notesError;
@@ -529,6 +547,21 @@ function App() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!session) return;
+    const channel = supabase
+      .channel('tiktok_sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tiktok_videos', filter: `user_id=eq.${session.user.id}` }, () => {
+        fetchTikTokVideos(session);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tiktok_queue', filter: `user_id=eq.${session.user.id}` }, () => {
+        fetchTikTokQueue(session);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [session]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -1396,7 +1429,8 @@ function App() {
               setGlobalView('notes');
             }} 
           /> :
-         globalView === 'translator' ? <TranslatorApp session={session!} /> : (
+         globalView === 'translator' ? <TranslatorApp session={session!} /> :
+         globalView === 'tiktok' ? <TikTokApp session={session!} /> : (
           <>
             {!isZenMode && (
               <div className="flex flex-col shrink-0">
@@ -1448,27 +1482,26 @@ function App() {
                       <div className="flex flex-wrap items-center gap-2 shrink-0 pb-1 md:pb-0">
                           
                           {/* Botones de Estado/Vista (Bell, Tray, Maximize) */}
-                          <div className="flex items-center gap-1.5 mr-1">
-                             {/* Botón Toggle Reminder */}
-                             <button
-                               onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
-                               disabled={overdueRemindersCount === 0}
-                               className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
-                                 showOverdueMarquee 
-                                   ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
-                                   : overdueRemindersCount > 0
-                                     ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
-                                     : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
-                               }`}
-                               title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
-                             >
-                                <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-white' : 'text-red-500'}` : ''} />
-                                {overdueRemindersCount > 0 && (
-                                  <span className="text-xs font-bold whitespace-nowrap">
-                                    {overdueRemindersCount}
-                                  </span>
-                                )}
-                             </button>
+                          {/* 1. Botones de Estado/Vista (Bell, Tray, Maximize, Sort) - Independientes como en Pizarrón */}
+                          <button
+                            onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
+                            disabled={overdueRemindersCount === 0}
+                            className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
+                              showOverdueMarquee 
+                                ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
+                                : overdueRemindersCount > 0
+                                  ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
+                                  : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
+                            }`}
+                            title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
+                          >
+                            <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-white' : 'text-red-500'}` : ''} />
+                            {overdueRemindersCount > 0 && (
+                              <span className={`text-xs font-bold whitespace-nowrap ${showOverdueMarquee ? 'text-white' : ''}`}>
+                                {overdueRemindersCount}
+                              </span>
+                            )}
+                          </button>
 
                              <button 
                                 onClick={() => setIsGlobalNoteTrayOpen(!isGlobalNoteTrayOpen)}
@@ -1536,7 +1569,6 @@ function App() {
                                  </div>
                                )}
                              </div>
-                          </div>
 
                           {/* Controles de Grupo (En una mini-cápsula gris) */}
                           <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-1 shadow-sm">
@@ -1598,25 +1630,25 @@ function App() {
                       </h1>
                       <div className="flex items-center gap-2 shrink-0">
                         {/* Botón Toggle Reminder */}
-                        <button
-                          onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
-                          disabled={overdueRemindersCount === 0}
-                          className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
-                            showOverdueMarquee 
-                              ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
-                              : overdueRemindersCount > 0
-                                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
-                                : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
-                          }`}
-                          title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
-                        >
-                          <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-white' : 'text-red-500'}` : ''} />
-                          {overdueRemindersCount > 0 && (
-                            <span className={`text-xs font-bold whitespace-nowrap ${showOverdueMarquee ? 'text-white' : ''}`}>
-                              {overdueRemindersCount}
-                            </span>
-                          )}
-                        </button>
+                          <button
+                            onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
+                            disabled={overdueRemindersCount === 0}
+                            className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
+                              showOverdueMarquee 
+                                ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
+                                : overdueRemindersCount > 0
+                                  ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
+                                  : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
+                            }`}
+                            title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
+                          >
+                            <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-white' : 'text-red-500'}` : ''} />
+                            {overdueRemindersCount > 0 && (
+                              <span className={`text-xs font-bold whitespace-nowrap ${showOverdueMarquee ? 'text-white' : ''}`}>
+                                {overdueRemindersCount}
+                              </span>
+                            )}
+                          </button>
                         <button
                           onClick={addGroup}
                           className="h-9 w-9 bg-[#4940D9] hover:bg-[#3D35C0] hover:shadow-lg hover:shadow-[#4940D9]/30 text-white rounded-full transition-all flex items-center justify-center shrink-0 shadow-md active:scale-95"

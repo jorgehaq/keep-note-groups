@@ -4,32 +4,47 @@ import { TaskStatus } from '../types';
 import { useUIStore } from '../src/lib/store';
 
 interface KanbanSemaphoreProps {
-    sourceId: string;
-    sourceTitle: string;
-    sourceType: 'note' | 'board';
+    sourceId?: string;
+    sourceTitle?: string;
+    sourceType?: 'note' | 'board';
     onInteract?: () => void;
+    status?: TaskStatus;
+    onStatusChange?: (status: TaskStatus) => void;
 }
 
 // Configuración de los 5 estados (incluyendo "Quitar" en Negro)
 const STATUS_CONFIG = [
-    { status: 'remove', label: 'Quitar de este Pizarrón/Nota', color: 'bg-zinc-800 dark:bg-black ring-1 ring-zinc-500', hex: '' },
+    { status: 'remove', label: 'Quitar / Archivar', color: 'bg-zinc-800 dark:bg-black ring-1 ring-zinc-500', hex: '' },
     { status: 'backlog', label: 'Backlog', color: 'bg-[#9E9E9E]', hex: '#9E9E9E' },
     { status: 'todo', label: 'Pendiente', color: 'bg-[#FFD60A]', hex: '#FFD60A' },
     { status: 'in_progress', label: 'En Proceso', color: 'bg-[#38BDF8]', hex: '#38BDF8' },
     { status: 'done', label: 'Terminado', color: 'bg-[#4ADE80]', hex: '#4ADE80' },
 ];
 
-export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({ sourceId, sourceTitle, sourceType, onInteract }) => {
+export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({ 
+    sourceId, 
+    sourceTitle, 
+    sourceType, 
+    onInteract,
+    status: manualStatus,
+    onStatusChange
+}) => {
     const { globalTasks } = useUIStore();
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    // 🚀 SINCRONIZACIÓN TOTAL: Usamos la lista global de tareas del Store
-    const task = globalTasks?.find(t => 
-        (sourceType === 'note' && (t.id === sourceId || t.linked_note_id === sourceId)) ||
-        (sourceType === 'board' && (t.id === sourceId || t.linked_board_id === sourceId))
-    );
-    const currentStatus = task ? (task.status as TaskStatus) : 'none';
+    // Si se pasa un status manual, lo usamos. Si no, buscamos en globalTasks.
+    let currentStatus: TaskStatus | 'none' | 'remove' = 'none';
+    
+    if (manualStatus) {
+        currentStatus = manualStatus;
+    } else if (sourceId && sourceType) {
+        const task = globalTasks?.find(t => 
+            (sourceType === 'note' && (t.id === sourceId || t.linked_note_id === sourceId)) ||
+            (sourceType === 'board' && (t.id === sourceId || t.linked_board_id === sourceId))
+        );
+        currentStatus = task ? (task.status as TaskStatus) : 'none';
+    }
 
     // Cerrar la paleta si se hace clic afuera
     useEffect(() => {
@@ -46,6 +61,13 @@ export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({ sourceId, sour
 
     const handleSetStatus = async (status: string) => {
         setIsOpen(false);
+
+        if (onStatusChange) {
+            onStatusChange(status as TaskStatus);
+            return;
+        }
+
+        if (!sourceId || !sourceType) return;
 
         // Primero buscamos la tarea existente
         const query = supabase.from('tasks').select('id, linked_note_id, linked_board_id');

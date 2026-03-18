@@ -19,6 +19,7 @@
 - 2026-03-18: Corregido clipping de burbujas Kanban en sidebar para pantallas pequeñas; implementado escalado responsivo de badges (fuente, tamaño y posición) preservando vista desktop (md+).
 - 2026-03-18: Implementada Búsqueda Profunda (Paridad) en Pizarrón: recursión en sub-pizarrones/resúmenes, iluminación ámbar global, persistencia de bandeja y unificación de estado con App.tsx.
 - 2026-03-18: Estandarización de headers y botón Bell convergente (blanco sobre rojo para contraste); reordenamiento estricto (Bell-Tray-Maximize-Sort-Search) y desacoplamiento del botón Sort en App.tsx para paridad total con Pizarrón.
+- 2026-03-18: Implementación del módulo "TikTok a Notas": Worker Python con Gemini 2.0 Flash para análisis de audio, cola de procesamiento en Supabase y UI reactiva para creación de notas desde videos.
 - Ejemplo: "2024-03-18: Corregido scroll position en SmartNotesEditor usando localStorage key 'scroll-{noteId}'"
 
 ## ⚠️ GAPS CRÍTICOS: DB Real vs types.ts (Verificado del SQL de producción)

@@ -7,6 +7,8 @@ import {
     Note,
     NoteSortMode,
     Task,
+    TikTokVideo,
+    TikTokQueueItem,
     Translation,
 } from "../../types";
 
@@ -41,6 +43,7 @@ interface UIStore {
     isMaximized: boolean;
     isBraindumpMaximized: boolean;
     isTranslatorMaximized: boolean;
+    isTikTokMaximized: boolean;
     pizarronVisibleByNoteAndTab: Record<string, Record<string, boolean>>;
     isZenModeByApp: Record<string, boolean>; // Zen orientation per app
 
@@ -49,6 +52,8 @@ interface UIStore {
     activeTabByNote: Record<string, string>;
     aiPanelOpenByBrainDump: Record<string, boolean>;
     activeTabByBrainDump: Record<string, string>;
+    aiPanelOpenByVideo: Record<string, boolean>;
+    activeTabByVideo: Record<string, string>;
 
     // Persisted UI State (per-group for notes)
     focusedNoteByGroup: Record<string, string | null>;
@@ -56,11 +61,15 @@ interface UIStore {
     noteTrayOpenByGroup: Record<string, boolean>;
     focusedDumpId: string | null;
     isDumpTrayOpen: boolean;
+    focusedVideoId: string | null;
+    isVideoTrayOpen: boolean;
 
     // Realtime Sync Data
     groups: Group[];
     translations: Translation[];
     brainDumps: BrainDump[];
+    tikTokVideos: TikTokVideo[];
+    tikTokQueueItems: TikTokQueueItem[];
     summaryCounts: Record<string, number>;
 
     setGroups: (groups: Group[] | ((prev: Group[]) => Group[])) => void;
@@ -69,6 +78,12 @@ interface UIStore {
     ) => void;
     setBrainDumps: (
         dumps: BrainDump[] | ((prev: BrainDump[]) => BrainDump[]),
+    ) => void;
+    setTikTokVideos: (
+        videos: TikTokVideo[] | ((prev: TikTokVideo[]) => TikTokVideo[]),
+    ) => void;
+    setTikTokQueueItems: (
+        items: TikTokQueueItem[] | ((prev: TikTokQueueItem[]) => TikTokQueueItem[]),
     ) => void;
     setSummaryCounts: (
         counts:
@@ -84,11 +99,15 @@ interface UIStore {
     updateTranslationSync: (id: string, updates: Partial<Translation>) => void;
     // Helper to update a brain dump
     updateBrainDumpSync: (id: string, updates: Partial<BrainDump>) => void;
+    updateTikTokVideoSync: (id: string, updates: Partial<TikTokVideo>) => void;
+    updateTikTokQueueItemSync: (id: string, updates: Partial<TikTokQueueItem>) => void;
 
     deleteGroupSync: (groupId: string) => void;
     deleteNoteSync: (noteId: string) => void;
     deleteTranslationSync: (id: string) => void;
     deleteBrainDumpSync: (id: string) => void;
+    deleteTikTokVideoSync: (id: string) => void;
+    deleteTikTokQueueItemSync: (id: string) => void;
 
     setActiveGroup: (id: string | null) => void;
     toggleNote: (groupId: string, noteId: string) => void;
@@ -98,15 +117,20 @@ interface UIStore {
     setIsMaximized: (maximized: boolean) => void;
     setIsBraindumpMaximized: (maximized: boolean) => void;
     setIsTranslatorMaximized: (maximized: boolean) => void;
+    setIsTikTokMaximized: (maximized: boolean) => void;
     setAiPanelOpen: (noteId: string, open: boolean) => void;
     setActiveTab: (noteId: string, tabId: string) => void;
     setAiPanelOpenByBrainDump: (dumpId: string, open: boolean) => void;
     setActiveTabByBrainDump: (dumpId: string, tabId: string) => void;
+    setAiPanelOpenByVideo: (videoId: string, open: boolean) => void;
+    setActiveTabByVideo: (videoId: string, tabId: string) => void;
     setPizarronVisible: (noteId: string, tabId: string, visible: boolean) => void;
     setFocusedNoteId: (id: string | null, groupId?: string) => void;
     setIsGlobalNoteTrayOpen: (open: boolean, groupId?: string) => void;
     setFocusedDumpId: (id: string | null) => void;
     setIsDumpTrayOpen: (open: boolean) => void;
+    setFocusedVideoId: (id: string | null) => void;
+    setIsVideoTrayOpen: (open: boolean) => void;
 
     // Dock Actions
     openGroup: (id: string) => void; // Adds to dock and sets active
@@ -169,6 +193,7 @@ export const useUIStore = create<UIStore>()(
             isMaximized: false,
             isBraindumpMaximized: false,
             isTranslatorMaximized: false,
+            isTikTokMaximized: false,
             showOverdueMarquee: false,
             focusedNoteByGroup: {},
             lastActiveNoteByGroup: {},
@@ -179,9 +204,15 @@ export const useUIStore = create<UIStore>()(
             activeTabByBrainDump: {},
             focusedDumpId: null,
             isDumpTrayOpen: false,
+            focusedVideoId: null,
+            isVideoTrayOpen: false,
+            aiPanelOpenByVideo: {},
+            activeTabByVideo: {},
             pizarronVisibleByNoteAndTab: {},
             isZenModeByApp: {},
             summaryCounts: {},
+            tikTokVideos: [],
+            tikTokQueueItems: [],
 
             setActiveGroup: (id) => set({ activeGroupId: id }),
 
@@ -293,6 +324,8 @@ export const useUIStore = create<UIStore>()(
                 set({ isBraindumpMaximized: maximized }),
             setIsTranslatorMaximized: (maximized) =>
                 set({ isTranslatorMaximized: maximized }),
+            setIsTikTokMaximized: (maximized) =>
+                set({ isTikTokMaximized: maximized }),
             setAiPanelOpen: (noteId, open) =>
                 set((state) => ({
                     aiPanelOpenByNote: {
@@ -319,6 +352,20 @@ export const useUIStore = create<UIStore>()(
                     activeTabByBrainDump: {
                         ...state.activeTabByBrainDump,
                         [dumpId]: tabId,
+                    },
+                })),
+            setAiPanelOpenByVideo: (videoId, open) =>
+                set((state) => ({
+                    aiPanelOpenByVideo: {
+                        ...state.aiPanelOpenByVideo,
+                        [videoId]: open,
+                    },
+                })),
+            setActiveTabByVideo: (videoId, tabId) =>
+                set((state) => ({
+                    activeTabByVideo: {
+                        ...state.activeTabByVideo,
+                        [videoId]: tabId,
                     },
                 })),
             setPizarronVisible: (noteId, tabId, visible) =>
@@ -359,6 +406,8 @@ export const useUIStore = create<UIStore>()(
             },
             setFocusedDumpId: (id) => set({ focusedDumpId: id }),
             setIsDumpTrayOpen: (open) => set({ isDumpTrayOpen: open }),
+            setFocusedVideoId: (id) => set({ focusedVideoId: id }),
+            setIsVideoTrayOpen: (open) => set({ isVideoTrayOpen: open }),
             setShowOverdueMarquee: (show) => set({ showOverdueMarquee: show }),
             toggleZenMode: (appId) =>
                 set((state) => ({
@@ -381,6 +430,12 @@ export const useUIStore = create<UIStore>()(
                 activeTabByBrainDump: {},
                 focusedDumpId: null,
                 isDumpTrayOpen: false,
+                focusedVideoId: null,
+                isVideoTrayOpen: false,
+                aiPanelOpenByVideo: {},
+                activeTabByVideo: {},
+                tikTokVideos: [],
+                tikTokQueueItems: [],
                 pizarronVisibleByNoteAndTab: {},
                 isZenModeByApp: {},
             }),
@@ -407,6 +462,18 @@ export const useUIStore = create<UIStore>()(
                     brainDumps: typeof dumpsOrFn === "function"
                         ? dumpsOrFn(state.brainDumps)
                         : dumpsOrFn,
+                })),
+            setTikTokVideos: (videosOrFn) =>
+                set((state) => ({
+                    tikTokVideos: typeof videosOrFn === "function"
+                        ? videosOrFn(state.tikTokVideos)
+                        : videosOrFn,
+                })),
+            setTikTokQueueItems: (itemsOrFn) =>
+                set((state) => ({
+                    tikTokQueueItems: typeof itemsOrFn === "function"
+                        ? itemsOrFn(state.tikTokQueueItems)
+                        : itemsOrFn,
                 })),
             setSummaryCounts: (countsOrFn) =>
                 set((state) => ({
@@ -460,6 +527,18 @@ export const useUIStore = create<UIStore>()(
                         d.id === id ? { ...d, ...updates } : d
                     ),
                 })),
+            updateTikTokVideoSync: (id, updates) =>
+                set((state) => ({
+                    tikTokVideos: state.tikTokVideos.map((v) =>
+                        v.id === id ? { ...v, ...updates } : v
+                    ),
+                })),
+            updateTikTokQueueItemSync: (id, updates) =>
+                set((state) => ({
+                    tikTokQueueItems: state.tikTokQueueItems.map((q) =>
+                        q.id === id ? { ...q, ...updates } : q
+                    ),
+                })),
 
             deleteGroupSync: (groupId) =>
                 set((state) => ({
@@ -486,6 +565,14 @@ export const useUIStore = create<UIStore>()(
                 set((state) => ({
                     brainDumps: state.brainDumps.filter((d) => d.id !== id),
                 })),
+            deleteTikTokVideoSync: (id) =>
+                set((state) => ({
+                    tikTokVideos: state.tikTokVideos.filter((v) => v.id !== id),
+                })),
+            deleteTikTokQueueItemSync: (id) =>
+                set((state) => ({
+                    tikTokQueueItems: state.tikTokQueueItems.filter((q) => q.id !== id),
+                })),
         }),
         {
             name: "keep-note-groups-ui-storage-v9", // v9: persistent AI state fix
@@ -500,6 +587,7 @@ export const useUIStore = create<UIStore>()(
                 isMaximized: state.isMaximized,
                 isBraindumpMaximized: state.isBraindumpMaximized,
                 isTranslatorMaximized: state.isTranslatorMaximized,
+                isTikTokMaximized: state.isTikTokMaximized,
                 focusedNoteByGroup: state.focusedNoteByGroup,
                 lastActiveNoteByGroup: state.lastActiveNoteByGroup,
                 noteTrayOpenByGroup: state.noteTrayOpenByGroup,
@@ -507,9 +595,13 @@ export const useUIStore = create<UIStore>()(
                 activeTabByNote: state.activeTabByNote,
                 aiPanelOpenByBrainDump: state.aiPanelOpenByBrainDump,
                 activeTabByBrainDump: state.activeTabByBrainDump,
+                aiPanelOpenByVideo: state.aiPanelOpenByVideo,
+                activeTabByVideo: state.activeTabByVideo,
                 pizarronVisibleByNoteAndTab: state.pizarronVisibleByNoteAndTab,
                 focusedDumpId: state.focusedDumpId,
                 isDumpTrayOpen: state.isDumpTrayOpen,
+                focusedVideoId: state.focusedVideoId,
+                isVideoTrayOpen: state.isVideoTrayOpen,
                 isZenModeByApp: state.isZenModeByApp,
             }),
         },

@@ -12,7 +12,8 @@ App.tsx
 │   ├── [timers]     → TimeTrackerApp
 │   ├── [reminders]  → RemindersApp
 │   ├── [braindump]  → BrainDumpApp > BrainDumpAIPanel, BrainDumpBreadcrumb
-│   └── [translator] → TranslatorApp
+│   ├── [translator] → TranslatorApp
+│   └── [tiktok]     → TikTokApp
 └── Sidebar (siempre visible, muestra contadores de Kanban/Reminders/Timers)
 └── Global Search (App.tsx) — Estado unificado en searchQueries (keys: activeGroupId o 'braindump')
 
