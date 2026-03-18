@@ -347,18 +347,23 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                     <div className="flex items-center gap-3">
                         {/* Botón Toggle Reminder */}
                         <button
-                          onClick={() => setShowOverdueMarquee(!showOverdueMarquee)}
-                          className={`h-9 p-2 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                          onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
+                          disabled={overdueRemindersCount === 0}
+                          className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
                             showOverdueMarquee 
-                              ? 'bg-[#DC2626] border-red-600 text-white shadow-md shadow-red-600/20' 
+                              ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
                               : overdueRemindersCount > 0
                                 ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
-                                : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600'
+                                : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
                           }`}
-                          title={showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
+                          title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                         >
-                          <Bell size={18} className={overdueRemindersCount > 0 ? 'animate-pulse' : ''} />
-                          <span className="text-xs font-bold">{overdueRemindersCount}</span>
+                          <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-white' : 'text-red-500'}` : ''} />
+                          {overdueRemindersCount > 0 && (
+                            <span className={`text-xs font-bold whitespace-nowrap ${showOverdueMarquee ? 'text-white' : ''}`}>
+                              {overdueRemindersCount}
+                            </span>
+                          )}
                         </button>
 
                         <button onClick={createNewDraft} className="h-9 bg-[#1F3760] hover:bg-[#152643] text-white px-4 py-2 rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all flex items-center gap-2 active:scale-95 shrink-0">

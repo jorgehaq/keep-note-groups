@@ -44,6 +44,19 @@ type GlobalAppView = 'notes' | 'kanban' | 'timers' | 'reminders' | 'braindump' |
   - **Mobile/Small**: Reducir a `h-4`, `min-w-[16px]`, `text-[10px]` y ajustar posición (`-top-1 -right-1`) para evitar clipping en el sidebar `w-12`.
 - **Kanban Stack**: Las 3 burbujas de colores deben permanecer alineadas (`flex items-center gap-px`) y visibles.
 
+## Estándar de Headers (Navegación y Controles por App)
+- **Secuencia Estricta de Botones**: Para mantener la paridad entre `App.tsx` y `BrainDumpApp.tsx`, el orden debe ser:
+  1. **Campana de Recordatorios**: Red (activo con marquee) / White (default/disabled).
+  2. **Bandeja de Accesos**: Toggle para tray lateral o lista de items del grupo.
+  3. **Maximizar/Minimizar**: Botón de vista de enfoque.
+  4. **Ordenar (Sort)**: Botón **independiente** (fuente de verdad: `isSortMenuOpen`).
+  5. **Búsqueda (Search)**: Input field (dentro de cápsula en Notas / independiente en Pizarrón).
+- **Reglas de UI del Botón Bell**:
+  - Si hay recordatorios vencidos (`overdueRemindersCount > 0`) y el marquee está activo: **Fondo Rojo + Icono/Texto Blanco**.
+  - Si el marquee está apagado: **Fondo light-red + Icono Rojo**.
+  - Esto garantiza legibilidad y contraste en ambos estados de alerta.
+- **Botón Sort Independiente**: En `App.tsx` (Notas), el botón de ordenar NO debe estar dentro de la cápsula gris de acciones secundarias; debe ser un botón `rounded-xl` independiente al lado de Maximizar.
+
 ## Reglas
 - El Sidebar siempre está visible (NO se desmonta con globalView).
 - Zen Mode (isZenModeByApp) oculta elementos del layout por app — respetar en nuevas apps.

@@ -514,8 +514,37 @@ export const BrainDumpApp: React.FC<{
                             <span className="truncate">Pizarrón</span>
                         </h1>
                         <div className="flex flex-wrap items-center gap-2 md:gap-3">
-                            <button onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)} className={`h-9 px-3 rounded-xl transition-all border ${overdueRemindersCount > 0 ? 'bg-red-50 text-red-600 border-red-200' : 'bg-white dark:bg-[#1A1A24] border-zinc-200/60 dark:border-[#2D2D42] text-zinc-400 opacity-60'}`}><Bell size={18} /></button>
-                            
+                            {/* 1. Botón Toggle Reminder (Bell) */}
+                            <button
+                              onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
+                              disabled={overdueRemindersCount === 0}
+                              className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
+                                showOverdueMarquee 
+                                  ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
+                                  : overdueRemindersCount > 0
+                                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
+                                    : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
+                              }`}
+                              title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
+                            >
+                              <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-white' : 'text-red-500'}` : ''} />
+                              {overdueRemindersCount > 0 && (
+                                <span className={`text-xs font-bold whitespace-nowrap ${showOverdueMarquee ? 'text-white' : ''}`}>
+                                  {overdueRemindersCount}
+                                </span>
+                              )}
+                            </button>
+
+                            {/* 2. Bandeja de accesos (Tray) */}
+                            <button onClick={() => setIsDumpTrayOpen(!isDumpTrayOpen)} className={`h-9 px-3 rounded-xl transition-all border flex items-center gap-2 ${isDumpTrayOpen ? 'bg-[#FFD700] border-amber-300 text-amber-950 font-bold shadow-sm shadow-amber-500/20' : 'bg-amber-50 dark:bg-amber-900/10 text-amber-500 border-amber-200/60 dark:border-amber-900/30'}`} title={isDumpTrayOpen ? "Ocultar bandeja" : "Mostrar bandeja"}>
+                                <ChevronsDownUp size={18} className={`transition-transform duration-300 ${isDumpTrayOpen ? 'rotate-180' : ''}`}/>
+                                <span className="text-xs font-bold">{rootPizarrones.length}</span>
+                            </button>
+
+                            {/* 3. Maximizar/Minimizar */}
+                            <button onClick={() => setIsBraindumpMaximized(!isBraindumpMaximized)} className="h-9 p-2 bg-white dark:bg-[#1A1A24] border border-zinc-200/60 dark:border-[#2D2D42] rounded-xl text-zinc-500 hover:text-amber-600 transition-all" title={isBraindumpMaximized ? "Minimizar" : "Maximizar"}>{isBraindumpMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}</button>
+
+                            {/* 4. Ordenar (Sort) */}
                             <div className="relative" ref={sortMenuRef}>
                                 <button onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} className="h-9 px-3 rounded-xl bg-white dark:bg-[#1A1A24] border border-zinc-200/60 dark:border-[#2D2D42] text-zinc-500 hover:text-amber-600 transition-all flex items-center gap-2" title="Ordenar pizarrones">
                                     <ArrowUpDown size={16} />
@@ -539,10 +568,7 @@ export const BrainDumpApp: React.FC<{
                                 )}
                             </div>
 
-                            <button onClick={() => setIsDumpTrayOpen(!isDumpTrayOpen)} className={`h-9 px-3 rounded-xl transition-all border flex items-center gap-2 ${isDumpTrayOpen ? 'bg-[#FFD700] border-amber-300 text-amber-950 font-bold shadow-sm shadow-amber-500/20' : 'bg-amber-50 dark:bg-amber-900/10 text-amber-500 border-amber-200/60 dark:border-amber-900/30'}`} title={isDumpTrayOpen ? "Ocultar bandeja" : "Mostrar bandeja"}>
-                                <ChevronsDownUp size={18} className={`transition-transform duration-300 ${isDumpTrayOpen ? 'rotate-180' : ''}`}/>
-                                <span className="text-xs font-bold">{rootPizarrones.length}</span>
-                            </button>
+                            {/* 5. Cuadro de búsqueda (Search) */}
                             <div className="relative flex items-center">
                                 <Search size={15} className={`absolute left-3 transition-colors ${searchQuery?.trim() ? 'text-amber-600 dark:text-amber-500 font-bold' : 'text-zinc-400'}`} />
                                 <input 
@@ -558,7 +584,6 @@ export const BrainDumpApp: React.FC<{
                                     </button>
                                 )}
                             </div>
-                            <button onClick={() => setIsBraindumpMaximized(!isBraindumpMaximized)} className="h-9 p-2 bg-white dark:bg-[#1A1A24] border border-zinc-200/60 dark:border-[#2D2D42] rounded-xl text-zinc-500 hover:text-amber-600 transition-all">{isBraindumpMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}</button>
                             <button onClick={createNewDraft} className="h-9 bg-[#FFD700] hover:bg-[#E5C100] text-amber-950 px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 active:scale-95 shadow-amber-500/10 border border-amber-400/30"><Plus size={20} /> <span className="text-sm font-bold hidden sm:inline">Nuevo Pizarrón</span></button>
                         </div>
                     </div>

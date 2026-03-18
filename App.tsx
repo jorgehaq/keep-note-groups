@@ -1462,10 +1462,10 @@ function App() {
                                }`}
                                title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                              >
-                                <Bell size={18} className={overdueRemindersList.length > 0 ? 'animate-pulse text-red-500' : ''} />
+                                <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-white' : 'text-red-500'}` : ''} />
                                 {overdueRemindersCount > 0 && (
                                   <span className="text-xs font-bold whitespace-nowrap">
-                                    {overdueRemindersList.length}
+                                    {overdueRemindersCount}
                                   </span>
                                 )}
                              </button>
@@ -1491,10 +1491,57 @@ function App() {
                              >
                                {isMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                              </button>
+
+                             <div className="relative" ref={sortMenuRef}>
+                               <button 
+                                   onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} 
+                                   className="h-9 px-3 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all flex items-center gap-2 active:scale-95"
+                                   title="Ordenar notas"
+                               >
+                                   <ArrowUpDown size={16} />
+                               </button>
+                               
+                               {isSortMenuOpen && (
+                                 <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-800 shadow-xl rounded-xl border border-zinc-200 dark:border-zinc-700 p-1.5 flex flex-col gap-0.5 min-w-[200px] animate-fadeIn">
+                                   <div className="px-2 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1 border-b border-zinc-100 dark:border-zinc-700">Ordenar por</div>
+                                   
+                                   <button onClick={() => applyManualSort('date-desc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'date-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                     <Calendar size={14} /> Fecha (Recientes)
+                                     {noteSortMode === 'date-desc' && <Check size={14} className="ml-auto" />}
+                                   </button>
+                                   
+                                   <button onClick={() => applyManualSort('date-asc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'date-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                     <Calendar size={14} /> Fecha (Antiguos)
+                                     {noteSortMode === 'date-asc' && <Check size={14} className="ml-auto" />}
+                                   </button>
+
+                                   <button onClick={() => applyManualSort('created-desc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'created-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                     <Calendar size={14} /> Creación (reciente)
+                                     {noteSortMode === 'created-desc' && <Check size={14} className="ml-auto" />}
+                                   </button>
+                                   <button onClick={() => applyManualSort('created-asc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'created-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                     <Calendar size={14} /> Creación (antigua)
+                                     {noteSortMode === 'created-asc' && <Check size={14} className="ml-auto" />}
+                                   </button>
+                                   
+                                   <button onClick={() => applyManualSort('alpha-asc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'alpha-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                     <Type size={14} /> Nombre (A-Z)
+                                     {noteSortMode === 'alpha-asc' && <Check size={14} className="ml-auto" />}
+                                   </button>
+                                   
+                                   <button onClick={() => applyManualSort('alpha-desc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'alpha-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
+                                     <Type size={14} /> Nombre (Z-A)
+                                     {noteSortMode === 'alpha-desc' && <Check size={14} className="ml-auto" />}
+                                   </button>
+                                 </div>
+                               )}
+                             </div>
                           </div>
 
                           {/* Controles de Grupo (En una mini-cápsula gris) */}
                           <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-1 shadow-sm">
+
+
                               {/* Buscador */}
                               <div className="relative flex items-center transition-all duration-300 mr-2">
                                 <Search size={15} className={`absolute left-2 pointer-events-none transition-colors ${currentSearchQuery.trim() ? 'text-amber-600 dark:text-amber-500 font-bold' : 'text-zinc-400'}`} />
@@ -1514,64 +1561,6 @@ function App() {
                                   </button>
                                 )}
                               </div>
-
-                              <div className="relative" ref={sortMenuRef}>
-                                <button 
-                                    onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} 
-                                    className="p-1.5 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                                    title="Ordenar notas"
-                                >
-                                    <ArrowUpDown size={16} />
-                                </button>
-                                
-                                {isSortMenuOpen && (
-                                  <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-800 shadow-xl rounded-xl border border-zinc-200 dark:border-zinc-700 p-1.5 flex flex-col gap-0.5 min-w-[200px] animate-fadeIn">
-                                    <div className="px-2 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1 border-b border-zinc-100 dark:border-zinc-700">Ordenar por</div>
-                                    
-                                    <button onClick={() => applyManualSort('date-desc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'date-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
-                                      <Calendar size={14} /> Fecha (Recientes)
-                                      {noteSortMode === 'date-desc' && <Check size={14} className="ml-auto" />}
-                                    </button>
-                                    
-                                    <button onClick={() => applyManualSort('date-asc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'date-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
-                                      <Calendar size={14} /> Fecha (Antiguos)
-                                      {noteSortMode === 'date-asc' && <Check size={14} className="ml-auto" />}
-                                    </button>
-
-                                    <button onClick={() => applyManualSort('created-desc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'created-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
-                                      <Calendar size={14} /> Creación (reciente)
-                                      {noteSortMode === 'created-desc' && <Check size={14} className="ml-auto" />}
-                                    </button>
-                                    <button onClick={() => applyManualSort('created-asc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'created-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
-                                      <Calendar size={14} /> Creación (antigua)
-                                      {noteSortMode === 'created-asc' && <Check size={14} className="ml-auto" />}
-                                    </button>
-                                    
-                                    <button onClick={() => applyManualSort('alpha-asc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'alpha-asc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
-                                      <Type size={14} /> Nombre (A-Z)
-                                      {noteSortMode === 'alpha-asc' && <Check size={14} className="ml-auto" />}
-                                    </button>
-                                    
-                                    <button onClick={() => applyManualSort('alpha-desc')} className={`flex items-center gap-2 px-3 py-2 text-xs text-left rounded-lg transition-colors ${noteSortMode === 'alpha-desc' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 font-medium'}`}>
-                                      <Type size={14} /> Nombre (Z-A)
-                                      {noteSortMode === 'alpha-desc' && <Check size={14} className="ml-auto" />}
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Modo ZEN Button */}
-                              <button
-                                onClick={() => toggleZenMode(globalView)}
-                                className={`h-9 w-9 flex items-center justify-center rounded-xl transition-all active:scale-95 border ${
-                                  isZenMode 
-                                    ? 'bg-amber-100 border-amber-300 text-amber-600 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-400 font-bold' 
-                                    : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/10'
-                                }`}
-                                title={isZenMode ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
-                              >
-                                <Wind size={18} />
-                              </button>
 
                               <button 
                                   onClick={downloadGroupAsMarkdown} 
@@ -1621,10 +1610,10 @@ function App() {
                           }`}
                           title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                         >
-                          <Bell size={18} className={overdueRemindersList.length > 0 ? 'animate-pulse text-red-500' : ''} />
+                          <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-white' : 'text-red-500'}` : ''} />
                           {overdueRemindersCount > 0 && (
-                            <span className="text-xs font-bold whitespace-nowrap">
-                              {overdueRemindersList.length}
+                            <span className={`text-xs font-bold whitespace-nowrap ${showOverdueMarquee ? 'text-white' : ''}`}>
+                              {overdueRemindersCount}
                             </span>
                           )}
                         </button>
