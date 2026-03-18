@@ -14,6 +14,9 @@
 - **Exportación Markdown v2 (Recursiva)**: 
   - `downloadNoteAsMarkdown`: Genera un .md completo con el contenido de la nota, su `scratchpad`, todos sus `summaries` asociados (con sus propios pizarrones) y todas las sub-notas anidadas.
   - `downloadGroupAsMarkdown`: Aplica la lógica recursiva a todas las notas raíz del grupo, consolidando todo el conocimiento (incluidos análisis AI y pizarrones) en un único archivo.
+- 2026-03-18: Corregido clipping de burbujas Kanban en sidebar para pantallas pequeñas; implementado escalado responsivo de badges (fuente, tamaño y posición) preservando vista desktop (md+).
+- 2026-03-18: Implementada Búsqueda Profunda (recursiva) en Notas; incluye indexación global de summaries en App.tsx para búsqueda instantánea, iluminación visual completa (glow ámbar) en pestañas multinivel (global/interno) y resaltado de texto en títulos y editores.
+- Ejemplo: "2024-03-18: Corregido scroll position en SmartNotesEditor usando localStorage key 'scroll-{noteId}'"
 
 ## Editor Stack
 - src/components/editor/SmartNotesEditor.tsx → CodeMirror. Es el editor principal plain-text.
@@ -44,3 +47,14 @@
 - El panel NoteAIPanel tiene su propio estado persistido: aiPanelOpenByNote y activeTabByNote en store.
 - LinkifiedText tiene floating selection menu compacto activado por botón 🏷️ — NO reimplementar sin leer el componente completo.
 - is_checklist cambia el editor completo — nunca cambiar este flag sin re-montar el editor.
+- **Búsqueda Recursiva (Deep Search)**:
+  - **Lógica**: Utiliza `checkNoteSearchMatch` en `App.tsx` y su réplica interna en `AccordionItem.tsx` para buscar en: Title, Content, Scratchpad, AI Summaries y todas las subnotas (recursivo).
+  - **UI Highlighting (Amber Glow)**:
+    - **Contornos**: Notas coincidentes DEBEN iluminar su contorno con resplandor ámbar (`shadow-[0_0_20px_rgba(245,158,11,0.3)]`).
+    - **Acceso (Pestañas)**: Las pestañas de acceso (tanto en el header global como las pestañas internas de sub-notas/summaries) deben mostrar un resplandor ámbar (`shadow-glow`) y un anillo ámbar reforzado (`ring-[3px]`) para indicar dónde está el resultado.
+  - **Resaltado de Texto (Words Highlight)**:
+    - Se DEBE resaltar la palabra buscada en:
+      - Títulos de pestañas globales (App.tsx).
+      - Títulos de notas en la lista (AccordionItem.tsx).
+      - Títulos de pestañas de sub-notas y summaries.
+      - Contenido interno de editores (Content, Scratchpad, AI Summary) mediante la prop `searchQuery` en `SmartNotesEditor`.

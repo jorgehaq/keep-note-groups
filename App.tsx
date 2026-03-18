@@ -130,6 +130,7 @@ function App() {
   const [groupTitleSyncStatus, setGroupTitleSyncStatus] = useState<'saved' | 'saving' | ''>('');
 
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+  const [allGroupSummaries, setAllGroupSummaries] = useState<any[]>([]);
   const sortMenuRef = useRef<HTMLDivElement>(null);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -149,6 +150,23 @@ function App() {
     window.addEventListener('resize', checkScroll);
     return () => window.removeEventListener('resize', checkScroll);
   }, [groups, activeGroupId, isGlobalNoteTrayOpen, globalView]);
+
+  useEffect(() => {
+    if (!activeGroupId || !session) {
+      setAllGroupSummaries([]);
+      return;
+    }
+    
+    const fetchAllSummaries = async () => {
+      const g = groups.find(group => group.id === activeGroupId);
+      const noteIds = g?.notes.map(n => n.id) || [];
+      if (noteIds.length === 0) return;
+      const { data } = await supabase.from('summaries').select('*').in('note_id', noteIds);
+      setAllGroupSummaries(data || []);
+    };
+    
+    fetchAllSummaries();
+  }, [activeGroupId, session, activeGroup?.notes.length]);
 
   const scrollTabs = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
@@ -900,6 +918,29 @@ function App() {
     return markers;
   };
 
+  const checkNoteSearchMatch = (note: Note, query: string, allNotes: Note[], summaries: any[]): boolean => {
+    if (!query) return false;
+    const q = query.toLowerCase();
+    
+    // 1. Check title & content
+    if (note.title?.toLowerCase().includes(q) || note.content?.toLowerCase().includes(q)) return true;
+    
+    // 2. Check scratchpad
+    if (note.scratchpad?.toLowerCase().includes(q)) return true;
+    
+    // 3. Check summaries
+    const noteSummaries = summaries.filter(s => s.note_id === note.id);
+    if (noteSummaries.some(s => 
+      s.content?.toLowerCase().includes(q) || 
+      s.target_objective?.toLowerCase().includes(q) || 
+      s.scratchpad?.toLowerCase().includes(q)
+    )) return true;
+    
+    // 4. Check subnotes (children) recursively
+    const children = allNotes.filter(n => n.parent_note_id === note.id);
+    return children.some(child => checkNoteSearchMatch(child, query, allNotes, summaries));
+  };
+
   const getRecursiveNoteMarkdown = async (noteId: string, depth: number, allNotes: Note[], allSummaries: any[]): Promise<string> => {
     const note = allNotes.find(n => n.id === noteId);
     if (!note) return "";
@@ -1603,11 +1644,9 @@ function App() {
                           const isFocused = focusedNoteId === note.id;
                           const isSelected = isFocused || (!focusedNoteId && activeNoteId === note.id);
 
-                          // --- LÓGICA DE BÚSQUEDA ---
-                          const query = currentSearchQuery.trim().toLowerCase();
-                          const titleMatch = query && note.title?.toLowerCase().includes(query);
-                          const contentMatch = query && !titleMatch && note.content?.toLowerCase().includes(query);
-                          const isSearchActive = titleMatch || contentMatch;
+                           // --- LÓGICA DE BÚSQUEDA ---
+                           const query = currentSearchQuery.trim().toLowerCase();
+                           const isSearchActive = !!query && checkNoteSearchMatch(note, query, activeGroup.notes, allGroupSummaries);
 
                           // Helper para resaltar texto si coincide
                           const highlightTitle = (text: string) => {
@@ -1650,9 +1689,9 @@ function App() {
                               }}
                               className={`relative flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 my-0.5 ${
                                 isSelected
-                                  ? `bg-[#4940D9] text-white border-[#4940D9] shadow-sm shadow-[#4940D9]/20 scale-[1.02] ${isSearchActive ? 'ring-2 ring-amber-400' : ''}`
+                                  ? `bg-[#4940D9] text-white border-[#4940D9] shadow-sm shadow-[#4940D9]/20 scale-[1.02] ${isSearchActive ? 'ring-[3px] ring-amber-400 shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
                                   : isSearchActive
-                                    ? 'bg-amber-100 dark:bg-amber-900 border-amber-500 text-amber-900 dark:text-amber-100 shadow-sm ring-1 ring-amber-500/50'
+                                    ? 'bg-amber-100 dark:bg-amber-900/40 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_10px_rgba(251,192,45,0.3)] ring-1 ring-amber-500/50'
                                     : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/40 hover:text-indigo-600'
                               }`}
                             >
@@ -1717,7 +1756,9 @@ function App() {
                                     <AccordionItem
                                       note={{ ...note, isOpen }}
                                       searchQuery={currentSearchQuery}
-                                      isHighlightedBySearch={!!(currentSearchQuery.trim() && (note.title?.toLowerCase().includes(currentSearchQuery.toLowerCase()) || note.content?.toLowerCase().includes(currentSearchQuery.toLowerCase())))}
+                                      allSummaries={allGroupSummaries}
+                                      groupNotes={activeGroup.notes}
+                                      isHighlightedBySearch={!!(currentSearchQuery.trim() && checkNoteSearchMatch(note, currentSearchQuery.trim(), activeGroup.notes, allGroupSummaries))}
                                       showLineNumbers={showLineNumbers}
                                       onToggleLineNumbers={() => {
                                         const next = !showLineNumbers;
@@ -1731,7 +1772,6 @@ function App() {
                                         const willBeOpen = !wasOpen;
 
                                         toggleNote(activeGroup.id, note.id);
-                                        // 📡 Persistence: Sync open state to DB
                                         handleUpdateNoteWrapper(note.id, { is_open: willBeOpen });
 
                                         if (wasOpen && store.noteSortMode) {
@@ -1740,7 +1780,7 @@ function App() {
                                       }}
                                       onUpdate={(id, updates) => handleUpdateNoteWrapper(id, updates)}
                                       onDelete={deleteNote}
-                              onExportNote={downloadNoteAsMarkdown}
+                                      onExportNote={downloadNoteAsMarkdown}
                                       onCopyNote={copyNoteToClipboard}
                                       onDuplicate={duplicateNote}
                                       onMove={moveNoteToGroup}
@@ -1751,7 +1791,6 @@ function App() {
                                       onCreateNote={createNoteFromAI}
                                       session={session}
                                       syncStatus={noteSaveStatus[note.id] || 'idle'}
-                                      groupNotes={activeGroup.notes}
                                     />
                                   </div>
                                 );

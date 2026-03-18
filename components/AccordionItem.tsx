@@ -35,6 +35,7 @@ interface AccordionItemProps {
   session?: Session | null;
   syncStatus?: 'idle' | 'saving' | 'saved';
   groupNotes?: Note[];
+  allSummaries?: any[];
 }
 
 const formatCleanDate = (isoString?: string) => {
@@ -236,7 +237,8 @@ const SubnoteTitle: React.FC<{
   child: Note;
   isActive: boolean;
   onRename: (id: string, title: string) => void;
-}> = ({ child, isActive, onRename }) => {
+  searchQuery?: string;
+}> = ({ child, isActive, onRename, searchQuery }) => {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(child.title || '');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -277,7 +279,7 @@ const SubnoteTitle: React.FC<{
       onDoubleClick={e => { e.stopPropagation(); if (isActive) setEditing(true); }}
       title={isActive ? 'Doble clic para renombrar' : child.title || ''}
     >
-      {child.title || 'Sin título'}
+      {searchQuery?.trim() ? highlightText(child.title || 'Sin título', searchQuery) : (child.title || 'Sin título')}
     </span>
   );
 };
@@ -399,6 +401,7 @@ const SubnoteTabContent: React.FC<{
               noteFontSize={noteFontSize}
               noteLineHeight={noteLineHeight}
               showLineNumbers={showLineNumbers}
+              searchQuery={searchQuery}
             />
           </div>
         </div>
@@ -427,8 +430,21 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   onToggleLineNumbers,
   session,
   syncStatus: propSyncStatus = 'idle',
+  allSummaries = [],
   groupNotes = []
 }) => {
+
+  const checkNoteMatch = (n: Note, q: string, all: Note[], sums: any[]): boolean => {
+    if (!q) return false;
+    const lowerQ = q.toLowerCase();
+    if (n.title?.toLowerCase().includes(lowerQ) || n.content?.toLowerCase().includes(lowerQ) || n.scratchpad?.toLowerCase().includes(lowerQ)) return true;
+    
+    const nSums = sums.filter(s => s.note_id === n.id);
+    if (nSums.some(s => s.content?.toLowerCase().includes(lowerQ) || s.target_objective?.toLowerCase().includes(lowerQ) || s.scratchpad?.toLowerCase().includes(lowerQ))) return true;
+    
+    const kids = all.filter(c => c.parent_note_id === n.id);
+    return kids.some(k => checkNoteMatch(k, q, all, sums));
+  };
 
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(!note.title);
@@ -685,7 +701,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   return (
     <div className={`m-1 transition-all duration-300 flex-1 flex flex-col min-h-0 bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border select-text ${
       isHighlightedBySearch
-        ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50/30 dark:bg-amber-900/10'
+        ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50/30 dark:bg-amber-900/10 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
         : 'border-zinc-200 dark:border-[#2D2D42] hover:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/50'
     }`}>
 
@@ -918,9 +934,11 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 <FileText size={11} /> Original
               </button>
 
-              {/* Tabs subnotas manuales — verdes */}
+               {/* Tabs subnotas manuales — verdes */}
               {manualChildren.map((child) => {
                 const isActive = activeTab === `sub_${child.id}`;
+                const isMatch = searchQuery?.trim() && checkNoteMatch(child, searchQuery.trim(), groupNotes, allSummaries);
+
                 return (
                   <div key={child.id} className="relative shrink-0 flex items-center group">
                     <button
@@ -928,7 +946,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all max-w-[150px] ${
                         isActive
                           ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
-                          : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-emerald-500/50 hover:text-emerald-400'
+                          : isMatch
+                            ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
+                            : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-emerald-500/50 hover:text-emerald-400'
                       }`}
                     >
                       <GitBranch size={10} className="shrink-0" />
@@ -936,6 +956,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                         child={child}
                         isActive={isActive}
                         onRename={handleSaveChildTitle}
+                        searchQuery={searchQuery}
                       />
                       {isActive && (
                         <span 
@@ -961,20 +982,29 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 </div>
               ))}
 
-              {/* Tabs AI summaries — violetas (completados) */}
-              {completedSummaries.map(s => (
-                <button key={s.id}
-                  onClick={() => setActiveTab(activeTab === s.id ? 'original' : s.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all max-w-[150px] ${
-                    activeTab === s.id
-                      ? 'bg-violet-600 text-white border-violet-500 shadow-sm'
-                      : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/40 hover:text-violet-400'
-                  }`}
-                >
+               {/* Tabs AI summaries — violetas (completados) */}
+              {completedSummaries.map(s => {
+                const isMatch = searchQuery?.trim() && (
+                  s.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+                  s.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+                  s.scratchpad?.toLowerCase().includes(searchQuery.trim().toLowerCase())
+                );
+                return (
+                  <button key={s.id}
+                    onClick={() => setActiveTab(activeTab === s.id ? 'original' : s.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all max-w-[150px] ${
+                      activeTab === s.id
+                        ? 'bg-violet-600 text-white border-violet-500 shadow-sm'
+                        : isMatch
+                          ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
+                          : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/40 hover:text-violet-400'
+                    }`}
+                  >
                   <Sparkles size={10} className="shrink-0" />
                   <span className="truncate">{s.target_objective || 'Análisis'}</span>
                 </button>
-              ))}
+              );
+            })}
 
               {/* Botón + Subnota */}
               {session?.user && (
