@@ -1,6 +1,6 @@
 import React from 'react';
 import { Task, TaskStatus, Group } from '../types';
-import { Trash2, ArrowRight, Inbox, Archive, Pencil } from 'lucide-react';
+import { Trash2, ArrowRight, Inbox, Archive, Pencil, PenTool } from 'lucide-react';
 
 interface KanbanListProps {
     view: 'backlog' | 'archive';
@@ -66,6 +66,9 @@ const TaskListItem: React.FC<{
                 <div className="min-w-0" title={task.title}>
                     <h4 className="text-zinc-800 dark:text-[#CCCCCC] text-sm font-bold leading-tight line-clamp-1">
                         {task.title || <span className="text-zinc-400 italic font-normal">Sin título</span>}
+                        {task.linked_board_id && (
+                            <PenTool size={10} className="inline-block ml-1.5 text-amber-500 mb-0.5" />
+                        )}
                     </h4>
                     {task.content && (
                         <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-500 line-clamp-2 leading-normal" title={task.content}>

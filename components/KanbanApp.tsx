@@ -98,6 +98,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
             const inProgress = allTasks.filter(t => t.status === 'in_progress').length;
             const done = allTasks.filter(t => t.status === 'done').length;
             setKanbanCounts(todo, inProgress, done);
+            window.dispatchEvent(new CustomEvent('kanban-updated'));
         }
     };
 
@@ -113,6 +114,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
         });
 
         await supabase.from('tasks').update(updates).eq('id', id);
+        window.dispatchEvent(new CustomEvent('kanban-updated'));
     };
 
     const deleteTask = async (id: string) => {
@@ -125,6 +127,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
             return next;
         });
         await supabase.from('tasks').delete().eq('id', id);
+        window.dispatchEvent(new CustomEvent('kanban-updated'));
     };
 
     if (loading) {

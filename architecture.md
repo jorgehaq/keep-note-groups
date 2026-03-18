@@ -69,5 +69,11 @@ Las interfaces principales definen el modelo de datos utilizado en toda la aplic
 - Existe una integración visual global: si hay recordatorios vencidos, aparece un banner (marquee) en la parte superior de la aplicación.
 - El `Sidebar` también muestra indicadores visuales de recordatorios pendientes/vencidos en los grupos correspondientes.
 
-### BrainDump & Flujo de Ideas
-- Los `BrainDumps` son independientes de las notas estructuradas pero pueden convertirse o usarse como fuente de información para nuevas notas mediante IA.
+### BrainDump & Kanban
+- Los `BrainDumps` son independientes de las notas estructuradas pero pueden vincularse al Kanban.
+- **Reglas de UI Inamovibles**:
+    - El **encabezado** del pizarrón debe permanecer limpio: **PROHIBIDO** añadir botones de "Vincular a Kanban" o iconos de estado (Semáforos) en el header principal.
+    - La gestión de vinculación se realiza **EXCLUSIVAMENTE** a través del menú de opciones (tres puntos).
+    - La opción "Añadir a Kanban" en el menú solo es visible si el pizarrón no está ya en el Kanban.
+    - La sincronización de títulos entre Pizarrón y Tarea de Kanban es automática mediante triggers de base de datos.
+    - No añadir opciones de "Cerrar Vista" en los menús internos si ya existe una navegación global clara.

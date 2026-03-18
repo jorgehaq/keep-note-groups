@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell, Grid, ChevronsDownUp, MoreVertical, ListTodo, CheckSquare, Square, GripVertical, Search, X, ChevronLeft, ChevronRight, ArrowUpRight, Download, ArrowUpDown, Calendar, Type, Check, Wind, Sparkles, PenLine, FileText, GitBranch, Loader2, CloudCheck } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell, Grid, ChevronsDownUp, MoreVertical, ListTodo, CheckSquare, Square, GripVertical, Search, X, ChevronLeft, ChevronRight, ArrowUpRight, Download, ArrowUpDown, Calendar, Type, Check, Wind, Sparkles, PenLine, FileText, GitBranch, Loader2, CloudCheck, KanbanSquare } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { KanbanSemaphore } from './KanbanSemaphore';
 import { PizarronLinkerModal } from './PizarronLinkerModal';
@@ -294,7 +294,7 @@ export const BrainDumpApp: React.FC<{
     // El dump que estamos visualizando actualmente (la raíz o un sub-pizarrón)
     const displayDump = isRootLevel ? (dumps.find(d => d.id === focusedDumpId)) : activeDump;
     const currentDumpId = displayDump?.id || focusedDumpId;
-    const isInKanban = displayDump ? globalTasks?.some(t => t.id === displayDump.id) : false;
+    const isInKanban = displayDump ? globalTasks?.some(t => t.id === displayDump.id || t.linked_board_id === displayDump.id) : false;
 
     const showAIPanel = currentDumpId ? (aiPanelOpenByBrainDump[currentDumpId] || false) : false;
     const activeTab = currentDumpId ? (activeTabByBrainDump[currentDumpId] || 'original') : 'original';
@@ -382,6 +382,26 @@ export const BrainDumpApp: React.FC<{
             return;
         }
         if (data) setActiveTab(`sub_${data.id}`);
+    };
+
+    const handleAddToKanban = async () => {
+        if (!displayDump || isInKanban) return;
+        
+        const { error } = await supabase.from('tasks').insert([{
+            title: displayDump.title || 'Pizarrón sin título',
+            content: displayDump.content || '',
+            status: 'backlog',
+            user_id: session.user.id,
+            linked_board_id: displayDump.id
+        }]);
+
+        if (error) {
+            console.error('Error linking to Kanban:', error);
+            alert(`Error al vincular con Kanban: ${error.message}`);
+            return;
+        }
+
+        window.dispatchEvent(new CustomEvent('kanban-updated'));
     };
 
     const changeStatus = async (id: string, newStatus: any) => {
@@ -550,26 +570,20 @@ export const BrainDumpApp: React.FC<{
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-1.5 shrink-0">
-                                            <button 
-                                                onClick={() => setPizarronVisible(displayDump!.id, activeTab, !(pizarronVisibleByNoteAndTab[displayDump!.id]?.[activeTab]))} 
-                                                className={`p-2 rounded-xl border transition-all ${pizarronVisibleByNoteAndTab[displayDump.id]?.[activeTab] ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : 'text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/30'}`}
-                                                title="Pizarrón / Borrador"
-                                            >
-                                                <PenLine size={13} />
-                                            </button>
-                                            <button 
-                                                onClick={() => toggleZenMode('braindump')} 
-                                                className={`p-2 rounded-xl border transition-all ${isZenMode ? 'bg-amber-100 border-amber-300 text-amber-600 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-400 font-bold' : 'text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/30'}`}
-                                                title={isZenMode ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
-                                            >
-                                                <Wind size={13} />
-                                            </button>
-                                            
-                                            {isInKanban && (
-                                                <div className="shrink-0 flex items-center">
-                                                    <KanbanSemaphore sourceId={displayDump!.id} sourceTitle={displayDump!.title || 'Sin título'} />
-                                                </div>
-                                            )}
+                                    <button 
+                                        onClick={() => setPizarronVisible(displayDump!.id, activeTab, !(pizarronVisibleByNoteAndTab[displayDump!.id]?.[activeTab]))} 
+                                        className={`p-2 rounded-xl border transition-all ${pizarronVisibleByNoteAndTab[displayDump.id]?.[activeTab] ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : 'text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/30'}`}
+                                        title="Pizarrón / Borrador"
+                                    >
+                                        <PenLine size={13} />
+                                    </button>
+                                    <button 
+                                        onClick={() => toggleZenMode('braindump')} 
+                                        className={`p-2 rounded-xl border transition-all ${isZenMode ? 'bg-amber-100 border-amber-300 text-amber-600 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-400 font-bold' : 'text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/30'}`}
+                                        title={isZenMode ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
+                                    >
+                                        <Wind size={13} />
+                                    </button>
                                     
                                     <div className="relative" ref={openMenuId === displayDump.id ? menuRef : undefined}>
                                         <button
@@ -591,18 +605,8 @@ export const BrainDumpApp: React.FC<{
                                                     setOpenMenuId(null); 
                                                 }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${displayDump.is_checklist ? 'text-[#1F3760] dark:text-blue-400 bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42]'}`}><ListTodo size={14} />{displayDump.is_checklist ? 'Quitar Checklist' : 'Hacer Checklist'}</button>
                                                 
-                                                {!globalTasks?.some(t => t.id === displayDump.id) && (
-                                                    <button onClick={async () => {
-                                                        await supabase.from('tasks').upsert({ 
-                                                            id: displayDump.id, 
-                                                            title: displayDump.title || 'Pizarrón sin título', 
-                                                            content: displayDump.content || '',
-                                                            status: 'backlog',
-                                                            user_id: session.user.id
-                                                        });
-                                                        window.dispatchEvent(new CustomEvent('kanban-updated'));
-                                                        setOpenMenuId(null);
-                                                    }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors">
+                                                {!isInKanban && (
+                                                    <button onClick={handleAddToKanban} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors">
                                                         <CheckSquare size={14} /> Añadir a Kanban
                                                     </button>
                                                 )}
@@ -620,7 +624,7 @@ export const BrainDumpApp: React.FC<{
                                                 >
                                                     <ArrowUpRight size={14} /> Convertir a Nota
                                                 </button>
-
+ 
                                                 <button 
                                                     onClick={(e) => { 
                                                         e.stopPropagation(); 
@@ -637,13 +641,10 @@ export const BrainDumpApp: React.FC<{
                                                 >
                                                     <Download size={14} /> Descargar .md
                                                 </button>
-
+ 
                                                 <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
                                                 <button onClick={() => { changeStatus(displayDump.id, 'history'); setOpenMenuId(null); }} className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"><ArchiveIcon size={14} />Archivar</button>
                                                 <button onClick={() => { deleteDump(displayDump.id); setOpenMenuId(null); }} className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"><Trash2 size={14} />Eliminar</button>
-                                                
-                                                <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
-                                                <button onClick={() => { setFocusedDumpId(null); setOpenMenuId(null); }} className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-500 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"><X size={14} />Cerrar Vista</button>
                                             </div>
                                         )}
                                     </div>

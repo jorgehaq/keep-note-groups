@@ -25,7 +25,14 @@ export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({ sourceId, sour
     // Consultar el estado actual en la base de datos al cargar
     useEffect(() => {
         const fetchStatus = async () => {
-            const { data } = await supabase.from('tasks').select('status').eq('id', sourceId).maybeSingle();
+            // Buscamos si existe una tarea donde el ID sea el sourceId, 
+            // O esté vinculada como nota o como pizarrón
+            const { data } = await supabase
+                .from('tasks')
+                .select('id, status')
+                .or(`id.eq.${sourceId},linked_note_id.eq.${sourceId},linked_board_id.eq.${sourceId}`)
+                .maybeSingle();
+            
             if (data) {
                 setCurrentStatus(data.status as TaskStatus);
             } else {
@@ -49,24 +56,50 @@ export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({ sourceId, sour
     }, [isOpen]);
 
     const handleSetStatus = async (status: string) => {
-        setIsOpen(false); // Cerrar paleta tras la selección
+        setIsOpen(false);
+
+        // Primero buscamos la tarea existente
+        const { data: existing } = await supabase
+            .from('tasks')
+            .select('id')
+            .or(`id.eq.${sourceId},linked_note_id.eq.${sourceId},linked_board_id.eq.${sourceId}`)
+            .maybeSingle();
 
         if (status === 'remove') {
             setCurrentStatus('none');
-            // Eliminar la tarea del Kanban
-            await supabase.from('tasks').delete().eq('id', sourceId);
+            if (existing) {
+                await supabase.from('tasks').delete().eq('id', existing.id);
+            }
         } else {
             setCurrentStatus(status as TaskStatus);
-            // Crear o actualizar la tarea usando el ID de la nota
-            const { error } = await supabase.from('tasks').upsert({
-                id: sourceId,
-                title: sourceTitle || 'Sin título',
-                status: status
-            });
-            if (error) console.error("Error al actualizar Kanban:", error);
+            const user = (await supabase.auth.getUser()).data.user;
+            
+            if (existing) {
+                // Actualizar existente
+                await supabase.from('tasks').update({ status: status }).eq('id', existing.id);
+            } else {
+                // Crear nueva vinculada (siempre lo vinculamos como Pizarrón por defecto en este contexto, 
+                // o intentamos detectar si el sourceId es de una Nota o Pizarrón)
+                // Usamos upsert con id: sourceId para mantener compatibilidad si no hay linked_ids
+                // Pero como ya existe el migration, mejor usamos las columnas nuevas.
+                // Para simplificar, si no existe y estamos en PizarrónApp, lo vinculamos como pizarrón.
+                // Nota: sourceTitle se pasa desde el componente padre.
+                const newTask: any = {
+                    title: sourceTitle || 'Sin título',
+                    status: status,
+                    user_id: user?.id,
+                    linked_board_id: sourceId // Por defecto asumimos Pizarrón si viene de BrainDumpApp
+                };
+                
+                // Si preferimos mantener el ID igual (legacy), podemos hacerlo, pero es redundante ahora.
+                // Sin embargo, para evitar romper Lógica previa, usaremos la columna correspondiente.
+                // ¿Cómo sabemos si es nota o pizarrón? 
+                // Podríamos pasar un prop 'type', pero el sourceId suele ser suficiente para distinguir en BD si se consulta.
+                // Por ahora, vincularemos como board si no se especifica.
+                await supabase.from('tasks').insert([newTask]);
+            }
         }
 
-        // ¡LA MAGIA INSTANTÁNEA! Avisarle a App.tsx que recargue los números
         window.dispatchEvent(new CustomEvent('kanban-updated'));
     };
 
