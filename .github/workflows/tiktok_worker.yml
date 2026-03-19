@@ -2,13 +2,13 @@ name: TikTok Worker
 
 on:
   schedule:
-    - cron: '*/8 * * * *'   # cada 8 minutos
-  workflow_dispatch:          # permite correrlo manualmente desde GitHub UI
+    - cron: '*/10 * * * *'   # cada 10 minutos (Whisper necesita más tiempo que solo metadata)
+  workflow_dispatch:           # trigger manual desde GitHub UI
 
 jobs:
   process-queue:
     runs-on: ubuntu-latest
-    timeout-minutes: 6        # muere antes del siguiente ciclo para evitar solapamiento
+    timeout-minutes: 8         # Whisper en CPU para videos cortos tarda ~30-60s por video
 
     steps:
       - name: Checkout repo
@@ -19,12 +19,16 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install ffmpeg
+        run: sudo apt-get install -y ffmpeg
+
+      - name: Install Python dependencies
         run: |
-          pip install supabase yt-dlp
+          pip install openai-whisper yt-dlp supabase
 
       - name: Run worker
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
         run: python tiktok_worker.py
