@@ -15,6 +15,8 @@
 - i18n solo tiene 'es' y 'en'. No agregar más idiomas sin pedirlo.
 
 ### Bugs Conocidos / Fixes Recientes
+- 2026-03-19: Corregido error de "Pantalla Negra" en producción al manejar `INITIAL_SESSION` en `onAuthStateChange` (Supabase v2) y unificar la carga inicial de datos.
+- 2026-03-19: Optimizada consulta de `summaries` en App.tsx añadiendo filtro de `user_id` para evitar escaneos de tabla completa y errores de RLS.
 - 2026-03-19: Estandarización de divisores (resizer) en TikTokApp para paridad absoluta con el módulo "Grupo de Notas" (clases de hover, ancho y animación fadeIn).
 - 2026-03-19: Implementado cierre automático (blur/click-outside) del menú de opciones en TikTokApp y persistencia global del toggle de Pizarrón.
 - 2026-03-19: Implementado Archivado y Borrado Recursivo en TikTok: eliminación en cascada de summaries, sub-notas y limpieza manual detallada de entradas en `tiktok_queue`.

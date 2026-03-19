@@ -203,22 +203,21 @@ function App() {
   // Explicit cleanup is handled inside deleteNote and moveNote functions.
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) fetchData();
-      else setLoading(false);
-    });
-
+    // onAuthStateChange already fires INITIAL_SESSION on mount in Supabase v2
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN') {
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
         setSession(session);
-        fetchData(session); // Fetch immediately with new session
+        if (session) {
+          fetchData(session);
+        } else {
+          setLoading(false);
+        }
       } else if (event === 'SIGNED_OUT') {
         setSession(null);
         setGroups([]);
         setBrainDumps([]);
         setTranslations([]);
-        useUIStore.getState().resetUIState(); // Clear persistent UI ids
+        useUIStore.getState().resetUIState();
         hasLoadedOnce.current = false;
         setLoading(false);
       }
@@ -332,7 +331,7 @@ function App() {
     const activeSession = overrideSession || sessionRef.current;
     if (!activeSession) return;
     try {
-      const { data, error } = await supabase.from('summaries').select('note_id');
+      const { data, error } = await supabase.from('summaries').select('note_id').eq('user_id', activeSession.user.id);
       if (error) throw error;
       const counts: Record<string, number> = {};
       data?.forEach(s => { counts[s.note_id] = (counts[s.note_id] || 0) + 1; });
