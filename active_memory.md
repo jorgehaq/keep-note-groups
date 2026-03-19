@@ -15,6 +15,9 @@
 - i18n solo tiene 'es' y 'en'. No agregar más idiomas sin pedirlo.
 
 ### Bugs Conocidos / Fixes Recientes
+- 2026-03-19: Implementada Respuesta Ágil (Optimistic UI) para eliminaciones y archivos en TikTokApp. Ahora la interfaz reacciona instantáneamente sin esperar a la DB, emulando la fluidez del módulo de notas.
+- 2026-03-19: Implementada sincronización en Tiempo Real para `tiktok_videos` y `tiktok_queue` en `App.tsx`. Ahora las eliminaciones, adiciones y cambios de estado se reflejan instantáneamente sin necesidad de F5.
+- 2026-03-19: Estandarizada la visualización de resúmenes AI en TikTokApp: ahora los resúmenes pendientes muestran un estado de pulso (animate-pulse) y un loader, y no permiten el clic hasta que el contenido está listo (paridad con Note Groups).
 - 2026-03-19: Consolidado script del worker en `scripts/tiktok_worker.py` y eliminado duplicado en el root. Añadido bloque `try-except` para `dotenv` permitiendo ejecución sin dependencias de desarrollo en GitHub Actions.
 - 2026-03-19: Implementado **debounce (1000ms)** en `fetchSummaryCounts` (App.tsx) dentro del canal Realtime para colapsar ráfagas de eventos y reducir el ruido de consultas a la DB.
 - 2026-03-19: Implementado `ErrorBoundary` global en `index.tsx` para evitar pantallazos negros ante crashes de React; diseño minimalista con opción de recarga.

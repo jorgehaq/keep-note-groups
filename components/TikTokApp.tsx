@@ -39,7 +39,8 @@ import {
   PenLine,
   Brain,
   GitBranch,
-  RotateCcw
+  RotateCcw,
+  Loader2
 } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 import { useUIStore } from '../src/lib/store';
@@ -162,7 +163,8 @@ const NewTikTokModal: React.FC<{
 export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
   const { 
     isTikTokMaximized, setIsTikTokMaximized, 
-    tikTokVideos, tikTokQueueItems,
+    tikTokVideos, setTikTokVideos, updateTikTokVideoSync, deleteTikTokVideoSync,
+    tikTokQueueItems, updateTikTokQueueItemSync, deleteTikTokQueueItemSync,
     focusedVideoId, setFocusedVideoId,
     isVideoTrayOpen, setIsVideoTrayOpen,
     isZenModeByApp, toggleZenMode,
@@ -274,31 +276,38 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
   const deleteVideo = async (id: string, url?: string) => {
     if (!confirm("¿Eliminar permanentemente este TikTok y todas sus notas?")) return;
     
-    // 1. Delete associated notes (sub-notes) - DB CASCADE should handle this but manual cleanup for safety
-    await supabase.from("notes").delete().eq("tiktok_video_id", id);
+    // 1. Optimistic local update
+    deleteTikTokVideoSync(id);
+    if (url) {
+      const qItem = tikTokQueueItems.find(q => q.url === url);
+      if (qItem) deleteTikTokQueueItemSync(qItem.id);
+    }
     
-    // 2. Delete from queue (log)
+    // Focus next if current was deleted
+    if (focusedVideoId === id) {
+      const remaining = rootVideos.filter(v => v.id !== id);
+      setFocusedVideoId(remaining.length > 0 ? remaining[0].id : null);
+    }
+
+    // 2. Perform deletions in Supabase
+    await supabase.from("notes").delete().eq("tiktok_video_id", id);
     if (url) {
       await supabase.from("tiktok_queue").delete().eq("url", url);
     }
-    // Cleanup any queue entries pointing to this video ID
     await supabase.from("tiktok_queue").delete().eq("video_id", id);
-    
-    // 3. Delete the video itself (cascades to summaries)
     await supabase.from("tiktok_videos").delete().eq("id", id);
-    
-    if (focusedVideoId === id) {
-      const remaining = rootVideos.filter(v => v.id !== id);
-      setFocusedVideoId(remaining.length > 0 ? remaining[0].id : null);
-    }
   };
 
   const archiveVideo = async (id: string) => {
-    await supabase.from("tiktok_videos").update({ status: 'archived' }).eq("id", id);
+    // Optimistic local update
+    updateTikTokVideoSync(id, { status: 'archived' });
+    
     if (focusedVideoId === id) {
       const remaining = rootVideos.filter(v => v.id !== id);
       setFocusedVideoId(remaining.length > 0 ? remaining[0].id : null);
     }
+    
+    await supabase.from("tiktok_videos").update({ status: 'archived' }).eq("id", id);
   };
 
   const restoreVideo = async (id: string) => {
@@ -650,7 +659,18 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
                     <FileText size={11} /> Transcripción
                   </button>
 
-                  {aiSummaries.map(summary => (
+                  {/* Tabs AI summaries — violetas (procesando) */}
+                  {aiSummaries.filter(s => s.status === 'pending' || s.status === 'processing').map(s => (
+                    <div key={s.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 max-w-[150px] bg-zinc-800/60 border-zinc-700 text-zinc-400 animate-pulse cursor-wait"
+                    >
+                      <Loader2 size={10} className="animate-spin shrink-0" />
+                      <span className="truncate">{s.target_objective || 'Analizando...'}</span>
+                    </div>
+                  ))}
+
+                  {/* Tabs AI summaries — violetas (completados) */}
+                  {aiSummaries.filter(s => s.status === 'completed' || !s.status).map(summary => (
                     <div key={summary.id} className="relative group">
                       <button 
                         onClick={() => setActiveTab(`summary_${summary.id}`)} 
@@ -709,8 +729,7 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
                       videoId={focusedVideo.id} 
                       onGenerate={async (obj) => { 
                         setShowAIInput(false);
-                        const newSum = await generateSummary(obj);
-                        if (newSum) setActiveTab(`summary_${newSum.id}`);
+                        await generateSummary(obj);
                       }} 
                     />
                   </div>

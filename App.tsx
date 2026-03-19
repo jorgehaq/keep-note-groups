@@ -72,7 +72,7 @@ function App() {
     setImminentRemindersCount,
     groups, setGroups, updateNoteSync, deleteNoteSync, updateGroupSync, deleteGroupSync,
     setTranslations, setBrainDumps,
-    setTikTokVideos, setTikTokQueueItems,
+    setTikTokVideos, setTikTokQueueItems, updateTikTokVideoSync, deleteTikTokVideoSync, updateTikTokQueueItemSync, deleteTikTokQueueItemSync,
     summaryCounts, setSummaryCounts,
     focusedNoteByGroup, lastActiveNoteByGroup, setFocusedNoteId,
     noteTrayOpenByGroup, setIsGlobalNoteTrayOpen,
@@ -319,6 +319,30 @@ function App() {
           setBrainDumps(prev => prev.map(d => d.id === payload.new.id ? (payload.new as BrainDump) : d));
         } else if (payload.eventType === 'DELETE') {
           setBrainDumps(prev => prev.filter(d => d.id !== payload.old.id));
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tiktok_videos' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setTikTokVideos(prev => {
+            if (prev.find(v => v.id === payload.new.id)) return prev;
+            return [payload.new as TikTokVideo, ...prev];
+          });
+        } else if (payload.eventType === 'UPDATE') {
+          updateTikTokVideoSync(payload.new.id, payload.new as Partial<TikTokVideo>);
+        } else if (payload.eventType === 'DELETE') {
+          deleteTikTokVideoSync(payload.old.id);
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tiktok_queue' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setTikTokQueueItems(prev => {
+            if (prev.find(q => q.id === payload.new.id)) return prev;
+            return [payload.new as TikTokQueueItem, ...prev];
+          });
+        } else if (payload.eventType === 'UPDATE') {
+          updateTikTokQueueItemSync(payload.new.id, payload.new as Partial<TikTokQueueItem>);
+        } else if (payload.eventType === 'DELETE') {
+          deleteTikTokQueueItemSync(payload.old.id);
         }
       })
       .subscribe();
