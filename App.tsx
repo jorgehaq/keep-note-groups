@@ -135,6 +135,7 @@ function App() {
   const [allGroupSummaries, setAllGroupSummaries] = useState<any[]>([]);
   const [allPizarronSummaries, setAllPizarronSummaries] = useState<any[]>([]);
   const sortMenuRef = useRef<HTMLDivElement>(null);
+  const summaryCountDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -246,7 +247,8 @@ function App() {
     const summaryChannel = supabase
       .channel('summaries-global-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'summaries' }, () => {
-        fetchSummaryCounts();
+        if (summaryCountDebounceRef.current) clearTimeout(summaryCountDebounceRef.current);
+        summaryCountDebounceRef.current = setTimeout(() => fetchSummaryCounts(), 1000);
       })
       .subscribe();
 
