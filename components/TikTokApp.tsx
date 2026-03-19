@@ -179,7 +179,9 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
-  const [sortMode, setSortMode] = useState<'date-desc' | 'alpha-asc'>('date-desc');
+  const [sortMode, setSortMode] = useState<'date-desc' | 'date-asc' | 'created-desc' | 'created-asc' | 'alpha-asc' | 'alpha-desc'>(() => {
+    return (localStorage.getItem('tiktokSortMode') as any) || 'date-desc';
+  });
   const [splitRatio, setSplitRatio] = useState(0.5);
   const [showAIInput, setShowAIInput] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -225,8 +227,31 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
     }
     // Sorting
     return result.sort((a, b) => {
-      if (sortMode === 'date-desc') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      return (a.title || "").localeCompare(b.title || "");
+      switch (sortMode) {
+        case 'date-desc': {
+          const dateB = new Date(b.updated_at || b.created_at || 0).getTime();
+          const dateA = new Date(a.updated_at || a.created_at || 0).getTime();
+          return dateB - dateA;
+        }
+        case 'date-asc': {
+          const dateA = new Date(a.updated_at || a.created_at || 0).getTime();
+          const dateB = new Date(b.updated_at || b.created_at || 0).getTime();
+          return dateA - dateB;
+        }
+        case 'created-desc': {
+          const dateB = new Date(b.created_at || 0).getTime();
+          const dateA = new Date(a.created_at || 0).getTime();
+          return dateB - dateA;
+        }
+        case 'created-asc': {
+          const dateA = new Date(a.created_at || 0).getTime();
+          const dateB = new Date(b.created_at || 0).getTime();
+          return dateA - dateB;
+        }
+        case 'alpha-asc': return (a.title || '').toLowerCase().localeCompare((b.title || '').toLowerCase());
+        case 'alpha-desc': return (b.title || '').toLowerCase().localeCompare((a.title || '').toLowerCase());
+        default: return 0;
+      }
     });
   }, [tikTokVideos, searchQuery, sortMode]);
 
@@ -240,11 +265,13 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
   }, [tikTokVideos, focusedVideoId]);
 
   // Auto-focus first video if none is focused
+  /*
   useEffect(() => {
     if (!focusedVideoId && rootVideos.length > 0) {
       setFocusedVideoId(rootVideos[0].id);
     }
   }, [rootVideos, focusedVideoId, setFocusedVideoId]);
+  */
 
   // Click outside for More Menu
   useEffect(() => {
@@ -474,12 +501,23 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
                 </button>
                 {isSortMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-[#1A1A24] border border-zinc-800 rounded-xl shadow-2xl z-50 py-1 overflow-hidden animate-fadeIn">
-                    <button onClick={() => { setSortMode('date-desc'); setIsSortMenuOpen(false); }} className={`w-full px-4 py-2 text-left text-xs flex items-center gap-2 hover:bg-zinc-800 ${sortMode === 'date-desc' ? 'text-[#EE1D52] bg-[#EE1D52]/5' : 'text-zinc-400'}`}>
-                      <Calendar size={14} /> Fecha (Recientes)
-                    </button>
-                    <button onClick={() => { setSortMode('alpha-asc'); setIsSortMenuOpen(false); }} className={`w-full px-4 py-2 text-left text-xs flex items-center gap-2 hover:bg-zinc-800 ${sortMode === 'alpha-asc' ? 'text-[#EE1D52] bg-[#EE1D52]/5' : 'text-zinc-400'}`}>
-                      <Type size={14} /> Nombre (A-Z)
-                    </button>
+                    {[
+                      { id: 'date-desc', label: 'Fecha (Recientes)', icon: <Calendar size={14} /> },
+                      { id: 'date-asc', label: 'Fecha (Antiguos)', icon: <Calendar size={14} /> },
+                      { id: 'created-desc', label: 'Creación (reciente)', icon: <Calendar size={14} /> },
+                      { id: 'created-asc', label: 'Creación (antigua)', icon: <Calendar size={14} /> },
+                      { id: 'alpha-asc', label: 'Nombre (A-Z)', icon: <Type size={14} /> },
+                      { id: 'alpha-desc', label: 'Nombre (Z-A)', icon: <Type size={14} /> },
+                    ].map(opt => (
+                      <button 
+                        key={opt.id} 
+                        onClick={() => { setSortMode(opt.id as any); localStorage.setItem('tiktokSortMode', opt.id); setIsSortMenuOpen(false); }} 
+                        className={`w-full px-4 py-2 text-left text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors ${sortMode === opt.id ? 'text-[#EE1D52] font-bold bg-[#EE1D52]/5' : 'text-zinc-400 font-medium'}`}
+                      >
+                        {opt.icon} {opt.label}
+                        {sortMode === opt.id && <Check size={14} className="ml-auto" />}
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
@@ -508,53 +546,30 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
         </div>
       )}
 
-      {/* 2. ACCESS TRAY */}
+      {/* 2. ACCESS TRAY (Solo Activos) */}
       {isVideoTrayOpen && !isZenMode && (
-        <div className="py-4 px-6 bg-[#1A1A24]/40 border-b border-zinc-800/30 overflow-x-auto hidden-scrollbar flex flex-col gap-4 animate-slideDown">
-          {/* Active Videos */}
-          <div className="flex items-center gap-3">
-            {rootVideos.length === 0 ? (
-              <div className="text-xs text-zinc-600 italic px-4">No hay videos activos</div>
-            ) : (
-              rootVideos.map(video => (
-                <button
-                  key={video.id}
-                  onClick={() => { setFocusedVideoId(video.id); }}
-                  className={`shrink-0 flex items-center gap-3 px-4 py-2 rounded-xl border transition-all ${
-                    focusedVideoId === video.id 
-                      ? 'bg-[#EE1D52] text-white border-[#EE1D52] shadow-lg shadow-[#EE1D52]/20 scale-[1.02]' 
-                      : 'bg-zinc-900/50 text-zinc-400 border-zinc-800 hover:border-[#EE1D52]/40 hover:text-[#EE1D52]'
-                  }`}
-                >
-                  <div className="w-6 h-8 rounded-md overflow-hidden bg-zinc-800 border border-zinc-700/50 shrink-0">
-                    <img src={video.thumbnail} className="w-full h-full object-cover" alt="" />
-                  </div>
-                  <div className="max-w-[150px] truncate text-[11px] font-bold">
-                    {highlightText(video.title || "Procesando...", searchQuery)}
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-
-          {/* Archived Section */}
-          {archivedVideos.length > 0 && (
-            <div className="border-t border-zinc-800/50 pt-4 flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-zinc-500 font-bold uppercase tracking-widest text-[9px] px-2 mb-1">
-                <Archive size={12} /> Archivo ({archivedVideos.length})
-              </div>
-              <div className="flex items-center gap-3 overflow-x-auto hidden-scrollbar">
-                {archivedVideos.map(video => (
-                  <div key={video.id} className="shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900/20 group">
-                    <span className="text-[10px] font-bold text-zinc-500 truncate max-w-[100px]">{video.title}</span>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => restoreVideo(video.id)} className="p-1 hover:text-[#EE1D52]" title="Restaurar"><RotateCcw size={12}/></button>
-                      <button onClick={() => deleteVideo(video.id, video.url)} className="p-1 hover:text-red-500" title="Eliminar"><Trash2 size={12}/></button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+        <div className="py-4 px-6 bg-[#1A1A24]/40 border-b border-zinc-800/30 overflow-x-auto hidden-scrollbar flex items-center gap-3 animate-slideDown">
+          {rootVideos.length === 0 ? (
+            <div className="text-xs text-zinc-600 italic px-4">No hay videos activos</div>
+          ) : (
+            rootVideos.map(video => (
+              <button
+                key={video.id}
+                onClick={() => { setFocusedVideoId(video.id); }}
+                className={`shrink-0 flex items-center gap-3 px-4 py-2 rounded-xl border transition-all ${
+                  focusedVideoId === video.id 
+                    ? 'bg-[#EE1D52] text-white border-[#EE1D52] shadow-lg shadow-[#EE1D52]/20 scale-[1.02]' 
+                    : 'bg-zinc-900/50 text-zinc-400 border-zinc-800 hover:border-[#EE1D52]/40 hover:text-[#EE1D52]'
+                }`}
+              >
+                <div className="w-6 h-8 rounded-md overflow-hidden bg-zinc-800 border border-zinc-700/50 shrink-0">
+                  <img src={video.thumbnail} className="w-full h-full object-cover" alt="" />
+                </div>
+                <div className="max-w-[150px] truncate text-[11px] font-bold">
+                  {highlightText(video.title || "Procesando...", searchQuery)}
+                </div>
+              </button>
+            ))
           )}
         </div>
       )}
@@ -562,8 +577,7 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
       {/* 3. MAIN CONTENT */}
       <div className="flex-1 overflow-hidden flex flex-col">
         {/* If there are videos, show the editor directly. If one is focused, show it. */}
-        {rootVideos.length > 0 ? (
-          focusedVideo ? (
+        {focusedVideo ? (
             <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] overflow-hidden m-4 animate-fadeIn">
               {/* Integrated Header */}
               <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
@@ -836,27 +850,110 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-zinc-500 italic">
-               Selecciona un video para comenzar
+            <div className={`flex-1 overflow-y-auto p-6 scroll-smooth animate-fadeIn`}>
+              <div className={`${isTikTokMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto space-y-12 pb-20`}>
+                {rootVideos.length > 0 ? (
+                  /* GRID DE VIDEOS ACTIVOS */
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {rootVideos.map(video => (
+                      <div 
+                        key={video.id} 
+                        onClick={() => setFocusedVideoId(video.id)}
+                        className={`group bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-zinc-800/50 rounded-2xl p-5 hover:border-[#EE1D52]/40 hover:shadow-xl transition-all cursor-pointer flex flex-col gap-4 relative`}
+                      >
+                        <div className="flex gap-4">
+                          <div className="w-16 h-20 rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 shrink-0 shadow-md">
+                            <img src={video.thumbnail} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
+                          </div>
+                          <div className="flex-1 min-w-0 flex flex-col justify-center">
+                            <h3 className="font-bold text-zinc-800 dark:text-zinc-100 truncate text-sm">
+                              {highlightText(video.title || "Procesando...", searchQuery)}
+                            </h3>
+                            <p className="text-[10px] font-medium text-zinc-500 mt-0.5 flex items-center gap-1">
+                              <User size={10} /> {video.author || "Anónimo"}
+                            </p>
+                            <div className="flex items-center gap-3 mt-2">
+                               <span className="text-[10px] font-black text-white px-1.5 py-0.5 bg-[#EE1D52] rounded flex items-center gap-1">
+                                 <Clock size={10} /> {formatDuration(video.duration)}
+                               </span>
+                               <span className="text-[9px] font-bold text-zinc-400 flex items-center gap-1 uppercase tracking-tighter">
+                                 <Calendar size={10} /> {new Date(video.created_at).toLocaleDateString()}
+                               </span>
+                            </div>
+                          </div>
+                          <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                             <button 
+                               onClick={(e) => { e.stopPropagation(); archiveVideo(video.id); }} 
+                               className="p-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-[#EE1D52] hover:bg-[#EE1D52]/10 rounded-xl transition-all"
+                               title="Archivar"
+                             >
+                               <Archive size={14} />
+                             </button>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between pt-3 border-t border-zinc-50 dark:border-zinc-800/50 mt-auto">
+                          <div className="flex items-center gap-1.5">
+                             <span className="text-[10px] font-bold text-zinc-400 capitalize">{video.author ? 'Creador' : 'Video'}</span>
+                             <span className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"></span>
+                             <span className="text-[10px] font-black text-[#EE1D52]/60 uppercase tracking-tighter italic">AI READY</span>
+                          </div>
+                          <div className="w-7 h-7 rounded-full bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center text-zinc-400 group-hover:bg-[#EE1D52] group-hover:text-white transition-all shadow-sm">
+                            <ChevronRight size={16} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  /* WELCOME SCREEN (Empty Root) */
+                  <div className="flex flex-col items-center justify-center text-center p-12 gap-6 animate-fadeIn">
+                    <div className="w-32 h-32 rounded-full bg-zinc-900/10 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center relative overflow-hidden group">
+                      <div className="absolute inset-0 bg-[#EE1D52]/5 group-hover:bg-[#EE1D52]/10 transition-colors"></div>
+                      <Brain size={56} className="text-zinc-600 dark:text-zinc-400 relative z-10" />
+                    </div>
+                    <div className="space-y-2 max-w-sm">
+                      <h2 className="text-xl font-black text-white uppercase tracking-tight">Cerebro TikTok</h2>
+                      <p className="text-sm text-zinc-500 font-medium">Extrae conocimiento de cualquier video. Usa el botón "Nuevo" para empezar o selecciona uno de tus accesos.</p>
+                    </div>
+                    <button 
+                       onClick={() => setIsModalOpen(true)}
+                       className="px-6 py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-2xl text-xs font-bold transition-all"
+                    >
+                       Agregar Nuevo Video
+                    </button>
+                  </div>
+                )}
+
+                {/* SECCIÓN DE ARCHIVO (Visible even if root is empty) */}
+                {archivedVideos.length > 0 && (
+                  <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800/50">
+                    <div className="flex items-center gap-2 text-zinc-400 font-bold uppercase tracking-widest text-xs px-2">
+                      <Archive size={16} /> Historial de Videos ({archivedVideos.length})
+                    </div>
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {archivedVideos.map(video => (
+                        <div key={video.id} className="p-4 bg-white dark:bg-[#1A1A24]/60 border border-zinc-200 dark:border-zinc-800/40 rounded-2xl flex items-center justify-between group hover:border-[#EE1D52]/30 transition-all">
+                          <div className="flex items-center gap-4 truncate">
+                            <div className="w-8 h-10 rounded bg-zinc-900 border border-zinc-800 overflow-hidden shrink-0 opacity-60">
+                              <img src={video.thumbnail} className="w-full h-full object-cover" alt="" />
+                            </div>
+                            <div className="flex flex-col truncate">
+                              <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300 truncate">{video.title || "Sin Título"}</span>
+                              <span className="text-[10px] text-zinc-500 font-medium">{video.author} • {formatDuration(video.duration)}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button onClick={() => restoreVideo(video.id)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-[#EE1D52] rounded-xl transition-all" title="Restaurar"><RotateCcw size={16}/></button>
+                            <button onClick={() => deleteVideo(video.id, video.url)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-red-500 rounded-xl transition-all" title="Eliminar permanentemente"><Trash2 size={16}/></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          )
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-12 gap-6 animate-fadeIn">
-            <div className="w-32 h-32 rounded-full bg-zinc-900/10 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center relative overflow-hidden group">
-              <div className="absolute inset-0 bg-[#EE1D52]/5 group-hover:bg-[#EE1D52]/10 transition-colors"></div>
-              <Brain size={56} className="text-zinc-600 dark:text-zinc-400 relative z-10" />
-            </div>
-            <div className="space-y-2 max-w-sm">
-              <h2 className="text-xl font-black text-white uppercase tracking-tight">Cerebro TikTok</h2>
-              <p className="text-sm text-zinc-500 font-medium">Extrae conocimiento de cualquier video. Usa el botón "Nuevo" para empezar o selecciona uno de tus accesos.</p>
-            </div>
-            <button 
-               onClick={() => setIsModalOpen(true)}
-               className="px-6 py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-2xl text-xs font-bold transition-all"
-            >
-               Agregar Nuevo Video
-            </button>
-          </div>
         )}
       </div>
 
