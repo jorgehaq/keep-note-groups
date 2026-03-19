@@ -15,13 +15,23 @@ import subprocess
 import tempfile
 import traceback
 from datetime import datetime, timezone
+from typing import Optional
 
 from supabase import create_client, Client
 
 # ── Config ──────────────────────────────────────────────────────────────────
-SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]   # service key, NO anon key
-MAX_ITEMS    = 5                                     # procesar máximo 5 por ciclo
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # En GitHub Actions no se necesita, los secretos ya están en os.environ
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")   # service key, NO anon key
+MAX_ITEMS    = 5                                         # procesar máximo 5 por ciclo
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise EnvironmentError("Faltan variables de entorno SUPABASE_URL o SUPABASE_SERVICE_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -32,7 +42,7 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def mark_queue(queue_id: str, status: str, video_id: str = None, error: str = None):
+def mark_queue(queue_id: str, status: str, video_id: Optional[str] = None, error: Optional[str] = None):
     """Actualiza el estado de un item en la cola."""
     payload = {"status": status, "updated_at": now_iso()}
     if video_id:

@@ -15,6 +15,7 @@
 - i18n solo tiene 'es' y 'en'. No agregar más idiomas sin pedirlo.
 
 ### Bugs Conocidos / Fixes Recientes
+- 2026-03-19: Actualizado `tiktok_worker.py` para manejar `dotenv` de forma opcional (try-except); permite ejecución fluida en GitHub Actions usando secretos de `os.environ`.
 - 2026-03-19: Implementado **debounce (1000ms)** en `fetchSummaryCounts` (App.tsx) dentro del canal Realtime para colapsar ráfagas de eventos y reducir el ruido de consultas a la DB.
 - 2026-03-19: Implementado `ErrorBoundary` global en `index.tsx` para evitar pantallazos negros ante crashes de React; diseño minimalista con opción de recarga.
 - 2026-03-19: Mitigado crash de CodeMirror (`Decorations that replace line breaks...`) mediante guard en `safeReplace` que impide reemplazos multilínea en `ViewPlugin`.
