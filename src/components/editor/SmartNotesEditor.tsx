@@ -419,7 +419,13 @@ const visualMarkupPluginFactory = (translationsMapRef: React.MutableRefObject<Re
         const selection = view.state.selection.main;
         const revealedLine = view.state.field(revealedLineField, false);
 
-        const safeReplace = (from: number, to: number) => { if (from < to) decos.push(Decoration.replace({}).range(from, to)); };
+        const safeReplace = (from: number, to: number) => { 
+            if (from >= to) return;
+            // Guard: ViewPlugin decorations that replace cannot cross line breaks
+            const lineEnd = view.state.doc.lineAt(from).to;
+            if (to > lineEnd) return;
+            decos.push(Decoration.replace({}).range(from, to)); 
+        };
         const safeMark = (className: string, from: number, to: number, attrs?: any) => {
             if (from < to) decos.push((attrs ? Decoration.mark({ class: className, attributes: attrs }) : Decoration.mark({ class: className })).range(from, to));
         };
@@ -1204,7 +1210,8 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                     menuPos = main.from;
                 }
                 
-                const rect = update.view.coordsAtPos(menuPos);
+                let rect: { top: number; left: number } | null = null;
+                try { rect = update.view.coordsAtPos(menuPos); } catch (e) { rect = null; }
                 if (rect && containerRef.current) {
                     const containerRect = containerRef.current.getBoundingClientRect();
                     const isMobile = window.innerWidth < 768;

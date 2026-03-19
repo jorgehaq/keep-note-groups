@@ -15,6 +15,9 @@
 - i18n solo tiene 'es' y 'en'. No agregar más idiomas sin pedirlo.
 
 ### Bugs Conocidos / Fixes Recientes
+- 2026-03-19: Implementado `ErrorBoundary` global en `index.tsx` para evitar pantallazos negros ante crashes de React; diseño minimalista con opción de recarga.
+- 2026-03-19: Mitigado crash de CodeMirror (`Decorations that replace line breaks...`) mediante guard en `safeReplace` que impide reemplazos multilínea en `ViewPlugin`.
+- 2026-03-19: Añadido `try-catch` preventivo en el plugin de selección de `SmartNotesEditor.tsx` al calcular coordenadas (`coordsAtPos`).
 - 2026-03-19: Corregido error de "Pantalla Negra" en producción al manejar `INITIAL_SESSION` en `onAuthStateChange` (Supabase v2) y unificar la carga inicial de datos.
 - 2026-03-19: Optimizada consulta de `summaries` en App.tsx añadiendo filtro de `user_id` para evitar escaneos de tabla completa y errores de RLS.
 - 2026-03-19: Estandarización de divisores (resizer) en TikTokApp para paridad absoluta con el módulo "Grupo de Notas" (clases de hover, ancho y animación fadeIn).
