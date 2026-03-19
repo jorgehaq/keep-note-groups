@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Settings, Grid, X, LogOut, StickyNote, KanbanSquare, Clock, Bell, PenTool, Languages, ChevronUp, ChevronDown, Music } from 'lucide-react';
+import { Plus, Settings, Grid, X, LogOut, StickyNote, KanbanSquare, Clock, Bell, PenTool, Languages, ChevronUp, ChevronDown, Play } from 'lucide-react';
 import { Group } from '../types';
 import { GroupLauncher } from './GroupLauncher';
 import { useUIStore } from '../src/lib/store';
@@ -195,7 +195,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all shrink-0 ${getAppStyle('tiktok')}`}
           title="TikTok a Notas"
         >
-          <Music size={20} />
+          <Play size={20} />
         </button>
 
         <div className="w-8 h-0.5 bg-zinc-300 dark:bg-[#2D2D42] rounded-full shrink-0"></div>

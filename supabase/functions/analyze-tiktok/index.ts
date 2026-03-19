@@ -12,9 +12,24 @@ serve(async (req) => {
   }
 
   try {
-    // Extract payload
-    const { prompt } = await req.json();
-    console.log("📥 Payload recibido:", { promptLength: prompt?.length });
+    // Extract payload with better error handling
+    const rawBody = await req.text();
+    console.log("📥 Raw body length:", rawBody.length);
+    
+    let prompt;
+    try {
+      const body = JSON.parse(rawBody);
+      prompt = body.prompt;
+    } catch (_e) {
+      console.error("❌ Body is not valid JSON:", rawBody);
+      throw new Error("Cuerpo de solicitud inválido: no es JSON.");
+    }
+
+    if (!prompt) {
+      throw new Error("Falta el campo 'prompt' en el cuerpo de la solicitud.");
+    }
+
+    console.log("📥 Prompt Length:", prompt.length);
 
     const apiKey = Deno.env.get("GEMINI_API_KEY");
     console.log("🔑 API Key presente:", !!apiKey);
@@ -36,9 +51,15 @@ serve(async (req) => {
             temperature: 0.7,
             topP: 0.95,
             topK: 40,
-            maxOutputTokens: 2048,
+            maxOutputTokens: 4096,
             responseMimeType: "application/json",
-          }
+          },
+          safetySettings: [
+            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
+            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
+            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
+          ]
         }),
       },
     );
@@ -52,7 +73,24 @@ serve(async (req) => {
     }
 
     const aiResponseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-    const analysis = JSON.parse(aiResponseText);
+    console.log("📝 Raw AI Response (first 500 chars):", aiResponseText.substring(0, 500));
+
+    let analysis;
+    try {
+      // Robust JSON extraction: look for the first '{' and last '}'
+      const firstBrace = aiResponseText.indexOf('{');
+      const lastBrace = aiResponseText.lastIndexOf('}');
+      if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+        throw new Error("No se encontró un bloque JSON válido en la respuesta de la IA.");
+      }
+      const cleanedText = aiResponseText.substring(firstBrace, lastBrace + 1);
+      analysis = JSON.parse(cleanedText);
+    } catch (parseError: unknown) {
+      const pErr = parseError as Error;
+      console.error("❌ JSON Parse Error:", pErr.message);
+      console.error("📄 Full Content that failed to parse:", aiResponseText);
+      throw new Error("No se pudo procesar la respuesta de la IA como JSON: " + pErr.message);
+    }
 
     return new Response(
       JSON.stringify(analysis),
@@ -61,11 +99,19 @@ serve(async (req) => {
         status: 200,
       },
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     const err = error as Error;
-    return new Response(JSON.stringify({ error: err.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 400,
-    });
+    console.error("❌ Edge Function internal error:", err.message);
+    return new Response(
+      JSON.stringify({ 
+        error: err.message,
+        details: err.stack,
+        timestamp: new Date().toISOString()
+      }), 
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      }
+    );
   }
 });

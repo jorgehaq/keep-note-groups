@@ -1,12 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
-  Music, 
-  List, 
   Play, 
   Check, 
   X, 
-  AlertCircle, 
-  RefreshCw, 
   Search, 
   ExternalLink, 
   Plus, 
@@ -31,7 +27,19 @@ import {
   Sparkles,
   FileText,
   Quote,
-  StickyNote
+  StickyNote,
+  ChevronsDownUp,
+  ArrowUpDown,
+  Calendar,
+  Wind,
+  PlusCircle,
+  History,
+  AlertCircle,
+  ChevronLeft,
+  PenLine,
+  Brain,
+  GitBranch,
+  RotateCcw
 } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 import { useUIStore } from '../src/lib/store';
@@ -39,6 +47,9 @@ import { Session } from '@supabase/supabase-js';
 import { TikTokVideo, TikTokQueueItem } from '../types';
 import { KanbanSemaphore } from './KanbanSemaphore';
 import { TikTokAIPanel } from './TikTokAIPanel';
+import { SmartNotesEditor, SmartNotesEditorRef } from '../src/components/editor/SmartNotesEditor';
+import { useTikTokSummaries } from '../src/lib/useTikTokSummaries';
+import { useTikTokSubnotes } from '../src/lib/useTikTokSubnotes';
 
 // --- HELPERS ---
 const formatDuration = (secs: number): string => {
@@ -48,94 +59,283 @@ const formatDuration = (secs: number): string => {
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
-const extractUrls = (raw: string): string[] => {
-  return raw
-    .split(/[\n,\s]+/)
-    .map((u) => u.trim())
-    .filter((u) => u.includes("tiktok.com"));
+const highlightText = (text: string, highlight?: string): React.ReactNode => {
+    if (!highlight || !highlight.trim()) return text;
+    const escaped = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+    return parts.map((part, index) =>
+        part.toLowerCase() === highlight.toLowerCase() ? (
+            <mark key={index} className="bg-yellow-200 dark:bg-yellow-500/40 text-yellow-900 dark:text-yellow-100 px-0.5 font-medium">
+                {part}
+            </mark>
+        ) : (
+            part
+        )
+    );
 };
+
+// --- SUB-COMPONENTS ---
+
+const NewTikTokModal: React.FC<{ 
+  onClose: () => void; 
+  queue: TikTokQueueItem[]; 
+  onAdd: (urls: string) => void;
+  isAdding: boolean;
+}> = ({ onClose, queue, onAdd, isAdding }) => {
+  const [urlInput, setUrlInput] = useState("");
+  
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+      <div className="w-full max-w-2xl bg-[#1A1A24] border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+        <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-[#EE1D52]/20 text-[#EE1D52] rounded-xl">
+              <PlusCircle size={20} />
+            </div>
+            <h2 className="text-lg font-bold text-white uppercase tracking-tight">Nuevo TikTok</h2>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-zinc-800 rounded-xl text-zinc-400 transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        
+        <div className="p-6 overflow-y-auto hidden-scrollbar flex flex-col gap-6">
+          {/* Input Area */}
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-1">Pegar URLs (una por línea o separadas por coma)</label>
+            <div className="flex gap-2">
+              <textarea 
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                placeholder="https://www.tiktok.com/@user/video/..."
+                className="flex-1 min-h-[100px] bg-zinc-900/50 border border-zinc-800 rounded-2xl px-4 py-3 text-sm text-zinc-200 outline-none focus:border-[#EE1D52]/50 transition-all resize-none font-mono"
+              />
+            </div>
+            <button 
+              onClick={() => { onAdd(urlInput); setUrlInput(""); }}
+              disabled={isAdding || !urlInput.trim()}
+              className="w-full py-3 bg-[#EE1D52] hover:bg-[#D61A4A] disabled:opacity-50 text-white rounded-2xl text-sm font-bold transition-all active:scale-[0.98] shadow-lg shadow-[#EE1D52]/20 flex items-center justify-center gap-2"
+            >
+              {isAdding ? <Clock className="animate-spin" size={18} /> : <Plus size={18} />}
+              {isAdding ? "Procesando..." : "Agregar a la cola"}
+            </button>
+          </div>
+
+          {/* Log Area */}
+          <div className="space-y-3 flex-1 min-h-[200px] flex flex-col">
+            <div className="flex items-center justify-between px-1">
+              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                <History size={12} /> Log de Pendientes y Procesados
+              </label>
+              <span className="text-[9px] font-bold text-zinc-600 bg-zinc-900 px-2 py-0.5 rounded-full">{queue.length} items</span>
+            </div>
+            <div className="flex-1 bg-zinc-950/50 border border-zinc-800/80 rounded-2xl p-4 font-mono text-[10px] overflow-y-auto space-y-2">
+              {queue.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-zinc-700 italic">No hay actividad reciente</div>
+              ) : (
+                queue.map(item => (
+                  <div key={item.id} className="flex items-start gap-3 border-b border-zinc-900/50 pb-2 last:border-0">
+                    <span className={`shrink-0 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${
+                      item.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' :
+                      item.status === 'failed' ? 'bg-red-500/10 text-red-500' :
+                      item.status === 'processing' ? 'bg-amber-500/10 text-amber-500 animate-pulse' :
+                      'bg-zinc-500/10 text-zinc-400'
+                    }`}>
+                      {item.status}
+                    </span>
+                    <span className="text-zinc-500 shrink-0">{new Date(item.created_at).toLocaleTimeString()}</span>
+                    <span className="text-zinc-300 truncate flex-1">{item.url}</span>
+                    {item.error_msg && <span className="text-red-400/60 italic" title={item.error_msg}>!!</span>}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- MAIN COMPONENT ---
 
 export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
   const { 
-    isTikTokMaximized, 
-    setIsTikTokMaximized, 
-    activeGroupId,
-    isZenModeByApp,
-    tikTokVideos,
-    tikTokQueueItems,
-    focusedVideoId,
-    setFocusedVideoId,
-    isVideoTrayOpen,
-    setIsVideoTrayOpen,
-    groups, // Needed for selecting target group when converting to note
-    overdueRemindersCount,
-    showOverdueMarquee,
-    setShowOverdueMarquee
+    isTikTokMaximized, setIsTikTokMaximized, 
+    tikTokVideos, tikTokQueueItems,
+    focusedVideoId, setFocusedVideoId,
+    isVideoTrayOpen, setIsVideoTrayOpen,
+    isZenModeByApp, toggleZenMode,
+    overdueRemindersCount, showOverdueMarquee, setShowOverdueMarquee,
+    activeTabByVideo, setActiveTabByVideo,
+    isTikTokPizarronOpen, setIsTikTokPizarronOpen,
+    pizarronVisibleByNoteAndTab, setPizarronVisible,
+    groups, activeGroupId
   } = useUIStore();
 
-  const [urlInput, setUrlInput] = useState("");
-  const [activeEditorTab, setActiveEditorTab] = useState<"notes" | "transcript" | "ai">("notes");
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
-  const actionMenuRef = useRef<HTMLDivElement>(null);
+  const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+  const [sortMode, setSortMode] = useState<'date-desc' | 'alpha-asc'>('date-desc');
+  const [splitRatio, setSplitRatio] = useState(0.5);
+  const [showAIInput, setShowAIInput] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  
+  const sortMenuRef = useRef<HTMLDivElement>(null);
+  const splitContainerRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+  const editorRef = useRef<SmartNotesEditorRef>(null);
+  const scratchRef = useRef<SmartNotesEditorRef>(null);
 
   const isZenMode = !!isZenModeByApp['tiktok'];
-  const focusedVideo = tikTokVideos.find(v => v.id === focusedVideoId);
+  const focusedVideo = useMemo(() => tikTokVideos.find(v => v.id === focusedVideoId), [tikTokVideos, focusedVideoId]);
+  
+  const { 
+    summaries: aiSummaries, 
+    generateSummary, 
+    deleteSummary, 
+    updateScratchpad: updateSummaryScratchpad, 
+    updateSummaryMetadata,
+    updateSummaryContent 
+  } = useTikTokSummaries(focusedVideoId);
 
-  // Close action menu when clicking outside
+  const {
+    subnotes,
+    createSubnote,
+    deleteSubnote,
+    updateSubnote
+  } = useTikTokSubnotes(focusedVideoId);
+
+  const activeTab = focusedVideoId ? (activeTabByVideo[focusedVideoId] || 'original') : 'original';
+  const setActiveTab = (tabId: string) => { if (focusedVideoId) setActiveTabByVideo(focusedVideoId, tabId); };
+
+  // Hierarchy support
+  const rootVideos = useMemo(() => {
+    let result = tikTokVideos.filter(v => !v.parent_id && v.status !== 'archived');
+    if (searchQuery.trim()) {
+      result = result.filter(v => 
+        v.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        v.summary?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        v.author?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    // Sorting
+    return result.sort((a, b) => {
+      if (sortMode === 'date-desc') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      return (a.title || "").localeCompare(b.title || "");
+    });
+  }, [tikTokVideos, searchQuery, sortMode]);
+
+  const archivedVideos = useMemo(() => {
+    return tikTokVideos.filter(v => v.status === 'archived');
+  }, [tikTokVideos]);
+
+  const subVideos = useMemo(() => {
+    if (!focusedVideoId) return [];
+    return tikTokVideos.filter(v => v.parent_id === focusedVideoId);
+  }, [tikTokVideos, focusedVideoId]);
+
+  // Auto-focus first video if none is focused
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target as Node)) {
-        setIsActionMenuOpen(false);
+    if (!focusedVideoId && rootVideos.length > 0) {
+      setFocusedVideoId(rootVideos[0].id);
+    }
+  }, [rootVideos, focusedVideoId, setFocusedVideoId]);
+
+  // Click outside for More Menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+        setShowMoreMenu(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    if (showMoreMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMoreMenu]);
 
-  // --- ACTIONS ---
-  const handleAddUrls = async () => {
-    const urls = extractUrls(urlInput);
+  // Actions
+  const handleAddUrls = async (raw: string) => {
+    const urls = raw.split(/[\n,\s]+/).map(u => u.trim()).filter(u => u.includes("tiktok.com"));
     if (!urls.length) return;
     setIsAdding(true);
-    
-    const rows = urls.map((url) => ({ 
-      url, 
-      user_id: session.user.id, 
-      status: "pending" 
-    }));
-    
-    const { error } = await supabase.from("tiktok_queue").insert(rows);
+    const rows = urls.map(url => ({ url, user_id: session.user.id, status: "pending" }));
+    await supabase.from("tiktok_queue").insert(rows);
+    setIsAdding(false);
+  };
 
-    if (!error) {
-      setUrlInput("");
-      // Realtime will pick up the change
+  const updateVideo = async (id: string, updates: Partial<TikTokVideo>) => {
+    await supabase.from("tiktok_videos").update(updates).eq("id", id);
+  };
+
+  const deleteVideo = async (id: string, url?: string) => {
+    if (!confirm("¿Eliminar permanentemente este TikTok y todas sus notas?")) return;
+    
+    // 1. Delete associated notes (sub-notes) - DB CASCADE should handle this but manual cleanup for safety
+    await supabase.from("notes").delete().eq("tiktok_video_id", id);
+    
+    // 2. Delete from queue (log)
+    if (url) {
+      await supabase.from("tiktok_queue").delete().eq("url", url);
+    }
+    // Cleanup any queue entries pointing to this video ID
+    await supabase.from("tiktok_queue").delete().eq("video_id", id);
+    
+    // 3. Delete the video itself (cascades to summaries)
+    await supabase.from("tiktok_videos").delete().eq("id", id);
+    
+    if (focusedVideoId === id) {
+      const remaining = rootVideos.filter(v => v.id !== id);
+      setFocusedVideoId(remaining.length > 0 ? remaining[0].id : null);
+    }
+  };
+
+  const archiveVideo = async (id: string) => {
+    await supabase.from("tiktok_videos").update({ status: 'archived' }).eq("id", id);
+    if (focusedVideoId === id) {
+      const remaining = rootVideos.filter(v => v.id !== id);
+      setFocusedVideoId(remaining.length > 0 ? remaining[0].id : null);
+    }
+  };
+
+  const restoreVideo = async (id: string) => {
+    await supabase.from("tiktok_videos").update({ status: 'active' }).eq("id", id);
+    setFocusedVideoId(id);
+  };
+
+  const handleCreateSubTikTok = async () => {
+    if (!focusedVideoId) return;
+    const url = prompt("Introduce el URL para el Sub-TikTok:");
+    if (!url) return;
+    
+    setIsAdding(true);
+    const { data: queueData, error: queueError } = await supabase.from("tiktok_queue").insert([{
+      url,
+      user_id: session.user.id,
+      status: "pending",
+      parent_id: focusedVideoId
+    }]).select().single();
+    
+    if (queueError) {
+      alert("Error al crear sub-tiktok: " + queueError.message);
+    } else {
+      // In a real scenario, we might want to link it once it's processed.
+      // For now, let's just add it to the queue. 
+      // The worker will insert it into tiktok_videos. 
+      // We need a way to tell the worker it has a parent.
+      // But our worker doesn't support parent_id yet.
+      // So I'll manually insert a placeholder or wait for processing.
+      setIsModalOpen(true); // Show log
     }
     setIsAdding(false);
   };
 
-  const handleUpdateVideo = async (updates: Partial<TikTokVideo>) => {
-    if (!focusedVideoId) return;
-    await supabase.from("tiktok_videos").update(updates).eq("id", focusedVideoId);
-  };
-
-  const handleDeleteVideo = async (id: string) => {
-    if (!confirm("¿Estás seguro de eliminar este video?")) return;
-    await supabase.from("tiktok_videos").delete().eq("id", id);
-    if (focusedVideoId === id) setFocusedVideoId(null);
-  };
-
-  const filteredVideos = tikTokVideos.filter(v => 
-    v.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    v.summary?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    v.author?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   const handleConvertToNote = async () => {
     if (!focusedVideo) return;
-    
-    // User selects a group
+    const { groups, activeGroupId } = useUIStore.getState();
     const groupNames = groups.map((g, idx) => `${idx + 1}. ${g.title}`).join("\n");
     const choice = prompt(`Selecciona el número del grupo para la nueva nota:\n${groupNames}\n\n(Deja vacío para el grupo activo)`);
     
@@ -169,348 +369,487 @@ ${focusedVideo.scratchpad || "_Sin notas_"}
 ${focusedVideo.transcript || "_Sin transcripción_"}
 `.trim();
 
-    const { data, error } = await supabase.from("notes").insert([{
+    const { error } = await supabase.from("notes").insert([{
       title: `TikTok: ${focusedVideo.title?.slice(0, 40)}`,
       content,
       user_id: session.user.id,
       group_id: targetGroupId,
       position: 0
-    }]).select().single();
+    }]);
 
     if (error) {
       alert("Error al convertir a nota: " + error.message);
     } else {
-      setIsActionMenuOpen(false);
-      if (confirm("Nota creada con éxito. ¿Quieres ir a verla ahora?")) {
-        useUIStore.setState({ globalView: 'notes', activeGroupId: targetGroupId });
-      }
+      alert("¡Nota creada con éxito!");
     }
   };
 
+  const handleDividerMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    isDraggingRef.current = true;
+    const container = splitContainerRef.current;
+    if (!container) return;
+    const onMove = (ev: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      const rect = container.getBoundingClientRect();
+      const ratio = (ev.clientX - rect.left) / rect.width;
+      setSplitRatio(Math.min(0.85, Math.max(0.15, ratio)));
+    };
+    const onUp = () => {
+      isDraggingRef.current = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+
+  // Click outside menus
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) setIsSortMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
-    <div className={`flex h-full bg-[#13131A] text-zinc-100 font-sans transition-all duration-300 ${isTikTokMaximized ? 'fixed inset-0 z-50' : 'relative'}`}>
+    <div className={`flex flex-col h-full bg-[#13131A] text-zinc-100 font-sans transition-all duration-300 ${isTikTokMaximized ? 'fixed inset-0 z-50' : 'relative'}`}>
       
-      {/* 1. LEFT TRAY (VIDEO LIST & QUEUE) */}
+      {/* 1. HEADER */}
       {!isZenMode && (
-        <div className={`
-          flex flex-col border-r border-zinc-800/50 bg-[#1A1A24] md:bg-[#1A1A24]/40 backdrop-blur-3xl transition-all duration-300 
-          ${isVideoTrayOpen ? 'w-full fixed inset-0 z-[60] md:relative md:w-80 md:inset-auto' : 'w-0 overflow-hidden'}
-        `}>
-          <div className="p-4 border-b border-zinc-800/50 flex flex-col gap-4">
-             {/* Mobile Close Button */}
-             <div className="flex md:hidden items-center justify-between mb-2">
-               <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Explorar Videos</span>
-               <button onClick={() => setIsVideoTrayOpen(false)} className="p-2 bg-zinc-800 rounded-xl text-zinc-400">
-                 <X size={20} />
-               </button>
-             </div>
-             {/* Search Area with Amber Pattern */}
-             <div className="relative group">
-               <Search className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-amber-400' : 'text-zinc-500'}`} size={16} />
-               <input
-                 type="text"
-                 value={searchQuery}
-                 onChange={(e) => setSearchQuery(e.target.value)}
-                 placeholder="Buscar videos..."
-                 className={`w-full bg-zinc-900/50 border rounded-2xl py-2.5 pl-11 pr-4 text-xs outline-none transition-all ${searchQuery ? 'border-amber-500/50 ring-4 ring-amber-500/5 shadow-[0_0_15px_rgba(245,158,11,0.1)]' : 'border-zinc-800 focus:border-indigo-500/50'}`}
-               />
-             </div>
+        <div className="sticky top-0 z-30 bg-[#1A1A24]/90 backdrop-blur-md shrink-0 border-b border-zinc-800/50">
+          <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 gap-4">
+            <h1 className="text-xl font-bold text-white flex items-center gap-3">
+              <div className="h-9 p-2 bg-[#EE1D52] rounded-lg text-white shadow-lg shadow-[#EE1D52]/20 shrink-0">
+                <Play size={20} />
+              </div>
+              <span className="truncate">TikTok</span>
+            </h1>
+            
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Bell Reminder */}
+              <button
+                onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
+                disabled={overdueRemindersCount === 0}
+                className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
+                  showOverdueMarquee 
+                    ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
+                    : overdueRemindersCount > 0
+                      ? 'bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20'
+                      : 'bg-zinc-900/50 border-zinc-800 text-zinc-500 opacity-60 cursor-not-allowed'
+                }`}
+              >
+                <Bell size={18} className={overdueRemindersCount > 0 ? 'animate-pulse' : ''} />
+                {overdueRemindersCount > 0 && <span className="text-xs font-bold">{overdueRemindersCount}</span>}
+              </button>
 
-             {/* Add URL */}
-             <div className="flex gap-2">
-               <input 
-                 type="text" 
-                 value={urlInput}
-                 onChange={(e) => setUrlInput(e.target.value)}
-                 placeholder="Pegar URL TikTok..."
-                 className="flex-1 bg-zinc-900/50 border border-zinc-800 rounded-xl px-3 py-2 text-[10px] outline-none focus:border-indigo-500/30"
-                 onKeyDown={(e) => e.key === 'Enter' && handleAddUrls()}
-               />
-               <button 
-                 onClick={handleAddUrls}
-                 disabled={isAdding || !urlInput.trim()}
-                 className="p-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-white transition-all disabled:opacity-50"
-               >
-                 {isAdding ? <RefreshCw className="animate-spin" size={14} /> : <Plus size={14} />}
-               </button>
-             </div>
-          </div>
+              {/* Accesos Tray Toggle */}
+              <button 
+                onClick={() => setIsVideoTrayOpen(!isVideoTrayOpen)} 
+                className={`h-9 px-3 rounded-xl transition-all border flex items-center gap-2 ${isVideoTrayOpen ? 'bg-[#EE1D52] border-[#EE1D52]/80 text-white font-bold shadow-lg shadow-[#EE1D52]/20' : 'bg-[#EE1D52]/10 text-[#EE1D52] border-[#EE1D52]/30 hover:bg-[#EE1D52]/20'}`}
+              >
+                <ChevronsDownUp size={18} className={`transition-transform duration-300 ${isVideoTrayOpen ? 'rotate-180' : ''}`}/>
+                <span className="text-sm font-bold">{rootVideos.length}</span>
+              </button>
 
-          {/* List Content */}
-          <div className="flex-1 overflow-y-auto hidden-scrollbar p-2 space-y-2">
-             {/* Queue Items */}
-             {tikTokQueueItems.length > 0 && (
-               <div className="space-y-1 mb-4">
-                 <div className="px-3 py-2 text-[9px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                   <Clock size={10} /> En Cola ({tikTokQueueItems.length})
-                 </div>
-                 {tikTokQueueItems.map(item => (
-                   <div key={item.id} className="mx-1 p-2 rounded-xl bg-indigo-500/5 border border-indigo-500/10 flex items-center justify-between gap-2 overflow-hidden shadow-sm animate-pulse">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] text-zinc-400 truncate opacity-60 italic">{item.url}</p>
-                      </div>
-                      <div className="text-[8px] font-black bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded-full uppercase">
-                        {item.status}
-                      </div>
-                   </div>
-                 ))}
-               </div>
-             )}
+              {/* Maximize */}
+              <button onClick={() => setIsTikTokMaximized(!isTikTokMaximized)} className="h-9 p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-white transition-all">
+                {isTikTokMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+              </button>
 
-             {/* Processed Videos */}
-             <div className="space-y-1">
-               <div className="px-3 py-2 text-[9px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                 <Play size={10} /> Videos Procesados
-               </div>
-               {filteredVideos.map(video => (
-                 <button
-                   key={video.id}
-                   onClick={() => setFocusedVideoId(video.id)}
-                   className={`w-full group text-left p-3 rounded-2xl flex items-center gap-3 transition-all ${
-                     focusedVideoId === video.id 
-                       ? 'bg-indigo-600/10 border border-indigo-500/30 shadow-lg shadow-black/20 translate-x-1' 
-                       : 'hover:bg-zinc-800/40 border border-transparent'
-                   }`}
-                 >
-                   <div className="w-12 h-16 rounded-xl overflow-hidden flex-shrink-0 border border-zinc-800 group-hover:border-zinc-700 transition-all shadow-inner relative">
-                      <img src={video.thumbnail} className="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 transition-all" alt="" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                      <div className="absolute bottom-1 right-1 text-[8px] font-bold text-white/80">{formatDuration(video.duration)}</div>
-                   </div>
-                   <div className="flex-1 min-w-0">
-                     <h4 className={`text-xs font-bold truncate transition-colors ${focusedVideoId === video.id ? 'text-indigo-400' : 'text-zinc-200 group-hover:text-white'}`}>
-                       {video.title || "Procesando..."}
-                     </h4>
-                     <p className="text-[10px] text-zinc-500 mt-0.5 font-medium flex items-center gap-1">
-                        <User size={10} /> @{video.author}
-                     </p>
-                     <div className="flex items-center gap-2 mt-2 opacity-50 group-hover:opacity-80 transition-opacity">
-                        <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-tighter">
-                          {new Date(video.created_at).toLocaleDateString()}
-                        </span>
-                     </div>
-                   </div>
-                 </button>
-               ))}
-             </div>
+              {/* Sort */}
+              <div className="relative" ref={sortMenuRef}>
+                <button onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} className="h-9 p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-white transition-all">
+                  <ArrowUpDown size={18} />
+                </button>
+                {isSortMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-[#1A1A24] border border-zinc-800 rounded-xl shadow-2xl z-50 py-1 overflow-hidden animate-fadeIn">
+                    <button onClick={() => { setSortMode('date-desc'); setIsSortMenuOpen(false); }} className={`w-full px-4 py-2 text-left text-xs flex items-center gap-2 hover:bg-zinc-800 ${sortMode === 'date-desc' ? 'text-[#EE1D52] bg-[#EE1D52]/5' : 'text-zinc-400'}`}>
+                      <Calendar size={14} /> Fecha (Recientes)
+                    </button>
+                    <button onClick={() => { setSortMode('alpha-asc'); setIsSortMenuOpen(false); }} className={`w-full px-4 py-2 text-left text-xs flex items-center gap-2 hover:bg-zinc-800 ${sortMode === 'alpha-asc' ? 'text-[#EE1D52] bg-[#EE1D52]/5' : 'text-zinc-400'}`}>
+                      <Type size={14} /> Nombre (A-Z)
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Search */}
+              <div className="relative">
+                <Search size={15} className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-[#EE1D52]' : 'text-zinc-500'}`} />
+                <input 
+                  type="text" 
+                  placeholder="Buscar TikTok..." 
+                  value={searchQuery} 
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="h-9 pl-9 pr-4 bg-zinc-900/50 border border-zinc-800 rounded-xl text-xs outline-none focus:border-[#EE1D52]/50 transition-all w-48"
+                />
+              </div>
+
+              {/* New Button */}
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="h-9 bg-[#EE1D52] hover:bg-[#D61A4A] text-white px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 active:scale-95 transition-all shadow-[#EE1D52]/10 border border-[#EE1D52]/30"
+              >
+                <Plus size={18} /> <span className="text-sm font-bold">Nuevo TikTok</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* 2. MAIN CONTENT (EDITOR & INFO) */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#13131A] relative shadow-2xl overflow-hidden">
-        
-        {/* Toggle Tray Button */}
-        {!isZenMode && (
-          <button
-            onClick={() => setIsVideoTrayOpen(!isVideoTrayOpen)}
-            className={`absolute top-1/2 -left-3 -translate-y-1/2 p-2 bg-zinc-800 hover:bg-zinc-700 rounded-full border border-zinc-700 z-40 transition-all shadow-xl ${isVideoTrayOpen ? 'md:opacity-0 md:hover:opacity-100' : 'opacity-100'}`}
-          >
-            <PanelLeft size={16} className={`text-zinc-400 transition-transform ${isVideoTrayOpen ? '' : 'rotate-180'}`} />
-          </button>
-        )}
-
-        {focusedVideo ? (
-          <>
-            {/* VIDEO HEADER */}
-            <div className={`px-8 py-4 border-b border-zinc-800/50 flex items-center justify-between gap-6 transition-all ${isZenMode ? 'mt-8' : ''}`}>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-1">
-                  <h2 className="text-xl font-black text-white truncate uppercase tracking-tight">{focusedVideo.title}</h2>
-                  <KanbanSemaphore 
-                    status={focusedVideo.status || 'todo'} 
-                    onStatusChange={(s) => handleUpdateVideo({ status: s })}
-                  />
-                </div>
-                <div className="flex items-center gap-4 text-xs font-bold text-zinc-500 font-mono uppercase tracking-[0.1em]">
-                  <span className="flex items-center gap-1.5 text-indigo-400/80"><User size={14} /> @{focusedVideo.author}</span>
-                  <span className="flex items-center gap-1.5"><Eye size={14} /> {focusedVideo.view_count.toLocaleString()}</span>
-                  <span className="flex items-center gap-1.5"><Heart size={14} className="text-red-500/40" /> {focusedVideo.like_count.toLocaleString()}</span>
-                  <a href={focusedVideo.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-white transition-colors">
-                    <ExternalLink size={14} /> VIDEO ORIGINAL
-                  </a>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                {/* Bell Reminder Button */}
+      {/* 2. ACCESS TRAY */}
+      {isVideoTrayOpen && !isZenMode && (
+        <div className="py-4 px-6 bg-[#1A1A24]/40 border-b border-zinc-800/30 overflow-x-auto hidden-scrollbar flex flex-col gap-4 animate-slideDown">
+          {/* Active Videos */}
+          <div className="flex items-center gap-3">
+            {rootVideos.length === 0 ? (
+              <div className="text-xs text-zinc-600 italic px-4">No hay videos activos</div>
+            ) : (
+              rootVideos.map(video => (
                 <button
-                  onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
-                  disabled={overdueRemindersCount === 0}
-                  className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
-                    showOverdueMarquee 
-                      ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
-                      : overdueRemindersCount > 0
-                        ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
-                        : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
+                  key={video.id}
+                  onClick={() => { setFocusedVideoId(video.id); }}
+                  className={`shrink-0 flex items-center gap-3 px-4 py-2 rounded-xl border transition-all ${
+                    focusedVideoId === video.id 
+                      ? 'bg-[#EE1D52] text-white border-[#EE1D52] shadow-lg shadow-[#EE1D52]/20 scale-[1.02]' 
+                      : 'bg-zinc-900/50 text-zinc-400 border-zinc-800 hover:border-[#EE1D52]/40 hover:text-[#EE1D52]'
                   }`}
-                  title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                 >
-                  <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-white' : 'text-red-500'}` : ''} />
-                  {overdueRemindersCount > 0 && (
-                    <span className={`text-xs font-bold whitespace-nowrap ${showOverdueMarquee ? 'text-white' : ''}`}>
-                      {overdueRemindersCount}
-                    </span>
-                  )}
+                  <div className="w-6 h-8 rounded-md overflow-hidden bg-zinc-800 border border-zinc-700/50 shrink-0">
+                    <img src={video.thumbnail} className="w-full h-full object-cover" alt="" />
+                  </div>
+                  <div className="max-w-[150px] truncate text-[11px] font-bold">
+                    {highlightText(video.title || "Procesando...", searchQuery)}
+                  </div>
                 </button>
-                <div className="relative" ref={actionMenuRef}>
-                    <button 
-                      onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
-                      className="p-3 hover:bg-zinc-800/80 rounded-2xl text-zinc-500 transition-all"
+              ))
+            )}
+          </div>
+
+          {/* Archived Section */}
+          {archivedVideos.length > 0 && (
+            <div className="border-t border-zinc-800/50 pt-4 flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-zinc-500 font-bold uppercase tracking-widest text-[9px] px-2 mb-1">
+                <Archive size={12} /> Archivo ({archivedVideos.length})
+              </div>
+              <div className="flex items-center gap-3 overflow-x-auto hidden-scrollbar">
+                {archivedVideos.map(video => (
+                  <div key={video.id} className="shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900/20 group">
+                    <span className="text-[10px] font-bold text-zinc-500 truncate max-w-[100px]">{video.title}</span>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => restoreVideo(video.id)} className="p-1 hover:text-[#EE1D52]" title="Restaurar"><RotateCcw size={12}/></button>
+                      <button onClick={() => deleteVideo(video.id, video.url)} className="p-1 hover:text-red-500" title="Eliminar"><Trash2 size={12}/></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 3. MAIN CONTENT */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        {/* If there are videos, show the editor directly. If one is focused, show it. */}
+        {rootVideos.length > 0 ? (
+          focusedVideo ? (
+            <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] overflow-hidden m-4 animate-fadeIn">
+              {/* Integrated Header */}
+              <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
+                <div className="flex-1 min-w-0 pr-4 flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <input 
+                      type="text"
+                      value={focusedVideo.title || ""}
+                      onChange={(e) => updateVideo(focusedVideo.id, { title: e.target.value })}
+                      placeholder="Sin Título"
+                      className="w-full bg-transparent border-none outline-none text-lg font-black text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400 p-0 truncate"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button 
+                    onClick={() => setIsTikTokPizarronOpen(!isTikTokPizarronOpen)} 
+                    className={`p-2 rounded-xl border transition-all ${isTikTokPizarronOpen ? 'bg-[#EE1D52]/20 text-[#EE1D52] border-[#EE1D52]/40' : 'text-zinc-500 border-zinc-800 hover:border-[#EE1D52]/30'}`}
+                    title="Pizarrón / Borrador"
+                  >
+                    <PenLine size={13} />
+                  </button>
+                  <button 
+                    onClick={() => toggleZenMode('tiktok')} 
+                    className={`p-2 rounded-xl border transition-all ${isZenMode ? 'bg-[#EE1D52] border-[#EE1D52]/80 text-white font-bold shadow-lg shadow-[#EE1D52]/20' : 'text-zinc-500 border-zinc-800 hover:border-[#EE1D52]/30'}`}
+                    title={isZenMode ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
+                  >
+                    <Wind size={13} />
+                  </button>
+                  
+                  <div className="relative" ref={moreMenuRef}>
+                    <button
+                      onClick={() => setShowMoreMenu(!showMoreMenu)}
+                      className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+                      title="Más opciones"
                     >
-                      <MoreVertical size={20} />
+                      <MoreVertical size={16} />
                     </button>
-                    {isActionMenuOpen && (
-                      <div className="absolute right-0 top-full mt-2 w-48 bg-[#1A1A24] border border-zinc-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                    
+                    {showMoreMenu && (
+                      <div className="absolute right-0 top-full mt-1 z-50 bg-[#1A1A24] shadow-xl rounded-lg border border-zinc-800 p-1 flex flex-col gap-0.5 min-w-[180px] animate-fadeIn">
                         <button 
-                          onClick={handleConvertToNote}
-                          className="w-full text-left px-4 py-3 text-xs font-semibold text-amber-400 hover:bg-amber-500/10 flex items-center gap-3"
+                          onClick={() => { handleConvertToNote(); setShowMoreMenu(false); }} 
+                          className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors"
                         >
-                          <StickyNote size={14} /> Convertir en Nota 📝
+                          <ExternalLink size={14} /> Convertir a Nota
                         </button>
-                        <button className="w-full text-left px-4 py-3 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
-                          <Archive size={14} /> Archivar Nota
-                        </button>
-                        <button className="w-full text-left px-4 py-3 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
-                          <Download size={14} /> Exportar MD
-                        </button>
-                        <div className="border-t border-zinc-800 my-1"></div>
+                        
+                        <div className="border-t border-zinc-800 my-0.5" />
+                        
                         <button 
-                          onClick={() => handleDeleteVideo(focusedVideo.id)}
-                          className="w-full text-left px-4 py-3 text-xs font-semibold text-red-400 hover:bg-red-500/10 flex items-center gap-3"
+                          onClick={() => { archiveVideo(focusedVideo.id); setShowMoreMenu(false); }} 
+                          className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors"
                         >
-                          <Trash2 size={14} /> Eliminar permanentemente
+                          <Archive size={14} /> Archivar
+                        </button>
+                        
+                        <button 
+                          onClick={() => { deleteVideo(focusedVideo.id, focusedVideo.url); setShowMoreMenu(false); }} 
+                          className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-500 hover:bg-red-500/10 transition-colors"
+                        >
+                          <Trash2 size={14} /> Eliminar
                         </button>
                       </div>
                     )}
-                </div>
-                {!isZenMode && (
-                  <button
-                    onClick={() => setIsTikTokMaximized(!isTikTokMaximized)}
-                    className="p-3 bg-zinc-800/80 hover:bg-zinc-700 rounded-2xl text-zinc-400 hover:text-white transition-all shadow-inner"
+                  </div>
+
+                  <button 
+                    onClick={() => setShowAIInput(!showAIInput)}
+                    className={`p-2 rounded-xl border transition-all ${showAIInput ? 'bg-[#EE1D52]/20 text-[#EE1D52] border-[#EE1D52]/40' : 'text-zinc-500 border-zinc-800 hover:border-[#EE1D52]/30'}`}
+                    title="Asistente IA"
                   >
-                    {isTikTokMaximized ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+                    <Sparkles size={13} />
                   </button>
-                )}
+                </div>
               </div>
-            </div>
 
-            {/* TAB NAVIGATION */}
-            <div className="px-8 border-b border-zinc-800/30 flex bg-zinc-900/10">
-              {[
-                { id: 'notes', label: 'ANÁLISIS & NOTAS', icon: FileText },
-                { id: 'transcript', label: 'TRANSCRIPCIÓN', icon: Quote },
-                { id: 'ai', label: 'IA GENERATIVA', icon: Sparkles },
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveEditorTab(tab.id as any)}
-                  className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 border-b-2 transition-all ${
-                    activeEditorTab === tab.id 
-                      ? 'border-indigo-500 text-white bg-indigo-500/5' 
-                      : 'border-transparent text-zinc-500 hover:text-zinc-300'
-                  }`}
-                >
-                  <tab.icon size={14} />
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+              {/* VIDEO METADATA BAR */}
+              <div className="px-4 py-2 bg-zinc-50 dark:bg-zinc-900/30 border-y border-zinc-100 dark:border-zinc-800/50 flex items-center gap-4 text-[10px] uppercase tracking-widest font-bold text-zinc-400">
+                <a href={focusedVideo.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-[#EE1D52] transition-colors"><ExternalLink size={10} /> Ver en TikTok</a>
+                <span className="flex items-center gap-1.5"><User size={10} /> {focusedVideo.author || "Anónimo"}</span>
+                <span className="flex items-center gap-1.5"><Clock size={10} /> {formatDuration(focusedVideo.duration)}</span>
+                <span className="flex items-center gap-1.5"><History size={10} /> {new Date(focusedVideo.created_at).toLocaleDateString()}</span>
+              </div>
 
-            {/* EDITOR AREA */}
-            <div className="flex-1 overflow-y-auto hidden-scrollbar p-8">
-              <div className="max-w-4xl mx-auto h-full flex flex-col gap-6">
-                
-                {activeEditorTab === 'notes' && (
-                  <>
-                    {/* Summary Card */}
-                    <div className="p-6 bg-zinc-900/40 rounded-3xl border border-zinc-800/50 shadow-inner relative overflow-hidden">
-                       <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500/50"></div>
-                       <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                         <Sparkles size={14} /> Resumen Ejecutivo
-                       </h3>
-                       <p className="text-zinc-300 leading-relaxed font-medium italic">
-                         {focusedVideo.summary || "Genera un análisis en la pestaña de IA para ver el resumen aquí."}
-                       </p>
+              <div className="flex-1 flex flex-col min-h-0 container-notes-app p-4">
+                {/* TABS SELECTION */}
+                <div className="flex items-center gap-2 pb-3 overflow-x-auto hidden-scrollbar shrink-0">
+                  <button 
+                    onClick={() => setActiveTab('original')} 
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${activeTab === 'original' ? 'bg-[#EE1D52] text-white border-[#EE1D52] shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-[#EE1D52]'}`}
+                  >
+                    <FileText size={11} /> Transcripción
+                  </button>
+
+                  {aiSummaries.map(summary => (
+                    <div key={summary.id} className="relative group">
+                      <button 
+                        onClick={() => setActiveTab(`summary_${summary.id}`)} 
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${activeTab === `summary_${summary.id}` ? 'bg-violet-600 text-white border-violet-500 shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-violet-400'}`}
+                      >
+                        <Sparkles size={11} /> 
+                        <span className="max-w-[120px] truncate">{summary.target_objective || 'Resumen'}</span>
+                        {activeTab === `summary_${summary.id}` && (
+                          <span 
+                            onClick={(e) => { e.stopPropagation(); deleteSummary(summary.id); setActiveTab('original'); }}
+                            className="ml-1 p-0.5 hover:bg-black/20 rounded transition-colors"
+                          >
+                            <Trash2 size={10} />
+                          </span>
+                        )}
+                      </button>
                     </div>
+                  ))}
 
-                    {/* Editor (Scratchpad / Notes) */}
-                    <div className="flex-1 flex flex-col min-h-[400px]">
-                       <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2 px-1">
-                         <Type size={14} /> Notas de Trabajo (Pizarrón)
-                       </h3>
-                       <textarea
-                         value={focusedVideo.scratchpad || ""}
-                         onChange={(e) => handleUpdateVideo({ scratchpad: e.target.value })}
-                         placeholder="Escribe tus ideas aquí..."
-                         className="flex-1 bg-transparent text-zinc-300 text-base leading-relaxed resize-none outline-none font-medium placeholder-zinc-700"
-                       />
-                    </div>
-                  </>
-                )}
+                  {subnotes.map(note => (
+                    <button 
+                      key={note.id}
+                      onClick={() => setActiveTab(`note_${note.id}`)} 
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${activeTab === `note_${note.id}` ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-emerald-400'}`}
+                    >
+                      <StickyNote size={11} /> 
+                      <span className="max-w-[120px] truncate">{note.title || 'Nota'}</span>
+                      {activeTab === `note_${note.id}` && (
+                        <span 
+                          onClick={(e) => { e.stopPropagation(); deleteSubnote(note.id); setActiveTab('original'); }}
+                          className="ml-1 p-0.5 hover:bg-black/20 rounded transition-colors"
+                        >
+                          <Trash2 size={10} />
+                        </span>
+                      )}
+                    </button>
+                  ))}
 
-                {activeEditorTab === 'transcript' && (
-                  <div className="flex flex-col gap-6">
-                    <div className="flex items-center justify-between">
-                       <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                         <Quote size={14} /> Transcripción del Video
-                       </h3>
-                       <button className="text-[9px] font-black text-indigo-400 hover:text-indigo-300 uppercase tracking-widest transition-colors flex items-center gap-1">
-                          <Download size={12} /> Descargar Texto
-                       </button>
-                    </div>
-                    <textarea
-                      value={focusedVideo.transcript || ""}
-                      onChange={(e) => handleUpdateVideo({ transcript: e.target.value })}
-                      placeholder="La transcripción se generará automáticamente..."
-                      className="w-full min-h-[600px] bg-zinc-900/20 rounded-3xl p-6 text-zinc-400 text-sm leading-relaxed outline-none border border-zinc-800/50 font-medium"
+                  <button 
+                    onClick={async () => {
+                      const tiktokGroup = groups.find(g => g.title === 'TikTok') || groups[0];
+                      if (!tiktokGroup) return;
+                      const newNote = await createSubnote('Nuevo Detalle', tiktokGroup.id);
+                      if (newNote) setActiveTab(`note_${newNote.id}`);
+                    }} 
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold border shrink-0 text-emerald-400 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/15 transition-all"
+                  >
+                    <Plus size={11} /> Sub
+                  </button>
+                </div>
+
+                {/* AI Assistant Panel */}
+                {showAIInput && (
+                  <div className="mb-4 animate-slideDown shrink-0">
+                    <TikTokAIPanel 
+                      videoId={focusedVideo.id} 
+                      onGenerate={async (obj) => { 
+                        setShowAIInput(false);
+                        const newSum = await generateSummary(obj);
+                        if (newSum) setActiveTab(`summary_${newSum.id}`);
+                      }} 
                     />
                   </div>
                 )}
 
-                {activeEditorTab === 'ai' && (
-                  <div className="flex flex-col gap-8">
-                     <TikTokAIPanel videoId={focusedVideo.id} />
-                     
-                     <div className="space-y-6">
-                        <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-1">Análisis Previos</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                           {focusedVideo.key_points?.map((point, idx) => (
-                             <div key={idx} className="p-4 bg-zinc-900/30 rounded-2xl border border-zinc-800/50 text-xs text-zinc-400 font-medium flex items-start gap-3">
-                                <div className="w-5 h-5 rounded-full bg-violet-500/10 text-violet-400 flex items-center justify-center font-bold flex-shrink-0">{idx + 1}</div>
-                                {point}
-                             </div>
-                           ))}
-                        </div>
-                     </div>
+                {/* CONTENT AREA (EDITOR + SCRATCHPAD) */}
+                <div ref={splitContainerRef} className="flex-1 flex min-h-0 gap-2 overflow-hidden animate-fadeIn">
+                  <div 
+                    className="flex-1 min-h-0 overflow-y-auto bg-zinc-50 dark:bg-zinc-900/20 rounded-xl border border-zinc-200 dark:border-zinc-800 scroll-smooth"
+                    style={isTikTokPizarronOpen ? { width: `${splitRatio * 100}%`, flex: 'none' } : { flex: 1 }}
+                  >
+                    <div className="p-4 h-full">
+                      {activeTab === 'original' && (
+                        <SmartNotesEditor 
+                          ref={editorRef}
+                          noteId={focusedVideo.id}
+                          initialContent={focusedVideo.transcript || ""}
+                          onChange={(c) => updateVideo(focusedVideo.id, { transcript: c })}
+                          searchQuery={searchQuery}
+                        />
+                      )}
+                      {activeTab.startsWith('summary_') && (() => {
+                        const summary = aiSummaries.find(s => `summary_${s.id}` === activeTab);
+                        return summary ? (
+                          <SmartNotesEditor 
+                            key={summary.id}
+                            noteId={summary.id}
+                            initialContent={summary.content || ""}
+                            onChange={(c) => updateSummaryContent(summary.id, c)}
+                            searchQuery={searchQuery}
+                          />
+                        ) : null;
+                      })()}
+                      {activeTab.startsWith('note_') && (() => {
+                        const note = subnotes.find(n => `note_${n.id}` === activeTab);
+                        return note ? (
+                          <SmartNotesEditor 
+                            key={note.id}
+                            noteId={note.id}
+                            initialContent={note.content || ""}
+                            onChange={(c) => updateSubnote(note.id, { content: c })}
+                            searchQuery={searchQuery}
+                          />
+                        ) : null;
+                      })()}
+                    </div>
                   </div>
-                )}
 
+                  {/* Divider */}
+                  {isTikTokPizarronOpen && (
+                    <div 
+                      onMouseDown={handleDividerMouseDown}
+                      className="shrink-0 flex items-center justify-center rounded-full cursor-col-resize select-none hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors w-2 h-full"
+                      title="Arrastrar para redimensionar"
+                    >
+                       <div className="rounded-full bg-zinc-300 dark:bg-zinc-600 w-1 h-8" />
+                    </div>
+                  )}
+
+                  {/* Scratchpad (Pizarrón) */}
+                  {isTikTokPizarronOpen && (
+                    <div className="flex-1 min-h-0 overflow-y-auto bg-violet-50/10 dark:bg-violet-900/5 rounded-xl border border-violet-200/50 dark:border-violet-900/30 animate-fadeIn flex flex-col">
+                      <div className="px-3 py-2 border-b border-violet-200/20 flex items-center gap-2">
+                        <PenLine size={11} className="text-violet-400" />
+                        <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest">Pizarrón</span>
+                      </div>
+                      <div className="flex-1 p-4">
+                        {activeTab === 'original' && (
+                          <SmartNotesEditor 
+                            ref={scratchRef}
+                            noteId={`scratch_${focusedVideo.id}`}
+                            initialContent={focusedVideo.scratchpad || ""}
+                            onChange={(c) => updateVideo(focusedVideo.id, { scratchpad: c })}
+                          />
+                        )}
+                        {activeTab.startsWith('summary_') && (() => {
+                          const summaryId = activeTab.replace('summary_', '');
+                          const summary = aiSummaries.find(s => s.id === summaryId);
+                          return summary ? (
+                            <SmartNotesEditor 
+                              key={`scratch_${summary.id}`}
+                              noteId={summary.id}
+                              initialContent={summary.scratchpad || ""}
+                              onChange={(c) => updateSummaryScratchpad(summary.id, c)}
+                            />
+                          ) : null;
+                        })()}
+                        {activeTab.startsWith('note_') && (() => {
+                          const noteId = activeTab.replace('note_', '');
+                          const note = subnotes.find(n => n.id === noteId);
+                          return note ? (
+                            <SmartNotesEditor 
+                              key={`scratch_${note.id}`}
+                              noteId={note.id}
+                              initialContent={note.scratchpad || ""}
+                              onChange={(c) => updateSubnote(note.id, { scratchpad: c })}
+                            />
+                          ) : null;
+                        })()}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-zinc-500 italic">
+               Selecciona un video para comenzar
+            </div>
+          )
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-zinc-600 gap-6 p-12">
-             <div className="w-24 h-24 rounded-full bg-zinc-900 flex items-center justify-center border border-zinc-800 shadow-inner">
-                <Music size={40} className="text-zinc-800" />
-             </div>
-             <div className="text-center space-y-2">
-                <h2 className="text-xl font-black text-zinc-400 uppercase tracking-tight">Selecciona un video</h2>
-                <p className="text-sm font-medium italic max-w-xs mx-auto text-zinc-500">
-                  Explora tus videos procesados en el panel izquierdo o añade una nueva URL para empezar.
-                </p>
-             </div>
-             {!isVideoTrayOpen && (
-               <button 
-                onClick={() => setIsVideoTrayOpen(true)}
-                className="mt-4 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-2xl text-xs font-bold transition-all border border-zinc-700 shadow-lg"
-               >
-                 Abrir Panel de Videos
-               </button>
-             )}
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-12 gap-6 animate-fadeIn">
+            <div className="w-32 h-32 rounded-full bg-zinc-900/10 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center relative overflow-hidden group">
+              <div className="absolute inset-0 bg-[#EE1D52]/5 group-hover:bg-[#EE1D52]/10 transition-colors"></div>
+              <Brain size={56} className="text-zinc-600 dark:text-zinc-400 relative z-10" />
+            </div>
+            <div className="space-y-2 max-w-sm">
+              <h2 className="text-xl font-black text-white uppercase tracking-tight">Cerebro TikTok</h2>
+              <p className="text-sm text-zinc-500 font-medium">Extrae conocimiento de cualquier video. Usa el botón "Nuevo" para empezar o selecciona uno de tus accesos.</p>
+            </div>
+            <button 
+               onClick={() => setIsModalOpen(true)}
+               className="px-6 py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-2xl text-xs font-bold transition-all"
+            >
+               Agregar Nuevo Video
+            </button>
           </div>
         )}
       </div>
+
+      {/* 4. MODAL */}
+      {isModalOpen && (
+        <NewTikTokModal 
+          onClose={() => setIsModalOpen(false)} 
+          queue={tikTokQueueItems}
+          onAdd={handleAddUrls}
+          isAdding={isAdding}
+        />
+      )}
     </div>
   );
 };

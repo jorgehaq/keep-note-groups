@@ -44,6 +44,7 @@ interface UIStore {
     isBraindumpMaximized: boolean;
     isTranslatorMaximized: boolean;
     isTikTokMaximized: boolean;
+    isTikTokPizarronOpen: boolean;
     pizarronVisibleByNoteAndTab: Record<string, Record<string, boolean>>;
     isZenModeByApp: Record<string, boolean>; // Zen orientation per app
 
@@ -124,6 +125,7 @@ interface UIStore {
     setActiveTabByBrainDump: (dumpId: string, tabId: string) => void;
     setAiPanelOpenByVideo: (videoId: string, open: boolean) => void;
     setActiveTabByVideo: (videoId: string, tabId: string) => void;
+    setIsTikTokPizarronOpen: (open: boolean) => void;
     setPizarronVisible: (noteId: string, tabId: string, visible: boolean) => void;
     setFocusedNoteId: (id: string | null, groupId?: string) => void;
     setIsGlobalNoteTrayOpen: (open: boolean, groupId?: string) => void;
@@ -194,6 +196,7 @@ export const useUIStore = create<UIStore>()(
             isBraindumpMaximized: false,
             isTranslatorMaximized: false,
             isTikTokMaximized: false,
+            isTikTokPizarronOpen: true,
             showOverdueMarquee: false,
             focusedNoteByGroup: {},
             lastActiveNoteByGroup: {},
@@ -368,6 +371,7 @@ export const useUIStore = create<UIStore>()(
                         [videoId]: tabId,
                     },
                 })),
+            setIsTikTokPizarronOpen: (open) => set({ isTikTokPizarronOpen: open }),
             setPizarronVisible: (noteId, tabId, visible) =>
                 set((state) => {
                     const noteStatus = state.pizarronVisibleByNoteAndTab[noteId] || {};
@@ -432,6 +436,7 @@ export const useUIStore = create<UIStore>()(
                 isDumpTrayOpen: false,
                 focusedVideoId: null,
                 isVideoTrayOpen: false,
+                isTikTokPizarronOpen: true,
                 aiPanelOpenByVideo: {},
                 activeTabByVideo: {},
                 tikTokVideos: [],
@@ -588,6 +593,7 @@ export const useUIStore = create<UIStore>()(
                 isBraindumpMaximized: state.isBraindumpMaximized,
                 isTranslatorMaximized: state.isTranslatorMaximized,
                 isTikTokMaximized: state.isTikTokMaximized,
+                isTikTokPizarronOpen: state.isTikTokPizarronOpen,
                 focusedNoteByGroup: state.focusedNoteByGroup,
                 lastActiveNoteByGroup: state.lastActiveNoteByGroup,
                 noteTrayOpenByGroup: state.noteTrayOpenByGroup,

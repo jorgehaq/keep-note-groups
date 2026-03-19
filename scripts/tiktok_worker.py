@@ -146,7 +146,7 @@ def process_queue():
 
     response = (
         supabase.table("tiktok_queue")
-        .select("id, url, user_id")
+        .select("id, url, user_id, parent_id")
         .eq("status", "pending")
         .order("created_at", desc=False)
         .limit(MAX_ITEMS)
@@ -161,9 +161,10 @@ def process_queue():
         return
 
     for item in items:
-        queue_id = item["id"]
-        url      = item["url"]
-        user_id  = item["user_id"]
+        queue_id  = item["id"]
+        url       = item["url"]
+        user_id   = item["user_id"]
+        parent_id = item.get("parent_id")
 
         print(f"\n  Procesando: {url[:70]}...")
         mark_queue(queue_id, "processing")
@@ -214,6 +215,7 @@ def process_queue():
                 "language"         : detected_language,
                 "content"          : description,
                 "description"      : description,
+                "parent_id"        : parent_id,
                 "status"           : "inbox",
                 "ai_summary_status": "idle",
                 "created_at"       : now_iso(),

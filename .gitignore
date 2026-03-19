@@ -26,3 +26,4 @@ dist-ssr
 supabase/snippets/Untitled*.env
 venv/
 .env
+.env

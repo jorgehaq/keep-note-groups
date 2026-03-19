@@ -32,6 +32,7 @@ export interface Note {
     | "stale";
   scratchpad?: string;
   children?: Note[];
+  tiktok_video_id?: string | null;
 }
 
 export type NoteFont = "sans" | "serif" | "mono";
@@ -168,10 +169,11 @@ export interface Summary {
   id: string;
   note_id?: string | null;
   brain_dump_id?: string | null;
+  tiktok_video_id?: string | null;
   target_objective: string;
   content: string;
   scratchpad?: string;
-  status: "pending" | "processing" | "completed" | "error";
+  status: "pending" | "processing" | "completed" | "failed";
   created_at: string;
   user_id: string;
 }
@@ -195,6 +197,8 @@ export interface TikTokVideo {
   key_points?: string[];
   summary?: string;
   category?: string;
+  parent_id?: string | null;
+  generation_level?: number;
   created_at: string;
   updated_at: string;
 }
@@ -203,8 +207,9 @@ export interface TikTokQueueItem {
   id: string;
   user_id: string;
   url: string;
-  status: "pending" | "processing" | "completed" | "error";
+  status: "pending" | "processing" | "completed" | "failed";
   error_msg?: string;
   video_id?: string;
+  parent_id?: string | null;
   created_at: string;
 }
