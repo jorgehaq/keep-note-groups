@@ -13,15 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const isDev = Deno.env.get("IS_DEV") === "true";
-    const authHeader = req.headers.get("Authorization");
-
-    // 1. Auth Validation (unless in DEV mode)
-    if (!isDev && !authHeader) {
-      throw new Error("No se envió el token de autorización.");
-    }
-
-    // 2. Extract payload
+    // Extract payload
     const { prompt, videoId } = await req.json();
     const apiKey = Deno.env.get("GEMINI_API_KEY");
     if (!apiKey) throw new Error("API Key de Gemini no configurada.");
