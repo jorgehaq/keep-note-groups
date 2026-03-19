@@ -6,7 +6,8 @@
 - SmartNotesEditor usa CodeMirror (NO Tiptap para notas plain-text). Tiptap solo en NoteEditor.tsx (src/components/).
 - El editor activo por defecto es SmartNotesEditor; ChecklistEditor se activa cuando note.is_checklist = true.
 - summaryCounts en store: Record<note_id, number> — se hidrata en fetchSummaryCounts() y se actualiza vía Realtime en summaries-global-sync.
-- pizarronVisibleByNoteAndTab en store: controla si el panel de pizarrones (subnota tipo board) está visible por nota y tab.
+- isTikTokPizarronOpen en store: controla la visibilidad GLOBAL del borrador para la App TikTok (estandarizado; no por nota).
+- TikTok Archiving: uso de columna `status` ('active' | 'archived') en `tiktok_videos`.
 
 ### Deuda Técnica Consciente
 - App.tsx tiene demasiada lógica (fetchData, sort, CRUD, Realtime) — candidato a custom hooks pero NO refactorizar sin pedirlo.
@@ -14,6 +15,9 @@
 - i18n solo tiene 'es' y 'en'. No agregar más idiomas sin pedirlo.
 
 ### Bugs Conocidos / Fixes Recientes
+- 2026-03-19: Estandarización de divisores (resizer) en TikTokApp para paridad absoluta con el módulo "Grupo de Notas" (clases de hover, ancho y animación fadeIn).
+- 2026-03-19: Implementado cierre automático (blur/click-outside) del menú de opciones en TikTokApp y persistencia global del toggle de Pizarrón.
+- 2026-03-19: Implementado Archivado y Borrado Recursivo en TikTok: eliminación en cascada de summaries, sub-notas y limpieza manual detallada de entradas en `tiktok_queue`.
 - 2026-03-18: Finalizada implementación de `TranslatorApp` con traducción automática vía MyMemory API (debounce 800ms) e historial persistente con sincronización Realtime; se priorizó speed-to-result sobre complejidad de backend (MyMemory público).
 - 2026-03-18: Corregido cierre automático de menú Kanban en Pizarrón; sincronización de semáforos unificada vía UIStore; implementado borrado de sub-pizarrones y descarga Markdown recursiva completa.
 - 2026-03-18: Implementado borrado de sub-notas en AccordionItem.tsx; exportación Markdown recursiva masiva (notas, sub-notas, scratchpads y summaries) tanto individual como por grupo en App.tsx.
