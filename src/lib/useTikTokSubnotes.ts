@@ -45,7 +45,7 @@ export function useTikTokSubnotes(videoId: string | null) {
     };
   }, [videoId, fetchSubnotes]);
 
-  const createSubnote = async (title: string, groupId?: string | null, content: string = '') => {
+  const createSubnote = async (title: string, groupId?: string | null, content: string = '', createdAt?: string) => {
     if (!videoId) return null;
     
     const { data: { user } } = await supabase.auth.getUser();
@@ -54,14 +54,20 @@ export function useTikTokSubnotes(videoId: string | null) {
       return null;
     }
 
-    const { data: newNote, error } = await supabase.from('notes').insert([{
+    const insertData: any = {
       tiktok_video_id: videoId,
       title: title || 'Nueva Sub-nota',
       content: content,
       user_id: user.id,
       group_id: groupId || null,
       position: 0
-    }]).select().single();
+    };
+
+    if (createdAt) {
+      insertData.created_at = createdAt;
+    }
+
+    const { data: newNote, error } = await supabase.from('notes').insert([insertData]).select().single();
     
     if (error) {
       console.error('Error creating sub-note:', error);

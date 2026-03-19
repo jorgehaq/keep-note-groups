@@ -1239,41 +1239,43 @@ function App() {
 
   return (
     <div className="flex h-screen bg-zinc-50 dark:bg-[#13131A] overflow-hidden transition-colors duration-300">
-      <Sidebar
-        groups={groups}
-        activeGroupId={activeGroupId}
-        onSelectGroup={(id) => { 
-          setActiveGroup(id); 
-          setGlobalView('notes');
-          // Al hacer clic en el grupo, le quitamos el foco a cualquier nota anclada
-          // para que la burbuja se apague (quede gris media) y el grupo se ilumine.
-          setFocusedNoteId(null);
-        }}
-        onAddGroup={() => { addGroup(); setIsGlobalNoteTrayOpen(true); }}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        onTogglePin={toggleGroupPin}
-        onToggleFavorite={toggleGroupFavorite}
-        onLogout={handleLogout}
-        onSelectDockedNote={(groupId, noteId) => {
-          const isAlreadyFocused = focusedNoteByGroup[groupId] === noteId;
-          const currentOpen = openNotesByGroup[groupId] || [];
-          const isOpen = currentOpen.includes(noteId);
-
-          if (isAlreadyFocused && globalView === 'notes') {
-            // ELIMINADO LOGICA DE TOGGLE OFF DESDE EL SIDEBAR
-            // Si ya está enfocada y estamos en la vista de notas, no hacemos nada.
-            return;
-          } else {
-            // Toggle ON or Switch
-            setActiveGroup(groupId);
+      {!isZenMode && (
+        <Sidebar
+          groups={groups}
+          activeGroupId={activeGroupId}
+          onSelectGroup={(id) => { 
+            setActiveGroup(id); 
             setGlobalView('notes');
-            if (!isOpen) toggleNote(groupId, noteId);
-            setFocusedNoteId(noteId, groupId);
-            setIsGlobalNoteTrayOpen(true, groupId);
-          }
-        }}
-        focusedNoteId={focusedNoteId}
-      />
+            // Al hacer clic en el grupo, le quitamos el foco a cualquier nota anclada
+            // para que la burbuja se apague (quede gris media) y el grupo se ilumine.
+            setFocusedNoteId(null);
+          }}
+          onAddGroup={() => { addGroup(); setIsGlobalNoteTrayOpen(true); }}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onTogglePin={toggleGroupPin}
+          onToggleFavorite={toggleGroupFavorite}
+          onLogout={handleLogout}
+          onSelectDockedNote={(groupId, noteId) => {
+            const isAlreadyFocused = focusedNoteByGroup[groupId] === noteId;
+            const currentOpen = openNotesByGroup[groupId] || [];
+            const isOpen = currentOpen.includes(noteId);
+
+            if (isAlreadyFocused && globalView === 'notes') {
+              // ELIMINADO LOGICA DE TOGGLE OFF DESDE EL SIDEBAR
+              // Si ya está enfocada y estamos en la vista de notas, no hacemos nada.
+              return;
+            } else {
+              // Toggle ON or Switch
+              setActiveGroup(groupId);
+              setGlobalView('notes');
+              if (!isOpen) toggleNote(groupId, noteId);
+              setFocusedNoteId(noteId, groupId);
+              setIsGlobalNoteTrayOpen(true, groupId);
+            }
+          }}
+          focusedNoteId={focusedNoteId}
+        />
+      )}
 
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
         {/* --- STACK DE BANNERS (NAVEGACIÓN GLOBAL) --- */}

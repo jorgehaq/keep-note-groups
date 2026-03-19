@@ -1,46 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
-  Play, 
-  Check, 
-  X, 
-  Search, 
-  ExternalLink, 
-  Plus, 
-  Maximize2, 
-  Minimize2, 
-  Bell, 
-  ChevronDown, 
-  ChevronUp,
-  Clock,
-  User,
-  Heart,
-  Eye,
-  Type,
-  Share2,
-  ChevronRight,
-  PanelLeft,
-  Settings,
-  MoreVertical,
-  Trash2,
-  Archive,
-  Download,
-  Sparkles,
-  FileText,
-  Quote,
-  StickyNote,
-  ChevronsDownUp,
-  ArrowUpDown,
-  Calendar,
-  Wind,
-  PlusCircle,
-  History,
-  AlertCircle,
-  ChevronLeft,
-  PenLine,
-  Brain,
-  GitBranch,
-  RotateCcw,
-  Loader2
+  Play, Check, X, Search, ExternalLink, Plus, Maximize2, Minimize2, 
+  Bell, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Clock, 
+  User, Heart, Eye, Type, Share2, Music, ChevronsDownUp, ArrowUpDown, 
+  Calendar, History, PanelLeft, Settings, MoreVertical, Trash2, 
+  Archive, Download, Sparkles, FileText, Quote, StickyNote, Wind, 
+  PlusCircle, AlertCircle, PenLine, Brain, GitBranch, RotateCcw, 
+  Loader2, ListPlus
 } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 import { useUIStore } from '../src/lib/store';
@@ -86,8 +52,8 @@ const NewTikTokModal: React.FC<{
   const [urlInput, setUrlInput] = useState("");
   
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-      <div className="w-full max-w-2xl bg-[#1A1A24] border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
+      <div className="w-full max-w-2xl bg-white dark:bg-[#1A1A24] border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]" onClick={(e) => e.stopPropagation()}>
         <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-[#EE1D52]/20 text-[#EE1D52] rounded-xl">
@@ -185,9 +151,14 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
   const [splitRatio, setSplitRatio] = useState(0.5);
   const [showAIInput, setShowAIInput] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [editingSubnoteId, setEditingSubnoteId] = useState<string | null>(null);
+  const [tempSubnoteTitle, setTempSubnoteTitle] = useState("");
   const moreMenuRef = useRef<HTMLDivElement>(null);
   
   const sortMenuRef = useRef<HTMLDivElement>(null);
+  const tabContainerRef = useRef<HTMLDivElement>(null);
   const splitContainerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
   const editorRef = useRef<SmartNotesEditorRef>(null);
@@ -215,6 +186,60 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
 
   const activeTab = focusedVideoId ? (activeTabByVideo[focusedVideoId] || 'original') : 'original';
   const setActiveTab = (tabId: string) => { if (focusedVideoId) setActiveTabByVideo(focusedVideoId, tabId); };
+
+  const getRelativeCreatedAt = () => {
+    // Determine the base date from the active tab
+    let baseDate = new Date(focusedVideo?.created_at || Date.now());
+    
+    if (activeTab.startsWith('summary_')) {
+      const id = activeTab.replace('summary_', '');
+      const summary = aiSummaries.find(s => s.id === id);
+      if (summary) baseDate = new Date(summary.created_at);
+    } else if (activeTab.startsWith('note_')) {
+      const id = activeTab.replace('note_', '');
+      const note = subnotes.find(n => n.id === id);
+      if (note) baseDate = new Date(note.created_at);
+    }
+    
+    // Increment by 1 minute (60,000 ms) to place it immediately after
+    return new Date(baseDate.getTime() + 60000).toISOString();
+  };
+
+  const unifiedTabs = useMemo(() => {
+    const tabs = [
+      ...aiSummaries.map(s => ({ id: `summary_${s.id}`, type: 'summary' as const, created_at: s.created_at, data: s })),
+      ...subnotes.map(n => ({ id: `note_${n.id}`, type: 'note' as const, created_at: n.created_at, data: n }))
+    ];
+    // Sort by created_at ascending
+    return tabs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  }, [aiSummaries, subnotes]);
+
+  const checkScroll = useCallback(() => {
+    if (tabContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = tabContainerRef.current;
+      setCanScrollLeft(scrollLeft > 5);
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 5);
+    }
+  }, []);
+
+  const scrollTabs = (direction: 'left' | 'right') => {
+    if (tabContainerRef.current) {
+      tabContainerRef.current.scrollBy({ left: direction === 'left' ? -200 : 200, behavior: 'smooth' });
+    }
+  };
+
+  useEffect(() => {
+    const container = tabContainerRef.current;
+    if (container) {
+      checkScroll();
+      container.addEventListener('scroll', checkScroll);
+      window.addEventListener('resize', checkScroll);
+      return () => {
+        container.removeEventListener('scroll', checkScroll);
+        window.removeEventListener('resize', checkScroll);
+      };
+    }
+  }, [unifiedTabs, checkScroll]);
 
   // Hierarchy support
   const rootVideos = useMemo(() => {
@@ -461,20 +486,32 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
   }, []);
 
   return (
-    <div className={`flex flex-col h-full bg-[#13131A] text-zinc-100 font-sans transition-all duration-300 ${isTikTokMaximized ? 'fixed inset-0 z-50' : 'relative'}`}>
+    <div className={`flex flex-col h-full bg-[#13131A] text-zinc-100 font-sans transition-all duration-300 ${isZenMode ? 'fixed inset-0 z-[60]' : 'relative'}`}>
       
       {/* 1. HEADER */}
       {!isZenMode && (
-        <div className="sticky top-0 z-30 bg-[#1A1A24]/90 backdrop-blur-md shrink-0 border-b border-zinc-800/50">
-          <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 gap-4">
+        <div className="sticky top-0 z-30 bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-800/50">
+          <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between px-6 py-4 gap-4">
             <h1 className="text-xl font-bold text-white flex items-center gap-3">
               <div className="h-9 p-2 bg-[#EE1D52] rounded-lg text-white shadow-lg shadow-[#EE1D52]/20 shrink-0">
-                <Play size={20} />
+                <Music size={20} />
               </div>
               <span className="truncate">TikTok</span>
             </h1>
             
             <div className="flex flex-wrap items-center gap-3">
+              {/* Search Bar */}
+              <div className="relative flex items-center group">
+                <Search size={15} className={`absolute left-3 text-zinc-500 transition-colors ${searchQuery ? 'text-[#EE1D52]' : ''}`} />
+                <input 
+                  type="text" 
+                  placeholder="Buscar TikTok..." 
+                  value={searchQuery} 
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="h-9 pl-9 pr-4 bg-zinc-900/50 border border-zinc-800 rounded-xl text-xs outline-none focus:border-[#EE1D52]/50 transition-all w-32 md:w-32 lg:w-40"
+                />
+              </div>
+
               {/* Bell Reminder */}
               <button
                 onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
@@ -511,7 +548,7 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
                   <ArrowUpDown size={18} />
                 </button>
                 {isSortMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-[#1A1A24] border border-zinc-800 rounded-xl shadow-2xl z-50 py-1 overflow-hidden animate-fadeIn">
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] rounded-xl shadow-2xl z-50 py-1 overflow-hidden animate-fadeIn">
                     {[
                       { id: 'date-desc', label: 'Fecha (Recientes)', icon: <Calendar size={14} /> },
                       { id: 'date-asc', label: 'Fecha (Antiguos)', icon: <Calendar size={14} /> },
@@ -533,18 +570,6 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
                 )}
               </div>
 
-              {/* Search */}
-              <div className="relative">
-                <Search size={15} className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-[#EE1D52]' : 'text-zinc-500'}`} />
-                <input 
-                  type="text" 
-                  placeholder="Buscar TikTok..." 
-                  value={searchQuery} 
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="h-9 pl-9 pr-4 bg-zinc-900/50 border border-zinc-800 rounded-xl text-xs outline-none focus:border-[#EE1D52]/50 transition-all w-48"
-                />
-              </div>
-
               {/* New Button */}
               <button 
                 onClick={() => setIsModalOpen(true)}
@@ -559,29 +584,34 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
 
       {/* 2. ACCESS TRAY (Solo Activos) */}
       {isVideoTrayOpen && !isZenMode && (
-        <div className="py-4 px-6 bg-[#1A1A24]/40 border-b border-zinc-800/30 overflow-x-auto hidden-scrollbar flex items-center gap-3 animate-slideDown">
-          {rootVideos.length === 0 ? (
-            <div className="text-xs text-zinc-600 italic px-4">No hay videos activos</div>
-          ) : (
-            rootVideos.map(video => (
-              <button
-                key={video.id}
-                onClick={() => { setFocusedVideoId(video.id); }}
-                className={`shrink-0 flex items-center gap-3 px-4 py-2 rounded-xl border transition-all ${
-                  focusedVideoId === video.id 
-                    ? 'bg-[#EE1D52] text-white border-[#EE1D52] shadow-lg shadow-[#EE1D52]/20 scale-[1.02]' 
-                    : 'bg-zinc-900/50 text-zinc-400 border-zinc-800 hover:border-[#EE1D52]/40 hover:text-[#EE1D52]'
-                }`}
-              >
-                <div className="w-6 h-8 rounded-md overflow-hidden bg-zinc-800 border border-zinc-700/50 shrink-0">
-                  <img src={video.thumbnail} className="w-full h-full object-cover" alt="" />
-                </div>
-                <div className="max-w-[150px] truncate text-[11px] font-bold">
-                  {highlightText(video.title || "Procesando...", searchQuery)}
-                </div>
-              </button>
-            ))
-          )}
+        <div className="bg-[#13131A] overflow-x-auto hidden-scrollbar animate-slideDown shrink-0">
+          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-start md:justify-center gap-3">
+            {rootVideos.length === 0 ? (
+              <div className="text-xs text-zinc-600 italic px-4">No hay videos activos</div>
+            ) : (
+              rootVideos.map(video => (
+                <button
+                  key={video.id}
+                  onClick={() => { 
+                    if (focusedVideoId === video.id) setFocusedVideoId(null);
+                    else setFocusedVideoId(video.id); 
+                  }}
+                  className={`shrink-0 flex items-center gap-3 px-4 py-2 rounded-xl border transition-all ${
+                    focusedVideoId === video.id 
+                      ? 'bg-[#EE1D52] text-white border-[#EE1D52] shadow-lg shadow-[#EE1D52]/20 scale-[1.02]' 
+                      : 'bg-zinc-900/50 text-zinc-400 border-zinc-800 hover:border-[#EE1D52]/40 hover:text-[#EE1D52]'
+                  }`}
+                >
+                  <div className="w-6 h-8 rounded-md overflow-hidden bg-zinc-800 border border-zinc-700/50 shrink-0">
+                    <img src={video.thumbnail} className="w-full h-full object-cover" alt="" />
+                  </div>
+                  <div className="max-w-[150px] truncate text-[11px] font-bold">
+                    {highlightText(video.title || "Procesando...", searchQuery)}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
         </div>
       )}
 
@@ -589,7 +619,8 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
       <div className="flex-1 overflow-hidden flex flex-col">
         {/* If there are videos, show the editor directly. If one is focused, show it. */}
         {focusedVideo ? (
-            <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] overflow-hidden m-4 animate-fadeIn">
+          <div className="flex-1 flex flex-col overflow-y-auto w-full p-4">
+            <div className={`flex-1 flex flex-col min-h-0 ${isTikTokMaximized ? 'max-w-full' : 'max-w-6xl mx-auto'} w-full transition-all duration-300 bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] focus-within:ring-2 focus-within:ring-[#EE1D52]/50 focus-within:border-[#EE1D52]/50 overflow-hidden animate-fadeIn`}>
               {/* Integrated Header */}
               <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
                 <div className="flex-1 min-w-0 pr-4 flex items-center gap-2">
@@ -605,12 +636,35 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button 
+                    onClick={async () => {
+                      const tiktokGroup = groups.find(g => g.title === 'TikTok') || groups[0];
+                      if (!tiktokGroup) return;
+                      const relDate = getRelativeCreatedAt();
+                      const newNote = await createSubnote('Nueva subnota', tiktokGroup.id, '', relDate);
+                      if (newNote) setActiveTab(`note_${newNote.id}`);
+                    }} 
+                    className="p-2 rounded-xl border text-emerald-400 border-zinc-800 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all flex items-center"
+                    title="Nueva subnota"
+                  >
+                    <ListPlus size={13} />
+                  </button>
+
+                  <button 
+                    onClick={() => setShowAIInput(!showAIInput)}
+                    className={`p-2 rounded-xl border transition-all ${showAIInput ? 'bg-[#EE1D52] border-[#EE1D52]/80 text-white font-bold shadow-lg shadow-[#EE1D52]/20' : 'text-zinc-500 border-zinc-800 hover:border-[#EE1D52]/30'}`}
+                    title="Asistente IA"
+                  >
+                    <Sparkles size={13} />
+                  </button>
+
+                  <button 
                     onClick={() => setIsTikTokPizarronOpen(!isTikTokPizarronOpen)} 
-                    className={`p-2 rounded-xl border transition-all ${isTikTokPizarronOpen ? 'bg-[#EE1D52]/20 text-[#EE1D52] border-[#EE1D52]/40' : 'text-zinc-500 border-zinc-800 hover:border-[#EE1D52]/30'}`}
+                    className={`p-2 rounded-xl border transition-all ${isTikTokPizarronOpen ? 'bg-[#EE1D52] border-[#EE1D52]/80 text-white font-bold shadow-lg shadow-[#EE1D52]/20' : 'text-zinc-500 border-zinc-800 hover:border-[#EE1D52]/30'}`}
                     title="Pizarrón / Borrador"
                   >
                     <PenLine size={13} />
                   </button>
+
                   <button 
                     onClick={() => toggleZenMode('tiktok')} 
                     className={`p-2 rounded-xl border transition-all ${isZenMode ? 'bg-[#EE1D52] border-[#EE1D52]/80 text-white font-bold shadow-lg shadow-[#EE1D52]/20' : 'text-zinc-500 border-zinc-800 hover:border-[#EE1D52]/30'}`}
@@ -625,11 +679,11 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
                       className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
                       title="Más opciones"
                     >
-                      <MoreVertical size={16} />
+                      < MoreVertical size={16} />
                     </button>
                     
                     {showMoreMenu && (
-                      <div className="absolute right-0 top-full mt-1 z-50 bg-[#1A1A24] shadow-xl rounded-lg border border-zinc-800 p-1 flex flex-col gap-0.5 min-w-[180px] animate-fadeIn">
+                      <div className="absolute right-0 top-full mt-1 z-50 bg-[#13131A] shadow-xl rounded-lg border border-zinc-800 p-1 flex flex-col gap-0.5 min-w-[180px] animate-fadeIn">
                         <button 
                           onClick={() => { handleConvertToNote(); setShowMoreMenu(false); }} 
                           className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors"
@@ -655,14 +709,6 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
                       </div>
                     )}
                   </div>
-
-                  <button 
-                    onClick={() => setShowAIInput(!showAIInput)}
-                    className={`p-2 rounded-xl border transition-all ${showAIInput ? 'bg-[#EE1D52]/20 text-[#EE1D52] border-[#EE1D52]/40' : 'text-zinc-500 border-zinc-800 hover:border-[#EE1D52]/30'}`}
-                    title="Asistente IA"
-                  >
-                    <Sparkles size={13} />
-                  </button>
                 </div>
               </div>
 
@@ -676,76 +722,137 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
 
               <div className="flex-1 flex flex-col min-h-0 container-notes-app p-4">
                 {/* TABS SELECTION */}
-                <div className="flex items-center gap-2 pb-3 overflow-x-auto hidden-scrollbar shrink-0">
-                  <button 
-                    onClick={() => setActiveTab('original')} 
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${activeTab === 'original' ? 'bg-[#EE1D52] text-white border-[#EE1D52] shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-[#EE1D52]'}`}
-                  >
-                    <FileText size={11} /> Transcripción
-                  </button>
-
-                  {/* Tabs AI summaries — violetas (procesando) */}
-                  {aiSummaries.filter(s => s.status === 'pending' || s.status === 'processing').map(s => (
-                    <div key={s.id}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 max-w-[150px] bg-zinc-800/60 border-zinc-700 text-zinc-400 animate-pulse cursor-wait"
-                    >
-                      <Loader2 size={10} className="animate-spin shrink-0" />
-                      <span className="truncate">{s.target_objective || 'Analizando...'}</span>
-                    </div>
-                  ))}
-
-                  {/* Tabs AI summaries — violetas (completados) */}
-                  {aiSummaries.filter(s => s.status === 'completed' || !s.status).map(summary => (
-                    <div key={summary.id} className="relative group">
+                <div className="relative mb-3 shrink-0">
+                  {/* Flecha Izquierda */}
+                  {canScrollLeft && (
+                    <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none">
                       <button 
-                        onClick={() => setActiveTab(`summary_${summary.id}`)} 
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${activeTab === `summary_${summary.id}` ? 'bg-violet-600 text-white border-violet-500 shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-violet-400'}`}
+                        onClick={() => scrollTabs('left')} 
+                        className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-[#EE1D52] transition-colors pointer-events-auto"
                       >
-                        <Sparkles size={11} /> 
-                        <span className="max-w-[120px] truncate">{summary.target_objective || 'Resumen'}</span>
-                        {activeTab === `summary_${summary.id}` && (
-                          <span 
-                            onClick={(e) => { e.stopPropagation(); deleteSummary(summary.id); setActiveTab('original'); }}
-                            className="ml-1 p-0.5 hover:bg-black/20 rounded transition-colors"
-                          >
-                            <Trash2 size={10} />
-                          </span>
-                        )}
+                        <ChevronLeft size={14} />
                       </button>
                     </div>
-                  ))}
+                  )}
 
-                  {subnotes.map(note => (
-                    <button 
-                      key={note.id}
-                      onClick={() => setActiveTab(`note_${note.id}`)} 
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${activeTab === `note_${note.id}` ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-emerald-400'}`}
-                    >
-                      <StickyNote size={11} /> 
-                      <span className="max-w-[120px] truncate">{note.title || 'Nota'}</span>
-                      {activeTab === `note_${note.id}` && (
-                        <span 
-                          onClick={(e) => { e.stopPropagation(); deleteSubnote(note.id); setActiveTab('original'); }}
-                          className="ml-1 p-0.5 hover:bg-black/20 rounded transition-colors"
-                        >
-                          <Trash2 size={10} />
-                        </span>
-                      )}
-                    </button>
-                  ))}
-
-                  <button 
-                    onClick={async () => {
-                      const tiktokGroup = groups.find(g => g.title === 'TikTok') || groups[0];
-                      if (!tiktokGroup) return;
-                      const newNote = await createSubnote('Nuevo Detalle', tiktokGroup.id);
-                      if (newNote) setActiveTab(`note_${newNote.id}`);
-                    }} 
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold border shrink-0 text-emerald-400 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/15 transition-all"
+                  <div 
+                    ref={tabContainerRef}
+                    className="flex items-center gap-2 pb-1 overflow-x-auto hidden-scrollbar scroll-smooth"
                   >
-                    <Plus size={11} /> Sub
-                  </button>
+                    <button 
+                      onClick={() => setActiveTab('original')} 
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${activeTab === 'original' ? 'bg-[#EE1D52] text-white border-[#EE1D52] shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-[#EE1D52]'}`}
+                    >
+                      <FileText size={11} /> Transcripción
+                    </button>
+
+                    {unifiedTabs.map(tab => {
+                      if (tab.type === 'summary') {
+                        const summary = tab.data;
+                        if (summary.status === 'pending' || summary.status === 'processing') {
+                          return (
+                            <div key={summary.id}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 max-w-[150px] bg-zinc-800/60 border-zinc-700 text-zinc-400 animate-pulse cursor-wait"
+                            >
+                              <Loader2 size={10} className="animate-spin shrink-0" />
+                              <span className="truncate">{summary.target_objective || 'Analizando...'}</span>
+                            </div>
+                          );
+                        }
+                        
+                        return (
+                          <div key={summary.id} className="relative group">
+                            <button 
+                              onClick={() => setActiveTab(`summary_${summary.id}`)} 
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${activeTab === `summary_${summary.id}` ? 'bg-violet-600 text-white border-violet-500 shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-violet-400'}`}
+                            >
+                              <Sparkles size={11} /> 
+                              <span className="max-w-[120px] truncate">{summary.target_objective || 'Resumen'}</span>
+                              {activeTab === `summary_${summary.id}` && (
+                                <span 
+                                  onClick={(e) => { e.stopPropagation(); deleteSummary(summary.id); setActiveTab('original'); }}
+                                  className="ml-1 p-0.5 hover:bg-black/20 rounded transition-colors"
+                                >
+                                  <Trash2 size={10} />
+                                </span>
+                              )}
+                            </button>
+                          </div>
+                        );
+                      } else {
+                        const note = tab.data;
+                        return (
+                          <button 
+                            key={note.id}
+                            onClick={() => setActiveTab(`note_${note.id}`)} 
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${activeTab === `note_${note.id}` ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-emerald-400'}`}
+                          >
+                            <StickyNote size={11} /> 
+                            {editingSubnoteId === note.id ? (
+                              <input 
+                                autoFocus
+                                type="text"
+                                value={tempSubnoteTitle}
+                                onChange={(e) => setTempSubnoteTitle(e.target.value)}
+                                className="bg-zinc-800 text-white border-emerald-500 border rounded px-1 outline-none text-[11px] max-w-[120px]"
+                                onBlur={() => {
+                                  if (tempSubnoteTitle.trim() && tempSubnoteTitle !== note.title) {
+                                    updateSubnote(note.id, { title: tempSubnoteTitle });
+                                  }
+                                  setEditingSubnoteId(null);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    if (tempSubnoteTitle.trim() && tempSubnoteTitle !== note.title) {
+                                      updateSubnote(note.id, { title: tempSubnoteTitle });
+                                    }
+                                    setEditingSubnoteId(null);
+                                  } else if (e.key === 'Escape') {
+                                    setEditingSubnoteId(null);
+                                  }
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            ) : (
+                              <span 
+                                className="max-w-[120px] truncate cursor-text"
+                                onDoubleClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingSubnoteId(note.id);
+                                  setTempSubnoteTitle(note.title || 'Nueva subnota');
+                                }}
+                                title="Doble clic para renombrar"
+                              >
+                                {note.title || 'Nueva subnota'}
+                              </span>
+                            )}
+                            {activeTab === `note_${note.id}` && (
+                              <span 
+                                onClick={(e) => { e.stopPropagation(); deleteSubnote(note.id); setActiveTab('original'); }}
+                                className="ml-1 p-0.5 hover:bg-black/20 rounded transition-colors"
+                              >
+                                <Trash2 size={10} />
+                              </span>
+                            )}
+                          </button>
+                        );
+                      }
+                    })}
+                  </div>
+
+                  {/* Flecha Derecha */}
+                  {canScrollRight && (
+                    <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#13131A] to-transparent z-10 flex items-center justify-end pointer-events-none">
+                      <button 
+                        onClick={() => scrollTabs('right')} 
+                        className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-[#EE1D52] transition-colors pointer-events-auto"
+                      >
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  )}
                 </div>
+
 
                 {/* AI Assistant Panel */}
                 {showAIInput && (
@@ -754,7 +861,44 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
                       videoId={focusedVideo.id} 
                       onGenerate={async (obj) => { 
                         setShowAIInput(false);
-                        await generateSummary(obj);
+                        const relDate = getRelativeCreatedAt();
+
+                        // ── Determinar el contenido del tab activo como FOCO PRINCIPAL ──
+                        let activeContent = '';
+                        let activeLabel = '';
+
+                        if (activeTab === 'original') {
+                          activeContent = focusedVideo.transcript || '';
+                          activeLabel = 'Transcripción principal';
+                        } else if (activeTab.startsWith('summary_')) {
+                          const s = aiSummaries.find(sm => sm.id === activeTab.replace('summary_', ''));
+                          activeContent = s?.content || '';
+                          activeLabel = `Resumen: ${s?.target_objective || 'IA'}`;
+                        } else if (activeTab.startsWith('note_')) {
+                          const n = subnotes.find(nt => nt.id === activeTab.replace('note_', ''));
+                          activeContent = n?.content || '';
+                          activeLabel = `Subnota: ${n?.title || 'Usuario'}`;
+                        }
+
+                        const fullContext = {
+                          title: focusedVideo.title || '',
+                          author: focusedVideo.author || '',
+                          activeLabel,
+                          activeContent,
+                          transcript: focusedVideo.transcript || '',
+                          subnotes: subnotes.map(n => ({ 
+                            title: n.title || '', 
+                            content: n.content || '',
+                            scratchpad: n.scratchpad || ''
+                          })),
+                          existingSummaries: aiSummaries.map(s => ({
+                            objective: s.target_objective || '',
+                            content: s.content || ''
+                          })),
+                          createdAt: relDate
+                        };
+
+                        await generateSummary(obj, fullContext);
                       }} 
                     />
                   </div>
@@ -857,12 +1001,13 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
                       </div>
                     </div>
                   )}
-                </div>
               </div>
             </div>
-          ) : (
-            <div className={`flex-1 overflow-y-auto p-6 scroll-smooth animate-fadeIn`}>
-              <div className={`${isTikTokMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto space-y-12 pb-20`}>
+          </div>
+        </div>
+      ) : (
+        <div className={`flex-1 overflow-y-auto p-6 scroll-smooth animate-fadeIn`}>
+              <div className={`${isTikTokMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto space-y-12 pb-20 px-4 md:px-10`}>
                 {rootVideos.length > 0 ? (
                   /* GRID DE VIDEOS ACTIVOS */
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -870,7 +1015,7 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
                       <div 
                         key={video.id} 
                         onClick={() => setFocusedVideoId(video.id)}
-                        className={`group bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-zinc-800/50 rounded-2xl p-5 hover:border-[#EE1D52]/40 hover:shadow-xl transition-all cursor-pointer flex flex-col gap-4 relative`}
+                        className={`group bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] rounded-2xl p-5 hover:border-[#EE1D52]/40 hover:shadow-xl transition-all cursor-pointer flex flex-col gap-4 relative`}
                       >
                         <div className="flex gap-4">
                           <div className="w-16 h-20 rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 shrink-0 shadow-md">
@@ -918,7 +1063,7 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
                   </div>
                 ) : (
                   /* WELCOME SCREEN (Empty Root) */
-                  <div className="flex flex-col items-center justify-center text-center p-12 gap-6 animate-fadeIn">
+                  <div className="max-w-4xl mx-auto px-6 h-full flex flex-col items-center justify-center text-center space-y-8">
                     <div className="w-32 h-32 rounded-full bg-zinc-900/10 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center relative overflow-hidden group">
                       <div className="absolute inset-0 bg-[#EE1D52]/5 group-hover:bg-[#EE1D52]/10 transition-colors"></div>
                       <Brain size={56} className="text-zinc-600 dark:text-zinc-400 relative z-10" />
@@ -940,11 +1085,11 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
                 {archivedVideos.length > 0 && (
                   <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800/50">
                     <div className="flex items-center gap-2 text-zinc-400 font-bold uppercase tracking-widest text-xs px-2">
-                      <Archive size={16} /> Historial de Videos ({archivedVideos.length})
+                      <Archive size={16} /> Archivo ({archivedVideos.length})
                     </div>
                     <div className="grid grid-cols-1 gap-2.5">
                       {archivedVideos.map(video => (
-                        <div key={video.id} className="p-4 bg-white dark:bg-[#1A1A24]/60 border border-zinc-200 dark:border-zinc-800/40 rounded-2xl flex items-center justify-between group hover:border-[#EE1D52]/30 transition-all">
+                        <div key={video.id} className="p-4 bg-white dark:bg-[#1A1A24]/60 border border-zinc-200 dark:border-[#2D2D42]/40 rounded-2xl flex items-center justify-between group hover:border-[#EE1D52]/30 transition-all">
                           <div className="flex items-center gap-4 truncate">
                             <div className="w-8 h-10 rounded bg-zinc-900 border border-zinc-800 overflow-hidden shrink-0 opacity-60">
                               <img src={video.thumbnail} className="w-full h-full object-cover" alt="" />

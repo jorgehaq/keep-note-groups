@@ -48,18 +48,33 @@ export function useTikTokSummaries(videoId: string | null) {
     };
   }, [videoId, fetchSummaries]);
 
-  const generateSummary = async (objective: string) => {
+  const generateSummary = async (objective: string, context?: {
+    title: string;
+    author: string;
+    activeLabel: string;
+    activeContent: string;
+    transcript: string;
+    subnotes: { title: string; content: string; scratchpad: string }[];
+    existingSummaries: { objective: string; content: string }[];
+    createdAt?: string
+  }) => {
     if (!videoId) return;
     
     // 1. Insert pending record
+    const insertData: any = {
+      tiktok_video_id: videoId,
+      target_objective: objective,
+      status: 'pending',
+      content: ''
+    };
+
+    if (context?.createdAt) {
+      insertData.created_at = context.createdAt;
+    }
+
     const { data: newSummary, error: insertError } = await supabase
       .from('summaries')
-      .insert([{
-        tiktok_video_id: videoId,
-        target_objective: objective,
-        status: 'pending',
-        content: ''
-      }])
+      .insert([insertData])
       .select()
       .single();
 
@@ -72,7 +87,7 @@ export function useTikTokSummaries(videoId: string | null) {
     const summaryId = newSummary.id;
 
     try {
-      // 2. Get video info for prompt
+      // 2. Get video info for prompt (Contexto Enriquecido)
       const { data: video } = await supabase
         .from('tiktok_videos')
         .select('transcript, title, author, description')
@@ -81,25 +96,51 @@ export function useTikTokSummaries(videoId: string | null) {
 
       if (!video) throw new Error("Video no encontrado");
 
-      const prompt = `Analiza el video de TikTok "${video.title}" de @${video.author} con el objetivo: "${objective}".
-      
-      CONTENIDO:
-      ${video.transcript || video.description || "Sin contenido disponible"}
-      
-      POR FAVOR, GENERA UN ANÁLISIS ESPECIALIZADO QUE INCLUYA:
-      1. RESUMEN EJECUTIVO: Una síntesis potente del mensaje central.
-      2. EL GANCHO (HOOK): Identifica cómo el video capta la atención en los primeros segundos.
-      3. PUNTOS CLAVE: Los insights o lecciones más importantes.
-      4. VALOR AGREGADO: Qué información nueva o ángulo único aporta.
-      5. CALL TO ACTION: Qué se espera que haga el espectador después.
+      // Paso 2: Obtener pizarrones vinculados al video
+      const { data: pizarrones } = await supabase
+        .from('brain_dumps')
+        .select('title, content')
+        .eq('tiktok_video_id', videoId);
 
-      Responde ESTRICTAMENTE con este JSON:
-      {
-        "summary": "Resumen ejecutivo detallado...",
-        "key_points": ["Insight 1", "Insight 2", "Gancho: ...", "CTA: ..."],
-        "category": "Categoría temática",
-        "suggested_title": "Título optimizado para retención"
-      }`;
+      const ctx = context;
+      const subnotesSec = ctx?.subnotes?.filter(n => n.content || n.scratchpad).map(n =>
+        `### Subnota: ${n.title}\n${n.content}${n.scratchpad ? `\n**Pizarrón de esta subnota:**\n${n.scratchpad}` : ''}`
+      ).join('\n\n') || '';
+
+      const pizarronesSec = (pizarrones || []).filter(p => p.content).map(p =>
+        `### Pizarrón: ${p.title || 'Sin título'}\n${p.content}`
+      ).join('\n\n') || '';
+
+      const summariesSec = ctx?.existingSummaries?.filter(s => s.content).map(s =>
+        `### Resumen previo (${s.objective}):\n${s.content}`
+      ).join('\n\n') || '';
+
+      const prompt = `
+Eres un asistente experto en análisis de contenido de TikTok.
+Analiza el video "${ctx?.title || video.title}" de @${ctx?.author || video.author}.
+
+## OBJETIVO PRINCIPAL
+${objective}
+
+## FOCO ACTIVO (contenido sobre el que se aplica principalmente el análisis)
+### ${ctx?.activeLabel || 'Transcripción'}
+${ctx?.activeContent || video.transcript || video.description || 'Sin contenido'}
+
+## CONTEXTO COMPLETO DEL VIDEO
+### Transcripción Whisper
+${ctx?.transcript || video.transcript || 'No disponible'}
+
+${subnotesSec ? `## SUBNOTAS DEL USUARIO\n${subnotesSec}` : ''}
+${pizarronesSec ? `## PIZARRONES ASOCIADOS\n${pizarronesSec}` : ''}
+${summariesSec ? `## RESÚMENES AI PREVIOS\n${summariesSec}` : ''}
+
+Responde ESTRICTAMENTE con este JSON:
+{
+  "summary": "Análisis ejecutivo enfocado en el objetivo y el foco activo...",
+  "key_points": ["Insight 1", "Insight 2", "Gancho: ...", "CTA: ..."],
+  "category": "Categoría temática",
+  "suggested_title": "Título optimizado"
+}`.trim();
 
       // 3. Invoke Edge Function
       const { data, error: aiError } = await supabase.functions.invoke('analyze-tiktok', {

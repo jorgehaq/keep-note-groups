@@ -162,6 +162,7 @@ export interface BrainDump {
     | "error"
     | "stale";
   scratchpad?: string;
+  tiktok_video_id?: string | null;
   children?: BrainDump[];
 }
 
