@@ -15,8 +15,13 @@ serve(async (req) => {
   try {
     // Extract payload
     const { prompt, videoId } = await req.json();
+    console.log("📥 Payload recibido:", { videoId, promptLength: prompt?.length });
+
     const apiKey = Deno.env.get("GEMINI_API_KEY");
+    console.log("🔑 API Key presente:", !!apiKey);
     if (!apiKey) throw new Error("API Key de Gemini no configurada.");
+
+    console.log("🚀 Llamando a Gemini...");
 
     // 3. Gemini Call
     const response = await fetch(
@@ -39,8 +44,11 @@ serve(async (req) => {
       },
     );
 
+    console.log("📡 Gemini status:", response.status);
     const data = await response.json();
+
     if (!response.ok) {
+      console.error("❌ Gemini error:", JSON.stringify(data));
       throw new Error(data.error?.message || "Google Gemini Error");
     }
 
