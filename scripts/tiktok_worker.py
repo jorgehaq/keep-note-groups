@@ -23,18 +23,24 @@ import subprocess
 import tempfile
 import traceback
 from datetime import datetime, timezone
-from typing import Any
-from dotenv import load_dotenv
-
-load_dotenv()  # Lee el .env local
+from typing import Any, Optional
 
 import whisper
 from supabase import create_client, Client
 
 # ── Config ────────────────────────────────────────────────────────────────────
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # En GitHub Actions no se necesita, los secretos ya están en os.environ
+
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")
 MAX_ITEMS    = 3   # Whisper tarda más que solo metadata, procesar menos por ciclo
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise EnvironmentError("Faltan variables de entorno SUPABASE_URL o SUPABASE_SERVICE_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
