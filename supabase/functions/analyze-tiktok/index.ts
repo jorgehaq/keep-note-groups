@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,8 +13,8 @@ serve(async (req) => {
 
   try {
     // Extract payload
-    const { prompt, videoId } = await req.json();
-    console.log("📥 Payload recibido:", { videoId, promptLength: prompt?.length });
+    const { prompt } = await req.json();
+    console.log("📥 Payload recibido:", { promptLength: prompt?.length });
 
     const apiKey = Deno.env.get("GEMINI_API_KEY");
     console.log("🔑 API Key presente:", !!apiKey);
@@ -63,7 +62,8 @@ serve(async (req) => {
       },
     );
   } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    const err = error as Error;
+    return new Response(JSON.stringify({ error: err.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     });

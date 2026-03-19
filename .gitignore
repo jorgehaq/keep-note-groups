@@ -23,4 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 *.txt
-supabase/snippets/Untitled*
+supabase/snippets/Untitled*.env
+venv/
+.env

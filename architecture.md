@@ -27,12 +27,14 @@ App.tsx
 - 'reload-app-data'      → fetchData() completo
 - 'app-theme-changed'    → componentes internos reaccionan al cambio de clase en html
 - 'tiktok-updated'       → (implícito via Realtime) recarga videos procesados en TikTokApp
+- 'tiktok-to-note'       → conversión de análisis de video en nota regular (insert en `notes`)
 
 ## Servicios Externos & Workers
 - **TikTok Worker** (`scripts/tiktok_worker.py`): Corre cada 8 minutos en GitHub Actions. Usa `yt-dlp` para extraer transcripciones (sin descargar video) y actualizar la tabla `tiktok_videos`.
 
-## Estándares de UI - Parity & Glow
+## Estándares de UI - Parity, Glow & Responsividad
 - **Global Search Parity**: Buscador ámbar con `highlightText` y tray persistent.
+- **Responsive Trays**: En móviles, los paneles laterales (Notes, TikTok) se comportan como overlays `fixed inset-0` con botón de cierre explícito.
 - **Kanban Glow Standard**: Los estados `todo`, `in_progress` y `done` deben usar colores de la familia Tailwind-400 con un `box-shadow` de 6px (opacidad 0.5) para legibilidad en Dark Mode.
 
 ## Alias de Paths

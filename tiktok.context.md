@@ -23,8 +23,14 @@ Módulo de análisis de contenido de TikTok que permite convertir videos en nota
 - **Tablas**: `tiktok_queue` (cola de tareas) y `tiktok_videos` (contenido final).
 - **Realtime**: Sincronización automática para mostrar el progreso del worker en tiempo real en la UI.
 
+## Acciones Avanzadas
+- **Convertir a Nota**: Integra Resumen, Notas, Puntos Clave y Transcripción en una sola nota estructurada en el grupo seleccionado.
+- **Acceso**: Menú `MoreVertical` en el header del video enfocado.
+
 ## Reglas de UI Estrictas
 1. **Search Parity**: El buscador debe usar el patrón ámbar (`amber-500/50`) con iluminación de texto cuando hay una búsqueda activa.
 2. **Tab Navigation**: Tres pilares de contenido: ANÁLISIS, TRANSCRIPCIÓN e IA.
-3. **Responsive Design**: Colapsar la bandeja de videos lateral (`PanelLeft`) para maximizar el área de edición.
+3. **Responsive Design**: 
+    - Móvil: Bandeja lateral como overlay `fixed z-[60]`.
+    - Desktop: Bandeja colapsable con `PanelLeft`.
 4. **Visual Glow**: Los badges de duración y autor deben seguir la estética premium del sistema (fuentes mono, opacidades dinámicas).

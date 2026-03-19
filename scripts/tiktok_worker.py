@@ -23,13 +23,17 @@ import subprocess
 import tempfile
 import traceback
 from datetime import datetime, timezone
+from typing import Any
+from dotenv import load_dotenv
+
+load_dotenv()  # Lee el .env local
 
 import whisper
 from supabase import create_client, Client
 
 # ── Config ────────────────────────────────────────────────────────────────────
-SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")
 MAX_ITEMS    = 3   # Whisper tarda más que solo metadata, procesar menos por ciclo
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -37,7 +41,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 # Cargar modelo Whisper una sola vez al arrancar
 # 'base' = ~140MB, buena precisión para voz, rápido en CPU (~5-15s por video corto)
 print("Cargando modelo Whisper 'base'...")
-whisper_model = whisper.load_model("base")
+whisper_model = whisper.load_model("base", device="cpu")
 print("Modelo cargado.")
 
 
@@ -47,12 +51,12 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def mark_queue(queue_id: str, status: str, video_id: str = None, error: str = None):
+def mark_queue(queue_id: str, status: str, video_id: str | None = None, error: str | None = None):
     payload = {"status": status, "updated_at": now_iso()}
     if video_id:
         payload["video_id"] = video_id
     if error:
-        payload["error_msg"] = error[:500]
+        payload["error_msg"] = (error or "")[:500]
     supabase.table("tiktok_queue").update(payload).eq("id", queue_id).execute()
 
 
@@ -99,7 +103,7 @@ def download_audio(url: str, tmp: str) -> str | None:
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
     if result.returncode != 0:
-        print(f"    yt-dlp error: {result.stderr[:200]}")
+        print(f"    yt-dlp error: {(result.stderr or '')[:200]}")
         return None
 
     # Buscar audio descargado (mp3 o m4a si ffmpeg no convirtió)
@@ -111,7 +115,7 @@ def download_audio(url: str, tmp: str) -> str | None:
     return None
 
 
-def transcribe_audio(audio_path: str, language_hint: str = None) -> tuple[str, str]:
+def transcribe_audio(audio_path: str, language_hint: str | None = None) -> tuple[str, str]:
     """
     Transcribe el audio con Whisper local.
     Retorna (transcript, idioma_detectado).
@@ -119,7 +123,7 @@ def transcribe_audio(audio_path: str, language_hint: str = None) -> tuple[str, s
     """
     print(f"    Transcribiendo: {os.path.basename(audio_path)}...")
 
-    options = {
+    options: dict[str, Any] = {
         "fp16"   : False,    # CPU no soporta fp16
         "verbose": False,
     }

@@ -30,7 +30,8 @@ import {
   Download,
   Sparkles,
   FileText,
-  Quote
+  Quote,
+  StickyNote
 } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 import { useUIStore } from '../src/lib/store';
@@ -58,6 +59,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
   const { 
     isTikTokMaximized, 
     setIsTikTokMaximized, 
+    activeGroupId,
     isZenModeByApp,
     tikTokVideos,
     tikTokQueueItems,
@@ -65,6 +67,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
     setFocusedVideoId,
     isVideoTrayOpen,
     setIsVideoTrayOpen,
+    groups, // Needed for selecting target group when converting to note
     overdueRemindersCount,
     showOverdueMarquee,
     setShowOverdueMarquee
@@ -129,13 +132,78 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
     v.author?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleConvertToNote = async () => {
+    if (!focusedVideo) return;
+    
+    // User selects a group
+    const groupNames = groups.map((g, idx) => `${idx + 1}. ${g.title}`).join("\n");
+    const choice = prompt(`Selecciona el número del grupo para la nueva nota:\n${groupNames}\n\n(Deja vacío para el grupo activo)`);
+    
+    let targetGroupId = activeGroupId;
+    if (choice) {
+      const idx = parseInt(choice) - 1;
+      if (groups[idx]) targetGroupId = groups[idx].id;
+    }
+
+    if (!targetGroupId) {
+      alert("No hay un grupo seleccionado.");
+      return;
+    }
+
+    const content = `
+# [ANÁLISIS TIKTOK] ${focusedVideo.title}
+**Autor:** @${focusedVideo.author} | **URL:** ${focusedVideo.url}
+
+## 📝 RESUMEN EJECUTIVO
+${focusedVideo.summary || "_Sin resumen generado_"}
+
+## 💡 PUNTOS CLAVE
+${focusedVideo.key_points?.map(p => `- ${p}`).join("\n") || "_Sin puntos clave_"}
+
+## ✍️ NOTAS DE TRABAJO
+${focusedVideo.scratchpad || "_Sin notas_"}
+
+---
+
+## 🎙️ TRANSCRIPCIÓN COMPLETA
+${focusedVideo.transcript || "_Sin transcripción_"}
+`.trim();
+
+    const { data, error } = await supabase.from("notes").insert([{
+      title: `TikTok: ${focusedVideo.title?.slice(0, 40)}`,
+      content,
+      user_id: session.user.id,
+      group_id: targetGroupId,
+      position: 0
+    }]).select().single();
+
+    if (error) {
+      alert("Error al convertir a nota: " + error.message);
+    } else {
+      setIsActionMenuOpen(false);
+      if (confirm("Nota creada con éxito. ¿Quieres ir a verla ahora?")) {
+        useUIStore.setState({ globalView: 'notes', activeGroupId: targetGroupId });
+      }
+    }
+  };
+
   return (
     <div className={`flex h-full bg-[#13131A] text-zinc-100 font-sans transition-all duration-300 ${isTikTokMaximized ? 'fixed inset-0 z-50' : 'relative'}`}>
       
       {/* 1. LEFT TRAY (VIDEO LIST & QUEUE) */}
       {!isZenMode && (
-        <div className={`flex flex-col border-r border-zinc-800/50 bg-[#1A1A24]/40 backdrop-blur-xl transition-all duration-300 ${isVideoTrayOpen ? 'w-80' : 'w-0 overflow-hidden'}`}>
+        <div className={`
+          flex flex-col border-r border-zinc-800/50 bg-[#1A1A24] md:bg-[#1A1A24]/40 backdrop-blur-3xl transition-all duration-300 
+          ${isVideoTrayOpen ? 'w-full fixed inset-0 z-[60] md:relative md:w-80 md:inset-auto' : 'w-0 overflow-hidden'}
+        `}>
           <div className="p-4 border-b border-zinc-800/50 flex flex-col gap-4">
+             {/* Mobile Close Button */}
+             <div className="flex md:hidden items-center justify-between mb-2">
+               <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Explorar Videos</span>
+               <button onClick={() => setIsVideoTrayOpen(false)} className="p-2 bg-zinc-800 rounded-xl text-zinc-400">
+                 <X size={20} />
+               </button>
+             </div>
              {/* Search Area with Amber Pattern */}
              <div className="relative group">
                <Search className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-amber-400' : 'text-zinc-500'}`} size={16} />
@@ -236,7 +304,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
         {!isZenMode && (
           <button
             onClick={() => setIsVideoTrayOpen(!isVideoTrayOpen)}
-            className="absolute top-1/2 -left-3 -translate-y-1/2 p-1 bg-zinc-800 hover:bg-zinc-700 rounded-full border border-zinc-700 z-40 transition-all opacity-0 hover:opacity-100 group-hover:opacity-100 shadow-xl"
+            className={`absolute top-1/2 -left-3 -translate-y-1/2 p-2 bg-zinc-800 hover:bg-zinc-700 rounded-full border border-zinc-700 z-40 transition-all shadow-xl ${isVideoTrayOpen ? 'md:opacity-0 md:hover:opacity-100' : 'opacity-100'}`}
           >
             <PanelLeft size={16} className={`text-zinc-400 transition-transform ${isVideoTrayOpen ? '' : 'rotate-180'}`} />
           </button>
@@ -294,6 +362,12 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                     </button>
                     {isActionMenuOpen && (
                       <div className="absolute right-0 top-full mt-2 w-48 bg-[#1A1A24] border border-zinc-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                        <button 
+                          onClick={handleConvertToNote}
+                          className="w-full text-left px-4 py-3 text-xs font-semibold text-amber-400 hover:bg-amber-500/10 flex items-center gap-3"
+                        >
+                          <StickyNote size={14} /> Convertir en Nota 📝
+                        </button>
                         <button className="w-full text-left px-4 py-3 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 flex items-center gap-3">
                           <Archive size={14} /> Archivar Nota
                         </button>
