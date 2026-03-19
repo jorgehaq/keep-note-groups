@@ -192,6 +192,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
   const isDraggingRef = useRef(false);
   const editorRef = useRef<SmartNotesEditorRef>(null);
   const scratchRef = useRef<SmartNotesEditorRef>(null);
+  const videoSaveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
 
   const isZenMode = !!isZenModeByApp['tiktok'];
   const focusedVideo = useMemo(() => tikTokVideos.find(v => v.id === focusedVideoId), [tikTokVideos, focusedVideoId]);
@@ -298,6 +299,16 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
 
   const updateVideo = async (id: string, updates: Partial<TikTokVideo>) => {
     await supabase.from("tiktok_videos").update(updates).eq("id", id);
+  };
+
+  const debouncedUpdateVideo = (id: string, updates: Partial<TikTokVideo>) => {
+    // Optimistic: actualiza estado local inmediato para que el UI no lagguee
+    updateTikTokVideoSync(id, updates);
+    // Debounce la escritura a Supabase
+    if (videoSaveTimeoutRef.current[id]) clearTimeout(videoSaveTimeoutRef.current[id]);
+    videoSaveTimeoutRef.current[id] = setTimeout(() => {
+      supabase.from("tiktok_videos").update(updates).eq("id", id);
+    }, 800);
   };
 
   const deleteVideo = async (id: string, url?: string) => {
@@ -761,7 +772,7 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
                           ref={editorRef}
                           noteId={focusedVideo.id}
                           initialContent={focusedVideo.transcript || ""}
-                          onChange={(c) => updateVideo(focusedVideo.id, { transcript: c })}
+                          onChange={(c) => debouncedUpdateVideo(focusedVideo.id, { transcript: c })}
                           searchQuery={searchQuery}
                         />
                       )}
@@ -816,7 +827,7 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
                             ref={scratchRef}
                             noteId={`scratch_${focusedVideo.id}`}
                             initialContent={focusedVideo.scratchpad || ""}
-                            onChange={(c) => updateVideo(focusedVideo.id, { scratchpad: c })}
+                            onChange={(c) => debouncedUpdateVideo(focusedVideo.id, { scratchpad: c })}
                           />
                         )}
                         {activeTab.startsWith('summary_') && (() => {
