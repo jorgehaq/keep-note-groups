@@ -690,16 +690,16 @@ export const BrainDumpApp: React.FC<{
                     <div className="max-w-6xl mx-auto relative px-0 py-1">
                         {/* Flecha Izquierda */}
                         {canScrollLeft && (
-                            <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-start pl-3 pointer-events-none">
-                                <button onClick={() => scrollTabs('left')} className="p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors pointer-events-auto active:scale-90">
-                                    <ChevronLeft size={16} />
+                            <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-start pl-6 pointer-events-none">
+                                <button onClick={() => scrollTabs('left')} className="p-1.5 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors pointer-events-auto active:scale-90 border border-zinc-700">
+                                    <ChevronLeft size={18} />
                                 </button>
                             </div>
                         )}
                         <div 
                             ref={scrollContainerRef}
                             onScroll={checkScroll}
-                            className="flex flex-nowrap items-center justify-start gap-4 overflow-x-auto hidden-scrollbar scroll-smooth py-3 pl-20 pr-20"
+                            className="flex flex-nowrap items-center justify-start gap-4 overflow-x-auto hidden-scrollbar scroll-smooth py-3 pl-32 pr-32"
                         >
                             {rootPizarrones.length === 0 ? (
                                 <div className="text-xs text-zinc-600 italic">No hay pizarrones activos</div>
@@ -737,9 +737,9 @@ export const BrainDumpApp: React.FC<{
                         </div>
                         {/* Flecha Derecha */}
                         {canScrollRight && (
-                            <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-end pr-2 pointer-events-none">
-                                <button onClick={() => scrollTabs('right')} className="p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors pointer-events-auto active:scale-90">
-                                    <ChevronRight size={16} />
+                            <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-end pr-6 pointer-events-none">
+                                <button onClick={() => scrollTabs('right')} className="p-1.5 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors pointer-events-auto active:scale-90 border border-zinc-700">
+                                    <ChevronRight size={18} />
                                 </button>
                             </div>
                         )}
@@ -911,14 +911,14 @@ export const BrainDumpApp: React.FC<{
                                                 <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
                                                 <button 
                                                     onClick={() => { changeStatus(displayDump.id, 'history'); setOpenMenuId(null); }} 
-                                                    className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors font-medium"
+                                                    className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors font-bold"
                                                 >
                                                     <ArchiveIcon size={14} /> Archivar Pizarrón
                                                 </button>
                                                 
                                                 <button 
                                                     onClick={() => { deleteDump(displayDump.id); setOpenMenuId(null); }} 
-                                                    className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium"
+                                                    className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-bold"
                                                 >
                                                     <Trash2 size={14} /> Eliminar Permanentemente
                                                 </button>
@@ -1058,7 +1058,7 @@ export const BrainDumpApp: React.FC<{
                     })()}
 
                     {!focusedDumpId && (
-                        <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto w-full px-4 lg:px-6 py-8 animate-fadeIn`}>
+                        <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto w-full px-4 md:px-10 animate-fadeIn pt-10 pb-10`}>
                             {/* LISTA PRINCIPAL DE PIZARRONES */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {rootPizarrones.map(p => {
@@ -1095,11 +1095,11 @@ export const BrainDumpApp: React.FC<{
 
                             {/* ARCHIVO */}
                             {archivo.length > 0 && (
-                                <div className="space-y-4 opacity-70 px-0 mt-8">
+                                <div className="mt-12 space-y-4 pt-8 border-t border-zinc-100 dark:border-[#2D2D42]/40 animate-fadeIn">
                                     <div className="flex items-center gap-2 text-zinc-400 font-bold uppercase tracking-widest text-xs px-2"><ArchiveIcon size={16} /> Archivo ({archivo.length})</div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
                                         {archivo.map(a => (
-                                            <div key={a.id} className="p-4 bg-white dark:bg-[#1A1A24]/50 border border-zinc-200 dark:border-[#2D2D42] rounded-xl flex items-center justify-between group hover:border-amber-500/30 transition-all">
+                                            <div key={a.id} className="p-4 bg-white dark:bg-[#1A1A24]/50 border border-zinc-200 dark:border-[#2D2D42] rounded-2xl flex items-center justify-between group hover:border-amber-500/30 transition-all">
                                                 <div className="flex items-center gap-3 truncate"><ArchiveIcon size={14} className="text-zinc-300" /><span className="text-sm font-bold text-zinc-700 dark:text-zinc-300 truncate">{a.title || 'Sin Título'}</span></div>
                                                 <div className="flex items-center gap-1 shrink-0">
                                                     <button onClick={() => changeStatus(a.id, 'main')} className="p-1.5 hover:text-indigo-500" title="Restaurar"><RotateCcw size={14}/></button>

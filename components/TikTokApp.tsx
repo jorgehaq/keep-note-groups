@@ -566,16 +566,16 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
         <div className="bg-[#13131A] shrink-0 animate-slideDown group/tray">
           <div className="max-w-6xl mx-auto relative px-0 py-1">
             {canScrollTrayLeft && (
-              <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-start pl-3 pointer-events-none">
-                <button onClick={() => scrollTray('left')} className="p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors pointer-events-auto active:scale-90">
-                    <ChevronLeft size={16} />
+              <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-start pl-6 pointer-events-none">
+                <button onClick={() => scrollTray('left')} className="p-1.5 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors pointer-events-auto active:scale-90 border border-zinc-700">
+                    <ChevronLeft size={18} />
                 </button>
               </div>
             )}
             <div 
               ref={videoTrayRef}
               onScroll={checkTrayScroll}
-              className="flex items-center justify-start gap-4 overflow-x-auto hidden-scrollbar scroll-smooth py-3 pl-20 pr-20"
+              className="flex items-center justify-start gap-4 overflow-x-auto hidden-scrollbar scroll-smooth py-3 pl-32 pr-32"
             >
               {rootVideos.length === 0 ? (
                 <div className="text-xs text-zinc-600 italic px-4">No hay videos activos</div>
@@ -613,9 +613,9 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
               )}
             </div>
             {canScrollTrayRight && (
-              <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-end pr-2 pointer-events-none">
-                <button onClick={() => scrollTray('right')} className="p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors pointer-events-auto active:scale-90">
-                  <ChevronRight size={16} />
+              <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-end pr-6 pointer-events-none">
+                <button onClick={() => scrollTray('right')} className="p-1.5 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors pointer-events-auto active:scale-90 border border-zinc-700">
+                  <ChevronRight size={18} />
                 </button>
               </div>
             )}
@@ -725,14 +725,14 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                         
                         <button 
                           onClick={() => { archiveVideo(focusedVideo.id); setShowMoreMenu(false); }} 
-                          className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors font-medium"
+                          className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors font-bold"
                         >
                           <Archive size={14} /> Archivar TikTok
                         </button>
                         
                         <button 
                           onClick={() => { deleteVideo(focusedVideo.id, focusedVideo.url); setShowMoreMenu(false); }} 
-                          className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium"
+                          className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-bold"
                         >
                           <Trash2 size={14} /> Eliminar Permanentemente
                         </button>
@@ -1166,7 +1166,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
 
                 {/* SECCIÓN DE ARCHIVO (Visible even if root is empty) */}
                 {archivedVideos.length > 0 && (
-                  <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800/50">
+                  <div className="space-y-4 pt-8 border-t border-zinc-100 dark:border-zinc-800/50">
                     <div className="flex items-center gap-2 text-zinc-400 font-bold uppercase tracking-widest text-xs px-2">
                       <Archive size={16} /> Archivo ({archivedVideos.length})
                     </div>

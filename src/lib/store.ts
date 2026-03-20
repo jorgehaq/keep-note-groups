@@ -400,9 +400,10 @@ export const useUIStore = create<UIStore>()(
                         ...state.focusedNoteByGroup,
                         [gid]: id,
                     },
-                    lastActiveNoteByGroup: id 
-                        ? { ...state.lastActiveNoteByGroup, [gid]: id }
-                        : state.lastActiveNoteByGroup
+                    lastActiveNoteByGroup: {
+                        ...state.lastActiveNoteByGroup,
+                        [gid]: id
+                    }
                 }));
             },
             setIsGlobalNoteTrayOpen: (open, groupId) => {
