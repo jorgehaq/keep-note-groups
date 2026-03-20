@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Archive, ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash, Sparkles, FileText, PenLine, ArrowUpRight, GitBranch, Plus, Wind, ListPlus, History, Calendar } from 'lucide-react';
 import { Note, NoteFont } from '../types';
 import { SmartNotesEditor, SmartNotesEditorRef } from '../src/components/editor/SmartNotesEditor';
@@ -235,6 +235,56 @@ const SummaryTabContent: React.FC<{
   );
 };
 
+const SummaryTitle: React.FC<{
+  summary: any;
+  isActive: boolean;
+  searchQuery?: string;
+  onRename: (id: string, newObjective: string) => void;
+}> = ({ summary, isActive, searchQuery, onRename }) => {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(summary.target_objective || '');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setVal(summary.target_objective || ''); }, [summary.target_objective]);
+
+  const save = () => {
+    setEditing(false);
+    const trimmed = val.trim();
+    if (trimmed && trimmed !== summary.target_objective) onRename(summary.id, trimmed);
+    else setVal(summary.target_objective || '');
+  };
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        value={val}
+        autoFocus
+        onChange={e => setVal(e.target.value)}
+        onBlur={save}
+        onKeyDown={e => {
+          if (e.key === 'Enter') save();
+          if (e.key === 'Escape') { setEditing(false); setVal(summary.target_objective || ''); }
+          e.stopPropagation();
+        }}
+        onClick={e => e.stopPropagation()}
+        className="bg-black text-white border-violet-500 border rounded px-1.5 py-0.5 outline-none text-[11px] max-w-[120px] shadow-inner"
+        placeholder="Título..."
+      />
+    );
+  }
+
+  return (
+    <span
+      className="truncate max-w-[120px] cursor-pointer"
+      onDoubleClick={e => { e.stopPropagation(); if (isActive) setEditing(true); }}
+      title={isActive ? 'Doble clic para renombrar' : summary.target_objective || ''}
+    >
+      {searchQuery?.trim() ? highlightText(summary.target_objective || 'Análisis AI', searchQuery) : (summary.target_objective || 'Análisis AI')}
+    </span>
+  );
+};
+
 const SubnoteTitle: React.FC<{
   child: Note;
   isActive: boolean;
@@ -269,7 +319,7 @@ const SubnoteTitle: React.FC<{
         }}
         onClick={e => e.stopPropagation()}
         onMouseDown={e => e.stopPropagation()}
-        className="w-24 bg-transparent outline-none border-b border-white/50 text-xs font-bold"
+        className="bg-black text-white border-emerald-500 border rounded px-1.5 py-0.5 outline-none text-[11px] max-w-[120px] shadow-inner"
         placeholder="Título..."
       />
     );
@@ -480,11 +530,36 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
  
    const activeTab = activeTabByNote[displayNoteId] || 'original';
    const setActiveTab = (tabId: string) => setStoreActiveTab(displayNoteId, tabId);
-   const { summaries: aiSummaries, deleteSummary, updateScratchpad, updateSummaryContent, loading: summariesLoading, hasFetched } = useSummaries(displayNoteId);
-   const completedSummaries = aiSummaries.filter(s => s.status === 'completed');
- 
-   const manualChildren = groupNotes.filter(n => n.parent_note_id === displayNoteId && !n.ai_generated);
-   const childrenLoaded = true; // Since we rely on global state
+    const { summaries: aiSummaries, deleteSummary, updateScratchpad, updateSummaryContent, updateSummaryMetadata, loading: summariesLoading, hasFetched } = useSummaries(displayNoteId);
+    const completedSummaries = aiSummaries.filter(s => s.status === 'completed');
+  
+    const manualChildren = groupNotes.filter(n => n.parent_note_id === displayNoteId && !n.ai_generated);
+
+    // DETERMINAR ORDEN RELATIVO (como TikTok)
+    const getRelativeCreatedAt = () => {
+      let baseDate = new Date(activeNote?.created_at || note.created_at || Date.now());
+      if (activeTab === 'original') {
+        baseDate = new Date(activeNote?.created_at || note.created_at || Date.now());
+      } else if (activeTab.startsWith('sub_')) {
+        const id = activeTab.replace('sub_', '');
+        const target = manualChildren.find(c => c.id === id);
+        if (target) baseDate = new Date(target.created_at);
+      } else {
+        const target = completedSummaries.find(s => s.id === activeTab);
+        if (target) baseDate = new Date(target.created_at);
+      }
+      return new Date(baseDate.getTime() + 1000).toISOString(); // +1 seg es suficiente para el orden
+    };
+
+    const unifiedTabs = useMemo(() => {
+      const items = [
+        ...manualChildren.map(c => ({ id: `sub_${c.id}`, type: 'sub' as const, created_at: c.created_at, data: c })),
+        ...aiSummaries.map(s => ({ id: s.id, type: 'summary' as const, created_at: s.created_at, data: s }))
+      ];
+      return items.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    }, [manualChildren, aiSummaries]);
+
+    const childrenLoaded = true; // Since we rely on global state
  
    // Fallback to 'original' if the active tab summary/subnote is missing
    useEffect(() => {
@@ -662,6 +737,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       generation_level: (note.generation_level || 0) + 1,
       ai_generated: false,
       position: manualChildren.length,
+      created_at: getRelativeCreatedAt(),
     }]).select().single();
     if (!error && data) {
       setActiveTab(`sub_${data.id}`);
@@ -978,77 +1054,88 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 <FileText size={11} /> Original
               </button>
 
-               {/* Tabs subnotas manuales — verdes */}
-              {manualChildren.map((child) => {
-                const isActive = activeTab === `sub_${child.id}`;
-                const isMatch = searchQuery?.trim() && checkNoteMatch(child, searchQuery.trim(), groupNotes, allSummaries);
+               {/* Tabs UNIFICADAS (Subnotes + Summaries mezclados por fecha) */}
+              {unifiedTabs.map((tab) => {
+                if (tab.type === 'sub') {
+                  const child = tab.data as Note;
+                  const isActive = activeTab === `sub_${child.id}`;
+                  const isMatch = searchQuery?.trim() && checkNoteMatch(child, searchQuery.trim(), groupNotes, allSummaries);
 
-                return (
-                  <div key={child.id} className="relative shrink-0 flex items-center group">
-                    <button
-                      onClick={() => setActiveTab(`sub_${child.id}`)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all max-w-[150px] ${
-                        isActive
-                          ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                  return (
+                    <div key={child.id} className="relative shrink-0 flex items-center group">
+                      <button
+                        onClick={() => setActiveTab(`sub_${child.id}`)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all max-w-[150px] ${
+                          isActive
+                            ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                            : isMatch
+                              ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
+                              : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-emerald-500/50 hover:text-emerald-400'
+                        }`}
+                      >
+                        <GitBranch size={10} className="shrink-0" />
+                        <SubnoteTitle
+                          child={child}
+                          isActive={isActive}
+                          onRename={handleSaveChildTitle}
+                          searchQuery={searchQuery}
+                        />
+                        {isActive && (
+                          <span 
+                            onClick={(e) => { e.stopPropagation(); if (confirm('¿Borrar esta sub-nota?')) onDelete(child.id); }} 
+                            className="ml-1 p-0.5 hover:bg-black/20 rounded transition-colors text-white/70 hover:text-white" 
+                            title="Borrar sub-nota"
+                          >
+                            <Trash2 size={10} />
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  );
+                } else {
+                  const s = tab.data as any;
+                  const isProcessing = s.status === 'pending' || s.status === 'processing';
+                  const isMatch = !isProcessing && searchQuery?.trim() && (
+                    s.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+                    s.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+                    s.scratchpad?.toLowerCase().includes(searchQuery.trim().toLowerCase())
+                  );
+
+                  if (isProcessing) {
+                    return (
+                      <div key={s.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 max-w-[150px] bg-zinc-100 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-700 text-zinc-400 animate-pulse"
+                      >
+                        <Loader2 size={10} className="animate-spin shrink-0" />
+                        <span className="truncate">{s.target_objective || 'Analizando...'}</span>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <button key={s.id}
+                      onClick={() => setActiveTab(activeTab === s.id ? 'original' : s.id)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all max-w-[150px] ${
+                        activeTab === s.id
+                          ? 'bg-violet-600 text-white border-violet-500 shadow-sm'
                           : isMatch
                             ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
-                            : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-emerald-500/50 hover:text-emerald-400'
+                            : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/40 hover:text-violet-400'
                       }`}
                     >
-                      <GitBranch size={10} className="shrink-0" />
-                      <SubnoteTitle
-                        child={child}
-                        isActive={isActive}
-                        onRename={handleSaveChildTitle}
-                        searchQuery={searchQuery}
+                    <Sparkles size={10} className="shrink-0" />
+                    <span className="truncate">
+                      <SummaryTitle 
+                        summary={s} 
+                        isActive={activeTab === s.id} 
+                        searchQuery={searchQuery} 
+                        onRename={(id, newObj) => updateSummaryMetadata(id, { target_objective: newObj })} 
                       />
-                      {isActive && (
-                        <span 
-                          onClick={(e) => { e.stopPropagation(); if (confirm('¿Borrar esta sub-nota?')) onDelete(child.id); }} 
-                          className="ml-1 p-0.5 hover:bg-black/20 rounded transition-colors text-white/70 hover:text-white" 
-                          title="Borrar sub-nota"
-                        >
-                          <Trash2 size={10} />
-                        </span>
-                      )}
-                    </button>
-                  </div>
-                );
+                    </span>
+                  </button>
+                  );
+                }
               })}
-
-              {/* Tabs AI summaries — violetas (procesando) */}
-              {aiSummaries.filter(s => s.status === 'pending' || s.status === 'processing').map(s => (
-                <div key={s.id}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 max-w-[150px] bg-zinc-800/60 border-zinc-700 text-zinc-400 animate-pulse"
-                >
-                  <Loader2 size={10} className="animate-spin shrink-0" />
-                  <span className="truncate">{s.target_objective || 'Analizando...'}</span>
-                </div>
-              ))}
-
-               {/* Tabs AI summaries — violetas (completados) */}
-              {completedSummaries.map(s => {
-                const isMatch = searchQuery?.trim() && (
-                  s.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
-                  s.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
-                  s.scratchpad?.toLowerCase().includes(searchQuery.trim().toLowerCase())
-                );
-                return (
-                  <button key={s.id}
-                    onClick={() => setActiveTab(activeTab === s.id ? 'original' : s.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all max-w-[150px] ${
-                      activeTab === s.id
-                        ? 'bg-violet-600 text-white border-violet-500 shadow-sm'
-                        : isMatch
-                          ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
-                          : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/40 hover:text-violet-400'
-                    }`}
-                  >
-                  <Sparkles size={10} className="shrink-0" />
-                  <span className="truncate">{s.target_objective || 'Análisis'}</span>
-                </button>
-              );
-            })}
 
             </div>
           )}
@@ -1070,6 +1157,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                   noteId={displayNoteId}
                   userId={session.user.id}
                   noteStatus={note.ai_summary_status ?? 'idle'}
+                  customCreatedAt={getRelativeCreatedAt()}
                   onPromoteToNote={onCreateNote ? handlePromoteToNote : undefined}
                 />
               </div>

@@ -12,7 +12,7 @@ export const BrainDumpBreadcrumb: React.FC<BrainDumpBreadcrumbProps> = ({ path, 
   if (path.length <= 1) return null;
 
   return (
-    <div className="flex items-center gap-1 px-4 py-2 border-b border-zinc-100 dark:border-zinc-800/50 bg-zinc-50/30 dark:bg-transparent overflow-x-auto hidden-scrollbar shrink-0">
+    <div className="flex items-center gap-0.5 flex-wrap px-1 py-1.5 mb-2 shrink-0 overflow-x-auto">
       <button
         onClick={() => onNavigate(path[0].id)}
         className="p-1 text-zinc-400 hover:text-amber-500 transition-colors shrink-0"

@@ -6,18 +6,19 @@ interface NoteAIPanelProps {
   noteId: string;
   userId: string;
   noteStatus: string;
+  customCreatedAt?: string;
   onPromoteToNote?: (content: string, title: string) => void;
 }
 
-export const NoteAIPanel: React.FC<NoteAIPanelProps> = ({ noteId, noteStatus }) => {
+export const NoteAIPanel: React.FC<NoteAIPanelProps> = ({ noteId, customCreatedAt }) => {
   const [objectiveInput, setObjectiveInput] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const { summaries, generateSummary } = useSummaries(noteId);
+  const { generateSummary } = useSummaries(noteId);
 
   const handleGenerate = async () => {
     if (isCreating) return;
     setIsCreating(true);
-    await generateSummary(objectiveInput.trim());
+    await generateSummary(objectiveInput.trim(), customCreatedAt);
     setObjectiveInput('');
     setIsCreating(false);
   };

@@ -96,7 +96,7 @@ export const useSummaries = (noteId: string | null) => {
         };
     }, [noteId, fetchSummaries]);
 
-    const generateSummary = async (objective?: string) => {
+    const generateSummary = async (objective?: string, customCreatedAt?: string) => {
         if (!noteId) return;
 
         // 🎯 Sincronizar el objetivo en la nota para que el motor Python lo detecte
@@ -115,6 +115,7 @@ export const useSummaries = (noteId: string | null) => {
                 note_id: noteId,
                 target_objective: objective || null,
                 status: "pending",
+                created_at: customCreatedAt || new Date().toISOString(),
             })
             .select()
             .single();
@@ -149,6 +150,14 @@ export const useSummaries = (noteId: string | null) => {
         if (error) console.error("Error updating scratchpad:", error);
     };
 
+    const updateSummaryMetadata = async (summaryId: string, updates: Partial<Summary>) => {
+        const { error } = await supabase
+            .from("summaries")
+            .update(updates)
+            .eq("id", summaryId);
+        if (error) console.error("Error updating summary metadata:", error);
+    };
+
     const updateSummaryContent = async (summaryId: string, text: string) => {
         const { error } = await supabase
             .from("summaries")
@@ -164,6 +173,7 @@ export const useSummaries = (noteId: string | null) => {
         deleteSummary,
         updateScratchpad,
         updateSummaryContent,
+        updateSummaryMetadata,
         refresh: fetchSummaries,
         hasFetched,
     };

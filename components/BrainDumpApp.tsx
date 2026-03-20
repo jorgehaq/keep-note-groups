@@ -687,7 +687,7 @@ export const BrainDumpApp: React.FC<{
 
             {!isZenMode && isDumpTrayOpen && (
                 <div className="bg-[#13131A] shrink-0 animate-slideDown group/tray">
-                    <div className="max-w-6xl mx-auto relative px-0 py-1">
+                    <div className="max-w-6xl mx-auto relative px-0">
                         {/* Flecha Izquierda */}
                         {canScrollLeft && (
                             <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-start pl-6 pointer-events-none">
@@ -747,7 +747,7 @@ export const BrainDumpApp: React.FC<{
                 </div>
             )}
 
-            <div className={`flex-1 ${focusedDumpId ? 'overflow-hidden' : 'overflow-y-auto'} bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 pt-5 hidden-scrollbar flex flex-col`}>
+            <div className={`flex-1 ${focusedDumpId ? 'overflow-hidden' : 'overflow-y-auto'} bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 ${!isZenMode && isDumpTrayOpen ? 'pt-0' : 'pt-5'} hidden-scrollbar flex flex-col`}>
                 <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto flex flex-col ${focusedDumpId ? 'gap-0 pb-0 flex-1 w-full min-h-0' : 'gap-12 pb-20 w-full'}`}>
                     
                     {focusedDumpId && displayDump && (() => {
@@ -960,10 +960,32 @@ export const BrainDumpApp: React.FC<{
                             </div>
 
                              <div className="px-4 pb-4 pt-2 w-full flex-1 flex flex-col min-h-0 gap-[10px]">
+                                <BrainDumpBreadcrumb 
+                                    path={breadcrumbPath} 
+                                    activeDumpId={displayDump.id} 
+                                    onNavigate={navigate} 
+                                />
+
+                                {/* AI Assistant Panel (TOP) — Moved above tabs for parity */}
+                                {showAIInput && (
+                                    <div className="animate-slideDown shrink-0 mb-2">
+                                        <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 dark:bg-[#1A1A2E]/60 p-3">
+                                            <div className="flex items-center justify-between mb-2 px-1">
+                                                <span className="text-[11px] font-bold text-violet-400 flex items-center gap-1.5 uppercase tracking-widest">
+                                                    <Sparkles size={11} className="text-violet-500" /> Consultar con IA
+                                                </span>
+                                                <button onClick={() => setShowAIInput(false)} className="text-zinc-400 hover:text-zinc-300 p-0.5">
+                                                    <X size={13} />
+                                                </button>
+                                            </div>
+                                            <BrainDumpAIPanel dumpId={displayDump.id} onGenerate={() => setShowAIInput(false)} />
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* TABS UNIFICADAS */}
                                 {(manualChildren.length > 0 || completedSummaries.length > 0 || true) && (
-                                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0 pt-2 px-2">
+                                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0">
                                         {(() => {
                                             const originalIsMatch = Boolean(searchQuery?.trim() && (displayDump.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || displayDump.scratchpad?.toLowerCase().includes(searchQuery.trim().toLowerCase())));
                                             return (
@@ -1058,12 +1080,7 @@ export const BrainDumpApp: React.FC<{
                                     </div>
                                 )}
 
-                                {/* AI Assistant Panel (TOP) */}
-                                {showAIInput && (
-                                    <div className="mb-4 animate-slideDown shrink-0">
-                                        <BrainDumpAIPanel dumpId={currentDumpId!} onGenerate={() => setShowAIInput(false)} />
-                                    </div>
-                                )}
+
 
                                 {/* CONTENIDO DE LA PESTAÑA */}
                                 {(() => {
@@ -1072,10 +1089,20 @@ export const BrainDumpApp: React.FC<{
                                     const activeSummary = !activeSubId && activeTab !== 'original' ? completedSummaries.find(s => s.id === activeTab) : null;
                                     const showScratch = isBraindumpPizarronOpen;
 
-                                    if (activeSummary) return <SummaryTabContent key={activeSummary.id} summary={activeSummary} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} onDelete={(id) => { deleteSummary(id); setActiveTab('original'); }} updateScratchpad={updateScratchpad} updateContent={updateSummaryContent} searchQuery={searchQuery} showScratch={showScratch} />;
+                                    if (activeSummary) {
+                                        return (
+                                            <div className="flex-1 flex flex-col min-h-0 animate-fadeIn">
+                                                <SummaryTabContent key={activeSummary.id} summary={activeSummary} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} onDelete={(id) => { deleteSummary(id); setActiveTab('original'); }} updateScratchpad={updateScratchpad} updateContent={updateSummaryContent} searchQuery={searchQuery} showScratch={showScratch} />
+                                            </div>
+                                        );
+                                    }
                                     
                                     const currentNote = activeSub || displayDump;
-                                    return <SubnoteTabContent key={currentNote!.id} dump={currentNote!} showScratch={showScratch} onUpdate={autoSave} splitRatio={splitRatio} onDividerMouseDown={handleDividerMouseDown} splitContainerRef={splitContainerRef} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} searchQuery={searchQuery} />;
+                                    return (
+                                        <div className="flex-1 flex flex-col min-h-0 animate-fadeIn">
+                                            <SubnoteTabContent key={currentNote!.id} dump={currentNote!} showScratch={showScratch} onUpdate={autoSave} splitRatio={splitRatio} onDividerMouseDown={handleDividerMouseDown} splitContainerRef={splitContainerRef} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} searchQuery={searchQuery} />
+                                        </div>
+                                    );
                                 })()}
                                 </div>
                         </div>

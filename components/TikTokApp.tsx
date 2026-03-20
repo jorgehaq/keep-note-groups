@@ -564,7 +564,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
       {/* 2. ACCESS TRAY (Solo Activos) */}
       {isVideoTrayOpen && !isZenMode && (
         <div className="bg-[#13131A] shrink-0 animate-slideDown group/tray">
-          <div className="max-w-6xl mx-auto relative px-0 py-1">
+          <div className="max-w-6xl mx-auto relative px-0">
             {canScrollTrayLeft && (
               <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-start pl-6 pointer-events-none">
                 <button onClick={() => scrollTray('left')} className="p-1.5 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors pointer-events-auto active:scale-90 border border-zinc-700">
@@ -638,7 +638,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
           const titleMatch = searchQuery?.trim() && (focusedVideo.title || '').toLowerCase().includes(searchQuery.toLowerCase());
 
           return (
-            <div className="flex-1 flex flex-col overflow-y-auto w-full p-4">
+            <div className={`flex-1 flex flex-col overflow-y-auto w-full px-4 pb-4 ${isVideoTrayOpen && !isZenMode ? 'pt-0' : 'pt-4'}`}>
               <div className={`flex-1 flex flex-col min-h-0 ${isTikTokMaximized ? 'max-w-full' : 'max-w-6xl mx-auto'} w-full transition-all duration-300 bg-white dark:bg-[#1A1A24] rounded-2xl border overflow-hidden animate-fadeIn ${
                 isGlobalVideoMatch
                   ? 'border-amber-500 ring-2 ring-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
