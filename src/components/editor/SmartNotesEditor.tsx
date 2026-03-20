@@ -367,6 +367,41 @@ const cleanTextForClipboard = (text: string) => {
 };
 
 /**
+ * 📦 Extensión para Arrastrar y Soltar (Natural Drag & Drop):
+ * Asegura que el texto arrastrado entre editores se trate como COPIA por defecto.
+ */
+const dragDropExtension = EditorView.domEventHandlers({
+    dragstart: (event, view) => {
+        if (event.dataTransfer && view.state.selection.main.from !== view.state.selection.main.to) {
+            // Fuerza que el navegador trate el arrastre como una COPIA, no un movimiento.
+            // Esto evita que el texto original sea borrado al soltarlo en otro editor.
+            event.dataTransfer.effectAllowed = 'copy';
+            const selection = view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to);
+            event.dataTransfer.setData('text/plain', selection);
+        }
+    },
+    dragover: (event) => {
+        if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = 'copy';
+            event.preventDefault();
+        }
+    },
+    drop: (event, view) => {
+        // En CodeMirror 6, el evento drop nativo suele manejar la inserción.
+        // Pero al forzar 'copy', prevenimos que el origen reciba la señal de borrado.
+        if (event.dataTransfer) {
+            const text = event.dataTransfer.getData('text/plain');
+            if (text) {
+                // Dejamos que CodeMirror maneje la inserción en la posición del mouse
+                // o podemos forzarla manualmente si detectamos que no ocurrió.
+                return false; // Dejar pasar al comportamiento nativo que inserta
+            }
+        }
+        return false;
+    }
+});
+
+/**
  * Extension para interceptar el pegado y copiado
  */
 const clipboardExtension = EditorView.domEventHandlers({
@@ -1258,21 +1293,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
             const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
             const { main } = view.state.selection;
 
-            // 🚀 FIX DEFINITIVO: Si el clic es dentro de una selección, colapsamos manualmente (SOLO DESKTOP).
-            // En móvil dejamos que el navegador gestione los tiradores de selección.
-            if (pos !== null && !main.empty && pos >= main.from && pos <= main.to) {
-                const isMobile = window.innerWidth < 768;
-                if (isMobile) return false; 
-                
-                // 🚀 PROTECCIÓN EXTRA: Si el buscador está abierto, no forzamos foco manual al texto
-                if (view.dom.querySelector('.cm-search, .cm-panel')) return false;
-
-                e.preventDefault(); 
-                view.dispatch({
-                    selection: { anchor: pos }
-                });
-                return true; 
-            }
+            // 🚀 FIX: Eliminamos el preventDefault y el colapso forzado para permitir el Drag & Drop nativo.
             return false; 
         },
         contextmenu: (e, view) => {
@@ -2002,6 +2023,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         hoverTooltipExtension, 
         selectionListener, 
         clipboardExtension, 
+        dragDropExtension, 
         EditorView.lineWrapping, 
         EditorView.editable.of(!readOnly)
     ], [
@@ -2015,7 +2037,8 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         onEnterAction,
         onBackspaceEmpty,
         noteId,
-        visualMarkupPlugin
+        visualMarkupPlugin,
+        dragDropExtension
     ]);
 
     // 🚀 LAYOUT STABILITY FIX: Detect container resize and force CodeMirror to recalibrate.
