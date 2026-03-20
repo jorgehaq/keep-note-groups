@@ -95,7 +95,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], on
 
     return (
         <DragDropContext onDragEnd={handleDragEnd}>
-            <div className="flex-1 flex justify-center gap-2 sm:gap-4 py-0 px-0 overflow-x-auto overflow-y-hidden hidden-scrollbar snap-x snap-mandatory sm:snap-none">
+            <div className="flex-1 flex justify-center gap-2 sm:gap-4 py-5 px-4 overflow-x-auto overflow-y-hidden hidden-scrollbar snap-x snap-mandatory sm:snap-none">
                 {COLUMNS.map(col => {
                     const colTasks = getColumnTasks(col.status);
                     return (

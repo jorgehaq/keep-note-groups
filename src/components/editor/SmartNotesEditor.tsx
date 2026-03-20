@@ -592,13 +592,21 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             backgroundColor: "transparent !important", // Deja que el contenedor padre maneje el fondo standardized
             color: "inherit !important",               
             outline: "none !important", // Eliminar borde punteado de foco
+            border: "none !important",
+            boxShadow: "none !important",
             transition: "font-size 0.2s ease, font-family 0.2s ease", // Animación suave al cambiar ajustes
             WebkitTouchCallout: "none !important", // Ocultar menú nativo de "copy/paste" al tocar sostenido
             WebkitUserSelect: "text !important",
             userSelect: "text !important",
         },
-        "&.cm-focused": {
-            outline: "none !important"
+        "&.cm-focused, &:focus, &:focus-within": {
+            outline: "none !important",
+            border: "none !important",
+            boxShadow: "none !important"
+        },
+        ".cm-scroller": {
+            backgroundColor: "transparent !important",
+            outline: "none !important",
         },
         ".cm-content": {
             fontFamily: fontFamily,

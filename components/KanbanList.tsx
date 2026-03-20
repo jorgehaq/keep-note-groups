@@ -18,16 +18,28 @@ export const KanbanList: React.FC<KanbanListProps> = ({ view, tasks, onUpdate, o
     const emptyLabel = view === 'backlog' ? 'No hay tareas en el backlog.' : 'No hay tareas archivadas.';
 
     return (
-        <div className="flex-1 overflow-y-auto hidden-scrollbar py-0 px-0">
-            <div className="max-w-5xl mx-auto">
-                <div className="bg-zinc-100/50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm transition-colors min-h-[400px]">
+        <div className="flex-1 h-full px-4 md:px-6 lg:px-8 py-5 overflow-hidden flex flex-col bg-zinc-50 dark:bg-[#13131A]">
+            <div className="max-w-2xl w-full mx-auto flex-1 flex flex-col bg-zinc-100/30 dark:bg-[#1A1A24]/40 border border-zinc-200 dark:border-zinc-800/50 rounded-3xl shadow-sm overflow-hidden animate-fadeIn">
+                {/* Carril Header (Sticky/Boxed) */}
+                <div className="flex items-center gap-2 p-5 border-b border-zinc-200 dark:border-zinc-800/50 bg-white/50 dark:bg-[#1A1A24]/80 backdrop-blur-sm shrink-0">
+                    {view === 'backlog' ? <Inbox size={18} className="text-zinc-500" /> : <Archive size={18} className="text-zinc-500" />}
+                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">
+                        {view === 'backlog' ? 'Backlog de Tareas' : 'Archivo de Tareas'}
+                    </h3>
+                    <span className="ml-auto bg-zinc-200 dark:bg-zinc-800 text-zinc-500 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        {filtered.length}
+                    </span>
+                </div>
+
+                {/* Carril Content (Internal Scroll) */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-5">
                     {filtered.length === 0 ? (
                         <div className="text-center py-24 text-zinc-400">
-                            {view === 'backlog' ? <Inbox size={32} className="mx-auto mb-4 opacity-20" /> : <Archive size={32} className="mx-auto mb-4 opacity-20" />}
-                            <p>{emptyLabel}</p>
+                            {view === 'backlog' ? <Inbox size={32} className="mx-auto mb-4 opacity-10" /> : <Archive size={32} className="mx-auto mb-4 opacity-10" />}
+                            <p className="text-xs font-medium uppercase tracking-wider opacity-40">{emptyLabel}</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="flex flex-col gap-3">
                             {filtered.map(task => (
                                 <TaskListItem key={task.id} task={task} view={view} onUpdate={onUpdate} onDelete={onDelete} onEdit={onEdit} />
                             ))}

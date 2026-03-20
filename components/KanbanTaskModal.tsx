@@ -11,11 +11,11 @@ interface KanbanTaskModalProps {
     isNew?: boolean;
 }
 
-const STATUS_OPTIONS: { value: TaskStatus; label: string; hex: string }[] = [
-    { value: 'backlog', label: 'Backlog', hex: '#9E9E9E' },
-    { value: 'todo', label: 'Pendiente', hex: '#FFD60A' },
-    { value: 'in_progress', label: 'En Proceso', hex: '#38BDF8' },
-    { value: 'done', label: 'Terminado', hex: '#4ADE80' },
+const STATUS_OPTIONS: { value: TaskStatus; label: string; hex: string; textClass: string }[] = [
+    { value: 'backlog', label: 'Backlog', hex: '#9E9E9E', textClass: 'text-zinc-950' },
+    { value: 'todo', label: 'Pendiente', hex: '#FFD60A', textClass: 'text-amber-950' },
+    { value: 'in_progress', label: 'En Proceso', hex: '#38BDF8', textClass: 'text-sky-950' },
+    { value: 'done', label: 'Terminado', hex: '#4ADE80', textClass: 'text-green-950' },
 ];
 
 export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({ task, onClose, onSave, isNew = false }) => {
@@ -108,7 +108,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({ task, onClose,
                                     onClick={() => setStatus(opt.value)}
                                     className={`px-3 py-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${
                                         status === opt.value 
-                                            ? 'text-white scale-[1.02]' 
+                                            ? `${opt.textClass} scale-[1.02]` 
                                             : 'bg-white dark:bg-[#101018] border-zinc-200 dark:border-[#2D2D42] text-zinc-500 dark:text-zinc-500 hover:border-emerald-500/40'
                                     }`}
                                     style={status === opt.value ? { 

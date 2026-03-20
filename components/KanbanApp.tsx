@@ -147,18 +147,39 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
 
     return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
-            
-            {/* 🚀 FIX: HEADER UNIFICADO (Estilo Enterprise Mental Space) */}
-            <div className="sticky top-0 z-30 bg-white/80 dark:bg-[#1A1A24]/90 backdrop-blur-md border-b border-zinc-200 dark:border-[#2D2D42] shadow-sm shrink-0">
-                <div className="h-[72px] flex items-center justify-between px-4 md:px-6 py-4">
-                    <h1 className="text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] flex items-center gap-3">
+            <div className="sticky top-0 z-30 bg-[#13131A]/90 backdrop-blur-md border-b border-zinc-800/50 shrink-0">
+                <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4 gap-4">
+                    <h1 className="text-xl font-bold text-white flex items-center gap-3">
                         <div className="h-9 p-2 bg-[#10B981] rounded-lg text-emerald-950 shadow-lg shadow-emerald-500/20 shrink-0">
                             <KanbanSquare size={20} />
                         </div>
-                        Kanban
+                        <span className="truncate">Kanban</span>
                     </h1>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 shrink-0">
+                        {/* TABS EN EL HEADER (Desktop) */}
+                        <div className="h-9 hidden lg:flex bg-zinc-900/50 p-1 rounded-xl border border-zinc-800 shadow-sm shrink-0 items-center mr-2">
+                            {TABS.map((tab) => (
+                                <button
+                                    key={tab.key}
+                                    onClick={() => setActiveTab(tab.key)}
+                                    className={`flex items-center justify-center gap-2 px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ${
+                                        activeTab === tab.key
+                                            ? 'bg-[#10B981] text-emerald-950 shadow-sm'
+                                            : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+                                    }`}
+                                >
+                                    {tab.icon}
+                                    <span className="hidden xl:inline">{t(tab.labelKey)}</span>
+                                    <span className={`ml-1 px-1 py-0.5 rounded-md text-[8px] font-bold transition-colors ${
+                                        activeTab === tab.key ? 'bg-emerald-400/20 text-emerald-900' : 'bg-zinc-800 text-zinc-500'
+                                    }`}>
+                                        {tab.key === 'board' ? todoCount + inProgressCount : tab.key === 'backlog' ? backlogCount : archivedCount}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+
                         {/* Botón Toggle Reminder */}
                         <button
                           onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
@@ -167,8 +188,8 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                             showOverdueMarquee 
                               ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
                               : overdueRemindersCount > 0
-                                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
-                                : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
+                                ? 'bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20'
+                                : 'bg-zinc-900/50 border-zinc-800 text-zinc-500 opacity-60 cursor-not-allowed'
                           }`}
                           title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                         >
@@ -179,59 +200,30 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                             </span>
                           )}
                         </button>
-
-                        {/* TABS EN EL HEADER */}
-                        <div className="h-9 hidden md:flex bg-white dark:bg-[#1A1A24] p-1 rounded-xl border border-zinc-200 dark:border-[#2D2D42] shadow-sm shrink-0">
-                            {TABS.map((tab) => (
-                                <button
-                                    key={tab.key}
-                                    onClick={() => setActiveTab(tab.key)}
-                                    className={`flex items-center justify-center gap-2 px-4 py-1.5 text-[11px] font-medium rounded-lg transition-all ${
-                                        activeTab === tab.key
-                                            ? 'max-h-[26px] bg-white dark:bg-[#2D2D42] text-zinc-900 dark:text-[#CCCCCC] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
-                                            : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
-                                    }`}
-                                >
-                                    {tab.icon}
-                                    <span className="hidden lg:inline">{t(tab.labelKey)}</span>
-                                    <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold transition-colors ${
-                                        activeTab === tab.key ? 'bg-emerald-500/10 text-emerald-500' : 'bg-zinc-100 dark:bg-white/5 text-zinc-400'
-                                    }`}>
-                                        {tab.key === 'board' ? todoCount + inProgressCount : tab.key === 'backlog' ? backlogCount : archivedCount}
-                                    </span>
-                                </button>
-                            ))}
-                        </div>
-
-
-                        {/* Botón Nueva Tarea */}
-                        <button 
-                            onClick={handleAdd} 
-                            className="h-9 bg-[#10B981] hover:bg-emerald-600 text-emerald-950 px-4 py-2 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
-                        >
-                            <Plus size={18} /> 
-                            <span className="text-sm font-medium hidden sm:inline pr-1">{t('kanban.new_task')}</span>
+                        
+                        <button onClick={handleAdd} className="h-9 bg-[#10B981] hover:bg-emerald-600 text-emerald-950 px-4 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 active:scale-95 shrink-0 border border-emerald-400/30 font-bold">
+                            <Plus size={20} /> <span className="text-sm hidden sm:inline">Nueva Tarea</span>
                         </button>
                     </div>
                 </div>
 
-                {/* Mobile Tabs (Sub-header) */}
-                <div className="flex md:hidden px-4 pb-3">
-                    <div className="flex bg-white dark:bg-[#1A1A24] p-1 rounded-xl w-full border border-zinc-200 dark:border-[#2D2D42] shadow-sm">
+                {/* Mobile Tabs (Below Header) */}
+                <div className="flex lg:hidden px-6 overflow-x-auto hidden-scrollbar">
+                    <div className="flex bg-zinc-900/50 p-1 rounded-xl w-full border border-zinc-800 shadow-sm">
                         {TABS.map((tab) => (
                             <button
                                 key={tab.key}
                                 onClick={() => setActiveTab(tab.key)}
-                                className={`flex-1 flex items-center justify-center gap-2 py-2 text-[11px] font-medium rounded-lg transition-all ${
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 text-[11px] font-bold rounded-lg transition-all ${
                                     activeTab === tab.key
-                                        ? 'bg-white dark:bg-[#2D2D42] text-zinc-900 dark:text-[#CCCCCC] shadow-sm ring-1 ring-black/5 dark:ring-white/10'
-                                        : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                                        ? 'bg-[#10B981] text-emerald-950 shadow-sm'
+                                        : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
                                 }`}
                             >
                                 {tab.icon}
                                 <span>{t(tab.labelKey)}</span>
                                 <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold ${
-                                    activeTab === tab.key ? 'bg-emerald-500/10 text-emerald-500' : 'bg-zinc-100 dark:bg-white/5 text-zinc-400'
+                                    activeTab === tab.key ? 'bg-emerald-400/20 text-emerald-900' : 'bg-zinc-800 text-zinc-500'
                                 }`}>
                                     {tab.key === 'board' ? todoCount + inProgressCount : tab.key === 'backlog' ? backlogCount : archivedCount}
                                 </span>
@@ -242,9 +234,8 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
             </div>
 
             {/* CONTENIDO PRINCIPAL */}
-            <div className="flex-1 overflow-y-auto p-4 hidden-scrollbar flex flex-col">
-                <div className="w-full flex flex-col h-full max-w-[1400px] mx-auto">
-
+            <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#13131A] hidden-scrollbar flex flex-col">
+                <div className="w-full flex-1 flex flex-col h-full max-w-[1400px] mx-auto">
                     {/* VISTAS FUNCIONALES INTACTAS */}
                     <div className="flex-1 flex flex-col min-h-0 animate-fadeIn">
                         {activeTab === 'board' && (

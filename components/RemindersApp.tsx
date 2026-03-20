@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Bell, Trash2, Clock, History as HistoryIcon, Wrench, Play, CheckCircle2, Circle, RotateCcw, Repeat, Check, ChevronDown, ChevronUp, Settings2, Archive as ArchiveIcon } from 'lucide-react';
+import { Plus, Bell, Trash2, Clock, History as HistoryIcon, Wrench, Play, CheckCircle2, Circle, RotateCcw, Repeat, Check, ChevronDown, ChevronUp, Settings2, Archive as ArchiveIcon, MoreVertical } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import { SmartNotesEditor } from '../src/components/editor/SmartNotesEditor';
@@ -170,6 +170,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
     const [expandedActiveIds, setExpandedActiveIds] = useState<Set<string>>(new Set());
     const [editingActiveIds, setEditingActiveIds] = useState<Set<string>>(new Set());
     const [expandedHistoryIds, setExpandedHistoryIds] = useState<Set<string>>(new Set()); 
+    const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
     const lastActionTimeRef = useRef<number>(0);
     const { setOverdueRemindersCount, setImminentRemindersCount, showOverdueMarquee, setShowOverdueMarquee, overdueRemindersCount } = useUIStore();
@@ -214,6 +215,14 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
         const newTarget: ReminderTarget = { id: crypto.randomUUID(), title: '', due_at: due, is_completed: false, recurrence: 'none' };
         autoSave(reminderId, { targets: [...reminder.targets, newTarget] });
     };
+
+    useEffect(() => {
+        const handleClickOutside = () => setActiveMenuId(null);
+        if (activeMenuId) {
+            window.addEventListener('click', handleClickOutside);
+        }
+        return () => window.removeEventListener('click', handleClickOutside);
+    }, [activeMenuId]);
 
     const autoSave = (id: string, updates: Partial<AdvancedReminder>) => {
         setReminders(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
@@ -335,16 +344,16 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
 
     return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
-            <div className="sticky top-0 z-30 bg-white/80 dark:bg-[#1A1A24]/90 backdrop-blur-md border-b border-zinc-200 dark:border-[#2D2D42] shadow-sm shrink-0">
-                <div className="h-[72px] flex items-center justify-between px-4 md:px-6 py-4">
-                    <h1 className="text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] flex items-center gap-3">
-                        <div className="h-9 p-2 bg-[#1F3760] rounded-lg text-white shadow-lg shadow-[#1F3760]/20">
+            <div className="sticky top-0 z-30 bg-[#13131A]/90 backdrop-blur-md border-b border-zinc-800/50 shrink-0">
+                <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4 gap-4">
+                    <h1 className="text-xl font-bold text-white flex items-center gap-3">
+                        <div className="h-9 p-2 bg-[#1F3760] rounded-lg text-white shadow-lg shadow-[#1F3760]/20 shrink-0">
                             <Bell size={20} />
                         </div>
-                        Recordatorios
+                        <span className="truncate">Recordatorios</span>
                     </h1>
                     
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 shrink-0">
                         {/* Botón Toggle Reminder */}
                         <button
                           onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
@@ -353,8 +362,8 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                             showOverdueMarquee 
                               ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
                               : overdueRemindersCount > 0
-                                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
-                                : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
+                                ? 'bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20'
+                                : 'bg-zinc-900/50 border-zinc-800 text-zinc-500 opacity-60 cursor-not-allowed'
                           }`}
                           title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                         >
@@ -366,15 +375,15 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                           )}
                         </button>
 
-                        <button onClick={createNewDraft} className="h-9 bg-[#1F3760] hover:bg-[#152643] text-white px-4 py-2 rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all flex items-center gap-2 active:scale-95 shrink-0">
-                            <Plus size={20} /> <span className="text-sm font-bold hidden sm:inline pr-2 text-white">Nuevo</span>
+                        <button onClick={createNewDraft} className="h-9 bg-[#1F3760] hover:bg-[#152643] text-white px-4 rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all flex items-center gap-2 active:scale-95 shrink-0 border border-[#1F3760]/30 font-bold">
+                            <Plus size={20} /> <span className="text-sm hidden sm:inline">Nuevo</span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#13131A] p-4 hidden-scrollbar">
-                <div className="max-w-4xl mx-auto flex flex-col gap-12 pb-20">
+            <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 pt-5 hidden-scrollbar">
+                <div className="max-w-6xl mx-auto flex flex-col gap-12 pb-20">
                     
                     {/* 1. CREACIÓN */}
                     {drafts.length > 0 && (
@@ -384,17 +393,71 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                 <span className="text-sm font-bold uppercase tracking-widest">Creación de recordatorio</span>
                             </div>
                             {drafts.map(draft => (
-                                /* 🚀 FIX: focus-within:ring-2 para iluminación exterior */
-                                <div key={draft.id} className="bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] transition-all duration-300 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 flex flex-col overflow-hidden">
-                                    <div className="flex items-center justify-between pr-4">
-                                        <input type="text" placeholder="Título general (ej. Servicios Públicos)" value={draft.title} onChange={e => autoSave(draft.id, { title: e.target.value })} className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] p-4 pb-3 outline-none placeholder-zinc-400" />
+                                <div key={draft.id} className="bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] transition-all duration-300 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 flex flex-col overflow-hidden animate-fadeIn">
+                                    {/* HEADER CON BOTONES ESTILO PIZARRON */}
+                                    <div className="flex items-center justify-between p-4 pb-2">
+                                        <input 
+                                            type="text" 
+                                            placeholder="Título general (ej. Servicios Públicos)" 
+                                            value={draft.title} 
+                                            onChange={e => autoSave(draft.id, { title: e.target.value })} 
+                                            className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] outline-none placeholder-zinc-400" 
+                                        />
+                                        
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            {/* Botón Activar (Play) - Estilo Pizarrón */}
+                                            <button 
+                                                onClick={() => changeStatus(draft.id, 'active')} 
+                                                disabled={draft.targets.length === 0} 
+                                                className="w-9 h-9 flex items-center justify-center bg-[#1F3760] hover:bg-[#152643] text-white rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all disabled:opacity-50 active:scale-95"
+                                                title="Activar todos"
+                                            >
+                                                <Play size={16} fill="currentColor" />
+                                            </button>
+
+                                            {/* Menú Tres Puntos (Caneca adentro) */}
+                                            <div className="relative">
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setActiveMenuId(activeMenuId === draft.id ? null : draft.id);
+                                                    }}
+                                                    className={`w-9 h-9 flex items-center justify-center transition-all rounded-xl ${activeMenuId === draft.id ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-800' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+                                                >
+                                                    <MoreVertical size={16} />
+                                                </button>
+
+                                                {activeMenuId === draft.id && (
+                                                    <div className="absolute right-0 top-full mt-1 z-50 min-w-[210px] bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] rounded-lg shadow-xl p-1 flex flex-col gap-0.5 animate-fadeIn">
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (confirm('¿Descartar completamente este borrador?')) {
+                                                                    if (saveTimeoutRef.current[draft.id]) {
+                                                                        clearTimeout(saveTimeoutRef.current[draft.id]);
+                                                                        delete saveTimeoutRef.current[draft.id];
+                                                                    }
+                                                                    setReminders(prev => prev.filter(r => r.id !== draft.id));
+                                                                    supabase.from('reminders').delete().eq('id', draft.id).then();
+                                                                    setActiveMenuId(null);
+                                                                }
+                                                            }}
+                                                            className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-bold"
+                                                        >
+                                                            <Trash2 size={14} /> <span className="flex-1">Descartar Borrador</span>
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
 
-
+                                    {/* EDITOR */}
                                     <div className="mb-4 bg-zinc-50 dark:bg-[#242432] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4 cursor-text min-h-[120px] mx-4">
                                         <SmartNotesEditor noteId={draft.id} initialContent={draft.content} onChange={c => autoSave(draft.id, { content: c })} />
                                     </div>
 
+                                    {/* TIEMPOS */}
                                     <div className="bg-zinc-50 dark:bg-[#13131A] rounded-xl mx-4 mb-4 p-4 border border-zinc-200 dark:border-[#2D2D42]">
                                         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                                             <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Tiempos:</span>
@@ -433,26 +496,8 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="flex justify-between items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-[#13131A]/50 rounded-b-2xl border-t border-zinc-200 dark:border-[#2D2D42] mt-auto">
-                                        <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
-                                            <span>Borrador en edición...</span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                        <button onClick={() => {
-                                            if (!window.confirm('¿Descartar completamente esta creación?')) return;
-                                            if (saveTimeoutRef.current[draft.id]) {
-                                                clearTimeout(saveTimeoutRef.current[draft.id]);
-                                                delete saveTimeoutRef.current[draft.id];
-                                            }
-                                            setReminders(prev => prev.filter(r => r.id !== draft.id));
-                                            supabase.from('reminders').delete().eq('id', draft.id).then();
-                                        }} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Descartar"><Trash2 size={18}/></button>
-
-                                        <button onClick={() => changeStatus(draft.id, 'active')} disabled={draft.targets.length === 0} className="flex items-center gap-2 px-5 py-2 text-xs font-normal text-white bg-[#1F3760] hover:bg-[#152643] rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all disabled:opacity-50"><Play size={14}/> Activar Todos</button>
-                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
                         </div>
                     )}
 
@@ -491,22 +536,114 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                                 value={r.title}
                                                                 onChange={e => autoSave(r.id, { title: e.target.value })}
                                                                 className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] p-0 outline-none placeholder-zinc-400"
+                                                                autoFocus
                                                             />
                                                         ) : (
                                                             <h3 className={`font-bold text-lg transition-colors duration-300 ${isExpanded ? 'text-zinc-800 dark:text-[#CCCCCC]' : 'text-[#4D4D54]'}`}>{r.title || 'Recordatorio Activo'}</h3>
                                                         )}
                                                     </div>
-                                                    <button onClick={() => toggleEditActive(r.id)} className={`transition-all flex items-center shrink-0 ${isEditing ? 'gap-2 px-3 py-1.5 rounded-lg text-xs font-normal bg-[#1F3760] text-white hover:bg-[#152643] active:scale-95 shadow-lg shadow-[#1F3760]/20' : 'p-2 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800'}`} title={isEditing ? 'Cerrar Edición' : 'Ajustar'}>
-                                                        <Wrench size={isEditing ? 14 : 18}/> {isEditing && <span>Cerrar Edición</span>}
-                                                    </button>
-                                                </div>
 
-                                                {isEditing ? (
-                                                    <div className="mt-2 animate-fadeIn">
-                                                        <div className="mb-4 bg-zinc-50 dark:bg-[#13131A]/50 border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-4 cursor-text min-h-[120px]">
-                                                            <SmartNotesEditor noteId={r.id} initialContent={r.content} onChange={content => autoSave(r.id, { content })} />
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        {isEditing && (
+                                                            <button 
+                                                                onClick={() => toggleEditActive(r.id)} 
+                                                                className="w-9 h-9 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
+                                                                title="Guardar cambios"
+                                                            >
+                                                                <Check size={18} strokeWidth={3} />
+                                                            </button>
+                                                        )}
+                                                        
+                                                        <button 
+                                                            onClick={() => toggleEditActive(r.id)} 
+                                                            className={`w-9 h-9 flex items-center justify-center transition-all rounded-xl ${isEditing ? 'bg-[#1F3760] text-white shadow-lg shadow-[#1F3760]/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`} 
+                                                            title={isEditing ? 'Cerrar Edición' : 'Ajustar recordatorio'}
+                                                        >
+                                                            <Wrench size={16}/>
+                                                        </button>
+
+                                                        {/* Menú Tres Puntos */}
+                                                        <div className="relative">
+                                                            <button 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setActiveMenuId(activeMenuId === r.id ? null : r.id);
+                                                                }}
+                                                                className={`w-9 h-9 flex items-center justify-center transition-all rounded-xl ${activeMenuId === r.id ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-800' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+                                                                title="Más opciones"
+                                                            >
+                                                                <MoreVertical size={16} />
+                                                            </button>
+
+                                                            {activeMenuId === r.id && (
+                                                                <div className="absolute right-0 top-full mt-1 z-50 min-w-[220px] bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] rounded-lg shadow-xl p-1 flex flex-col gap-0.5 animate-fadeIn">
+                                                                    <button 
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            changeStatus(r.id, 'history');
+                                                                            setActiveMenuId(null);
+                                                                        }}
+                                                                        className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors font-bold"
+                                                                    >
+                                                                        <ArchiveIcon size={14} /> <span className="flex-1">Archivar Grupo</span>
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            deleteReminder(r.id);
+                                                                            setActiveMenuId(null);
+                                                                        }}
+                                                                        className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-bold"
+                                                                    >
+                                                                        <Trash2 size={14} /> <span className="flex-1">Eliminar Permanentemente</span>
+                                                                    </button>
+                                                                </div>
+                                                            )}
                                                         </div>
+                                                    </div>
+                                                </div>
+                                                                             <div className="mt-2">
+                                                    <style>{`
+                                                        .reminder-content-wrapper.is-collapsed .cm-content,
+                                                        .reminder-content-wrapper.is-collapsed .cm-line {
+                                                            color: #4D4D54 !important;
+                                                        }
+                                                        .reminder-editor-view-mode {
+                                                            padding-left: 2.75rem;
+                                                            margin-bottom: 1rem;
+                                                        }
+                                                        .reminder-editor-edit-mode {
+                                                            margin-bottom: 1rem;
+                                                            padding: 1rem;
+                                                            border-radius: 0.75rem;
+                                                            background-color: rgba(244, 244, 245, 0.5);
+                                                            border: 1px solid #e4e4e7;
+                                                            min-height: 120px;
+                                                        }
+                                                        .dark .reminder-editor-edit-mode {
+                                                            background-color: rgba(19, 19, 26, 0.5);
+                                                            border-color: #2D2D42;
+                                                        }
+                                                        /* 🚀 KILL Focus Flash */
+                                                        .reminder-editor-container .cm-content:focus,
+                                                        .reminder-editor-container .cm-editor:focus,
+                                                        .reminder-editor-container .cm-content:focus-within,
+                                                        .reminder-editor-container .cm-editor:focus-within {
+                                                            outline: none !important;
+                                                            box-shadow: none !important;
+                                                        }
+                                                    `}</style>
+                                                    
+                                                    <div className={`reminder-editor-container ${isEditing ? 'reminder-editor-edit-mode animate-fadeIn' : `reminder-editor-view-mode ${isExpanded ? 'opacity-100' : 'line-clamp-2 max-h-[40px] pointer-events-none is-collapsed'} reminder-content-wrapper`} outline-none ring-0`}>
+                                                        <SmartNotesEditor 
+                                                            noteId={r.id} 
+                                                            initialContent={r.content} 
+                                                            onChange={content => isEditing && autoSave(r.id, { content })} 
+                                                            readOnly={!isEditing} 
+                                                        />
+                                                    </div>
 
+                                                    {isEditing && (
                                                         <div className="bg-zinc-50 dark:bg-[#13131A] rounded-xl p-4 border border-zinc-200 dark:border-[#2D2D42]">
                                                             <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                                                                 <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Ajustar Tiempos:</span>
@@ -517,17 +654,19 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                                     <button onClick={() => addTarget(r.id, 0)} className="text-[10px] font-normal bg-zinc-200 dark:bg-zinc-800 px-2 py-1 rounded-md hover:bg-zinc-300"><Plus size={12}/></button>
                                                                 </div>
                                                             </div>
-                                                            <div className="space-y-3 mt-4">
+                                                            
+                                                            <div className="space-y-2">
                                                                 {r.targets.map((target, idx) => (
-                                                                    <div key={target.id} className="flex flex-col group p-3 bg-zinc-50 dark:bg-[#1A1A24]/30 rounded-xl border border-zinc-200 dark:border-[#2D2D42]/80 hover:border-zinc-200 transition-colors">
-                                                                        <div className="flex flex-wrap justify-between items-start w-full gap-2">
-                                                                            <input value={target.title} onChange={e => { const newT = r.targets.map((t, i) => i === idx ? { ...t, title: e.target.value } : t); autoSave(r.id, { targets: newT }); }} placeholder="Título del recordatorio" className="flex-1 bg-transparent text-sm font-bold text-zinc-800 dark:text-[#CCCCCC] outline-none placeholder-zinc-400 dark:placeholder-zinc-600" />
-                                                                            <div className="flex items-center gap-3 shrink-0 ml-auto">
-                                                                                <div className="text-[11px] font-bold text-[#7E7E85] flex items-center">
-                                                                                    <LiveCountdown dueAt={target.due_at} isSaved={true} isCompleted={target.is_completed} recurrence={target.recurrence} />
-                                                                                </div>
-                                                                                <button onClick={() => { autoSave(r.id, { targets: r.targets.filter(t => t.id !== target.id) }); }} className="text-zinc-400 hover:text-red-500 transition-colors" title="Eliminar"><Trash2 size={16}/></button>
-                                                                            </div>
+                                                                    <div key={target.id} className="flex flex-col gap-2 p-3 bg-white dark:bg-[#1A1A24] rounded-lg border border-zinc-200 dark:border-[#2D2D42]">
+                                                                        <div className="flex justify-between items-center">
+                                                                            <input 
+                                                                                type="text" 
+                                                                                value={target.title} 
+                                                                                onChange={e => { const newT = r.targets.map((t, i) => i === idx ? { ...t, title: e.target.value } : t); autoSave(r.id, { targets: newT }); }} 
+                                                                                className="bg-transparent text-sm font-bold text-zinc-800 dark:text-[#CCCCCC] p-0 outline-none flex-1"
+                                                                                placeholder="Tarea del recordatorio..."
+                                                                            />
+                                                                            <button onClick={() => { autoSave(r.id, { targets: r.targets.filter(t => t.id !== target.id) }); }} className="text-zinc-400 hover:text-red-500 transition-colors" title="Eliminar"><Trash2 size={16}/></button>
                                                                         </div>
                                                                         <div className="flex items-center gap-2 text-[11px] flex-wrap mt-1.5">
                                                                             <input type="datetime-local" value={toLocalDateTimeLocal(target.due_at)} onChange={e => { const newT = r.targets.map((t, i) => i === idx ? { ...t, due_at: new Date(e.target.value).toISOString() } : t); autoSave(r.id, { targets: newT }); }} className="bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] rounded py-1 px-2 text-zinc-800 dark:text-[#CCCCCC] font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all" />
@@ -540,19 +679,9 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                                 ))}
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="mt-2">
-                                                        <style>{`
-                                                            .reminder-content-wrapper.is-collapsed .cm-content,
-                                                            .reminder-content-wrapper.is-collapsed .cm-line {
-                                                                color: #4D4D54 !important;
-                                                            }
-                                                        `}</style>
-                                                        <div className={`mb-4 pl-11 transition-all duration-300 overflow-hidden text-sm ${isExpanded ? 'opacity-90' : 'line-clamp-2 max-h-[40px] pointer-events-none is-collapsed'} reminder-content-wrapper`}>
-                                                            <SmartNotesEditor noteId={r.id} initialContent={r.content} onChange={() => {}} readOnly={true} />
-                                                        </div>
+                                                    )}
 
+                                                    {!isEditing && (
                                                         <div className="space-y-3">
                                                             {r.targets.map(t => {
                                                                 const { isSleeping } = getDerivedReminderState(t.due_at, t.recurrence, t.is_completed);
@@ -576,46 +705,20 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                                         </div>
                                                                     </div>
                                                                     <div className="flex flex-col gap-1 pl-7 mt-1.5">
-                                                                        <div className="flex items-center flex-wrap gap-2 text-[11px] font-bold">
-                                                                            {t.last_completed_at && (
-                                                                                <span className="text-[#225B49]">✓ Última atención: {formatCustomDate(t.last_completed_at, dateFormat, timeFormat)}<span className="mx-1 text-zinc-300 dark:text-zinc-600 hidden sm:inline">,</span></span>
-                                                                            )}
-                                                                            <span className={isSleeping ? 'text-zinc-500' : colorClass}>Próximo recordatorio: {formatCustomDate(t.due_at, dateFormat, timeFormat)}</span>
-                                                                            {isSleeping && isRecurrent && (
-                                                                                <span className="text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded text-[10px]">
-                                                                                    ✓ Listo por ahora
-                                                                                </span>
-                                                                            )}
+                                                                        <div className="flex items-center justify-between text-[11px] text-zinc-500">
+                                                                            <div className="flex items-center gap-1.5 font-bold">
+                                                                                <Clock size={12} />
+                                                                                <LiveCountdown dueAt={t.due_at} isSaved={true} isCompleted={isSleeping} recurrence={t.recurrence} />
+                                                                            </div>
                                                                         </div>
                                                                     </div>
                                                                 </div>
-                                                            )})}
+                                                                );
+                                                            })}
                                                         </div>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {isEditing && (
-                                                <div className="flex justify-between items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-[#2D2D42]/50 rounded-b-2xl border-t border-zinc-200 dark:border-[#2D2D42] mt-auto">
-                                                    <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
-                                                        <span>Creado: {formatCleanDate(r.created_at)}</span>
-                                                        {isEdited && (
-                                                            <>
-                                                                <span className="opacity-50">|</span>
-                                                                <span>Editado: {formatCleanDate(r.updated_at)}</span>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex items-center gap-2 shrink-0">
-                                                        <button onClick={() => deleteReminder(r.id)} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Eliminar">
-                                                            <Trash2 size={18} />
-                                                        </button>
-                                                        <button onClick={() => changeStatus(r.id, 'history')} className="flex items-center gap-2 px-5 py-2 text-xs font-normal text-white bg-[#1F3760] hover:bg-[#152643] rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all">
-                                                            <ArchiveIcon size={14} /> Desactivar Grupo
-                                                        </button>
-                                                    </div>
+                                                    )}
                                                 </div>
-                                            )}
+                                            </div>
                                         </div>
                                     );
                                 })}
@@ -693,12 +796,13 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                             </div>
                                         )}
                                     </div>
-                                )})}
-                            </div>
-                        )}
-                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
+    </div>
     );
 };

@@ -243,17 +243,15 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
 
     return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
-            {/* HEADER */}
-            <div className="sticky top-0 z-30 bg-white/80 dark:bg-[#1A1A24]/90 backdrop-blur-md border-b border-zinc-200 dark:border-[#2D2D42] shadow-sm shrink-0">
-                <div className="h-[72px] flex items-center justify-between px-4 md:px-6 py-4">
-                    <h1 className="text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] flex items-center gap-3">
-                        <div className="h-9 p-2 bg-[#2563EB] rounded-lg text-white shadow-lg shadow-blue-500/20">
+            <div className="sticky top-0 z-30 bg-[#13131A]/90 backdrop-blur-md border-b border-zinc-800/50 shrink-0">
+                <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4 gap-4">
+                    <h1 className="text-xl font-bold text-white flex items-center gap-3">
+                        <div className="h-9 p-2 bg-[#2563EB] rounded-lg text-white shadow-lg shadow-blue-500/20 shrink-0">
                             <Clock size={20} />
                         </div>
-                        Cronómetros
+                        <span className="truncate">Cronómetros</span>
                     </h1>
-                    
-                    <div className="flex items-center gap-3">
+                                 <div className="flex items-center gap-3 shrink-0">
                         {/* Botón Toggle Reminder */}
                         <button
                           onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
@@ -262,8 +260,8 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                             showOverdueMarquee 
                               ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
                               : overdueRemindersCount > 0
-                                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
-                                : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
+                                ? 'bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20'
+                                : 'bg-zinc-900/50 border-zinc-800 text-zinc-500 opacity-60 cursor-not-allowed'
                           }`}
                           title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                         >
@@ -274,16 +272,15 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                             </span>
                           )}
                         </button>
-
-                        <button onClick={createNewDraft} className="h-9 bg-[#2563EB] hover:bg-blue-700 text-white px-4 py-2 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 active:scale-95 shrink-0">
-                            <Plus size={20} /> <span className="text-sm font-bold hidden sm:inline pr-2 text-white">Nuevo</span>
+                        <button onClick={createNewDraft} className="h-9 bg-[#2563EB] hover:bg-blue-700 text-white px-4 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 active:scale-95 shrink-0 border border-blue-400/30 font-bold">
+                            <Plus size={20} /> <span className="text-sm hidden sm:inline">Nuevo</span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#13131A] p-4 hidden-scrollbar">
-                <div className="max-w-4xl mx-auto flex flex-col gap-12 pb-20">
+            <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 pt-5 hidden-scrollbar">
+                <div className="max-w-6xl mx-auto flex flex-col gap-12 pb-20">
                     
                     {/* 1. BORRADORES (EN CONSTRUCCIÓN) */}
                     {drafts.length > 0 && (
