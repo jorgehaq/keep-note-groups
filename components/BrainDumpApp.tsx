@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell, Grid, ChevronsDownUp, MoreVertical, ListTodo, CheckSquare, Square, GripVertical, Search, X, ChevronLeft, ChevronRight, ArrowUpRight, Download, ArrowUpDown, Calendar, Type, Check, Wind, Sparkles, PenLine, FileText, GitBranch, Loader2, CloudCheck, KanbanSquare, ListPlus } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell, Grid, ChevronsDownUp, MoreVertical, ListTodo, CheckSquare, Square, GripVertical, Search, X, ChevronLeft, ChevronRight, ArrowUpRight, Download, ArrowUpDown, Calendar, Type, Check, Wind, Sparkles, PenLine, FileText, GitBranch, Loader2, CloudCheck, KanbanSquare, ListPlus, Hash } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { KanbanSemaphore } from './KanbanSemaphore';
 import { PizarronLinkerModal } from './PizarronLinkerModal';
@@ -55,7 +55,8 @@ const SummaryTabContent: React.FC<{
   updateScratchpad: (id: string, text: string) => void;
   updateContent: (id: string, text: string) => void;
   showScratch: boolean;
-}> = ({ summary, noteFont, noteFontSize, noteLineHeight, searchQuery, onDelete, updateScratchpad, updateContent, showScratch }) => {
+  showLineNumbers?: boolean;
+}> = ({ summary, noteFont, noteFontSize, noteLineHeight, searchQuery, onDelete, updateScratchpad, updateContent, showScratch, showLineNumbers }) => {
   const scratchRef = useRef<SmartNotesEditorRef>(null);
   const [localScratch, setLocalScratch] = useState(summary.scratchpad || '');
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -234,6 +235,7 @@ const SubnoteTabContent: React.FC<{
   noteFontSize: string;
   noteLineHeight: string;
   searchQuery?: string;
+  showLineNumbers?: boolean;
 }> = ({
   dump,
   showScratch,
@@ -244,6 +246,7 @@ const SubnoteTabContent: React.FC<{
   noteFontSize,
   noteLineHeight,
   searchQuery,
+  showLineNumbers,
   onUpdate
 }) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -273,6 +276,7 @@ const SubnoteTabContent: React.FC<{
                 noteId={dump.id}
                 initialContent={dump.content || ''}
                 searchQuery={searchQuery}
+                showLineNumbers={showLineNumbers}
                 onChange={c => onUpdate(dump.id, { content: c })}
                 noteFont={noteFont as any}
                 noteFontSize={noteFontSize}
@@ -335,7 +339,9 @@ export const BrainDumpApp: React.FC<{
     groups?: Group[];
     onOpenNote?: (groupId: string, noteId: string) => void;
     setSearchQuery?: (query: string) => void;
-}> = ({ session, noteFont = 'sans', noteFontSize = 'medium', noteLineHeight = 'standard', searchQuery, allSummaries = [], groups = [], onOpenNote, setSearchQuery }) => {
+    showLineNumbers?: boolean;
+    onToggleLineNumbers?: () => void;
+}> = ({ session, noteFont = 'sans', noteFontSize = 'medium', noteLineHeight = 'standard', searchQuery, allSummaries = [], groups = [], onOpenNote, setSearchQuery, showLineNumbers = false, onToggleLineNumbers }) => {
     
     // --- STORE & HOOKS ---
     const { 
@@ -901,6 +907,16 @@ export const BrainDumpApp: React.FC<{
                                         <Wind size={13} />
                                     </button>
                                     
+ 
+                                     {showLineNumbers && onToggleLineNumbers && (
+                                         <button
+                                             onClick={(e) => { e.stopPropagation(); onToggleLineNumbers(); }}
+                                             className="p-1.5 rounded-lg transition-colors text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shrink-0"
+                                             title="Ocultar números de línea"
+                                         >
+                                             <Hash size={14} />
+                                         </button>
+                                     )}
                                     <div className="relative" ref={openMenuId === displayDump.id ? menuRef : undefined}>
                                         <div className="flex items-center gap-1.5">
                                             {isInKanban && (
@@ -923,6 +939,14 @@ export const BrainDumpApp: React.FC<{
                                         
                                         {openMenuId === displayDump.id && (
                                             <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-[#1A1A24] shadow-xl rounded-lg border border-zinc-200 dark:border-[#2D2D42] p-1 flex flex-col gap-0.5 min-w-[200px] animate-fadeIn">
+                                                {onToggleLineNumbers && (
+                                                    <>
+                                                        <button onClick={(e) => { e.stopPropagation(); onToggleLineNumbers(); setOpenMenuId(null); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${showLineNumbers ? "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20" : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42]"}`}>
+                                                            <Hash size={14} /> {showLineNumbers ? "Ocultar números" : "Mostrar números"}
+                                                        </button>
+                                                        <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
+                                                    </>
+                                                )}
                                                 <button onClick={() => { 
                                                     const willBeChecklist = !displayDump.is_checklist;
                                                     let contentToSave = displayDump.content;
@@ -950,7 +974,7 @@ export const BrainDumpApp: React.FC<{
                                                         setIsLinkModalOpen(true);
                                                         setOpenMenuId(null);
                                                     }} 
-                                                    className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 transition-colors"
+                                                    className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 transition-colors font-bold"
                                                 >
                                                     <ArrowUpRight size={14} /> Convertir a Nota
                                                 </button>
@@ -1020,10 +1044,11 @@ export const BrainDumpApp: React.FC<{
                                                         document.body.removeChild(element);
                                                         setOpenMenuId(null);
                                                     }} 
-                                                    className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"
+                                                    className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors font-bold"
                                                 >
-                                                    <Download size={14} /> Descargar .md Completo
+                                                    <Download size={14} /> Exportar (.md)
                                                 </button>
+
  
                                                 <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
                                                 <button 
@@ -1211,7 +1236,7 @@ export const BrainDumpApp: React.FC<{
                                     if (activeSummary) {
                                         return (
                                             <div className="flex-1 flex flex-col min-h-0 animate-fadeIn">
-                                                <SummaryTabContent key={activeSummary.id} summary={activeSummary} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} onDelete={(id) => { deleteSummary(id); setActiveTab('original'); }} updateScratchpad={updateScratchpad} updateContent={updateSummaryContent} searchQuery={searchQuery} showScratch={showScratch} />
+                                                <SummaryTabContent key={activeSummary!.id} summary={activeSummary!} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} onDelete={(id) => { deleteSummary(id); setActiveTab('original'); }} updateScratchpad={updateScratchpad} updateContent={updateSummaryContent} searchQuery={searchQuery} showScratch={showScratch} showLineNumbers={showLineNumbers} />
                                             </div>
                                         );
                                     }
@@ -1219,7 +1244,7 @@ export const BrainDumpApp: React.FC<{
                                     const currentNote = activeSub || displayDump;
                                     return (
                                         <div className="flex-1 flex flex-col min-h-0 animate-fadeIn">
-                                            <SubnoteTabContent key={currentNote!.id} dump={currentNote!} showScratch={showScratch} onUpdate={autoSave} splitRatio={splitRatio} onDividerMouseDown={handleDividerMouseDown} splitContainerRef={splitContainerRef} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} searchQuery={searchQuery} />
+                                            <SubnoteTabContent key={currentNote!.id} dump={currentNote!} showScratch={showScratch} onUpdate={autoSave} splitRatio={splitRatio} onDividerMouseDown={handleDividerMouseDown} splitContainerRef={splitContainerRef} noteFont={noteFont} noteFontSize={noteFontSize} noteLineHeight={noteLineHeight} searchQuery={searchQuery} showLineNumbers={showLineNumbers} />
                                         </div>
                                     );
                                 })()}

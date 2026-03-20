@@ -6,7 +6,7 @@ import {
   Calendar, History, PanelLeft, Settings, MoreVertical, Trash2, 
   Archive, Download, Sparkles, FileText, Quote, StickyNote, Wind, 
   PlusCircle, AlertCircle, PenLine, Brain, GitBranch, RotateCcw, 
-  Loader2, ListPlus, ArrowUpRight
+  Loader2, ListPlus, ArrowUpRight, Hash
 } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 import { useUIStore } from '../src/lib/store';
@@ -132,13 +132,17 @@ export const TikTokApp: React.FC<{
   allSummaries?: any[],
   allSubnotes?: any[],
   searchQuery?: string,
-  onSearchQueryChange?: (q: string) => void
+  onSearchQueryChange?: (q: string) => void,
+  showLineNumbers?: boolean,
+  onToggleLineNumbers?: () => void
 }> = ({ 
   session,
   allSummaries = [],
   allSubnotes = [],
   searchQuery = "",
-  onSearchQueryChange
+  onSearchQueryChange,
+  showLineNumbers = false,
+  onToggleLineNumbers
 }) => {
   const { 
     isTikTokMaximized, setIsTikTokMaximized, 
@@ -826,6 +830,16 @@ export const TikTokApp: React.FC<{
                   >
                     <Wind size={13} />
                   </button>
+
+                  {showLineNumbers && onToggleLineNumbers && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onToggleLineNumbers(); }}
+                      className="p-1.5 rounded-lg transition-colors text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shrink-0"
+                      title="Ocultar números de línea"
+                    >
+                      <Hash size={14} />
+                    </button>
+                  )}
                   
                   <div className="relative" ref={moreMenuRef}>
                     <button
@@ -838,9 +852,17 @@ export const TikTokApp: React.FC<{
                     
                     {showMoreMenu && (
                       <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-[#1A1A24] shadow-xl rounded-lg border border-zinc-200 dark:border-[#2D2D42] p-1 flex flex-col gap-0.5 min-w-[210px] animate-fadeIn">
-                        <button 
+                        {onToggleLineNumbers && (
+                          <>
+                            <button onClick={(e) => { e.stopPropagation(); onToggleLineNumbers(); setShowMoreMenu(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${showLineNumbers ? "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20" : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42]"}`}>
+                              <Hash size={14} /> {showLineNumbers ? "Ocultar números" : "Mostrar números"}
+                            </button>
+                            <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
+                          </>
+                        )}
+                               <button 
                           onClick={() => { handleConvertToNote(); setShowMoreMenu(false); }} 
-                          className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 transition-colors"
+                          className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 transition-colors font-bold"
                         >
                           <ArrowUpRight size={14} /> Convertir a Nota
                         </button>
@@ -931,9 +953,9 @@ export const TikTokApp: React.FC<{
                             document.body.removeChild(element);
                             setShowMoreMenu(false);
                           }} 
-                          className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"
+                          className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors font-bold"
                         >
-                          <Download size={14} /> Descargar .md Completo
+                          <Download size={14} /> Exportar (.md)
                         </button>
                         
                         <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
@@ -1247,6 +1269,7 @@ export const TikTokApp: React.FC<{
                           initialContent={focusedVideo.transcript || ""}
                           onChange={(c) => debouncedUpdateVideo(focusedVideo.id, { transcript: c })}
                           searchQuery={searchQuery}
+                          showLineNumbers={showLineNumbers}
                         />
                       )}
                       {activeTab.startsWith('summary_') && (() => {
@@ -1258,6 +1281,7 @@ export const TikTokApp: React.FC<{
                             initialContent={summary.content || ""}
                             onChange={(c) => updateSummaryContent(summary.id, c)}
                             searchQuery={searchQuery}
+                          showLineNumbers={showLineNumbers}
                           />
                         ) : null;
                       })()}
@@ -1270,6 +1294,7 @@ export const TikTokApp: React.FC<{
                             initialContent={note.content || ""}
                             onChange={(c) => updateSubnote(note.id, { content: c })}
                             searchQuery={searchQuery}
+                          showLineNumbers={showLineNumbers}
                           />
                         ) : null;
                       })()}
@@ -1302,6 +1327,7 @@ export const TikTokApp: React.FC<{
                             initialContent={focusedVideo.scratchpad || ""}
                             onChange={(c) => debouncedUpdateVideo(focusedVideo.id, { scratchpad: c })}
                             searchQuery={searchQuery}
+                          showLineNumbers={showLineNumbers}
                           />
                         )}
                         {activeTab.startsWith('summary_') && (() => {
@@ -1314,6 +1340,7 @@ export const TikTokApp: React.FC<{
                               initialContent={summary.scratchpad || ""}
                               onChange={(c) => updateSummaryScratchpad(summary.id, c)}
                               searchQuery={searchQuery}
+                          showLineNumbers={showLineNumbers}
                             />
                           ) : null;
                         })()}
@@ -1327,6 +1354,7 @@ export const TikTokApp: React.FC<{
                               initialContent={note.scratchpad || ""}
                               onChange={(c) => updateSubnote(note.id, { scratchpad: c })}
                               searchQuery={searchQuery}
+                          showLineNumbers={showLineNumbers}
                             />
                           ) : null;
                         })()}

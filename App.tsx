@@ -1546,6 +1546,8 @@ function App() {
          globalView === 'timers' ? <TimeTrackerApp session={session!} /> :
          globalView === 'reminders' ? <RemindersApp session={session!} dateFormat={dateFormat} timeFormat={timeFormat} /> :
          globalView === 'braindump' ? <BrainDumpApp 
+             showLineNumbers={showLineNumbers}
+             onToggleLineNumbers={() => { const next = !showLineNumbers; setShowLineNumbers(next); localStorage.setItem("app-show-line-numbers", String(next)); }}
             session={session!} 
             noteFont={noteFont} 
             noteFontSize={noteFontSize} 
@@ -1565,17 +1567,19 @@ function App() {
               setGlobalView('notes');
             }} 
           /> :
-         globalView === 'translator' ? <TranslatorApp session={session!} /> :
-         globalView === 'tiktok' ? <TikTokApp 
-           session={session!} 
-           allSummaries={allTikTokSummaries}
-           allSubnotes={allTikTokSubnotes}
-           searchQuery={currentSearchQuery}
-           onSearchQueryChange={(q) => {
-             setSearchQuery('tiktok', q);
-             setSearchExemptNoteIds(new Set());
-           }}
-         /> : (
+          globalView === 'translator' ? <TranslatorApp session={session!} /> :
+          globalView === 'tiktok' ? <TikTokApp 
+            session={session!} 
+            showLineNumbers={showLineNumbers}
+            onToggleLineNumbers={() => { const next = !showLineNumbers; setShowLineNumbers(next); localStorage.setItem("app-show-line-numbers", String(next)); }}
+            allSummaries={allTikTokSummaries}
+            allSubnotes={allTikTokSubnotes}
+            searchQuery={currentSearchQuery}
+            onSearchQueryChange={(q) => {
+              setSearchQuery('tiktok', q);
+              setSearchExemptNoteIds(new Set());
+            }}
+          /> : (
           <>
             {!isZenMode && (
               <div className="flex flex-col shrink-0">
