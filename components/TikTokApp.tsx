@@ -706,10 +706,10 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                   <div className="relative" ref={moreMenuRef}>
                     <button
                       onClick={() => setShowMoreMenu(!showMoreMenu)}
-                      className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors border border-transparent"
+                      className={`p-2 rounded-xl border transition-all ${showMoreMenu ? 'bg-[#EE1D52] border-[#EE1D52]/80 text-white font-bold shadow-lg shadow-[#EE1D52]/20' : 'text-zinc-500 border-zinc-800 hover:border-[#EE1D52]/30'}`}
                       title="Más opciones"
                     >
-                      <MoreVertical size={16} />
+                      <MoreVertical size={13} />
                     </button>
                     
                     {showMoreMenu && (

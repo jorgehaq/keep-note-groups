@@ -235,10 +235,10 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
             </div>
 
         <div className="flex-1 overflow-y-auto p-4 hidden-scrollbar">
-            <div className={`${isTranslatorMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto flex flex-col gap-12 pb-20`}>
+            <div className={`${isTranslatorMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto flex flex-col [&>*:not(:first-child)]:mt-12 [&>*:not(:first-child)]:pt-8 [&>*:not(:first-child)]:border-t [&>*:not(:first-child)]:border-zinc-100 dark:[&>*:not(:first-child)]:border-[#2D2D42]/40 pb-20`}>
                 
                 {/* 1. MÓDULO DE CREACIÓN */}
-                <div className="space-y-6 animate-fadeIn">
+                <div className="space-y-4 animate-fadeIn">
                     {/* 🚀 FIX: focus-within EN LA TARJETA EXTERIOR EXCLUSIVAMENTE */}
                     <div className="bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] transition-all duration-300 hover:border-violet-500/50 hover:shadow-xl hover:shadow-violet-500/5 focus-within:ring-2 focus-within:ring-violet-500/50 overflow-hidden">
                         
@@ -326,9 +326,9 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                 </div>
 
                 {/* 2. ARCHIVO DE TRADUCCIONES */}
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-zinc-400">
-                        <ArchiveIcon size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Archivo ({filteredTranslations.length}{totalArchiveCount > filteredTranslations.length ? ' de ' + totalArchiveCount : ''})</span>
+                <div className="space-y-4 animate-fadeIn opacity-70">
+                    <div className="flex items-center gap-2 text-zinc-400 font-bold uppercase tracking-widest text-xs px-2 mb-2">
+                        <ArchiveIcon size={16} /> Archivo ({filteredTranslations.length}{totalArchiveCount > filteredTranslations.length ? ' de ' + totalArchiveCount : ''})
                     </div>
 
                     <div className="space-y-2">

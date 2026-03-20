@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Clock, Trash2, CheckCircle2, Play, Pause, Square, Flag, History as HistoryIcon, Zap, ChevronDown, ChevronUp, RotateCcw, Archive as ArchiveIcon, Wrench, Bell } from 'lucide-react';
+import { Plus, Clock, Trash2, CheckCircle2, Play, Pause, Square, Flag, History as HistoryIcon, Zap, ChevronDown, ChevronUp, RotateCcw, Archive as ArchiveIcon, Wrench, Bell, MoreVertical } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import { SmartNotesEditor } from '../src/components/editor/SmartNotesEditor';
@@ -108,8 +108,15 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
     const [loading, setLoading] = useState(true);
     const [expandedActiveIds, setExpandedActiveIds] = useState<Set<string>>(new Set());
     const [expandedHistoryIds, setExpandedHistoryIds] = useState<Set<string>>(new Set());
+    const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
     const { showOverdueMarquee, setShowOverdueMarquee, overdueRemindersCount } = useUIStore();
+
+    useEffect(() => {
+        const handleClickOutside = () => setActiveMenuId(null);
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, []);
 
     const fetchTimers = useCallback(async () => {
         setLoading(true);
@@ -280,23 +287,69 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
             </div>
 
             <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 pt-5 hidden-scrollbar">
-                <div className="max-w-6xl mx-auto flex flex-col gap-12 pb-20">
+                <div className="max-w-6xl mx-auto flex flex-col [&>*:not(:first-child)]:mt-12 [&>*:not(:first-child)]:pt-8 [&>*:not(:first-child)]:border-t [&>*:not(:first-child)]:border-zinc-100 dark:[&>*:not(:first-child)]:border-[#2D2D42]/40 pb-20">
                     
                     {/* 1. BORRADORES (EN CONSTRUCCIÓN) */}
                     {drafts.length > 0 && (
-                        <div className="space-y-6 animate-fadeIn">
-                            <div className="flex items-center gap-2 text-indigo-500">
-                                <Wrench size={18} className="fill-current" />
-                                <span className="text-sm font-bold uppercase tracking-widest">Creación de Cronómetro</span>
+                        <div className="space-y-4 animate-fadeIn">
+                            <div className="flex items-center gap-2 text-zinc-400 font-bold uppercase tracking-widest text-xs px-2 mb-2">
+                                <Wrench size={16} className="fill-current" /> Creación de Cronómetro ({drafts.length})
                             </div>
                             {drafts.map(draft => (
-                                <div key={draft.id} className="bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] transition-all duration-300 hover:border-[#2563EB]/50 hover:shadow-xl hover:shadow-[#2563EB]/5 focus-within:ring-2 focus-within:ring-[#2563EB]/50 flex flex-col overflow-hidden">
-                                    <div className="flex items-center justify-between pr-4">
+                                <div key={draft.id} className="bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] transition-all duration-300 hover:border-[#2563EB]/50 hover:shadow-xl hover:shadow-[#2563EB]/5 flex flex-col overflow-hidden">
+                                    <div className="flex items-center justify-between p-4 pb-2">
                                         <input 
                                             type="text" placeholder="¿Qué vamos a medir? (ej. Sprint Programación)" 
                                             value={draft.title || ''} onChange={e => autoSave(draft.id, { title: e.target.value })} 
-                                            className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] p-4 pb-3 outline-none placeholder-zinc-400" 
+                                            className="w-full bg-transparent text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] outline-none placeholder-zinc-400" 
                                         />
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <button 
+                                                onClick={() => changeStatus(draft.id, 'active')} 
+                                                className="p-2 flex items-center justify-center bg-[#1F3760] hover:bg-[#152643] text-white rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all active:scale-95"
+                                                title="Establecer e Iniciar"
+                                            >
+                                                <Play size={13} fill="currentColor" />
+                                            </button>
+
+                                            <div className="relative">
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setActiveMenuId(activeMenuId === draft.id ? null : draft.id);
+                                                    }}
+                                                    className={`p-2 rounded-xl border transition-all ${activeMenuId === draft.id ? 'bg-[#1F3760] border-[#1F3760]/80 text-white font-bold shadow-lg shadow-[#1F3760]/20' : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#1F3760]/30'}`}
+                                                    title="Más opciones"
+                                                >
+                                                    <MoreVertical size={13} />
+                                                </button>
+
+                                                {activeMenuId === draft.id && (
+                                                    <div className="absolute right-0 top-full mt-1 z-50 min-w-[220px] bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] rounded-lg shadow-xl p-1 flex flex-col gap-0.5 animate-fadeIn">
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                changeStatus(draft.id, 'history');
+                                                                setActiveMenuId(null);
+                                                            }}
+                                                            className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors font-bold"
+                                                        >
+                                                            <ArchiveIcon size={14} /> <span className="flex-1">Archivar Cronómetro</span>
+                                                        </button>
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                deleteTimer(draft.id);
+                                                                setActiveMenuId(null);
+                                                            }}
+                                                            className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-bold"
+                                                        >
+                                                            <Trash2 size={14} /> <span className="flex-1">Eliminar Permanentemente</span>
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
 
                                     
@@ -316,20 +369,6 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                             <option value="racing">🏁 Modo Carrera (Marcar Hitos sin detener el reloj principal)</option>
                                         </select>
                                     </div>
-
-                                    <div className="flex justify-between items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-b-2xl border-t border-zinc-200 dark:border-zinc-800 mt-auto">
-                                        <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
-                                            <span>Borrador en edición...</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button onClick={() => deleteTimer(draft.id)} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Eliminar">
-                                                <Trash2 size={18} />
-                                            </button>
-                                            <button onClick={() => changeStatus(draft.id, 'active')} className="flex items-center gap-2 px-5 py-2 text-xs font-normal text-white bg-[#2563EB] hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/20 transition-all">
-                                                <Play size={14}/> Establecer e Iniciar
-                                            </button>
-                                        </div>
-                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -337,9 +376,9 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
 
                     {/* 2. ACTIVOS Y CORRIENDO */}
                     {actives.length > 0 && (
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2 text-emerald-500">
-                                <Clock size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Activos y Corriendo</span>
+                        <div className="space-y-4 animate-fadeIn">
+                            <div className="flex items-center gap-2 text-zinc-400 font-bold uppercase tracking-widest text-xs px-2 mb-2">
+                                <Clock size={16} /> Activos y Corriendo ({actives.length})
                             </div>
                             
                             <div className="grid grid-cols-1 gap-4">
@@ -352,14 +391,55 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                                 {/* HEADER */}
                                                 <div className="flex justify-between items-start mb-4">
                                                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                    <div className="flex flex-col min-w-0 pl-1">
-                                                        <input type="text" value={timer.title} onChange={e => autoSave(timer.id, { title: e.target.value })} className="font-bold text-lg text-zinc-800 dark:text-[#CCCCCC] truncate bg-transparent outline-none w-full placeholder-zinc-400" placeholder="Cronómetro" />
-                                                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
-                                                            {timer.type === 'cycle' ? <><RotateCcw size={10}/> Modo Ciclo</> : <><Flag size={10}/> Modo Carrera</>}
-                                                        </span>
+                                                        <div className="flex flex-col flex-1 min-w-0 pl-1 pr-2">
+                                                            <input type="text" value={timer.title} onChange={e => autoSave(timer.id, { title: e.target.value })} className="font-bold text-lg text-zinc-800 dark:text-[#CCCCCC] truncate bg-transparent outline-none w-full placeholder-zinc-400" placeholder="Cronómetro" />
+                                                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                                                                {timer.type === 'cycle' ? <><RotateCcw size={10}/> Modo Ciclo</> : <><Flag size={10}/> Modo Carrera</>}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Menú Tres Puntos */}
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <div className="relative">
+                                                            <button 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setActiveMenuId(activeMenuId === timer.id ? null : timer.id);
+                                                                }}
+                                                                className={`p-2 rounded-xl border transition-all ${activeMenuId === timer.id ? 'bg-[#1F3760] border-[#1F3760]/80 text-white font-bold shadow-lg shadow-[#1F3760]/20' : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#1F3760]/30'}`}
+                                                                title="Más opciones"
+                                                            >
+                                                                <MoreVertical size={13} />
+                                                            </button>
+
+                                                            {activeMenuId === timer.id && (
+                                                                <div className="absolute right-0 top-full mt-1 z-50 min-w-[220px] bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] rounded-lg shadow-xl p-1 flex flex-col gap-0.5 animate-fadeIn">
+                                                                    <button 
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            changeStatus(timer.id, 'history');
+                                                                            setActiveMenuId(null);
+                                                                        }}
+                                                                        className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors font-bold"
+                                                                    >
+                                                                        <ArchiveIcon size={14} /> <span className="flex-1">Archivar Cronómetro</span>
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            deleteTimer(timer.id);
+                                                                            setActiveMenuId(null);
+                                                                        }}
+                                                                        className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-bold"
+                                                                    >
+                                                                        <Trash2 size={14} /> <span className="flex-1">Eliminar Permanentemente</span>
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
 
                                             {/* ÁREA EXPANDIDA */}
                                             <div className="animate-fadeIn space-y-4">
@@ -421,27 +501,6 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                                 </div>
                                             )}
                                             </div>
-
-                                            {/* FOOTER ACCIONES */}
-                                            <div className="flex justify-between items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-[#2D2D42]/50 rounded-b-2xl border-t border-zinc-200 dark:border-[#2D2D42] mt-auto">
-                                                <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
-                                                    <span>Creado: {formatCleanDate(timer.created_at)}</span>
-                                                    {(new Date(timer.updated_at).getTime() - new Date(timer.created_at).getTime() > 60000) && (
-                                                        <>
-                                                            <span className="opacity-50">|</span>
-                                                            <span>Editado: {formatCleanDate(timer.updated_at)}</span>
-                                                        </>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center gap-2 shrink-0">
-                                                    <button onClick={() => deleteTimer(timer.id)} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Eliminar">
-                                                        <Trash2 size={18} />
-                                                    </button>
-                                                    <button onClick={() => changeStatus(timer.id, 'history')} className="flex items-center gap-2 px-4 py-2 text-xs font-normal text-white bg-[#2563EB] hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/20 transition-all">
-                                                        <ArchiveIcon size={14} /> Archivar Cronómetro
-                                                    </button>
-                                                </div>
-                                            </div>
                                         </div>
                                     );
                                 })}
@@ -450,9 +509,9 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                     )}
 
                     {/* 3. ARCHIVO (HISTORIAL) */}
-                    <div className="space-y-4 opacity-70">
-                        <div className="flex items-center gap-2 text-zinc-400">
-                            <ArchiveIcon size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Archivo ({history.length})</span>
+                    <div className="space-y-4 animate-fadeIn opacity-70">
+                        <div className="flex items-center gap-2 text-zinc-400 font-bold uppercase tracking-widest text-xs px-2 mb-2">
+                            <ArchiveIcon size={16} /> Archivo ({history.length})
                         </div>
                         {history.length === 0 ? (
                             <div className="text-sm text-center text-zinc-400 p-4">No hay cronómetros archivados.</div>

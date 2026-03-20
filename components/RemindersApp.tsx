@@ -383,14 +383,13 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
             </div>
 
             <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 pt-5 hidden-scrollbar">
-                <div className="max-w-6xl mx-auto flex flex-col gap-12 pb-20">
+                <div className="max-w-6xl mx-auto flex flex-col [&>*:not(:first-child)]:mt-12 [&>*:not(:first-child)]:pt-8 [&>*:not(:first-child)]:border-t [&>*:not(:first-child)]:border-zinc-100 dark:[&>*:not(:first-child)]:border-[#2D2D42]/40 pb-20">
                     
                     {/* 1. CREACIÓN */}
                     {drafts.length > 0 && (
-                        <div className="space-y-6 animate-fadeIn">
-                            <div className="flex items-center gap-2 text-indigo-500">
-                                <Wrench size={18} />
-                                <span className="text-sm font-bold uppercase tracking-widest">Creación de recordatorio</span>
+                        <div className="space-y-4 animate-fadeIn">
+                            <div className="flex items-center gap-2 text-zinc-400 font-bold uppercase tracking-widest text-xs px-2 mb-2">
+                                <Wrench size={16} /> Creación ({drafts.length})
                             </div>
                             {drafts.map(draft => (
                                 <div key={draft.id} className="bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] transition-all duration-300 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 flex flex-col overflow-hidden animate-fadeIn">
@@ -409,10 +408,10 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                             <button 
                                                 onClick={() => changeStatus(draft.id, 'active')} 
                                                 disabled={draft.targets.length === 0} 
-                                                className="w-9 h-9 flex items-center justify-center bg-[#1F3760] hover:bg-[#152643] text-white rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all disabled:opacity-50 active:scale-95"
+                                                className="p-2 flex items-center justify-center bg-[#1F3760] hover:bg-[#152643] text-white rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all disabled:opacity-50 active:scale-95"
                                                 title="Activar todos"
                                             >
-                                                <Play size={16} fill="currentColor" />
+                                                <Play size={13} fill="currentColor" />
                                             </button>
 
                                             {/* Menú Tres Puntos (Caneca adentro) */}
@@ -422,9 +421,9 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                         e.stopPropagation();
                                                         setActiveMenuId(activeMenuId === draft.id ? null : draft.id);
                                                     }}
-                                                    className={`w-9 h-9 flex items-center justify-center transition-all rounded-xl ${activeMenuId === draft.id ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-800' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+                                                    className={`p-2 rounded-xl border transition-all ${activeMenuId === draft.id ? 'bg-[#1F3760] border-[#1F3760]/80 text-white font-bold shadow-lg shadow-[#1F3760]/20' : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#1F3760]/30'}`}
                                                 >
-                                                    <MoreVertical size={16} />
+                                                    <MoreVertical size={13} />
                                                 </button>
 
                                                 {activeMenuId === draft.id && (
@@ -503,9 +502,9 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
 
                     {/* 2. ACTIVOS */}
                     {activeReminders.length > 0 && (
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2 text-[#225B49]">
-                                <Clock size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Activos y Corriendo</span>
+                        <div className="space-y-4 animate-fadeIn">
+                            <div className="flex items-center gap-2 text-zinc-400 font-bold uppercase tracking-widest text-xs px-2 mb-2">
+                                <Clock size={16} /> Activos y Corriendo ({activeReminders.length})
                             </div>
 
                             <div className="grid grid-cols-1 gap-4">
@@ -556,10 +555,10 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                         
                                                         <button 
                                                             onClick={() => toggleEditActive(r.id)} 
-                                                            className={`w-9 h-9 flex items-center justify-center transition-all rounded-xl ${isEditing ? 'bg-[#1F3760] text-white shadow-lg shadow-[#1F3760]/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`} 
+                                                            className={`p-2 flex items-center justify-center transition-all rounded-xl ${isEditing ? 'bg-[#1F3760] text-white shadow-lg shadow-[#1F3760]/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`} 
                                                             title={isEditing ? 'Cerrar Edición' : 'Ajustar recordatorio'}
                                                         >
-                                                            <Wrench size={16}/>
+                                                            <Wrench size={13}/>
                                                         </button>
 
                                                         {/* Menú Tres Puntos */}
@@ -569,10 +568,10 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                                     e.stopPropagation();
                                                                     setActiveMenuId(activeMenuId === r.id ? null : r.id);
                                                                 }}
-                                                                className={`w-9 h-9 flex items-center justify-center transition-all rounded-xl ${activeMenuId === r.id ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-800' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+                                                                className={`p-2 rounded-xl border transition-all ${activeMenuId === r.id ? 'bg-[#1F3760] border-[#1F3760]/80 text-white font-bold shadow-lg shadow-[#1F3760]/20' : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#1F3760]/30'}`}
                                                                 title="Más opciones"
                                                             >
-                                                                <MoreVertical size={16} />
+                                                                <MoreVertical size={13} />
                                                             </button>
 
                                                             {activeMenuId === r.id && (
@@ -727,9 +726,9 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                     )}
 
                     {/* 3. HISTORIAL */}
-                    <div className="space-y-4 opacity-70">
-                        <div className="flex items-center gap-2 text-zinc-400">
-                            <ArchiveIcon size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Archivo ({history.length})</span>
+                    <div className="space-y-4 animate-fadeIn opacity-70">
+                        <div className="flex items-center gap-2 text-zinc-400 font-bold uppercase tracking-widest text-xs px-2 mb-2">
+                            <ArchiveIcon size={16} /> Archivo ({history.length})
                         </div>
                         {history.length === 0 ? (
                             <div className="text-sm text-center text-zinc-400 p-4">No hay recordatorios finalizados.</div>

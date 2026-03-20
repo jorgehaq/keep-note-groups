@@ -920,7 +920,17 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           )}
 
           <div className="relative shrink-0 flex items-center" ref={mobileMenuRef}>
-            <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(!isMobileMenuOpen); }} className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"><MoreVertical size={16} /></button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(!isMobileMenuOpen); }}
+              className={`p-2 rounded-xl border transition-all ${
+                isMobileMenuOpen
+                  ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
+                  : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
+              }`}
+              title="Más opciones de la nota"
+            >
+              <MoreVertical size={13} />
+            </button>
             {isMobileMenuOpen && (
               <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-[#1A1A24] shadow-xl rounded-lg border border-zinc-200 dark:border-[#2D2D42] p-1 flex flex-col gap-0.5 min-w-[180px] animate-fadeIn">
                 {/* GRUPO 1: Estados de la nota */}
