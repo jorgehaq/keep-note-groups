@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Archive, ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash, Sparkles, FileText, PenLine, ArrowUpRight, GitBranch, Plus, Wind, ListPlus, History } from 'lucide-react';
+import { Archive, ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash, Sparkles, FileText, PenLine, ArrowUpRight, GitBranch, Plus, Wind, ListPlus, History, Calendar } from 'lucide-react';
 import { Note, NoteFont } from '../types';
 import { SmartNotesEditor, SmartNotesEditorRef } from '../src/components/editor/SmartNotesEditor';
 import { ChecklistEditor, ChecklistEditorRef, parseMarkdownToChecklist, serializeChecklistToMarkdown, serializeChecklistToPlainMarkdown } from '../src/components/editor/ChecklistEditor';
@@ -910,7 +910,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 
                 {/* GRUPO 4: Gestión */}
                 {onArchive && (
-                  <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false); onArchive(note.id); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 font-bold transition-colors">
+                  <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false); onArchive(note.id); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 font-bold transition-colors">
                     <Archive size={14} /> Archivar Nota
                   </button>
                 )}
@@ -924,6 +924,12 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             )}
           </div>
         </div>
+      </div>
+
+      {/* METADATA BAR (like TikTok/Pizarron) */}
+      <div className="px-4 py-2 bg-zinc-50 dark:bg-zinc-900/30 border-y border-zinc-200 dark:border-zinc-800/50 flex flex-wrap items-center gap-4 text-[10px] uppercase tracking-widest font-bold text-zinc-400">
+          <span className="flex items-center gap-1.5"><Calendar size={10} /> {formatCleanDate(note.created_at)}</span>
+          {note.updated_at && <span className="flex items-center gap-1.5"><Calendar size={10} /> {formatCleanDate(note.updated_at)}</span>}
       </div>
 
       {/* CONTENT */}
@@ -1145,19 +1151,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         </div>
       </div>
 
-      {/* FOOTER */}
-      <div className="flex items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-[#2D2D42]/50 rounded-b-2xl border-t border-zinc-200 dark:border-[#2D2D42] mt-auto">
-        <div className="flex flex-wrap items-center gap-4 text-[10px] uppercase tracking-widest font-bold text-zinc-400">
-          {note.created_at && (
-            <span className="flex items-center gap-1.5"><Clock size={10} /> {new Date(note.created_at).toLocaleDateString()}</span>
-          )}
-          {note.updated_at && note.created_at && (new Date(note.updated_at).getTime() - new Date(note.created_at).getTime() > 60000) && (
-            <span className="flex items-center gap-1.5"><History size={10} /> Editado {new Date(note.updated_at).toLocaleDateString()}</span>
-          )}
-          {propSyncStatus === 'saving' && (<span className="flex items-center gap-1 text-amber-500 animate-pulse ml-1"><Loader2 size={10} className="animate-spin" /> Guardando...</span>)}
-          {propSyncStatus === 'saved' && (<span className="flex items-center gap-1 text-emerald-500 ml-1"><CloudCheck size={10} /> Sincronizado</span>)}
-        </div>
-      </div>
+
 
       {isMoveModalOpen && onMove && (
         <MoveToGroupModal

@@ -721,6 +721,97 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                           <ArrowUpRight size={14} /> Convertir a Nota
                         </button>
                         
+                        <button 
+                          onClick={async () => { 
+                            if (!focusedVideo) return;
+                            
+                            // 1. Obtener todos los IDs en el árbol (recursivo) para traer summaries de hijos
+                            const getAllTreeIds = (id: string): string[] => {
+                                const kids = tikTokVideos.filter(v => v.parent_id === id);
+                                return [id, ...kids.flatMap(k => getAllTreeIds(k.id))];
+                            };
+                            const treeIds = getAllTreeIds(focusedVideo.id);
+
+                            // 2. Traer todos los summaries de la base de datos para este árbol
+                            const { data: allSummaries, error: sumError } = await supabase
+                                .from('summaries')
+                                .select('*')
+                                .in('tiktok_video_id', treeIds);
+                            
+                            if (sumError) console.error("Error al obtener resúmenes para exportar:", sumError);
+
+                            const cleanMarkdown = (text: string) => 
+                                (text || '').replace(/\[\d+\]/g, '').replace(/<[^>]+>/g, '');
+
+                            const getRecursiveContent = (videoId: string, depth: number): string => {
+                              const video = tikTokVideos.find(v => v.id === videoId);
+                              if (!video) return "";
+
+                              let md = `${"#".repeat(depth)} 🎬 ${video.title || 'TikTok Sin Título'}\n\n`;
+                              md += `**Información del Video:**\n`;
+                              md += `- **URL:** ${video.url}\n`;
+                              md += `- **Autor:** ${video.author || 'Anónimo'}\n`;
+                              md += `- **Fecha:** ${new Date(video.created_at).toLocaleString('es-ES')}\n`;
+                              if (video.duration) md += `- **Duración:** ${Math.floor(video.duration / 60)}:${(video.duration % 60).toString().padStart(2, '0')}\n`;
+                              if (video.view_count) md += `- **Vistas:** ${video.view_count.toLocaleString()}\n`;
+                              if (video.like_count) md += `- **Likes:** ${video.like_count.toLocaleString()}\n`;
+                              if (video.category) md += `- **Categoría Sugerida:** ${video.category}\n`;
+                              md += "\n";
+
+                              if (video.description) {
+                                md += `${"#".repeat(depth + 1)} Descripción Original\n\n${cleanMarkdown(video.description)}\n\n`;
+                              }
+                              
+                              if (video.transcript) {
+                                md += `${"#".repeat(depth + 1)} Transcripción (Whisper)\n\n${cleanMarkdown(video.transcript)}\n\n`;
+                              }
+                              
+                              if (video.content) {
+                                md += `${"#".repeat(depth + 1)} Análisis y Notas\n\n${cleanMarkdown(video.content)}\n\n`;
+                              }
+                              
+                              if (video.scratchpad) {
+                                md += `${"#".repeat(depth + 1)} Pizarrón del Video\n\n${cleanMarkdown(video.scratchpad)}\n\n`;
+                              }
+                              
+                              // Summaries for THIS video from the pre-fetched list
+                              const vSummaries = (allSummaries || []).filter(s => s.tiktok_video_id === videoId);
+                              if (vSummaries.length > 0) {
+                                md += `${"#".repeat(depth + 1)} Análisis de Inteligencia Artificial (${vSummaries.length})\n\n`;
+                                for (const s of vSummaries) {
+                                  md += `${"#".repeat(depth + 2)} Obj: ${s.target_objective || 'General'}\n\n`;
+                                  md += `${cleanMarkdown(s.content)}\n\n`;
+                                  if (s.scratchpad) {
+                                    md += `**Pizarrón del Análisis:**\n\n${cleanMarkdown(s.scratchpad)}\n\n`;
+                                  }
+                                }
+                              }
+
+                              // Sub-TikToks
+                              const children = tikTokVideos.filter(v => v.parent_id === videoId);
+                              for (const child of children) {
+                                md += "\n---\n\n";
+                                md += getRecursiveContent(child.id, depth + 1);
+                              }
+                              
+                              return md;
+                            };
+
+                            const fullMarkdown = getRecursiveContent(focusedVideo.id, 1);
+                            const element = document.createElement("a");
+                            const file = new Blob([fullMarkdown], { type: 'text/markdown;charset=utf-8;' });
+                            element.href = URL.createObjectURL(file);
+                            element.download = `${(focusedVideo.title || 'analisis_tiktok').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
+                            document.body.appendChild(element);
+                            element.click();
+                            document.body.removeChild(element);
+                            setShowMoreMenu(false);
+                          }} 
+                          className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"
+                        >
+                          <Download size={14} /> Descargar .md Completo
+                        </button>
+                        
                         <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
                         
                         <button 

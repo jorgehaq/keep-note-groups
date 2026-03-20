@@ -869,6 +869,8 @@ function App() {
     if (updates.is_pinned !== undefined) dbUpdates.is_pinned = updates.is_pinned;
     if (updates.is_docked !== undefined) dbUpdates.is_docked = updates.is_docked;
     if (updates.is_checklist !== undefined) dbUpdates.is_checklist = updates.is_checklist;
+    if (updates.status !== undefined) dbUpdates.status = updates.status;
+    if (updates.group_id !== undefined) dbUpdates.group_id = updates.group_id;
 
     const isTextUpdate = updates.title !== undefined || updates.content !== undefined || updates.scratchpad !== undefined;
     if (isTextUpdate) {
@@ -909,10 +911,11 @@ function App() {
     if (!pendingUpdatesRef.current[noteId]) pendingUpdatesRef.current[noteId] = {};
     Object.assign(pendingUpdatesRef.current[noteId], dbUpdates);
 
-    // 🚀 FIX: Los títulos se guardan inmediatamente si no hay más cambios.
+    // 🚀 FIX: Los títulos y cambios de estado (archivo, fijar, mover) se guardan inmediatamente.
     const pendingKeys = Object.keys(pendingUpdatesRef.current[noteId]).filter(k => k !== 'updated_at');
+    const isStateUpdate = updates.status !== undefined || updates.is_pinned !== undefined || updates.is_docked !== undefined || updates.group_id !== undefined;
     const isTitleOnly = updates.title !== undefined && !('content' in pendingUpdatesRef.current[noteId]) && pendingKeys.length === 1;
-    const debounceTime = isTitleOnly ? 0 : 1000; // Reducido de 2s a 1s para mejor UX
+    const debounceTime = (isTitleOnly || isStateUpdate) ? 0 : 1000; // Solo debouncing para contenido/scratchpad
 
     setNoteSaveStatus(prev => ({ ...prev, [noteId]: 'saving' }));
 
@@ -920,9 +923,10 @@ function App() {
       clearTimeout(saveTimeoutRef.current[noteId]);
     }
 
-    saveTimeoutRef.current[noteId] = setTimeout(async () => {
+    const executeUpdate = async () => {
       const finalUpdates = { ...pendingUpdatesRef.current[noteId] };
       delete pendingUpdatesRef.current[noteId];
+      if (!finalUpdates || Object.keys(finalUpdates).length === 0) return;
 
       try {
         const { error } = await supabase.from('notes').update(finalUpdates).eq('id', noteId);
@@ -951,7 +955,13 @@ function App() {
       } finally {
         delete saveTimeoutRef.current[noteId];
       }
-    }, debounceTime);
+    };
+
+    if (debounceTime === 0) {
+      executeUpdate();
+    } else {
+      saveTimeoutRef.current[noteId] = setTimeout(executeUpdate, debounceTime);
+    }
   };
 
   const archiveNote = (noteId: string) => {
@@ -1527,10 +1537,31 @@ function App() {
                           </div>
                       </div>
 
-                      {/* Lado Derecho: Controles de Grupo y Acciones */}
-                      <div className="flex flex-wrap items-center gap-2 shrink-0 pb-1 md:pb-0">
+                          {/* Lado Derecho: Controles de Grupo y Acciones */}
+                      <div className="flex flex-wrap items-center gap-3 shrink-0 pb-1 md:pb-0">
                           
+                          {/* Buscador (Posicionado como en TikTok) */}
+                          <div className="relative flex items-center group">
+                            <Search size={15} className={`absolute left-3 pointer-events-none transition-colors ${currentSearchQuery.trim() ? 'text-amber-600 dark:text-amber-500' : 'text-zinc-500'}`} />
+                            <input 
+                              type="text" 
+                              placeholder="Buscar..." 
+                              value={currentSearchQuery} 
+                              onChange={(e) => {
+                                if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: e.target.value }));
+                                setSearchExemptNoteIds(new Set());
+                              }}
+                              className={`h-9 pl-9 pr-8 rounded-xl border transition-all outline-none text-xs w-32 md:w-32 lg:w-40 ${currentSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50' : 'bg-white dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:border-indigo-500/50 dark:focus:border-indigo-500/50'}`}
+                            />
+                            {currentSearchQuery.trim() && (
+                              <button onClick={() => { if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: '' })); setSearchExemptNoteIds(new Set()); }} className="absolute right-2 p-1 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-full transition-colors" title="Limpiar búsqueda">
+                                <X size={14} />
+                              </button>
+                            )}
+                          </div>
+
                           {/* Botones de Estado/Vista (Bell, Tray, Maximize) */}
+
                           {/* 1. Botones de Estado/Vista (Bell, Tray, Maximize, Sort) - Independientes como en Pizarrón */}
                           <button
                             onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
@@ -1622,25 +1653,6 @@ function App() {
                           <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-1 shadow-sm">
 
 
-                              {/* Buscador */}
-                              <div className="relative flex items-center transition-all duration-300 mr-2">
-                                <Search size={15} className={`absolute left-2 pointer-events-none transition-colors ${currentSearchQuery.trim() ? 'text-amber-600 dark:text-amber-500 font-bold' : 'text-zinc-400'}`} />
-                                <input
-                                  type="text"
-                                  placeholder={`Buscar...`}
-                                  value={currentSearchQuery}
-                                  onChange={(e) => {
-                                     if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: e.target.value }));
-                                    setSearchExemptNoteIds(new Set());
-                                  }}
-                                  className={`h-[26px] w-32 md:w-32 lg:w-40 pl-7 pr-8 text-xs rounded-lg border transition-all focus:outline-none ${currentSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50' : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-1 focus:ring-zinc-400/30'}`}
-                                />
-                                {currentSearchQuery.trim() && (
-                                  <button onClick={() => { if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: '' })); setSearchExemptNoteIds(new Set()); }} className="absolute right-2 p-0.5 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 bg-amber-200/50 dark:bg-amber-800/50 hover:bg-amber-300/50 dark:hover:bg-amber-700/50 rounded-full transition-colors" title="Limpiar búsqueda">
-                                    <X size={12} />
-                                  </button>
-                                )}
-                              </div>
 
                               <button 
                                   onClick={downloadGroupAsMarkdown} 

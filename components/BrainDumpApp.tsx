@@ -864,9 +864,21 @@ export const BrainDumpApp: React.FC<{
                                                 </button>
  
                                                 <button 
-                                                    onClick={(e) => { 
+                                                    onClick={async (e) => { 
                                                         e.stopPropagation(); 
                                                         
+                                                        const getAllTreeIds = (id: string): string[] => {
+                                                            const kids = dumps.filter(d => d.parent_id === id);
+                                                            return [id, ...kids.flatMap(k => getAllTreeIds(k.id))];
+                                                        };
+                                                        if (!displayDump) return;
+                                                        const treeIds = getAllTreeIds(displayDump.id);
+
+                                                        const { data: allSummaries } = await supabase
+                                                            .from('summaries')
+                                                            .select('*')
+                                                            .in('brain_dump_id', treeIds);
+
                                                         const getRecursiveContent = (dumpId: string, depth: number): string => {
                                                             const target = dumps.find(d => d.id === dumpId);
                                                             if (!target) return "";
@@ -881,12 +893,25 @@ export const BrainDumpApp: React.FC<{
                                                                 md += `${target.scratchpad}\n\n`;
                                                             }
 
+                                                            // Resúmenes AI vinculados a este pizarrón
+                                                            const dumpSummaries = (allSummaries || []).filter(s => s.brain_dump_id === dumpId);
+                                                            if (dumpSummaries.length > 0) {
+                                                                md += `${"#".repeat(depth + 1)} Análisis de Inteligencia Artificial (${dumpSummaries.length})\n\n`;
+                                                                for (const s of dumpSummaries) {
+                                                                    md += `${"#".repeat(depth + 2)} Análisis: ${s.target_objective || 'Sin objetivo'}\n\n`;
+                                                                    md += `${s.content}\n\n`;
+                                                                    if (s.scratchpad && s.scratchpad.trim()) {
+                                                                        md += `**Pizarrón del Análisis:**\n\n${s.scratchpad}\n\n`;
+                                                                    }
+                                                                }
+                                                            }
+
                                                             // Sub-pizarrones
                                                             const subNodes = dumps.filter(d => d.parent_id === dumpId)
                                                                 .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
                                                             
                                                             for (const sub of subNodes) {
-                                                                md += "\n---\n\n"; // Separador visual entre niveles
+                                                                md += "\n---\n\n";
                                                                 md += getRecursiveContent(sub.id, depth + 1);
                                                             }
 
@@ -895,7 +920,7 @@ export const BrainDumpApp: React.FC<{
 
                                                         const fullMarkdown = getRecursiveContent(displayDump.id, 1);
                                                         const element = document.createElement("a");
-                                                        const file = new Blob([fullMarkdown], { type: 'text/markdown' });
+                                                        const file = new Blob([fullMarkdown], { type: 'text/markdown;charset=utf-8;' });
                                                         element.href = URL.createObjectURL(file);
                                                         element.download = `${(displayDump.title || 'pizarron_completo').replace(/\s+/g, '_')}.md`;
                                                         document.body.appendChild(element);
