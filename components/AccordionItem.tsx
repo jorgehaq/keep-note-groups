@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash, Sparkles, FileText, PenLine, ArrowUpRight, GitBranch, Plus, Wind } from 'lucide-react';
+import { ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash, Sparkles, FileText, PenLine, ArrowUpRight, GitBranch, Plus, Wind, ListPlus, History } from 'lucide-react';
 import { Note, NoteFont } from '../types';
 import { SmartNotesEditor, SmartNotesEditorRef } from '../src/components/editor/SmartNotesEditor';
 import { ChecklistEditor, ChecklistEditorRef, parseMarkdownToChecklist, serializeChecklistToMarkdown, serializeChecklistToPlainMarkdown } from '../src/components/editor/ChecklistEditor';
@@ -206,16 +206,16 @@ const SummaryTabContent: React.FC<{
         </div>
       </div>
 
-      <div className={`flex flex-col flex-1 min-h-0 ${!showMobileWhiteboard ? 'hidden md:flex' : 'flex'}`}>
-        <div className="flex items-center gap-1.5 mb-1.5 px-1">
-          <PenLine size={11} className="text-zinc-500" />
-          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Pizarrón</span>
+      <div className={`flex flex-col flex-1 min-h-0 rounded-xl border border-violet-200/50 dark:border-violet-900/30 bg-violet-50/10 dark:bg-violet-900/5 animate-fadeIn overflow-hidden ${!showMobileWhiteboard ? 'hidden md:flex' : 'flex'}`}>
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-violet-200/20 shrink-0">
+          <PenLine size={11} className="text-violet-400" />
+          <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest flex-1">Pizarrón</span>
         </div>
         <div onClick={(e) => {
           if ((e.target as HTMLElement).closest('.cm-panel, .cm-search, .cm-search-marker-container')) return;
           scratchRef.current?.focus();
         }}
-          className={`note-editor-scroll bg-zinc-50 dark:bg-[#242432] rounded-xl p-4 cursor-text flex-1 overflow-y-scroll min-h-[120px] border ${searchQuery?.trim() && localScratch?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ? 'border-amber-500' : 'border-zinc-200 dark:border-[#2D2D42]'}`}>
+          className="note-editor-scroll flex-1 p-4 cursor-text overflow-y-scroll min-h-[120px]">
           <SmartNotesEditor
             ref={scratchRef}
             noteId={`scratch_${summary.id}`}
@@ -327,7 +327,7 @@ const SubnoteTabContent: React.FC<{
       className={`flex-1 flex min-h-0 ${isMobile ? 'flex-col' : 'flex-row'} gap-2 animate-fadeIn`}
     >
       <div
-        className={`min-h-0 overflow-hidden rounded-xl border ${borderColor} bg-zinc-50 dark:bg-[#242432]`}
+        className={`min-h-0 overflow-hidden rounded-xl border ${borderColor} bg-zinc-50 dark:bg-zinc-900/20`}
         style={showScratch
           ? (isMobile
               ? { height: `${splitRatio * 100}%`, flex: 'none' }
@@ -377,12 +377,12 @@ const SubnoteTabContent: React.FC<{
 
       {showScratch && (
         <div
-          className="min-h-0 overflow-hidden flex flex-col rounded-xl border border-zinc-200 dark:border-[#2D2D42] bg-zinc-50 dark:bg-[#1A1A24]"
+          className="min-h-0 overflow-hidden flex flex-col rounded-xl border border-violet-200/50 dark:border-violet-900/30 bg-violet-50/10 dark:bg-violet-900/5 animate-fadeIn"
           style={{ flex: 1 }}
         >
-          <div className="flex items-center gap-1.5 px-3 py-2 border-b border-zinc-200 dark:border-[#2D2D42] shrink-0">
-            <PenLine size={11} className="text-zinc-400" />
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex-1">Pizarrón</span>
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-violet-200/20 shrink-0">
+            <PenLine size={11} className="text-violet-400" />
+            <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest flex-1">Pizarrón</span>
           </div>
           <div
             onClick={(e) => {
@@ -750,15 +750,41 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 border border-transparent">
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Botón Nueva subnota */}
+          {session?.user && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleCreateSubnote(); }}
+              title="Nueva subnota"
+              className="p-2 rounded-xl border text-emerald-400 border-zinc-200 dark:border-zinc-700 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all flex items-center"
+            >
+              <ListPlus size={13} />
+            </button>
+          )}
+
+          {/* Botón AI */}
+          {session?.user && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowAIInput(v => !v); }}
+              title={showAIInput ? 'Ocultar panel AI' : 'Abrir panel AI'}
+              className={`p-2 rounded-xl border transition-all ${
+                showAIInput 
+                  ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
+                  : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
+              }`}
+            >
+              <Sparkles size={13} />
+            </button>
+          )}
+
           {/* Botón pizarrón en header */}
           <button
             onClick={(e) => { e.stopPropagation(); setShowNoteScratch(v => !v); }}
             title={showNoteScratch ? 'Ocultar pizarrón' : 'Abrir pizarrón'}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+            className={`p-2 rounded-xl border transition-all ${
               showNoteScratch
-                ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                : 'text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/30 hover:text-amber-400'
+                ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
+                : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
             }`}
           >
             <PenLine size={13} />
@@ -767,10 +793,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           {/* Botón Zen */}
           <button
             onClick={(e) => { e.stopPropagation(); useUIStore.getState().toggleZenMode('notes'); }}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+            className={`p-2 rounded-xl border transition-all ${
               useUIStore.getState().isZenModeByApp['notes']
-                ? 'bg-amber-100 border-amber-300 text-amber-600 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-400 font-bold' 
-                : 'text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/30 hover:text-amber-400'
+                ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
+                : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
             }`}
             title={useUIStore.getState().isZenModeByApp['notes'] ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
           >
@@ -1019,6 +1045,29 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             </div>
           )}
 
+
+          {/* ── AI INPUT PANEL — sobre el contenido activo (como TikTok/Pizarrón) ─── */}
+          {session?.user && showAIInput && (
+            <div className="shrink-0 mb-2">
+              <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 dark:bg-[#1A1A2E]/60 p-3 animate-fadeIn">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-bold text-violet-400 flex items-center gap-1.5">
+                    <Sparkles size={11} /> AI — basado en contenido activo
+                  </span>
+                  <button onClick={() => setShowAIInput(false)} className="text-zinc-400 hover:text-zinc-300 p-0.5">
+                    <X size={13} />
+                  </button>
+                </div>
+                <NoteAIPanel
+                  noteId={displayNoteId}
+                  userId={session.user.id}
+                  noteStatus={note.ai_summary_status ?? 'idle'}
+                  onPromoteToNote={onCreateNote ? handlePromoteToNote : undefined}
+                />
+              </div>
+            </div>
+          )}
+
           {/* ── CONTENIDO ACTIVO ─────────────────────────────────────────────────── */}
           {(() => {
             const activeSubnoteId = activeTab.startsWith('sub_') ? activeTab.replace('sub_', '') : null;
@@ -1089,46 +1138,17 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               />
             );
           })()}
-
-          {/* ── AI INPUT COLAPSABLE — siempre al fondo, expandible ─────────────────── */}
-          {session?.user && (
-            <div className="shrink-0">
-              {showAIInput ? (
-                <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 dark:bg-[#1A1A2E]/60 p-3 animate-fadeIn">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-bold text-violet-400 flex items-center gap-1.5">
-                      <Sparkles size={11} /> AI — basado en contenido activo
-                    </span>
-                    <button onClick={() => setShowAIInput(false)} className="text-zinc-400 hover:text-zinc-300 p-0.5">
-                      <X size={13} />
-                    </button>
-                  </div>
-                  <NoteAIPanel
-                    noteId={displayNoteId}
-                    userId={session.user.id}
-                    noteStatus={note.ai_summary_status ?? 'idle'}
-                    onPromoteToNote={onCreateNote ? handlePromoteToNote : undefined}
-                  />
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowAIInput(true)}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-violet-500/20 text-violet-400/60 hover:border-violet-500/40 hover:text-violet-400 hover:bg-violet-500/5 transition-all text-xs font-medium"
-                >
-                  <Sparkles size={12} /> Preguntar a la IA sobre esta nota...
-                </button>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
       {/* FOOTER */}
       <div className="flex items-center pl-3 pr-4 py-3 bg-zinc-50 dark:bg-[#2D2D42]/50 rounded-b-2xl border-t border-zinc-200 dark:border-[#2D2D42] mt-auto">
-        <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 pl-2">
-          {note.created_at && (<span><span className="hidden md:inline text-zinc-500/80 mr-1">Creado:</span>{formatCleanDate(note.created_at)}</span>)}
+        <div className="flex flex-wrap items-center gap-4 text-[10px] uppercase tracking-widest font-bold text-zinc-400">
+          {note.created_at && (
+            <span className="flex items-center gap-1.5"><Clock size={10} /> {new Date(note.created_at).toLocaleDateString()}</span>
+          )}
           {note.updated_at && note.created_at && (new Date(note.updated_at).getTime() - new Date(note.created_at).getTime() > 60000) && (
-            <><span className="opacity-50">|</span><span><span className="hidden md:inline text-zinc-500/80 mr-1">Editado:</span>{formatCleanDate(note.updated_at)}</span></>
+            <span className="flex items-center gap-1.5"><History size={10} /> Editado {new Date(note.updated_at).toLocaleDateString()}</span>
           )}
           {propSyncStatus === 'saving' && (<span className="flex items-center gap-1 text-amber-500 animate-pulse ml-1"><Loader2 size={10} className="animate-spin" /> Guardando...</span>)}
           {propSyncStatus === 'saved' && (<span className="flex items-center gap-1 text-emerald-500 ml-1"><CloudCheck size={10} /> Sincronizado</span>)}

@@ -133,35 +133,85 @@ const SubnoteTitle: React.FC<{
     else setVal(child.title || '');
   };
 
-  if (editing) {
-    return (
-      <input
-        ref={inputRef}
-        value={val}
-        autoFocus
-        onChange={e => setVal(e.target.value)}
-        onBlur={save}
-        onKeyDown={e => {
-          if (e.key === 'Enter') save();
-          if (e.key === 'Escape') { setEditing(false); setVal(child.title || ''); }
-          e.stopPropagation();
-        }}
-        onClick={e => e.stopPropagation()}
-        className="w-24 bg-transparent outline-none border-b border-white/50 text-xs font-bold"
-        placeholder="Título..."
-      />
-    );
-  }
+    if (editing) {
+        return (
+            <input
+                ref={inputRef}
+                value={val}
+                autoFocus
+                onChange={e => setVal(e.target.value)}
+                onBlur={save}
+                onKeyDown={e => {
+                    if (e.key === 'Enter') save();
+                    if (e.key === 'Escape') { setEditing(false); setVal(child.title || ''); }
+                    e.stopPropagation();
+                }}
+                onClick={e => e.stopPropagation()}
+                className="bg-zinc-800 text-white border-amber-500 border rounded px-1 outline-none text-[11px] max-w-[120px]"
+                placeholder="Título..."
+            />
+        );
+    }
 
-  return (
-    <span
-      className="truncate max-w-[100px] cursor-pointer"
-      onDoubleClick={e => { e.stopPropagation(); if (isActive) setEditing(true); }}
-      title={isActive ? 'Doble clic para renombrar' : child.title || ''}
-    >
-      {highlightText(child.title || 'Sin título', searchQuery)}
-    </span>
-  );
+    return (
+        <span
+            className="truncate max-w-[100px] cursor-pointer"
+            onDoubleClick={e => { e.stopPropagation(); if (isActive) setEditing(true); }}
+            title={isActive ? 'Doble clic para renombrar' : child.title || ''}
+        >
+            {highlightText(child.title || 'Sin título', searchQuery)}
+        </span>
+    );
+};
+
+const SummaryTitle: React.FC<{
+    summary: Summary;
+    isActive: boolean;
+    searchQuery?: string;
+    onRename: (id: string, newObjective: string) => void;
+  }> = ({ summary, isActive, searchQuery, onRename }) => {
+    const [editing, setEditing] = useState(false);
+    const [val, setVal] = useState(summary.target_objective || '');
+    const inputRef = useRef<HTMLInputElement>(null);
+  
+    useEffect(() => { setVal(summary.target_objective || ''); }, [summary.target_objective]);
+  
+    const save = () => {
+      setEditing(false);
+      const trimmed = val.trim();
+      if (trimmed && trimmed !== summary.target_objective) onRename(summary.id, trimmed);
+      else setVal(summary.target_objective || '');
+    };
+  
+    if (editing) {
+      return (
+        <input
+          ref={inputRef}
+          value={val}
+          autoFocus
+          onChange={e => setVal(e.target.value)}
+          onBlur={save}
+          onKeyDown={e => {
+            if (e.key === 'Enter') save();
+            if (e.key === 'Escape') { setEditing(false); setVal(summary.target_objective || ''); }
+            e.stopPropagation();
+          }}
+          onClick={e => e.stopPropagation()}
+          className="bg-zinc-800 text-white border-violet-500 border rounded px-1 outline-none text-[11px] max-w-[120px]"
+          placeholder="Resumen..."
+        />
+      );
+    }
+  
+    return (
+      <span
+        className="truncate max-w-[120px] cursor-pointer"
+        onDoubleClick={e => { e.stopPropagation(); if (isActive) setEditing(true); }}
+        title={isActive ? 'Doble clic para renombrar' : summary.target_objective || ''}
+      >
+        {searchQuery?.trim() ? highlightText(summary.target_objective || 'Resumen', searchQuery.trim()) : (summary.target_objective || 'Resumen')}
+      </span>
+    );
 };
 
 const SubnoteTabContent: React.FC<{
@@ -328,7 +378,7 @@ export const BrainDumpApp: React.FC<{
 
     const { 
         summaries: aiSummaries, deleteSummary, updateScratchpad, 
-        updateSummaryContent, loading: summariesLoading 
+        updateSummaryContent, updateSummaryMetadata, loading: summariesLoading 
     } = useBrainDumpSummaries(currentDumpId);
     
     const completedSummaries = aiSummaries.filter(s => s.status === 'completed');
@@ -353,6 +403,9 @@ export const BrainDumpApp: React.FC<{
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [linkingPizarron, setLinkingPizarron] = useState<BrainDump | null>(null);
 
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(false);
+
     const menuRef = useRef<HTMLDivElement>(null);
     const sortMenuRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -376,6 +429,34 @@ export const BrainDumpApp: React.FC<{
         if (currentDumpId) setActiveTabByBrainDump(currentDumpId, tabId);
     };
 
+    // --- SCROLL LOGIC ---
+    const checkScroll = useCallback(() => {
+        if (scrollContainerRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+            setCanScrollLeft(scrollLeft > 5);
+            setCanScrollRight(Math.ceil(scrollLeft + clientWidth) < scrollWidth - 5);
+        }
+    }, []);
+
+    const scrollTabs = (direction: 'left' | 'right') => {
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollBy({ left: direction === 'left' ? -200 : 200, behavior: 'smooth' });
+        }
+    };
+
+    useEffect(() => {
+        const container = scrollContainerRef.current;
+        if (container) {
+            checkScroll();
+            container.addEventListener('scroll', checkScroll);
+            window.addEventListener('resize', checkScroll);
+            return () => {
+                container.removeEventListener('scroll', checkScroll);
+                window.removeEventListener('resize', checkScroll);
+            };
+        }
+    }, [dumps, checkScroll]);
+
     // --- HANDLERS ---
     const autoSave = (id: string, updates: Partial<BrainDump>) => {
         setDumps(prev => prev.map(d => d.id === id ? { ...d, ...updates, updated_at: new Date().toISOString() } : d));
@@ -389,7 +470,10 @@ export const BrainDumpApp: React.FC<{
         const { data: newMain } = await supabase.from('brain_dumps')
             .insert([{ title: '', content: '', status: 'main', user_id: session.user.id }])
             .select().single();
-        if (newMain) setFocusedDumpId(newMain.id);
+        if (newMain) {
+            setDumps(prev => [newMain, ...prev]);
+            setFocusedDumpId(newMain.id);
+        }
     };
 
     const handleCreateSubpizarron = async () => {
@@ -407,7 +491,10 @@ export const BrainDumpApp: React.FC<{
             alert(`Error al crear subpizarrón: ${error.message}. ¿Has ejecutado el script SQL de migración?`);
             return;
         }
-        if (data) setActiveTab(`sub_${data.id}`);
+        if (data) {
+            setDumps(prev => [...prev, data]);
+            setActiveTab(`sub_${data.id}`);
+        }
     };
 
     const handleAddToKanban = async () => {
@@ -599,40 +686,62 @@ export const BrainDumpApp: React.FC<{
             )}
 
             {!isZenMode && isDumpTrayOpen && (
-                <div className="bg-[#13131A] overflow-x-auto hidden-scrollbar animate-slideDown shrink-0">
-                    <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-start md:justify-center gap-3">
-                        {rootPizarrones.length === 0 ? (
-                            <div className="text-xs text-zinc-600 italic px-4">No hay pizarrones activos</div>
-                        ) : (
-                            rootPizarrones.map(p => {
-                                const isMatch = searchQuery?.trim() && checkPizarronSearchMatch(p, searchQuery.trim(), dumps, allSummaries);
-                                return (
-                                    <button
-                                        key={p.id}
-                                        onClick={() => {
-                                            if (focusedDumpId === p.id) {
-                                                setFocusedDumpId(null);
-                                            } else {
-                                                setFocusedDumpId(p.id);
-                                            }
-                                        }}
-                                        className={`relative shrink-0 flex items-center px-3 py-1.5 rounded-lg border transition-all ${
-                                            focusedDumpId === p.id 
-                                                ? 'bg-[#FFD700] text-amber-950 border-amber-300 shadow-sm shadow-amber-500/20' 
-                                                : isMatch
-                                                    ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
-                                                    : 'bg-zinc-900/50 text-zinc-400 border-zinc-800 hover:border-amber-500/40 hover:text-amber-600'
-                                        }`}
-                                    >
-                                        <div className="max-w-[150px] truncate text-xs font-bold">
-                                            {searchQuery?.trim() ? highlightText(p.title || 'Sin Título', searchQuery.trim()) : (p.title || 'Sin Título')}
-                                        </div>
-                                        {globalTasks?.some(t => t.id === p.id || t.linked_board_id === p.id) && (
-                                            <div className="absolute -top-1.5 -right-1.5"><KanbanSemaphore sourceType="board" sourceId={p.id} sourceTitle={p.title || ''} /></div>
-                                        )}
-                                    </button>
-                                );
-                            })
+                <div className="bg-[#13131A] shrink-0 animate-slideDown group/tray">
+                    <div className="max-w-6xl mx-auto relative px-6 py-1">
+                        {/* Flecha Izquierda */}
+                        {canScrollLeft && (
+                            <div className="absolute left-6 top-0 bottom-0 w-12 bg-gradient-to-r from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none">
+                                <button onClick={() => scrollTabs('left')} className="p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors pointer-events-auto">
+                                    <ChevronLeft size={16} />
+                                </button>
+                            </div>
+                        )}
+                        <div 
+                            ref={scrollContainerRef}
+                            onScroll={checkScroll}
+                            className="flex flex-nowrap items-center justify-start md:justify-center gap-3 overflow-x-auto hidden-scrollbar scroll-smooth py-3 px-1"
+                        >
+                            {rootPizarrones.length === 0 ? (
+                                <div className="text-xs text-zinc-600 italic">No hay pizarrones activos</div>
+                            ) : (
+                                rootPizarrones.map(p => {
+                                    const isMatch = searchQuery?.trim() && checkPizarronSearchMatch(p, searchQuery.trim(), dumps, allSummaries);
+                                    return (
+                                        <button
+                                            key={p.id}
+                                            onClick={() => {
+                                                if (focusedDumpId === p.id) {
+                                                    setFocusedDumpId(null);
+                                                } else {
+                                                    setFocusedDumpId(p.id);
+                                                }
+                                            }}
+                                            className={`relative shrink-0 flex items-center px-3 py-1.5 rounded-lg border transition-all ${
+                                                focusedDumpId === p.id 
+                                                    ? `bg-[#FFD700] text-amber-950 border-amber-300 shadow-sm shadow-amber-500/20 ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-[#13131A] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
+                                                    : isMatch
+                                                        ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
+                                                        : 'bg-zinc-900/50 text-zinc-400 border-zinc-800 hover:border-amber-500/40 hover:text-amber-600'
+                                            }`}
+                                        >
+                                            <div className="max-w-[150px] truncate text-xs font-bold">
+                                                {searchQuery?.trim() ? highlightText(p.title || 'Sin Título', searchQuery.trim()) : (p.title || 'Sin Título')}
+                                            </div>
+                                            {globalTasks?.some(t => t.id === p.id || t.linked_board_id === p.id) && (
+                                                <div className="absolute -top-1.5 -right-1.5"><KanbanSemaphore sourceType="board" sourceId={p.id} sourceTitle={p.title || ''} /></div>
+                                            )}
+                                        </button>
+                                    );
+                                })
+                            )}
+                        </div>
+                        {/* Flecha Derecha */}
+                        {canScrollRight && (
+                            <div className="absolute right-6 top-0 bottom-0 w-12 bg-gradient-to-l from-[#13131A] to-transparent z-10 flex items-center justify-end pointer-events-none">
+                                <button onClick={() => scrollTabs('right')} className="p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors pointer-events-auto">
+                                    <ChevronRight size={16} />
+                                </button>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -641,10 +750,14 @@ export const BrainDumpApp: React.FC<{
             <div className={`flex-1 ${focusedDumpId ? 'overflow-hidden' : 'overflow-y-auto'} bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 pt-5 hidden-scrollbar flex flex-col`}>
                 <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto flex flex-col ${focusedDumpId ? 'gap-0 pb-0 flex-1 w-full min-h-0' : 'gap-12 pb-20 w-full'}`}>
                     
-                    {focusedDumpId && displayDump && (
-                        <div className={`flex-1 flex flex-col min-h-0 bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] focus-within:ring-2 focus-within:ring-amber-500/50 focus-within:border-amber-500/50 overflow-hidden animate-fadeIn transition-all duration-300`}>
-                            
-                            {/* Integrated Header (Pizarrón Name & Actions) */}
+                    {focusedDumpId && displayDump && (() => {
+                        const isDisplayDumpMatch = searchQuery?.trim() && checkPizarronSearchMatch(displayDump, searchQuery.trim(), dumps, allSummaries);
+                        return (
+                            <div className={`flex-1 flex flex-col min-h-0 bg-white dark:bg-[#1A1A24] rounded-2xl border overflow-hidden animate-fadeIn transition-all duration-300 ${
+                                isDisplayDumpMatch
+                                    ? 'border-amber-500 ring-2 ring-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
+                                    : 'shadow-lg border-zinc-200 dark:border-[#2D2D42] focus-within:ring-2 focus-within:ring-amber-500/50 focus-within:border-amber-500/50'
+                            }`}>
                             <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
                                 <div className="flex-1 min-w-0 pr-4 flex items-center gap-2">
                                     {!isRootLevel && (
@@ -815,22 +928,27 @@ export const BrainDumpApp: React.FC<{
                                 {/* TABS UNIFICADAS */}
                                 {(manualChildren.length > 0 || completedSummaries.length > 0 || true) && (
                                     <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0 pt-2 px-2">
-                                        <button 
-                                            onClick={() => setActiveTab('original')} 
-                                            className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all ${
-                                                activeTab === 'original' 
-                                                    ? 'bg-amber-500 text-amber-950 border-amber-400 shadow-sm' 
-                                                    : searchQuery?.trim() && (displayDump.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || displayDump.scratchpad?.toLowerCase().includes(searchQuery.trim().toLowerCase()))
-                                                        ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
-                                                        : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-amber-400'
-                                            }`}
-                                        >
-                                            <FileText size={11} /> 
-                                            {globalTasks?.some(t => t.id === focusedDumpId || t.linked_board_id === focusedDumpId) && (
-                                                <div className="absolute -top-1.5 -right-1.5 z-10"><KanbanSemaphore sourceType="board" sourceId={focusedDumpId!} sourceTitle="Pizarrón Original" /></div>
-                                            )}
-                                            Original
-                                        </button>
+                                        {(() => {
+                                            const originalIsMatch = Boolean(searchQuery?.trim() && (displayDump.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || displayDump.scratchpad?.toLowerCase().includes(searchQuery.trim().toLowerCase())));
+                                            return (
+                                                <button 
+                                                    onClick={() => setActiveTab('original')} 
+                                                    className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all ${
+                                                        activeTab === 'original' 
+                                                            ? `bg-amber-500 text-amber-950 border-amber-400 shadow-sm ${originalIsMatch ? 'ring-[3px] ring-amber-400 shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
+                                                            : originalIsMatch
+                                                                ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
+                                                                : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-amber-400'
+                                                    }`}
+                                                >
+                                                    <FileText size={11} /> 
+                                                    {globalTasks?.some(t => t.id === focusedDumpId || t.linked_board_id === focusedDumpId) && (
+                                                        <div className="absolute -top-1.5 -right-1.5 z-10"><KanbanSemaphore sourceType="board" sourceId={focusedDumpId!} sourceTitle="Pizarrón Original" /></div>
+                                                    )}
+                                                    Original
+                                                </button>
+                                            );
+                                        })()}
                                         
                                         {(() => {
                                             // Unified tabs sorted by created_at (like TikTok)
@@ -850,7 +968,7 @@ export const BrainDumpApp: React.FC<{
                                                                 onClick={() => setActiveTab(`sub_${child.id}`)} 
                                                                 className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all max-w-[150px] ${
                                                                     isActive 
-                                                                        ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm' 
+                                                                        ? `bg-emerald-600 text-white border-emerald-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
                                                                         : isMatch
                                                                             ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
                                                                             : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-emerald-400 font-bold'
@@ -883,13 +1001,18 @@ export const BrainDumpApp: React.FC<{
                                                     return (
                                                         <button key={s.id} onClick={() => setActiveTab(s.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all max-w-[150px] ${
                                                             activeTab === s.id 
-                                                                ? 'bg-violet-600 text-white border-violet-500 shadow-sm' 
+                                                                ? `bg-violet-600 text-white border-violet-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
                                                                 : isMatch
                                                                     ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
                                                                     : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-violet-400'
                                                         }`}>
                                                             <Sparkles size={10} /> 
-                                                            <span className="truncate">{searchQuery?.trim() ? highlightText(s.target_objective || 'Resumen', searchQuery.trim()) : (s.target_objective || 'Resumen')}</span>
+                                                            <SummaryTitle
+                                                                summary={s}
+                                                                isActive={activeTab === s.id}
+                                                                searchQuery={searchQuery}
+                                                                onRename={(id, newObj) => updateSummaryMetadata(id, { target_objective: newObj })}
+                                                            />
                                                         </button>
                                                     );
                                                 }
@@ -920,13 +1043,14 @@ export const BrainDumpApp: React.FC<{
                                 })()}
                                 </div>
                         </div>
-                    )}
+                        );
+                    })()}
 
                     {!focusedDumpId && (
                         <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto w-full px-4 lg:px-6 py-8 animate-fadeIn`}>
                             {/* LISTA PRINCIPAL DE PIZARRONES */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {filteredPizarrones.map(p => {
+                                {rootPizarrones.map(p => {
                                     const isMatch = searchQuery?.trim() && checkPizarronSearchMatch(p, searchQuery.trim(), dumps, allSummaries);
                                     return (
                                         <div key={p.id} onClick={() => setFocusedDumpId(p.id)} className={`group bg-white dark:bg-[#1A1A24] border rounded-2xl p-5 hover:shadow-xl transition-all cursor-pointer flex flex-col gap-3 relative ${

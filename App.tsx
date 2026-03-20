@@ -1552,6 +1552,19 @@ function App() {
                                {isMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                              </button>
 
+                             {/* Botón Zen Mode */}
+                             <button
+                               onClick={() => toggleZenMode('notes')}
+                               className={`h-9 p-2 rounded-xl border transition-all active:scale-95 shrink-0 ${
+                                 isZenMode 
+                                   ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
+                                   : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400'
+                               }`}
+                               title={isZenMode ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
+                             >
+                               <Wind size={18} />
+                             </button>
+
                              <div className="relative" ref={sortMenuRef}>
                                <button 
                                    onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} 

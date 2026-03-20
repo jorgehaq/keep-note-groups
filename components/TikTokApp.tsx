@@ -155,12 +155,15 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [canScrollTrayLeft, setCanScrollTrayLeft] = useState(false);
+  const [canScrollTrayRight, setCanScrollTrayRight] = useState(false);
   const [editingSubnoteId, setEditingSubnoteId] = useState<string | null>(null);
   const [tempSubnoteTitle, setTempSubnoteTitle] = useState("");
   const moreMenuRef = useRef<HTMLDivElement>(null);
   
   const sortMenuRef = useRef<HTMLDivElement>(null);
   const tabContainerRef = useRef<HTMLDivElement>(null);
+  const videoTrayRef = useRef<HTMLDivElement>(null);
   const splitContainerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
   const editorRef = useRef<SmartNotesEditorRef>(null);
@@ -242,6 +245,34 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
       };
     }
   }, [unifiedTabs, checkScroll]);
+
+  // Video Tray Scroll Logic
+  const checkTrayScroll = useCallback(() => {
+    if (videoTrayRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = videoTrayRef.current;
+      setCanScrollTrayLeft(scrollLeft > 5);
+      setCanScrollTrayRight(Math.ceil(scrollLeft + clientWidth) < scrollWidth - 5);
+    }
+  }, []);
+
+  const scrollTray = (direction: 'left' | 'right') => {
+    if (videoTrayRef.current) {
+      videoTrayRef.current.scrollBy({ left: direction === 'left' ? -300 : 300, behavior: 'smooth' });
+    }
+  };
+
+  useEffect(() => {
+    const container = videoTrayRef.current;
+    if (container) {
+      checkTrayScroll();
+      container.addEventListener('scroll', checkTrayScroll);
+      window.addEventListener('resize', checkTrayScroll);
+      return () => {
+        container.removeEventListener('scroll', checkTrayScroll);
+        window.removeEventListener('resize', checkTrayScroll);
+      };
+    }
+  }, [tikTokVideos, checkTrayScroll]);
 
   // Hierarchy support
   const rootVideos = useMemo(() => {
@@ -539,32 +570,52 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
 
       {/* 2. ACCESS TRAY (Solo Activos) */}
       {isVideoTrayOpen && !isZenMode && (
-        <div className="bg-[#13131A] overflow-x-auto hidden-scrollbar animate-slideDown shrink-0">
-          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-start md:justify-center gap-3">
-            {rootVideos.length === 0 ? (
-              <div className="text-xs text-zinc-600 italic px-4">No hay videos activos</div>
-            ) : (
-              rootVideos.map(video => (
-                <button
-                  key={video.id}
-                  onClick={() => { 
-                    if (focusedVideoId === video.id) setFocusedVideoId(null);
-                    else setFocusedVideoId(video.id); 
-                  }}
-                  className={`shrink-0 flex items-center gap-3 px-4 py-2 rounded-xl border transition-all ${
-                    focusedVideoId === video.id 
-                      ? 'bg-[#EE1D52] text-white border-[#EE1D52] shadow-lg shadow-[#EE1D52]/20 scale-[1.02]' 
-                      : 'bg-zinc-900/50 text-zinc-400 border-zinc-800 hover:border-[#EE1D52]/40 hover:text-[#EE1D52]'
-                  }`}
-                >
-                  <div className="w-6 h-8 rounded-md overflow-hidden bg-zinc-800 border border-zinc-700/50 shrink-0">
-                    <img src={video.thumbnail} className="w-full h-full object-cover" alt="" />
-                  </div>
-                  <div className="max-w-[150px] truncate text-[11px] font-bold">
-                    {highlightText(video.title || "Procesando...", searchQuery)}
-                  </div>
+        <div className="bg-[#13131A] shrink-0 animate-slideDown group/tray">
+          <div className="max-w-6xl mx-auto relative px-6 py-4">
+            {canScrollTrayLeft && (
+              <div className="absolute left-6 top-0 bottom-0 w-12 bg-gradient-to-r from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none">
+                <button onClick={() => scrollTray('left')} className="p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors pointer-events-auto">
+                    <ChevronLeft size={16} />
                 </button>
-              ))
+              </div>
+            )}
+            <div 
+              ref={videoTrayRef}
+              onScroll={checkTrayScroll}
+              className="flex items-center justify-start md:justify-center gap-3 overflow-x-auto hidden-scrollbar scroll-smooth"
+            >
+              {rootVideos.length === 0 ? (
+                <div className="text-xs text-zinc-600 italic px-4">No hay videos activos</div>
+              ) : (
+                rootVideos.map(video => (
+                  <button
+                    key={video.id}
+                    onClick={() => { 
+                      if (focusedVideoId === video.id) setFocusedVideoId(null);
+                      else setFocusedVideoId(video.id); 
+                    }}
+                    className={`shrink-0 flex items-center gap-3 px-4 py-2 rounded-xl border transition-all ${
+                      focusedVideoId === video.id 
+                        ? 'bg-[#EE1D52] text-white border-[#EE1D52] shadow-lg shadow-[#EE1D52]/20 scale-[1.02]' 
+                        : 'bg-zinc-900/50 text-zinc-400 border-zinc-800 hover:border-[#EE1D52]/40 hover:text-[#EE1D52]'
+                    }`}
+                  >
+                    <div className="w-6 h-8 rounded-md overflow-hidden bg-zinc-800 border border-zinc-700/50 shrink-0">
+                      <img src={video.thumbnail} className="w-full h-full object-cover" alt="" />
+                    </div>
+                    <div className="max-w-[150px] truncate text-[11px] font-bold">
+                      {highlightText(video.title || "Procesando...", searchQuery)}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+            {canScrollTrayRight && (
+              <div className="absolute right-6 top-0 bottom-0 w-12 bg-gradient-to-l from-[#13131A] to-transparent z-10 flex items-center justify-end pointer-events-none">
+                <button onClick={() => scrollTray('right')} className="p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors pointer-events-auto">
+                  <ChevronRight size={16} />
+                </button>
+              </div>
             )}
           </div>
         </div>

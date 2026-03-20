@@ -66,6 +66,11 @@ export function useBrainDumpSummaries(dumpId: string | null) {
     setSummaries(prev => prev.map(s => s.id === summaryId ? { ...s, scratchpad: text } : s));
   };
 
+  const updateSummaryMetadata = async (summaryId: string, updates: Partial<Summary>) => {
+    await supabase.from('summaries').update(updates).eq('id', summaryId);
+    setSummaries(prev => prev.map(s => s.id === summaryId ? { ...s, ...updates } : s));
+  };
+
   const updateSummaryContent = async (summaryId: string, text: string) => {
     await supabase.from('summaries').update({ content: text }).eq('id', summaryId);
     setSummaries(prev => prev.map(s => s.id === summaryId ? { ...s, content: text } : s));
@@ -78,6 +83,7 @@ export function useBrainDumpSummaries(dumpId: string | null) {
     generateSummary, 
     deleteSummary, 
     updateScratchpad, 
-    updateSummaryContent 
+    updateSummaryContent,
+    updateSummaryMetadata
   };
 }
