@@ -66,6 +66,11 @@ interface UIStore {
     focusedVideoId: string | null;
     isVideoTrayOpen: boolean;
 
+    // Search & Archive states
+    searchQueries: Record<string, string>;
+    isArchiveOpenByGroup: Record<string, boolean>;
+    isArchiveOpenByApp: Record<string, boolean>;
+
     // Realtime Sync Data
     groups: Group[];
     translations: Translation[];
@@ -136,6 +141,11 @@ interface UIStore {
     setIsVideoTrayOpen: (open: boolean) => void;
     setIsBraindumpPizarronOpen: (open: boolean) => void;
 
+    // Search & Archive Actions
+    setSearchQuery: (id: string, query: string) => void;
+    setArchiveOpenByGroup: (groupId: string, open: boolean) => void;
+    setArchiveOpenByApp: (appId: string, open: boolean) => void;
+
     // Dock Actions
     openGroup: (id: string) => void; // Adds to dock and sets active
     closeGroup: (id: string) => void; // Removes from dock
@@ -184,7 +194,7 @@ export const useUIStore = create<UIStore>()(
             openNotesByGroup: {},
             dockedGroupIds: [],
             lastLauncherTab: "recent", // Default to recent
-            noteSortMode: "date-desc",
+            noteSortMode: "created-asc",
             globalView: "notes",
             activeTimersCount: 0,
             overdueRemindersCount: 0,
@@ -223,6 +233,10 @@ export const useUIStore = create<UIStore>()(
             summaryCounts: {},
             tikTokVideos: [],
             tikTokQueueItems: [],
+
+            searchQueries: {},
+            isArchiveOpenByGroup: {},
+            isArchiveOpenByApp: {},
 
             setActiveGroup: (id) => set({ activeGroupId: id }),
 
@@ -433,6 +447,27 @@ export const useUIStore = create<UIStore>()(
                         [appId]: !state.isZenModeByApp[appId],
                     },
                 })),
+            setSearchQuery: (id, query) =>
+                set((state) => ({
+                    searchQueries: {
+                        ...state.searchQueries,
+                        [id]: query,
+                    },
+                })),
+            setArchiveOpenByGroup: (groupId, open) =>
+                set((state) => ({
+                    isArchiveOpenByGroup: {
+                        ...state.isArchiveOpenByGroup,
+                        [groupId]: open,
+                    },
+                })),
+            setArchiveOpenByApp: (appId, open) =>
+                set((state) => ({
+                    isArchiveOpenByApp: {
+                        ...state.isArchiveOpenByApp,
+                        [appId]: open,
+                    },
+                })),
             resetUIState: () => set({
                 activeGroupId: null,
                 openNotesByGroup: {},
@@ -457,6 +492,9 @@ export const useUIStore = create<UIStore>()(
                 tikTokQueueItems: [],
                 pizarronVisibleByNoteAndTab: {},
                 isZenModeByApp: {},
+                searchQueries: {},
+                isArchiveOpenByGroup: {},
+                isArchiveOpenByApp: {},
             }),
 
             // Realtime Sync Implementation
@@ -594,7 +632,7 @@ export const useUIStore = create<UIStore>()(
                 })),
         }),
         {
-            name: "keep-note-groups-ui-storage-v9", // v9: persistent AI state fix
+            name: "keep-note-groups-ui-storage-v10", // v10: Search & Archive persist
             storage: createJSONStorage(() => localStorage),
             partialize: (state) => ({
                 dockedGroupIds: state.dockedGroupIds,
@@ -624,6 +662,9 @@ export const useUIStore = create<UIStore>()(
                 isVideoTrayOpen: state.isVideoTrayOpen,
                 isBraindumpPizarronOpen: state.isBraindumpPizarronOpen,
                 isZenModeByApp: state.isZenModeByApp,
+                searchQueries: state.searchQueries,
+                isArchiveOpenByGroup: state.isArchiveOpenByGroup,
+                isArchiveOpenByApp: state.isArchiveOpenByApp,
             }),
         },
     ),

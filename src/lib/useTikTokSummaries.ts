@@ -14,7 +14,7 @@ export function useTikTokSummaries(videoId: string | null) {
       .from('summaries')
       .select('*')
       .eq('tiktok_video_id', videoId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: true });
 
     if (!error && data) {
       setSummaries(data);

@@ -24,7 +24,7 @@ interface AccordionItemProps {
   onCopyNote?: (note: Note) => void;
   onDuplicate?: (noteId: string) => void;
   onMove?: (noteId: string, targetGroupId: string) => Promise<void>;
-  onCreateNote?: (content: string, title: string, groupId?: string) => Promise<void>;
+  onCreateNote?: (content: string, title: string, groupId?: string, createdAt?: string) => Promise<string | null>;
   groups?: Group[];
   searchQuery?: string;
   noteFont?: NoteFont;
@@ -548,7 +548,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         const target = completedSummaries.find(s => s.id === activeTab);
         if (target) baseDate = new Date(target.created_at);
       }
-      return new Date(baseDate.getTime() + 1000).toISOString(); // +1 seg es suficiente para el orden
+      return new Date(baseDate.getTime() + 1).toISOString(); // +1 ms rigorosamente como pedido
     };
 
     const unifiedTabs = useMemo(() => {
@@ -725,39 +725,15 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   };
 
   const handleCreateSubnote = async () => {
-    if (!session?.user) return;
-    const title = `Nueva Nota`;
-    const { data, error } = await supabase.from('notes').insert([{
-      title,
-      content: '',
-      scratchpad: '',
-      group_id: note.group_id,
-      user_id: session.user.id,
-      parent_note_id: displayNoteId,
-      generation_level: (note.generation_level || 0) + 1,
-      ai_generated: false,
-      position: manualChildren.length,
-      created_at: getRelativeCreatedAt(),
-    }]).select().single();
-    if (!error && data) {
-      setActiveTab(`sub_${data.id}`);
-      // Actualizamos UIStore de forma optimista para que App.tsx vea la nueva nota de inmediato
-      const store = useUIStore.getState();
-      const currentGroups = store.groups;
-      const updatedGroups = currentGroups.map(g => {
-        if (g.id === note.group_id) {
-            return { ...g, notes: [...g.notes, { ...data, isOpen: false }] };
-        }
-        return g;
-      });
-      store.setGroups(updatedGroups);
-    }
+    if (!onCreateNote) return;
+    const createdAt = getRelativeCreatedAt();
+    const newId = await onCreateNote('', '', displayNoteId, createdAt);
+    if (newId) setActiveTab(`sub_${newId}`);
   };
 
   const handleSaveChildTitle = async (childId: string, title: string) => {
     onUpdate(childId, { title });
   };
-
 
   const handleUpdateContent = (newMarkdown: string) => {
     onUpdate(displayNoteId, { content: newMarkdown });
@@ -775,7 +751,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
   const handlePromoteToNote = async (content: string, title: string) => {
     if (!onCreateNote) return;
-    await onCreateNote(content, title, note.group_id);
+    const newId = await onCreateNote(content, title, note.group_id, getRelativeCreatedAt());
+    if (newId) setActiveTab(`sub_${newId}`);
   };
 
   return (
@@ -1043,7 +1020,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 noteId={displayNoteId}
                 userId={session.user.id}
                 noteStatus={note.ai_summary_status ?? 'idle'}
+                getRelativeCreatedAt={getRelativeCreatedAt}
                 onPromoteToNote={onCreateNote ? handlePromoteToNote : undefined}
+                onCancel={() => setShowAIPanel(false)}
               />
             </div>
           )}
@@ -1167,8 +1146,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                   noteId={displayNoteId}
                   userId={session.user.id}
                   noteStatus={note.ai_summary_status ?? 'idle'}
-                  customCreatedAt={getRelativeCreatedAt()}
+                  getRelativeCreatedAt={getRelativeCreatedAt}
                   onPromoteToNote={onCreateNote ? handlePromoteToNote : undefined}
+                  onCancel={() => setShowAIInput(false)}
                 />
               </div>
             </div>

@@ -148,7 +148,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const [sortMode, setSortMode] = useState<'date-desc' | 'date-asc' | 'created-desc' | 'created-asc' | 'alpha-asc' | 'alpha-desc'>(() => {
-    return (localStorage.getItem('tiktokSortMode') as any) || 'date-desc';
+    return (localStorage.getItem('tiktok-sort-mode') as any) || 'created-asc';
   });
   const [splitRatio, setSplitRatio] = useState(0.5);
   const [showAIInput, setShowAIInput] = useState(false);
@@ -206,8 +206,8 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
       if (note) baseDate = new Date(note.created_at);
     }
     
-    // Increment by 1 minute (60,000 ms) to place it immediately after
-    return new Date(baseDate.getTime() + 60000).toISOString();
+    // Increment by 1 second (1000 ms) to place it immediately after
+    return new Date(baseDate.getTime() + 1).toISOString();
   };
 
   const unifiedTabs = useMemo(() => {
@@ -229,7 +229,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
 
   const scrollTabs = (direction: 'left' | 'right') => {
     if (tabContainerRef.current) {
-      tabContainerRef.current.scrollBy({ left: direction === 'left' ? -200 : 200, behavior: 'smooth' });
+      tabContainerRef.current.scrollBy({ left: direction === 'left' ? -300 : 300, behavior: 'smooth' });
     }
   };
 
@@ -244,7 +244,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
         window.removeEventListener('resize', checkScroll);
       };
     }
-  }, [unifiedTabs, checkScroll]);
+  }, [unifiedTabs, checkScroll, activeTab, focusedVideoId]);
 
   // Video Tray Scroll Logic
   const checkTrayScroll = useCallback(() => {
@@ -260,19 +260,6 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
       videoTrayRef.current.scrollBy({ left: direction === 'left' ? -350 : 350, behavior: 'smooth' });
     }
   };
-
-  useEffect(() => {
-    const container = videoTrayRef.current;
-    if (container) {
-      checkTrayScroll();
-      container.addEventListener('scroll', checkTrayScroll);
-      window.addEventListener('resize', checkTrayScroll);
-      return () => {
-        container.removeEventListener('scroll', checkTrayScroll);
-        window.removeEventListener('resize', checkTrayScroll);
-      };
-    }
-  }, [tikTokVideos, checkTrayScroll]);
 
   // Hierarchy support - SHOW ALL even if searching (like Pizarrón)
   const rootVideos = useMemo(() => {
@@ -300,12 +287,31 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
           const dateB = new Date(b.created_at || 0).getTime();
           return dateA - dateB;
         }
-        case 'alpha-asc': return (a.title || '').toLowerCase().localeCompare((b.title || '').toLowerCase());
-        case 'alpha-desc': return (b.title || '').toLowerCase().localeCompare((a.title || '').toLowerCase());
+        case 'alpha-asc': {
+          return (a.title || '').localeCompare(b.title || '');
+        }
+        case 'alpha-desc': {
+          return (b.title || '').localeCompare(a.title || '');
+        }
         default: return 0;
       }
     });
-  }, [tikTokVideos, searchQuery, sortMode]);
+  }, [tikTokVideos, sortMode]);
+
+  useEffect(() => {
+    const container = videoTrayRef.current;
+    if (container) {
+      checkTrayScroll();
+      container.addEventListener('scroll', checkTrayScroll);
+      window.addEventListener('resize', checkTrayScroll);
+      return () => {
+        container.removeEventListener('scroll', checkTrayScroll);
+        window.removeEventListener('resize', checkTrayScroll);
+      };
+    }
+  }, [tikTokVideos, rootVideos, isVideoTrayOpen, checkTrayScroll]);
+
+
 
   const archivedVideos = useMemo(() => {
     return tikTokVideos.filter(v => v.status === 'archived');
@@ -563,19 +569,22 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
 
       {/* 2. ACCESS TRAY (Solo Activos) */}
       {isVideoTrayOpen && !isZenMode && (
-        <div className="bg-[#13131A] shrink-0 animate-slideDown group/tray">
+        <div className="pt-[2px] bg-[#13131A] shrink-0 animate-slideDown group/tray">
           <div className="max-w-6xl mx-auto relative px-0">
             {canScrollTrayLeft && (
               <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-start pl-6 pointer-events-none">
-                <button onClick={() => scrollTray('left')} className="p-1.5 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors pointer-events-auto active:scale-90 border border-zinc-700">
-                    <ChevronLeft size={18} />
+                <button 
+                  onClick={() => scrollTray('left')} 
+                  className="p-1.5 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors pointer-events-auto active:scale-95 border border-zinc-700"
+                >
+                  <ChevronLeft size={18} />
                 </button>
               </div>
             )}
             <div 
               ref={videoTrayRef}
               onScroll={checkTrayScroll}
-              className="flex items-center justify-start gap-4 overflow-x-auto hidden-scrollbar scroll-smooth py-3 pl-32 pr-32"
+              className="flex flex-nowrap items-center justify-start gap-4 overflow-x-auto hidden-scrollbar scroll-smooth py-3 pl-1 pr-12"
             >
               {rootVideos.length === 0 ? (
                 <div className="text-xs text-zinc-600 italic px-4">No hay videos activos</div>
@@ -614,7 +623,10 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
             </div>
             {canScrollTrayRight && (
               <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-end pr-6 pointer-events-none">
-                <button onClick={() => scrollTray('right')} className="p-1.5 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors pointer-events-auto active:scale-90 border border-zinc-700">
+                <button 
+                  onClick={() => scrollTray('right')} 
+                  className="p-1.5 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors pointer-events-auto active:scale-95 border border-zinc-700"
+                >
                   <ChevronRight size={18} />
                 </button>
               </div>
@@ -846,19 +858,20 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                 <div className="relative mb-3 shrink-0">
                   {/* Flecha Izquierda */}
                   {canScrollLeft && (
-                    <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none">
+                    <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-start pl-6 pointer-events-none">
                       <button 
                         onClick={() => scrollTabs('left')} 
-                        className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-[#EE1D52] transition-colors pointer-events-auto"
+                        className="p-1.5 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors pointer-events-auto active:scale-95 border border-zinc-700"
                       >
-                        <ChevronLeft size={14} />
+                        <ChevronLeft size={18} />
                       </button>
                     </div>
                   )}
 
                   <div 
                     ref={tabContainerRef}
-                    className="flex items-center gap-2 pb-1 overflow-x-auto hidden-scrollbar scroll-smooth px-1 py-1"
+                    onScroll={checkScroll}
+                    className="flex flex-nowrap items-center gap-2 overflow-x-auto hidden-scrollbar scroll-smooth py-1 pl-1 pr-12"
                   >
                     {(() => {
                       const isTranscriptionMatch = searchQuery?.trim() && (
@@ -1004,12 +1017,12 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
 
                   {/* Flecha Derecha */}
                   {canScrollRight && (
-                    <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#13131A] to-transparent z-10 flex items-center justify-end pointer-events-none">
+                    <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-end pr-6 pointer-events-none">
                       <button 
                         onClick={() => scrollTabs('right')} 
-                        className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-[#EE1D52] transition-colors pointer-events-auto"
+                        className="p-1.5 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors pointer-events-auto active:scale-95 border border-zinc-700"
                       >
-                        <ChevronRight size={14} />
+                        <ChevronRight size={18} />
                       </button>
                     </div>
                   )}
@@ -1060,7 +1073,8 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                           createdAt: relDate
                         };
 
-                        await generateSummary(obj, fullContext);
+                        const newSumm = await generateSummary(obj, fullContext);
+                        if (newSumm) setActiveTab(`summary_${newSumm.id}`);
                       }} 
                     />
                   </div>

@@ -7,20 +7,32 @@ interface NoteAIPanelProps {
   userId: string;
   noteStatus: string;
   customCreatedAt?: string;
+  getRelativeCreatedAt?: () => string;
   onPromoteToNote?: (content: string, title: string) => void;
+  onCancel?: () => void;
+  onGenerate?: (objective: string) => Promise<void>;
 }
 
-export const NoteAIPanel: React.FC<NoteAIPanelProps> = ({ noteId, customCreatedAt }) => {
+export const NoteAIPanel: React.FC<NoteAIPanelProps> = ({ noteId, customCreatedAt, getRelativeCreatedAt, onGenerate, onCancel }) => {
   const [objectiveInput, setObjectiveInput] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const { generateSummary } = useSummaries(noteId);
 
   const handleGenerate = async () => {
-    if (isCreating) return;
+    if (isCreating || !objectiveInput.trim()) return;
     setIsCreating(true);
-    await generateSummary(objectiveInput.trim(), customCreatedAt);
+    
+    const createdAt = customCreatedAt || (getRelativeCreatedAt ? getRelativeCreatedAt() : undefined);
+    
+    if (onGenerate) {
+      await onGenerate(objectiveInput.trim());
+    } else {
+      await generateSummary(objectiveInput.trim(), createdAt);
+    }
+    
     setObjectiveInput('');
     setIsCreating(false);
+    if (onCancel) onCancel();
   };
 
   return (

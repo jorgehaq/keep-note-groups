@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid, Maximize2, Minimize2, ChevronsDownUp, Bell, Pin, PanelLeft, ChevronLeft, ChevronRight, Wind, PenLine, Archive, RotateCcw } from 'lucide-react';
+import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid, Maximize2, Minimize2, ChevronsDownUp, Bell, Pin, PanelLeft, ChevronLeft, ChevronRight, Wind, PenLine, Archive, RotateCcw, ChevronDown } from 'lucide-react';
 import { Note, Group, Theme, NoteFont, Reminder, NoteSortMode, BrainDump, TikTokVideo, TikTokQueueItem } from './types';
 import { AccordionItem } from './components/AccordionItem';
 import { Sidebar } from './components/Sidebar';
@@ -89,7 +89,9 @@ function App() {
     noteTrayOpenByGroup, setIsGlobalNoteTrayOpen,
     isZenModeByApp, toggleZenMode,
     isNotesPizarronOpen, setIsNotesPizarronOpen,
-    setActiveNoteId
+    setActiveNoteId,
+    searchQueries, setSearchQuery,
+    isArchiveOpenByGroup, setArchiveOpenByGroup
   } = useUIStore();
 
   const [showLineNumbers, setShowLineNumbers] = useState<boolean>(
@@ -123,7 +125,6 @@ function App() {
   }, [activeNoteId]);
 
   const isGlobalNoteTrayOpen = activeGroupId ? (noteTrayOpenByGroup[activeGroupId] ?? true) : false;
-  const [searchQueries, setSearchQueries] = useState<Record<string, string>>({});
   const currentSearchQuery = globalView === 'braindump' ? (searchQueries['braindump'] || '') : (activeGroupId ? (searchQueries[activeGroupId] || '') : '');
   const [searchExemptNoteIds, setSearchExemptNoteIds] = useState<Set<string>>(new Set());
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('app-theme-preference') as Theme) || 'dark');
@@ -167,6 +168,17 @@ function App() {
     window.addEventListener('resize', checkScroll);
     return () => window.removeEventListener('resize', checkScroll);
   }, [groups, activeGroupId, isGlobalNoteTrayOpen, globalView]);
+
+  const getRelativeCreatedAt = () => {
+    if (!activeGroupId) return new Date().toISOString();
+    const group = groups.find(g => g.id === activeGroupId);
+    if (!group) return new Date().toISOString();
+
+    const activeNote = group.notes.find(n => n.id === focusedNoteId) || group.notes.find(n => n.id === activeNoteId);
+    if (!activeNote) return new Date().toISOString();
+
+    return new Date(new Date(activeNote.created_at).getTime() + 1000).toISOString();
+  };
 
   useEffect(() => {
     if (!activeGroupId || !session) {
@@ -750,7 +762,16 @@ function App() {
     try {
       const currentGroup = groups.find(g => g.id === activeGroupId);
       const position = currentGroup ? currentGroup.notes.length : 0;
-      const { data, error } = await supabase.from('notes').insert([{ title: '', content: '', group_id: activeGroupId, user_id: session.user.id, position }]).select().single();
+      const createdAt = getRelativeCreatedAt();
+
+      const { data, error } = await supabase.from('notes').insert([{ 
+        title: '', 
+        content: '', 
+        group_id: activeGroupId, 
+        user_id: session.user.id, 
+        position,
+        created_at: createdAt
+      }]).select().single();
       if (error) throw error;
 
       const newNote: Note = { id: data.id, title: data.title, content: data.content || '', isOpen: true, created_at: data.created_at, group_id: data.group_id, position: data.position };
@@ -761,10 +782,7 @@ function App() {
 
       setGroups(groups.map(g => {
         if (g.id === activeGroupId) {
-          // 🚀 FIX: Eliminamos la regla de "anclaje" complicada.
-          // Simplemente la ponemos al principio para que sea visible de inmediato,
-          // pero sin lógica de "splice" que pueda dejarla amarrada a un índice.
-          const newNotes = [newNote, ...g.notes];
+          const newNotes = [...g.notes, newNote];
           return { ...g, notes: newNotes };
         }
         return g;
@@ -798,17 +816,33 @@ function App() {
     }
   };
 
-  const createNoteFromAI = async (content: string, title: string, groupId?: string) => {
+  const createNoteFromAI = async (content: string, title: string, groupId?: string, createdAt?: string, parentNoteId?: string) => {
     if (!session) return;
     try {
-      const targetGroupId = groupId || activeGroupId;
+      let targetGroupId = groupId || activeGroupId;
+      
+      // Si recibimos parentNoteId, intentamos deducir el groupId de esa nota padre
+      if (parentNoteId) {
+        const parentNote = groups.flatMap(g => g.notes).find(n => n.id === parentNoteId);
+        if (parentNote) targetGroupId = parentNote.group_id;
+      }
+      
       if (!targetGroupId) return;
 
       const currentGroup = groups.find(g => g.id === targetGroupId);
       const position = currentGroup ? currentGroup.notes.length : 0;
+      const finalCreatedAt = createdAt || getRelativeCreatedAt();
 
       const { data, error } = await supabase.from('notes').insert([
-        { title, content: content || '', group_id: targetGroupId, user_id: session.user.id, position }
+        { 
+          title, 
+          content: content || '', 
+          group_id: targetGroupId, 
+          user_id: session.user.id, 
+          position, 
+          created_at: finalCreatedAt,
+          parent_note_id: parentNoteId
+        }
       ]).select().single();
 
       if (error) throw error;
@@ -820,30 +854,36 @@ function App() {
         isOpen: true,
         created_at: data.created_at,
         group_id: data.group_id,
-        position: data.position
+        position: data.position,
+        parent_note_id: data.parent_note_id
       };
 
-      setGroups(groups.map(g => {
+      setGroups(currentGroups => currentGroups.map(g => {
         if (g.id === targetGroupId) {
-          return { ...g, notes: [newNote, ...g.notes] };
+          // Si es un sub-nota, el parent_note_id ya está en newNote.
+          // App.tsx el map principal solo muestra !parent_note_id
+          return { ...g, notes: [...g.notes, newNote] };
         }
         return g;
       }));
 
-      // Enfocar la nueva nota generada por AI
-      setEditingNoteId(newNote.id);
-      setFocusedNoteId(newNote.id);
+      // Solo enfocar y scrollear si NO es una subnota (para no cerrar la vista actual)
+      if (!parentNoteId) {
+        setEditingNoteId(newNote.id);
+        setFocusedNoteId(newNote.id);
 
-      // Scroll suave hacia la nueva nota
-      setTimeout(() => {
-        const noteElement = document.getElementById(`note-${newNote.id}`);
-        if (noteElement) {
-          noteElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 200);
+        setTimeout(() => {
+          const noteElement = document.getElementById(`note-${newNote.id}`);
+          if (noteElement) {
+            noteElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 200);
+      }
 
+      return newNote.id;
     } catch (error: any) {
       alert('Error al crear nota desde AI: ' + error.message);
+      return null;
     }
   };
 
@@ -1278,9 +1318,8 @@ function App() {
           onSelectGroup={(id) => { 
             setActiveGroup(id); 
             setGlobalView('notes');
-            // Al hacer clic en el grupo, le quitamos el foco a cualquier nota anclada
-            // para que la burbuja se apague (quede gris media) y el grupo se ilumine.
-            setFocusedNoteId(null);
+            // Al hacer clic en el grupo, ya NO le quitamos el foco a las notas
+            // para que se mantenga el contexto como en el Pizarrón.
           }}
           onAddGroup={() => { addGroup(); setIsGlobalNoteTrayOpen(true); }}
           onOpenSettings={() => setIsSettingsOpen(true)}
@@ -1475,8 +1514,8 @@ function App() {
             noteLineHeight={noteLineHeight} 
             searchQuery={currentSearchQuery} 
             setSearchQuery={(q) => {
-              if (globalView === 'braindump') setSearchQueries(prev => ({ ...prev, ['braindump']: q }));
-              else if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: q }));
+              if (globalView === 'braindump') setSearchQuery('braindump', q);
+              else if (activeGroupId) setSearchQuery(activeGroupId, q);
               setSearchExemptNoteIds(new Set());
             }}
             allSummaries={allPizarronSummaries}
@@ -1548,13 +1587,13 @@ function App() {
                               placeholder="Buscar..." 
                               value={currentSearchQuery} 
                               onChange={(e) => {
-                                if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: e.target.value }));
+                                if (activeGroupId) setSearchQuery(activeGroupId, e.target.value);
                                 setSearchExemptNoteIds(new Set());
                               }}
                               className={`h-9 pl-9 pr-8 rounded-xl border transition-all outline-none text-xs w-32 md:w-32 lg:w-40 ${currentSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50' : 'bg-white dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:border-indigo-500/50 dark:focus:border-indigo-500/50'}`}
                             />
                             {currentSearchQuery.trim() && (
-                              <button onClick={() => { if (activeGroupId) setSearchQueries(prev => ({ ...prev, [activeGroupId]: '' })); setSearchExemptNoteIds(new Set()); }} className="absolute right-2 p-1 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-full transition-colors" title="Limpiar búsqueda">
+                              <button onClick={() => { if (activeGroupId) setSearchQuery(activeGroupId, ''); setSearchExemptNoteIds(new Set()); }} className="absolute right-2 p-1 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-full transition-colors" title="Limpiar búsqueda">
                                 <X size={14} />
                               </button>
                             )}
@@ -1906,7 +1945,7 @@ function App() {
                                     noteFont={noteFont}
                                     noteFontSize={noteFontSize}
                                     noteLineHeight={noteLineHeight}
-                                    onCreateNote={createNoteFromAI}
+                                     onCreateNote={(c, t, p, d) => createNoteFromAI(c, t, activeGroup.id, d, p)}
                                     session={session}
                                     syncStatus={noteSaveStatus[note.id] || 'idle'}
                                   />
@@ -1960,42 +1999,49 @@ function App() {
 
                           {/* SECCIÓN DE ARCHIVO (ESTILO PIZARRÓN) */}
                           {activeGroup.notes.filter(n => n.status === 'history').length > 0 && (
-                            <div className="mt-12 space-y-4 pt-8 border-t border-zinc-100 dark:border-zinc-800/50 mb-20 animate-fadeIn max-w-6xl mx-auto w-full px-4 md:px-10 min-h-[300px]">
-                              <div className="flex items-center gap-3 text-zinc-400 font-bold uppercase tracking-[0.2em] text-[10px]">
-                                 <Archive size={16} className="text-zinc-500/50" /> 
+                            <div className={`mt-12 space-y-4 pt-8 border-t border-zinc-100 dark:border-zinc-800/50 mb-20 animate-fadeIn max-w-6xl mx-auto w-full px-4 md:px-10 ${isArchiveOpenByGroup[activeGroupId!] ? 'min-h-[300px]' : ''}`}>
+                              <button 
+                                onClick={() => setArchiveOpenByGroup(activeGroupId!, !isArchiveOpenByGroup[activeGroupId!])}
+                                className="flex items-center gap-3 text-zinc-400 font-bold uppercase tracking-[0.2em] text-[10px] hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group/archheader"
+                              >
+                                 <Archive size={16} className="text-zinc-500/50 group-hover/archheader:text-indigo-500/50 transition-colors" /> 
                                  <span>Archivo ({activeGroup.notes.filter(n => n.status === 'history').length})</span>
-                              </div>
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
-                                {activeGroup.notes.filter(n => n.status === 'history').map(note => (
-                                  <div key={note.id} className="p-4 bg-white dark:bg-[#1A1A24]/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex items-center justify-between group hover:border-[#4940D9]/30 hover:shadow-xl transition-all">
-                                     <div className="flex items-center gap-3 truncate">
-                                       <div className="w-8 h-8 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center text-zinc-400">
-                                         <Archive size={16} />
+                                 <ChevronDown size={14} className={`transition-transform duration-300 ${isArchiveOpenByGroup[activeGroupId!] ? '' : '-rotate-90'}`} />
+                              </button>
+                              
+                              {isArchiveOpenByGroup[activeGroupId!] && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
+                                  {activeGroup.notes.filter(n => n.status === 'history').map(note => (
+                                    <div key={note.id} className="p-4 bg-white dark:bg-[#1A1A24]/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex items-center justify-between group hover:border-[#4940D9]/30 hover:shadow-xl transition-all">
+                                       <div className="flex items-center gap-3 truncate">
+                                         <div className="w-8 h-8 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center text-zinc-400">
+                                           <Archive size={16} />
+                                         </div>
+                                         <div className="flex flex-col truncate">
+                                           <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300 truncate">{note.title || 'Sin Título'}</span>
+                                           <span className="text-[10px] text-zinc-400 font-medium">{new Date(note.created_at || '').toLocaleDateString()}</span>
+                                         </div>
                                        </div>
-                                       <div className="flex flex-col truncate">
-                                         <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300 truncate">{note.title || 'Sin Título'}</span>
-                                         <span className="text-[10px] text-zinc-400 font-medium">{new Date(note.created_at || '').toLocaleDateString()}</span>
+                                       <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <button 
+                                             onClick={() => restoreNote(note.id)} 
+                                             className="p-2 rounded-xl text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all active:scale-90" 
+                                             title="Restaurar Nota"
+                                          >
+                                             <RotateCcw size={16}/>
+                                          </button>
+                                          <button 
+                                             onClick={() => deleteNote(note.id)} 
+                                             className="p-2 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-90" 
+                                             title="Eliminar Permanente"
+                                          >
+                                             <Trash2 size={16}/>
+                                          </button>
                                        </div>
-                                     </div>
-                                     <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button 
-                                           onClick={() => restoreNote(note.id)} 
-                                           className="p-2 rounded-xl text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all active:scale-90" 
-                                           title="Restaurar Nota"
-                                        >
-                                           <RotateCcw size={16}/>
-                                        </button>
-                                        <button 
-                                           onClick={() => deleteNote(note.id)} 
-                                           className="p-2 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-90" 
-                                           title="Eliminar Permanente"
-                                        >
-                                           <Trash2 size={16}/>
-                                        </button>
-                                     </div>
-                                  </div>
-                                ))}
-                              </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>

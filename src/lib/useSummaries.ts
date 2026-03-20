@@ -25,7 +25,7 @@ export const useSummaries = (noteId: string | null) => {
             .from("summaries")
             .select("*")
             .eq("note_id", noteId)
-            .order("created_at", { ascending: false });
+            .order("created_at", { ascending: true });
 
         if (!error && data) {
             setSummaries(data);

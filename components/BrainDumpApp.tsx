@@ -339,7 +339,8 @@ export const BrainDumpApp: React.FC<{
         isZenModeByApp, toggleZenMode,
         aiPanelOpenByBrainDump, activeTabByBrainDump,
         setAiPanelOpenByBrainDump, setActiveTabByBrainDump,
-        isBraindumpPizarronOpen, setIsBraindumpPizarronOpen
+        isBraindumpPizarronOpen, setIsBraindumpPizarronOpen,
+        isArchiveOpenByApp, setArchiveOpenByApp
     } = useUIStore();
 
     const checkPizarronSearchMatch = useCallback((dump: BrainDump, query: string, allDumps: BrainDump[], summaries: Summary[]): boolean => {
@@ -405,8 +406,8 @@ export const BrainDumpApp: React.FC<{
             const target = completedSummaries.find(s => s.id === activeTab);
             if (target) baseDate = new Date(target.created_at);
         }
-        // Retornamos la fecha base + 1 segundo para forzar que aparezca "después" en el sort por created_at
-        return new Date(baseDate.getTime() + 1000).toISOString();
+        // Retornamos la fecha base + 1 milisegundo rigoroso como pedido
+        return new Date(baseDate.getTime() + 1).toISOString();
     }, [displayDump, activeTabByBrainDump, currentDumpId, manualChildren, completedSummaries]);
 
     // --- LOCAL UI STATE ---
@@ -414,7 +415,7 @@ export const BrainDumpApp: React.FC<{
     useEffect(() => { setIsZenMode(isZenModeByApp['braindump']); }, [isZenModeByApp]);
 
     const [sortMode, setSortMode] = useState<'date-desc' | 'date-asc' | 'created-desc' | 'created-asc' | 'alpha-asc' | 'alpha-desc'>(() => {
-        return (localStorage.getItem('pizarronSortMode') as any) || 'date-desc';
+        return (localStorage.getItem('braindump-sort-mode') as any) || 'created-asc';
     });
     const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -1173,19 +1174,29 @@ export const BrainDumpApp: React.FC<{
 
                             {/* ARCHIVO */}
                             {archivo.length > 0 && (
-                                <div className="mt-12 space-y-4 pt-8 border-t border-zinc-100 dark:border-[#2D2D42]/40 animate-fadeIn">
-                                    <div className="flex items-center gap-2 text-zinc-400 font-bold uppercase tracking-widest text-xs px-2"><ArchiveIcon size={16} /> Archivo ({archivo.length})</div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
-                                        {archivo.map(a => (
-                                            <div key={a.id} className="p-4 bg-white dark:bg-[#1A1A24]/50 border border-zinc-200 dark:border-[#2D2D42] rounded-2xl flex items-center justify-between group hover:border-amber-500/30 transition-all">
-                                                <div className="flex items-center gap-3 truncate"><ArchiveIcon size={14} className="text-zinc-300" /><span className="text-sm font-bold text-zinc-700 dark:text-zinc-300 truncate">{a.title || 'Sin Título'}</span></div>
-                                                <div className="flex items-center gap-1 shrink-0">
-                                                    <button onClick={() => changeStatus(a.id, 'main')} className="p-1.5 hover:text-indigo-500" title="Restaurar"><RotateCcw size={14}/></button>
-                                                    <button onClick={() => deleteDump(a.id)} className="p-1.5 hover:text-red-500" title="Eliminar"><Trash2 size={14}/></button>
+                                <div className={`mt-12 space-y-4 pt-8 border-t border-zinc-100 dark:border-[#2D2D42]/40 animate-fadeIn ${isArchiveOpenByApp['braindump'] ? 'pb-20' : 'pb-10'}`}>
+                                    <button 
+                                        onClick={() => setArchiveOpenByApp('braindump', !isArchiveOpenByApp['braindump'])}
+                                        className="flex items-center gap-3 text-zinc-400 font-bold uppercase tracking-widest text-[10px] px-2 hover:text-amber-600 transition-colors group/archheader"
+                                    >
+                                        <ArchiveIcon size={16} className="text-zinc-500/50 group-hover/archheader:text-amber-500/50 transition-colors" /> 
+                                        <span>Archivo ({archivo.length})</span>
+                                        <ChevronDown size={14} className={`transition-transform duration-300 ${isArchiveOpenByApp['braindump'] ? '' : '-rotate-90'}`} />
+                                    </button>
+                                    
+                                    {isArchiveOpenByApp['braindump'] && (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {archivo.map(a => (
+                                                <div key={a.id} className="p-4 bg-white dark:bg-[#1A1A24]/50 border border-zinc-200 dark:border-[#2D2D42] rounded-2xl flex items-center justify-between group hover:border-amber-500/30 transition-all">
+                                                    <div className="flex items-center gap-3 truncate"><ArchiveIcon size={14} className="text-zinc-300" /><span className="text-sm font-bold text-zinc-700 dark:text-zinc-300 truncate">{a.title || 'Sin Título'}</span></div>
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                        <button onClick={() => changeStatus(a.id, 'main')} className="p-1.5 hover:text-indigo-500" title="Restaurar"><RotateCcw size={14}/></button>
+                                                        <button onClick={() => deleteDump(a.id)} className="p-1.5 hover:text-red-500" title="Eliminar"><Trash2 size={14}/></button>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
