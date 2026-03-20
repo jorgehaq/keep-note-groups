@@ -44,13 +44,14 @@ export function useBrainDumpSummaries(dumpId: string | null) {
     };
   }, [dumpId, fetchSummaries]);
 
-  const generateSummary = async (objective: string) => {
+  const generateSummary = async (objective: string, createdAt?: string) => {
     if (!dumpId) return;
     const { error } = await supabase.from('summaries').insert([{
       brain_dump_id: dumpId,
       target_objective: objective,
       status: 'pending',
-      content: ''
+      content: '',
+      ...(createdAt ? { created_at: createdAt } : {})
     }]);
     if (error) console.error('Error generating summary:', error);
   };

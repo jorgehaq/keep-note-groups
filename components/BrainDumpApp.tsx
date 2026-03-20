@@ -388,6 +388,27 @@ export const BrainDumpApp: React.FC<{
             .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     }, [dumps, currentDumpId]);
 
+    // DETERMINAR ORDEN RELATIVO (como TikTok/Notas)
+    const getRelativeCreatedAt = useCallback(() => {
+        if (!currentDumpId || !displayDump) return new Date().toISOString();
+        
+        let baseDate = new Date(displayDump.created_at);
+        const activeTab = activeTabByBrainDump[currentDumpId] || 'original';
+        
+        if (activeTab === 'original') {
+            baseDate = new Date(displayDump.created_at);
+        } else if (activeTab.startsWith('sub_')) {
+            const id = activeTab.replace('sub_', '');
+            const target = manualChildren.find(c => c.id === id);
+            if (target) baseDate = new Date(target.created_at);
+        } else {
+            const target = completedSummaries.find(s => s.id === activeTab);
+            if (target) baseDate = new Date(target.created_at);
+        }
+        // Retornamos la fecha base + 1 segundo para forzar que aparezca "después" en el sort por created_at
+        return new Date(baseDate.getTime() + 1000).toISOString();
+    }, [displayDump, activeTabByBrainDump, currentDumpId, manualChildren, completedSummaries]);
+
     // --- LOCAL UI STATE ---
     const [isZenMode, setIsZenMode] = useState(isZenModeByApp['braindump']);
     useEffect(() => { setIsZenMode(isZenModeByApp['braindump']); }, [isZenModeByApp]);
@@ -478,13 +499,15 @@ export const BrainDumpApp: React.FC<{
 
     const handleCreateSubpizarron = async () => {
         if (!currentDumpId) return;
+        const relativeDate = getRelativeCreatedAt();
         const { data, error } = await supabase.from('brain_dumps').insert([{
             title: 'Nuevo Sub-pizarrón',
             content: '',
             status: 'main',
             user_id: session.user.id,
             parent_id: currentDumpId,
-            generation_level: (displayDump?.generation_level || 0) + 1
+            generation_level: (displayDump?.generation_level || 0) + 1,
+            created_at: relativeDate
         }]).select().single();
         if (error) {
             console.error('Error creating subpizarron:', error);
@@ -981,7 +1004,7 @@ export const BrainDumpApp: React.FC<{
                                                     <X size={13} />
                                                 </button>
                                             </div>
-                                            <BrainDumpAIPanel dumpId={displayDump.id} onGenerate={() => setShowAIInput(false)} />
+                                            <BrainDumpAIPanel dumpId={displayDump.id} onGenerate={() => setShowAIInput(false)} getRelativeCreatedAt={getRelativeCreatedAt} />
                                         </div>
                                     </div>
                                 )}
