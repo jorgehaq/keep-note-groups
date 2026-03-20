@@ -171,15 +171,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </button>
 
-        {/* Botón Pizarrón */}
-        <button
-          onClick={() => setGlobalView('braindump')}
-          className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all shrink-0 ${getAppStyle('braindump')}`}
-          title={t('sidebar.braindump')}
-        >
-          <PenTool size={20} />
-        </button>
-
         {/* Translator Button */}
         <button
           onClick={() => setGlobalView('translator')}
@@ -187,6 +178,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           title={t('sidebar.translator')}
         >
           <Languages size={20} />
+        </button>
+
+        {/* Botón Pizarrón */}
+        <button
+          onClick={() => setGlobalView('braindump')}
+          className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all shrink-0 ${getAppStyle('braindump')}`}
+          title={t('sidebar.braindump')}
+        >
+          <PenTool size={20} />
         </button>
 
         {/* TikTok Button */}
