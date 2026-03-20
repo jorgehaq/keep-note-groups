@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Archive, ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash, Sparkles, FileText, PenLine, ArrowUpRight, GitBranch, Plus, Wind, ListPlus, History, Calendar } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { Archive, ChevronUp, ChevronLeft, ChevronRight, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash, Sparkles, FileText, PenLine, ArrowUpRight, GitBranch, Plus, Wind, ListPlus, History, Calendar } from 'lucide-react';
 import { Note, NoteFont } from '../types';
 import { SmartNotesEditor, SmartNotesEditorRef } from '../src/components/editor/SmartNotesEditor';
 import { ChecklistEditor, ChecklistEditorRef, parseMarkdownToChecklist, serializeChecklistToMarkdown, serializeChecklistToPlainMarkdown } from '../src/components/editor/ChecklistEditor';
@@ -639,6 +639,41 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
   // ── AI INPUT COLAPSABLE ────────────────────────────────────────────────────
   const [showAIInput, setShowAIInput] = useState(false);
+  
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    if (tabBarRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = tabBarRef.current;
+      setCanScrollLeft(scrollLeft > 5);
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 5);
+    }
+  }, []);
+
+  const scrollTabs = (direction: 'left' | 'right') => {
+    if (tabBarRef.current) {
+      tabBarRef.current.scrollBy({ left: direction === 'left' ? -300 : 300, behavior: 'smooth' });
+    }
+  };
+
+  useEffect(() => {
+    const container = tabBarRef.current;
+    if (container) {
+      checkScroll();
+      container.addEventListener('scroll', checkScroll);
+      window.addEventListener('resize', checkScroll);
+      return () => {
+        container.removeEventListener('scroll', checkScroll);
+        window.removeEventListener('resize', checkScroll);
+      };
+    }
+  }, [checkScroll]);
+
+  // Recalcular scroll cuando cambien las pestañas
+  useEffect(() => {
+    checkScroll();
+  }, [unifiedTabs, checkScroll]);
 
     // ── SPLIT RATIO (pizarron) ─────────────────────────────────────────────────
     // Usamos el ratio global del store para sincronizar todas las notas
@@ -1052,7 +1087,18 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
           {/* ── BARRA DE TABS UNIFICADA — siempre visible si hay hijos o summaries ── */}
           {(manualChildren.length > 0 || aiSummaries.length > 0 || childrenLoaded) && (
-            <div ref={tabBarRef} className="flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0">
+            <div className="relative group/tabbar shrink-0">
+              {/* Flecha Izquierda */}
+              <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white dark:from-[#1A1A24] to-transparent z-10 flex items-center justify-start pointer-events-none transition-opacity duration-150 ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`}>
+                <button 
+                  onClick={() => scrollTabs('left')} 
+                  className={`p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-400 hover:text-emerald-500 transition-colors active:scale-95 border border-zinc-200 dark:border-zinc-700 ml-1 ${canScrollLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                >
+                  <ChevronLeft size={14} />
+                </button>
+              </div>
+
+              <div ref={tabBarRef} className="flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0 hidden-scrollbar px-10">
 
               {/* Tab Original */}
               <button
@@ -1151,7 +1197,17 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                   );
                 }
               })}
+              </div>
 
+              {/* Flecha Derecha */}
+              <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white dark:from-[#1A1A24] to-transparent z-10 flex items-center justify-end pointer-events-none transition-opacity duration-150 ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}>
+                <button 
+                  onClick={() => scrollTabs('right')} 
+                  className={`p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-400 hover:text-emerald-500 transition-colors active:scale-95 border border-zinc-200 dark:border-zinc-700 mr-1 ${canScrollRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
           )}
 

@@ -379,6 +379,38 @@ export const BrainDumpApp: React.FC<{
     const showAIPanel = currentDumpId ? (aiPanelOpenByBrainDump[currentDumpId] || false) : false;
     const activeTab = currentDumpId ? (activeTabByBrainDump[currentDumpId] || 'original') : 'original';
 
+    const [canScrollTabsLeft, setCanScrollTabsLeft] = useState(false);
+    const [canScrollTabsRight, setCanScrollTabsRight] = useState(false);
+
+    const checkTabsScroll = useCallback(() => {
+        if (tabBarRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = tabBarRef.current;
+            setCanScrollTabsLeft(scrollLeft > 5);
+            setCanScrollTabsRight(scrollLeft + clientWidth < scrollWidth - 5);
+        }
+    }, [tabBarRef]);
+
+    const scrollTabsHorizontally = (direction: 'left' | 'right') => {
+        if (tabBarRef.current) {
+            tabBarRef.current.scrollBy({ left: direction === 'left' ? -300 : 300, behavior: 'smooth' });
+        }
+    };
+
+    useEffect(() => {
+        const container = tabBarRef.current;
+        if (container) {
+            checkTabsScroll();
+            container.addEventListener('scroll', checkTabsScroll);
+            window.addEventListener('resize', checkTabsScroll);
+            return () => {
+                container.removeEventListener('scroll', checkTabsScroll);
+                window.removeEventListener('resize', checkTabsScroll);
+            };
+        }
+    }, [checkTabsScroll, tabBarRef]);
+
+
+
     useEffect(() => {
       if (!tabBarRef.current) return;
       const activeBtn = tabBarRef.current.querySelector('[data-active-tab="true"]');
@@ -404,6 +436,11 @@ export const BrainDumpApp: React.FC<{
         ];
         return items.sort((a, b) => a.order_index - b.order_index);
     }, [manualChildren, aiSummaries]);
+
+    // Recalcular scroll cuando cambien las pestañas
+    useEffect(() => {
+        checkTabsScroll();
+    }, [unifiedTabs, checkTabsScroll]);
 
     // DETERMINAR ORDEN RELATIVO (Interpolación REAL estilo Notion/Linear)
     const getNewOrderIndex = useCallback(() => {
@@ -1031,7 +1068,18 @@ export const BrainDumpApp: React.FC<{
 
                                 {/* TABS UNIFICADAS */}
                                 {(manualChildren.length > 0 || completedSummaries.length > 0 || true) && (
-                                    <div ref={tabBarRef} className="flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0">
+                                    <div className="relative group/tabbar shrink-0">
+                                        {/* Flecha Izquierda */}
+                                        <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white dark:from-[#1A1A24] to-transparent z-10 flex items-center justify-start pointer-events-none transition-opacity duration-150 ${canScrollTabsLeft ? 'opacity-100' : 'opacity-0'}`}>
+                                            <button 
+                                                onClick={() => scrollTabsHorizontally('left')} 
+                                                className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors active:scale-95 border border-zinc-700 ml-1 ${canScrollTabsLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                                            >
+                                                <ChevronLeft size={14} />
+                                            </button>
+                                        </div>
+
+                                        <div ref={tabBarRef} className="flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0 hidden-scrollbar px-10">
                                         {(() => {
                                             const originalIsMatch = Boolean(searchQuery?.trim() && (displayDump.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || displayDump.scratchpad?.toLowerCase().includes(searchQuery.trim().toLowerCase())));
                                             return (
@@ -1128,7 +1176,17 @@ export const BrainDumpApp: React.FC<{
                                                 }
                                             });
                                         })()}
+                                        </div>
 
+                                        {/* Flecha Derecha */}
+                                        <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white dark:from-[#1A1A24] to-transparent z-10 flex items-center justify-end pointer-events-none transition-opacity duration-150 ${canScrollTabsRight ? 'opacity-100' : 'opacity-0'}`}>
+                                            <button 
+                                                onClick={() => scrollTabsHorizontally('right')} 
+                                                className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors active:scale-95 border border-zinc-700 mr-1 ${canScrollTabsRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                                            >
+                                                <ChevronRight size={14} />
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
 

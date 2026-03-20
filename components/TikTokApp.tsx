@@ -162,7 +162,6 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
   const moreMenuRef = useRef<HTMLDivElement>(null);
   
   const sortMenuRef = useRef<HTMLDivElement>(null);
-  const tabContainerRef = useRef<HTMLDivElement>(null);
   const videoTrayRef = useRef<HTMLDivElement>(null);
   const splitContainerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
@@ -232,16 +231,16 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
   };
 
   const checkScroll = useCallback(() => {
-    if (tabContainerRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = tabContainerRef.current;
+    if (tabBarRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = tabBarRef.current;
       setCanScrollLeft(scrollLeft > 5);
       setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 5);
     }
   }, []);
 
   const scrollTabs = (direction: 'left' | 'right') => {
-    if (tabContainerRef.current) {
-      tabContainerRef.current.scrollBy({ left: direction === 'left' ? -300 : 300, behavior: 'smooth' });
+    if (tabBarRef.current) {
+      tabBarRef.current.scrollBy({ left: direction === 'left' ? -300 : 300, behavior: 'smooth' });
     }
   };
 
@@ -256,7 +255,12 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
         window.removeEventListener('resize', checkScroll);
       };
     }
-  }, [unifiedTabs, checkScroll, activeTab, focusedVideoId]);
+  }, [checkScroll]);
+
+  // Recalcular scroll cuando cambien las pestañas
+  useEffect(() => {
+    checkScroll();
+  }, [unifiedTabs, checkScroll]);
 
   // Video Tray Scroll Logic
   const checkTrayScroll = useCallback(() => {
@@ -584,19 +588,19 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
         <div className="pt-[2px] bg-[#13131A] shrink-0 animate-slideDown group/tray">
           <div className="max-w-6xl mx-auto relative px-0">
             {canScrollTrayLeft && (
-              <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-start pl-6 pointer-events-none">
+              <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none transition-opacity duration-150 ${canScrollTrayLeft ? 'opacity-100' : 'opacity-0'}`}>
                 <button 
                   onClick={() => scrollTray('left')} 
-                  className="p-1.5 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors pointer-events-auto active:scale-95 border border-zinc-700"
+                  className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors active:scale-95 border border-zinc-700 ml-1 ${canScrollTrayLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
                 >
-                  <ChevronLeft size={18} />
+                  <ChevronLeft size={14} />
                 </button>
               </div>
             )}
             <div 
               ref={videoTrayRef}
               onScroll={checkTrayScroll}
-              className="flex flex-nowrap items-center justify-start gap-4 overflow-x-auto hidden-scrollbar scroll-smooth py-3 pl-1 pr-12"
+              className="flex flex-nowrap items-center justify-start gap-4 overflow-x-auto hidden-scrollbar scroll-smooth py-3 px-10"
             >
               {rootVideos.length === 0 ? (
                 <div className="text-xs text-zinc-600 italic px-4">No hay videos activos</div>
@@ -634,12 +638,12 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
               )}
             </div>
             {canScrollTrayRight && (
-              <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-end pr-6 pointer-events-none">
+              <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#13131A] to-transparent z-10 flex items-center justify-end pointer-events-none transition-opacity duration-150 ${canScrollTrayRight ? 'opacity-100' : 'opacity-0'}`}>
                 <button 
                   onClick={() => scrollTray('right')} 
-                  className="p-1.5 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors pointer-events-auto active:scale-95 border border-zinc-700"
+                  className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors active:scale-95 border border-zinc-700 mr-1 ${canScrollTrayRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
                 >
-                  <ChevronRight size={18} />
+                  <ChevronRight size={14} />
                 </button>
               </div>
             )}
@@ -869,21 +873,19 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                 {/* TABS SELECTION */}
                 <div className="relative mb-3 shrink-0">
                   {/* Flecha Izquierda */}
-                  {canScrollLeft && (
-                    <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-start pl-6 pointer-events-none">
-                      <button 
-                        onClick={() => scrollTabs('left')} 
-                        className="p-1.5 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors pointer-events-auto active:scale-95 border border-zinc-700"
-                      >
-                        <ChevronLeft size={18} />
-                      </button>
-                    </div>
-                  )}
+                  <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#1A1A24] to-transparent z-10 flex items-center justify-start pointer-events-none transition-opacity duration-150 ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`}>
+                    <button 
+                      onClick={() => scrollTabs('left')} 
+                      className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors active:scale-95 border border-zinc-700 ml-1 ${canScrollLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
+                  </div>
 
                   <div 
                     ref={tabBarRef}
                     onScroll={checkScroll}
-                    className="flex flex-nowrap items-center gap-2 overflow-x-auto hidden-scrollbar scroll-smooth py-1 pl-1 pr-12"
+                    className="flex flex-nowrap items-center gap-2 overflow-x-auto hidden-scrollbar scroll-smooth py-1 px-10"
                   >
                     {(() => {
                       const isTranscriptionMatch = searchQuery?.trim() && (
@@ -1031,16 +1033,14 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                   </div>
 
                   {/* Flecha Derecha */}
-                  {canScrollRight && (
-                    <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-end pr-6 pointer-events-none">
-                      <button 
-                        onClick={() => scrollTabs('right')} 
-                        className="p-1.5 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors pointer-events-auto active:scale-95 border border-zinc-700"
-                      >
-                        <ChevronRight size={18} />
-                      </button>
-                    </div>
-                  )}
+                  <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#1A1A24] to-transparent z-10 flex items-center justify-end pointer-events-none transition-opacity duration-150 ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}>
+                    <button 
+                      onClick={() => scrollTabs('right')} 
+                      className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors active:scale-95 border border-zinc-700 mr-1 ${canScrollRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
                 </div>
 
 
