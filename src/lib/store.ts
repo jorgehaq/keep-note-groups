@@ -182,7 +182,9 @@ interface UIStore {
     showOverdueMarquee: boolean;
     setShowOverdueMarquee: (show: boolean) => void;
     isNotesPizarronOpen: boolean;
+    notesSplitRatio: number; // Ratio del split para el pizarron de notas
     setIsNotesPizarronOpen: (open: boolean) => void;
+    setNotesSplitRatio: (ratio: number) => void;
     toggleZenMode: (appId: string) => void;
     resetUIState: () => void;
 }
@@ -435,6 +437,8 @@ export const useUIStore = create<UIStore>()(
             setFocusedVideoId: (id) => set({ focusedVideoId: id }),
             setIsVideoTrayOpen: (open) => set({ isVideoTrayOpen: open }),
             setIsNotesPizarronOpen: (open) => set({ isNotesPizarronOpen: open }),
+            notesSplitRatio: 0.5,
+            setNotesSplitRatio: (ratio) => set({ notesSplitRatio: ratio }),
             setIsBraindumpPizarronOpen: (open) => set({ isBraindumpPizarronOpen: open }),
             setActiveNoteId: (groupId, noteId) => set((state) => ({
                 lastActiveNoteByGroup: { ...state.lastActiveNoteByGroup, [groupId]: noteId }

@@ -509,15 +509,12 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
  
    const { 
-     aiPanelOpenByNote, 
-     activeTabByNote, 
-     isNotesPizarronOpen,
-     setAiPanelOpen, 
-     setActiveTab: setStoreActiveTab,
-     setIsNotesPizarronOpen,
-     globalTasks
-   } = useUIStore();
-   const { activeNoteId, activeNote, breadcrumbPath, navigate } = useNoteTree(note.id);
+      aiPanelOpenByNote, setAiPanelOpen, activeTabByNote, setActiveTab: setStoreActiveTab,
+      isNotesPizarronOpen, setIsNotesPizarronOpen,
+      notesSplitRatio, setNotesSplitRatio,
+      globalTasks
+    } = useUIStore();
+    const { activeNoteId, activeNote, breadcrumbPath, navigate } = useNoteTree(note.id);
    const isRootLevel = !activeNoteId || activeNoteId === note.id;
    const displayContent = isRootLevel ? note.content : (activeNote?.content ?? '');
    const displayNoteId = isRootLevel ? note.id : activeNoteId;
@@ -621,9 +618,11 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   // ── AI INPUT COLAPSABLE ────────────────────────────────────────────────────
   const [showAIInput, setShowAIInput] = useState(false);
 
-  // ── SPLIT RATIO (pizarron) ─────────────────────────────────────────────────
-  const [splitRatio, setSplitRatio] = useState(0.5); // 50/50 por defecto
-  const isDraggingRef = useRef(false);
+    // ── SPLIT RATIO (pizarron) ─────────────────────────────────────────────────
+    // Usamos el ratio global del store para sincronizar todas las notas
+    const splitRatio = notesSplitRatio;
+    const setSplitRatio = (val: number) => setNotesSplitRatio(val);
+    const isDraggingRef = useRef(false);
   const splitContainerRef = useRef<HTMLDivElement>(null);
 
   // Sync scratchpad local con nota cuando cambia note.id
