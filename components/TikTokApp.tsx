@@ -694,12 +694,18 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button 
-                    onClick={async () => {
+                    onClick={async (e) => { 
+                      e.stopPropagation(); 
                       const tiktokGroup = groups.find(g => g.title === 'TikTok') || groups[0];
                       if (!tiktokGroup) return;
                       const relIndex = getNewOrderIndex();
-                      const newNote = await createSubnote('Nueva subnota', tiktokGroup.id, '', relIndex);
-                      if (newNote) setActiveTab(`note_${newNote.id}`);
+                      // Crear con título vacío para forzar el flujo de renombramiento
+                      const newNote = await createSubnote('', tiktokGroup.id, '', relIndex);
+                      if (newNote) {
+                        setActiveTab(`note_${newNote.id}`);
+                        setEditingSubnoteId(newNote.id);
+                        setTempSubnoteTitle('');
+                      }
                     }} 
                     className="p-2 rounded-xl border text-emerald-400 border-zinc-800 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all flex items-center"
                     title="Nueva subnota"
@@ -986,22 +992,26 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                                 type="text"
                                 value={tempSubnoteTitle}
                                 onChange={(e) => setTempSubnoteTitle(e.target.value)}
+                                onFocus={(e) => e.currentTarget.select()} // 🚀 NUEVO: Seleccionar al entrar
                                 className="bg-zinc-800 text-white border-emerald-500 border rounded px-1 outline-none text-[11px] max-w-[120px]"
+                                placeholder="Título..."
                                 onBlur={() => {
-                                  if (tempSubnoteTitle.trim() && tempSubnoteTitle !== note.title) {
-                                    updateSubnote(note.id, { title: tempSubnoteTitle });
+                                  // Solo guardar si hay un cambio real
+                                  if (tempSubnoteTitle.trim() !== (note.title || '')) {
+                                    updateSubnote(note.id, { title: tempSubnoteTitle.trim() });
                                   }
                                   setEditingSubnoteId(null);
                                 }}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') {
-                                    if (tempSubnoteTitle.trim() && tempSubnoteTitle !== note.title) {
-                                      updateSubnote(note.id, { title: tempSubnoteTitle });
+                                    if (tempSubnoteTitle.trim() !== (note.title || '')) {
+                                      updateSubnote(note.id, { title: tempSubnoteTitle.trim() });
                                     }
                                     setEditingSubnoteId(null);
                                   } else if (e.key === 'Escape') {
                                     setEditingSubnoteId(null);
                                   }
+                                  e.stopPropagation();
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                               />
@@ -1011,11 +1021,11 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                                 onDoubleClick={(e) => {
                                   e.stopPropagation();
                                   setEditingSubnoteId(note.id);
-                                  setTempSubnoteTitle(note.title || 'Nueva subnota');
+                                  setTempSubnoteTitle(note.title || '');
                                 }}
                                 title="Doble clic para renombrar"
                               >
-                                {note.title || 'Nueva subnota'}
+                                {note.title || 'Sin título'}
                               </span>
                             )}
                             {activeTab === `note_${note.id}` && (

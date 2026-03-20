@@ -291,17 +291,30 @@ const SubnoteTitle: React.FC<{
   onRename: (id: string, title: string) => void;
   searchQuery?: string;
 }> = ({ child, isActive, onRename, searchQuery }) => {
-  const [editing, setEditing] = useState(false);
+  // 🚀 NUEVO: Si no tiene título (recién creada), empezar editando
+  const [editing, setEditing] = useState(!child.title);
   const [val, setVal] = useState(child.title || '');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setVal(child.title || ''); }, [child.title]);
 
+  // Asegurar foco cuando entra en modo edición
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select(); // Seleccionar todo el texto para fácil reemplazo
+    }
+  }, [editing]);
+
   const save = () => {
     setEditing(false);
     const trimmed = val.trim();
-    if (trimmed && trimmed !== child.title) onRename(child.id, trimmed);
-    else setVal(child.title || '');
+    // Si hay cambio, guardar. Si no, restaurar el valor de la nota (que puede ser vacío)
+    if (trimmed !== (child.title || '')) {
+      onRename(child.id, trimmed);
+    } else {
+      setVal(child.title || '');
+    }
   };
 
   if (editing) {

@@ -120,16 +120,25 @@ const SubnoteTitle: React.FC<{
   searchQuery?: string;
   onRename: (id: string, title: string) => void;
 }> = ({ child, isActive, searchQuery, onRename }) => {
-  const [editing, setEditing] = useState(false);
+  // 🚀 NUEVO: Si es nuevo (título vacío o el de defecto), empezar editando
+  const [editing, setEditing] = useState(!child.title || child.title === 'Nuevo Sub-pizarrón');
   const [val, setVal] = useState(child.title || '');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setVal(child.title || ''); }, [child.title]);
 
+  // Asegurar foco y selección cuando entra en modo edición
+  useEffect(() => {
+    if (editing && inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.select();
+    }
+  }, [editing]);
+
   const save = () => {
     setEditing(false);
     const trimmed = val.trim();
-    if (trimmed && trimmed !== child.title) onRename(child.id, trimmed);
+    if (trimmed !== (child.title || '')) onRename(child.id, trimmed);
     else setVal(child.title || '');
   };
 
@@ -558,7 +567,7 @@ export const BrainDumpApp: React.FC<{
         if (!currentDumpId) return;
         const orderIndex = getNewOrderIndex();
         const { data, error } = await supabase.from('brain_dumps').insert([{
-            title: 'Nuevo Sub-pizarrón',
+            title: '', // Título vacío para disparar el modo edición
             content: '',
             status: 'main',
             user_id: session.user.id,

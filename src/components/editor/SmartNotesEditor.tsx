@@ -686,14 +686,13 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-cursor-indicator-line": { 
             borderLeftColor: "#6366f1 !important"
         },
-        ".cm-hl-y, .cm-hl-r, .cm-hl-b, .cm-hl-g, .cm-custom-hl": { color: "#000000 !important", padding: "0 2px", borderRadius: "0px !important" },
-        ".cm-hl-y": { backgroundColor: "#FFFF00 !important" },
-        ".cm-hl-r": { backgroundColor: "#FF0000 !important" },
-        ".cm-hl-b": { backgroundColor: "#3282F6 !important" },
-        ".cm-hl-g": { backgroundColor: "#92D050 !important" },
-        ".cm-custom-hl": { backgroundColor: "#FFFF00 !important" },
-        ".cm-custom-tr": { position: "relative", backgroundColor: "#10B981 !important", color: "#000000 !important", border: "1px solid #00000030", padding: "0 2px", cursor: "help", borderRadius: "4px !important" },
-        ".dark & .cm-custom-tr": { backgroundColor: "#10B981 !important", color: "#000000 !important", borderRadius: "4px !important" },
+        ".cm-hl-y, .cm-hl-r, .cm-hl-b, .cm-hl-g, .cm-custom-hl": { backgroundColor: "transparent !important", padding: "0 4px", borderRadius: "4px !important" },
+        ".cm-hl-y, .cm-custom-hl": { color: "#EAB308 !important", border: "2px solid #EAB308 !important" },
+        ".cm-hl-r": { color: "#EF4444 !important", border: "2px solid #EF4444 !important" },
+        ".cm-hl-b": { color: "#3B82F6 !important", border: "2px solid #3B82F6 !important" },
+        ".cm-hl-g": { color: "#22C55E !important", border: "2px solid #22C55E !important" },
+        ".cm-custom-tr": { position: "relative", backgroundColor: "#3B82F644 !important", color: "#3B82F6 !important", border: "2px solid #3B82F6 !important", padding: "0 2px", cursor: "help", borderRadius: "4px !important" },
+        ".dark & .cm-custom-tr": { backgroundColor: "#3B82F633 !important", color: "#60A5FA !important", border: "2px solid #3B82F6 !important", borderRadius: "4px !important" },
         ".cm-custom-h1": { fontSize: "1.4em", fontWeight: "bold", color: "inherit", lineHeight: "1.2" },
         ".cm-custom-bold": { fontWeight: "bold", color: "inherit" },
         ".cm-custom-strikethrough": { textDecoration: "line-through !important", color: "inherit", opacity: "0.6" },
@@ -701,26 +700,26 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-url, .cm-link, .cm-custom-link, .cm-custom-link *": { color: "#60A5FA !important", textDecoration: "underline !important", cursor: "pointer !important", transition: "opacity 0.2s", opacity: "1 !important" },
         ".cm-custom-link:hover": { opacity: "0.8 !important" },
         // LIGHT MODE - fondos sólidos claros
-        ".cm-custom-mk-ins":  { backgroundColor: "#EDE9FE !important", color: "#6D28D9 !important", border: "1px solid #C4B5FD", padding: "0 3px", borderRadius: "4px !important" },
-        ".cm-custom-mk-idea": { backgroundColor: "#FEE2E2 !important", color: "#B91C1C !important", border: "1px solid #FECACA", padding: "0 3px", borderRadius: "4px !important" },
-        ".cm-custom-mk-op":   { backgroundColor: "#ECFCCB !important", color: "#3F6212 !important", border: "1px solid #BEF264", padding: "0 3px", borderRadius: "4px !important" },
-        ".cm-custom-mk-duda": { backgroundColor: "#E0F2FE !important", color: "#0369A1 !important", border: "1px solid #7DD3FC", padding: "0 3px", borderRadius: "4px !important" },
-        ".cm-custom-mk-wow":  { backgroundColor: "#FCE7F3 !important", color: "#9D174D !important", border: "1px solid #F9A8D4", padding: "0 3px", borderRadius: "4px !important" },
-        ".cm-custom-mk-pat":  { backgroundColor: "#F3E8FF !important", color: "#6B21A8 !important", border: "1px solid #D8B4FE", padding: "0 3px", borderRadius: "4px !important" },
-        ".cm-custom-mk-yo":   { backgroundColor: "#FEF3C7 !important", color: "#92400E !important", border: "1px solid #FCD34D", padding: "0 3px", borderRadius: "4px !important" },
-        ".cm-custom-mk-ruido":{ backgroundColor: "#F3F4F6 !important", color: "#374151 !important", border: "1px solid #D1D5DB", padding: "0 3px", borderRadius: "4px !important" },
-        ".cm-custom-mk-contra":{ backgroundColor: "#FEE2E2 !important", color: "#991B1B !important", border: "1px solid #FCA5A5", padding: "0 3px", borderRadius: "4px !important" },
+        ".cm-custom-mk-ins":  { backgroundColor: "#EDE9FE !important", color: "#6D28D9 !important", border: "2px solid #6D28D9", padding: "0 3px", borderRadius: "4px !important" },
+        ".cm-custom-mk-idea": { backgroundColor: "#B91C1C !important", color: "#ffffff !important", border: "2px solid #B91C1C", padding: "0 3px", borderRadius: "4px !important" },
+        ".cm-custom-mk-op":   { backgroundColor: "#ECFCCB !important", color: "#3F6212 !important", border: "2px solid #3F6212", padding: "0 3px", borderRadius: "4px !important" },
+        ".cm-custom-mk-duda": { backgroundColor: "#E0F2FE !important", color: "#0369A1 !important", border: "2px solid #0369A1", padding: "0 3px", borderRadius: "4px !important" },
+        ".cm-custom-mk-wow":  { backgroundColor: "#FCE7F3 !important", color: "#9D174D !important", border: "2px solid #9D174D", padding: "0 3px", borderRadius: "4px !important" },
+        ".cm-custom-mk-pat":  { backgroundColor: "#F3E8FF !important", color: "#6B21A8 !important", border: "2px solid #6B21A8", padding: "0 3px", borderRadius: "4px !important" },
+        ".cm-custom-mk-yo":   { backgroundColor: "#FEF3C7 !important", color: "#92400E !important", border: "2px solid #92400E", padding: "0 3px", borderRadius: "4px !important" },
+        ".cm-custom-mk-ruido":{ backgroundColor: "#F3F4F6 !important", color: "#374151 !important", border: "2px solid #374151", padding: "0 3px", borderRadius: "4px !important" },
+        ".cm-custom-mk-contra":{ backgroundColor: "#FEE2E2 !important", color: "#991B1B !important", border: "2px solid #991B1B", padding: "0 3px", borderRadius: "4px !important" },
 
         // DARK MODE - fondos sólidos oscuros
-        ".dark & .cm-custom-mk-ins":  { backgroundColor: "#2E1065 !important", color: "#C4B5FD !important", border: "1px solid #4C1D95" },
-        ".dark & .cm-custom-mk-idea": { backgroundColor: "#450A0A !important", color: "#FCA5A5 !important", border: "1px solid #7F1D1D" },
-        ".dark & .cm-custom-mk-op":   { backgroundColor: "#1A2E05 !important", color: "#BEF264 !important", border: "1px solid #365314" },
-        ".dark & .cm-custom-mk-duda": { backgroundColor: "#082F49 !important", color: "#7DD3FC !important", border: "1px solid #0C4A6E" },
-        ".dark & .cm-custom-mk-wow":  { backgroundColor: "#500724 !important", color: "#F9A8D4 !important", border: "1px solid #831843" },
-        ".dark & .cm-custom-mk-pat":  { backgroundColor: "#3B0764 !important", color: "#D8B4FE !important", border: "1px solid #581C87" },
-        ".dark & .cm-custom-mk-yo":   { backgroundColor: "#451A03 !important", color: "#FCD34D !important", border: "1px solid #78350F" },
-        ".dark & .cm-custom-mk-ruido":{ backgroundColor: "#1F2937 !important", color: "#9CA3AF !important", border: "1px solid #374151" },
-        ".dark & .cm-custom-mk-contra":{ backgroundColor: "#450A0A !important", color: "#EF4444 !important", border: "1px solid #991B1B" },
+        ".dark & .cm-custom-mk-ins":  { backgroundColor: "#2E1065 !important", color: "#C4B5FD !important", border: "2px solid #C4B5FD" },
+        ".dark & .cm-custom-mk-idea": { backgroundColor: "#450A0A !important", color: "#FCA5A5 !important", border: "2px solid #FCA5A5" },
+        ".dark & .cm-custom-mk-op":   { backgroundColor: "#1A2E05 !important", color: "#BEF264 !important", border: "2px solid #BEF264" },
+        ".dark & .cm-custom-mk-duda": { backgroundColor: "#082F49 !important", color: "#7DD3FC !important", border: "2px solid #7DD3FC" },
+        ".dark & .cm-custom-mk-wow":  { backgroundColor: "#500724 !important", color: "#F9A8D4 !important", border: "2px solid #F9A8D4" },
+        ".dark & .cm-custom-mk-pat":  { backgroundColor: "#3B0764 !important", color: "#D8B4FE !important", border: "2px solid #D8B4FE" },
+        ".dark & .cm-custom-mk-yo":   { backgroundColor: "#451A03 !important", color: "#FCD34D !important", border: "2px solid #FCD34D" },
+        ".dark & .cm-custom-mk-ruido":{ backgroundColor: "#1F2937 !important", color: "#9CA3AF !important", border: "2px solid #9CA3AF" },
+        ".dark & .cm-custom-mk-contra":{ backgroundColor: "#450A0A !important", color: "#EF4444 !important", border: "2px solid #EF4444" },
         ".cm-custom-hr": { display: "inline-block", verticalAlign: "middle", width: "calc(100% - 30px)", height: "1px", backgroundColor: "#d4d4d8", margin: "12px 0", borderRadius: "2px" },
         ".dark & .cm-custom-hr": { backgroundColor: "#3f3f3f" },
         ".cm-custom-hr-big": { display: "inline-block", verticalAlign: "middle", width: "calc(100% - 30px)", height: "3px", background: "linear-gradient(90deg, transparent, #8B5CF6, #6366f1, #8B5CF6, transparent)", margin: "12px 0", borderRadius: "4px" },
@@ -992,6 +991,12 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
     const wikiCloseTimerRef = useRef<NodeJS.Timeout | null>(null);
     const wikiButtonRef = useRef<HTMLDivElement>(null);
     const isInteractingWithWikiRef = useRef(false);
+
+    // 🚀 NUEVO: Mapeo dinámico para el tamaño del globo de Wikipedia
+    const tooltipTextSize = noteFontSize === 'small' ? 'text-[13px]' : noteFontSize === 'large' ? 'text-[18px]' : 'text-[15px]';
+    const tooltipTitleSize = noteFontSize === 'small' ? 'text-[15px]' : noteFontSize === 'large' ? 'text-[20px]' : 'text-[17px]';
+    const tooltipMetaSize = noteFontSize === 'small' ? 'text-[11px]' : noteFontSize === 'large' ? 'text-[14px]' : 'text-[13px]';
+    const tooltipSmallSize = noteFontSize === 'small' ? 'text-[10px]' : noteFontSize === 'large' ? 'text-[13px]' : 'text-[11px]';
 
     useEffect(() => {
         const release = () => { isInteractingWithWikiRef.current = false; };
@@ -2205,7 +2210,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                                     top: (wikiButtonRef.current?.getBoundingClientRect().top || 0) - 12,
                                                     left: (wikiButtonRef.current?.getBoundingClientRect().left || 0) + ((wikiButtonRef.current?.getBoundingClientRect().width || 0) / 2),
                                                     transform: 'translate(-50%, -100%)',
-                                                    width: '18rem'
+                                                    width: noteFontSize === 'large' ? '24rem' : '18rem'
                                                 }}
                                                 tabIndex={-1}
                                                 onMouseEnter={() => {
@@ -2246,19 +2251,19 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                                 </button>
 
                                                 <div className="flex items-start gap-2 pr-4">
-                                                    <Search size={12} className="text-amber-500 mt-0.5 shrink-0" />
+                                                    <Search size={12} className="text-amber-500 mt-1 shrink-0" />
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-[11px] font-black text-amber-500 mb-1 truncate select-text">{wikiResult.title}</p>
+                                                        <p className={`${tooltipTitleSize} font-black text-amber-500 mb-1 truncate select-text`}>{wikiResult.title}</p>
                                                         {wikiResult.description && (
-                                                            <p className="text-[10px] text-zinc-400 mb-1.5 italic select-text">{wikiResult.description}</p>
+                                                            <p className={`${tooltipMetaSize} text-zinc-400 mb-1.5 italic select-text`}>{wikiResult.description}</p>
                                                         )}
-                                                        <p className="text-[11px] text-zinc-700 dark:text-zinc-300 leading-relaxed line-clamp-5 select-text cursor-text">
+                                                        <p className={`${tooltipTextSize} text-zinc-700 dark:text-zinc-300 leading-relaxed line-clamp-[10] select-text cursor-text`}>
                                                             {wikiResult.extract}
                                                         </p>
                                                         
                                                         {/* Badge de fuente */}
                                                         <div className="flex items-center justify-between mt-2 select-text">
-                                                            <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 select-text">
+                                                            <span className={`${tooltipSmallSize} font-black uppercase tracking-wider text-zinc-400 select-text`}>
                                                                 {wikiResult.source === 'npm' && '📦 npm Registry'}
                                                                 {wikiResult.source === 'pypi' && '🐍 PyPI'}
                                                                 {wikiResult.source === 'wikidata' && '🔷 Wikidata'}
@@ -2276,7 +2281,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
                                                                     onMouseDown={(e) => e.stopPropagation()}
-                                                                    className="text-[10px] text-amber-500 hover:text-amber-400 font-bold select-text"
+                                                                    className={`${tooltipMetaSize} text-amber-500 hover:text-amber-400 font-bold select-text`}
                                                                 >
                                                                     Ver más →
                                                                 </a>
