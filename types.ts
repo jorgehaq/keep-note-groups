@@ -31,6 +31,7 @@ export interface Note {
     | "error"
     | "stale";
   scratchpad?: string;
+  status?: 'main' | 'history';
   children?: Note[];
   tiktok_video_id?: string | null;
 }

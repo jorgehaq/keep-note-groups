@@ -170,6 +170,8 @@ interface UIStore {
     setImminentRemindersCount: (count: number) => void;
     showOverdueMarquee: boolean;
     setShowOverdueMarquee: (show: boolean) => void;
+    isNotesPizarronOpen: boolean;
+    setIsNotesPizarronOpen: (open: boolean) => void;
     toggleZenMode: (appId: string) => void;
     resetUIState: () => void;
 }
@@ -213,6 +215,7 @@ export const useUIStore = create<UIStore>()(
             isVideoTrayOpen: false,
             isBraindumpPizarronOpen: false,
             aiPanelOpenByVideo: {},
+            isNotesPizarronOpen: true,
             activeTabByVideo: {},
             pizarronVisibleByNoteAndTab: {},
             isZenModeByApp: {},
@@ -415,6 +418,7 @@ export const useUIStore = create<UIStore>()(
             setIsDumpTrayOpen: (open) => set({ isDumpTrayOpen: open }),
             setFocusedVideoId: (id) => set({ focusedVideoId: id }),
             setIsVideoTrayOpen: (open) => set({ isVideoTrayOpen: open }),
+            setIsNotesPizarronOpen: (open) => set({ isNotesPizarronOpen: open }),
             setIsBraindumpPizarronOpen: (open) => set({ isBraindumpPizarronOpen: open }),
             setShowOverdueMarquee: (show) => set({ showOverdueMarquee: show }),
             toggleZenMode: (appId) =>

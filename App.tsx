@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid, Maximize2, Minimize2, ChevronsDownUp, Bell, Pin, PanelLeft, ChevronLeft, ChevronRight, Wind } from 'lucide-react';
+import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, StickyNote, Grid, Maximize2, Minimize2, ChevronsDownUp, Bell, Pin, PanelLeft, ChevronLeft, ChevronRight, Wind, PenLine, Archive, RotateCcw } from 'lucide-react';
 import { Note, Group, Theme, NoteFont, Reminder, NoteSortMode, BrainDump, TikTokVideo, TikTokQueueItem } from './types';
 import { AccordionItem } from './components/AccordionItem';
 import { Sidebar } from './components/Sidebar';
@@ -76,7 +76,8 @@ function App() {
     summaryCounts, setSummaryCounts,
     focusedNoteByGroup, lastActiveNoteByGroup, setFocusedNoteId,
     noteTrayOpenByGroup, setIsGlobalNoteTrayOpen,
-    isZenModeByApp, toggleZenMode
+    isZenModeByApp, toggleZenMode,
+    isNotesPizarronOpen, setIsNotesPizarronOpen
   } = useUIStore();
 
   const [showLineNumbers, setShowLineNumbers] = useState<boolean>(
@@ -941,6 +942,15 @@ function App() {
     }, debounceTime);
   };
 
+  const archiveNote = (noteId: string) => {
+    updateNote(noteId, { status: 'history' });
+    setFocusedNoteId(null);
+  };
+
+  const restoreNote = (noteId: string) => {
+    updateNote(noteId, { status: 'main' });
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setSession(null);
@@ -1551,8 +1561,7 @@ function App() {
                              >
                                {isMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                              </button>
-
-                             <div className="relative" ref={sortMenuRef}>
+                              <div className="relative" ref={sortMenuRef}>
                                <button 
                                    onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} 
                                    className="h-9 px-3 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all flex items-center gap-2 active:scale-95"
@@ -1697,23 +1706,27 @@ function App() {
 
                 {/* 2. FRANJA DE NOTAS (INTEGRADA EN EL ENCABEZADO) */}
                 {isGlobalNoteTrayOpen && activeGroup && (
-                  <div className="pt-[10px] px-[10px] pb-[10px] bg-[#FAFAFA] dark:bg-[#13131A] relative group/tray">
-                      {/* Flecha Izquierda (solo visible en md:hidden cuando hay scroll) */}
-                      {canScrollLeft && (
-                        <div className="md:hidden absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#FAFAFA] dark:from-[#13131A] to-transparent z-10 flex items-center justify-start pl-1">
-                          <button onClick={() => scrollTabs('left')} className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-colors">
-                            <ChevronLeft size={16} />
-                          </button>
-                        </div>
-                      )}
-                      
-                      {/* Contenedor de Tabs con onScroll */}
-                      <div 
-                        ref={scrollContainerRef}
-                        onScroll={checkScroll}
-                        className="flex flex-nowrap md:flex-wrap justify-start md:justify-center gap-2.5 overflow-x-auto hidden-scrollbar pt-2 pb-2 md:pb-1 scroll-smooth px-2"
-                      >
-                      {sortNotesArray(activeGroup.notes.filter(n => !n.parent_note_id), noteSortMode)
+                  <div className="pt-[2px] bg-[#FAFAFA] dark:bg-[#13131A] relative group/tray border-b border-zinc-200/50 dark:border-zinc-800/50">
+                      <div className="max-w-6xl mx-auto relative px-6">
+                          {/* Flecha Izquierda */}
+                          {canScrollLeft && (
+                            <div className="absolute left-6 top-0 bottom-0 w-12 bg-gradient-to-r from-[#FAFAFA] dark:from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none">
+                              <button 
+                                onClick={() => scrollTabs('left')} 
+                                className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-colors pointer-events-auto active:scale-95"
+                              >
+                                <ChevronLeft size={16} />
+                              </button>
+                            </div>
+                          )}
+                          
+                          {/* Contenedor de Tabs con onScroll */}
+                          <div 
+                            ref={scrollContainerRef}
+                            onScroll={checkScroll}
+                            className="flex flex-nowrap items-center justify-start md:justify-center gap-3 overflow-x-auto hidden-scrollbar py-3 px-1 scroll-smooth"
+                          >
+                      {sortNotesArray(activeGroup.notes.filter(n => !n.parent_note_id && n.status !== 'history'), noteSortMode)
                         .map(note => {
                           const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
                           const isFocused = focusedNoteId === note.id;
@@ -1762,12 +1775,12 @@ function App() {
                                   if (isOpen) toggleNote(activeGroup.id, note.id);
                                 }
                               }}
-                              className={`relative flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 my-0.5 ${
+                              className={`relative flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 ${
                                 isSelected
-                                  ? `bg-[#4940D9] text-white border-[#4940D9] shadow-sm shadow-[#4940D9]/20 scale-[1.02] ${isSearchActive ? 'ring-[3px] ring-amber-400 shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
+                                  ? `bg-[#4940D9] text-white border-[#4940D9] shadow-sm shadow-[#4940D9]/20 scale-[1.02] ${isSearchActive ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-[#FAFAFA] dark:ring-offset-[#13131A] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
                                   : isSearchActive
-                                    ? 'bg-amber-100 dark:bg-amber-900/40 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_10px_rgba(251,192,45,0.3)] ring-1 ring-amber-500/50'
-                                    : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/40 hover:text-indigo-600'
+                                    ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_10px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
+                                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/40 hover:text-indigo-600'
                               }`}
                             >
                               <span className="whitespace-nowrap">
@@ -1791,18 +1804,22 @@ function App() {
                           );
                       })}
                       </div>
-                      
-                      {/* Flecha Derecha (solo visible en md:hidden cuando hay scroll) */}
+
+                      {/* Flecha Derecha */}
                       {canScrollRight && (
-                        <div className="md:hidden absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#FAFAFA] dark:from-[#13131A] to-transparent z-10 flex items-center justify-end pr-1">
-                          <button onClick={() => scrollTabs('right')} className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-colors">
+                        <div className="absolute right-6 top-0 bottom-0 w-12 bg-gradient-to-l from-[#FAFAFA] dark:from-[#13131A] to-transparent z-10 flex items-center justify-end pointer-events-none">
+                          <button 
+                            onClick={() => scrollTabs('right')} 
+                            className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-colors pointer-events-auto active:scale-95"
+                          >
                             <ChevronRight size={16} />
                           </button>
                         </div>
                       )}
                     </div>
-                  )}
-              </div>
+                  </div>
+                )}
+               </div>
             </div>
           )}
               {/* AREA DE LA NOTA - OCUPA EL RESTO DEL ESPACIO */}
@@ -1818,7 +1835,7 @@ function App() {
                         ) : (
                           <div className="flex-1 flex flex-col min-h-0">
                             {activeGroup.notes
-                              .filter(n => (mountedNoteIds.has(n.id) || n.id === activeNoteId) && !n.parent_note_id)
+                              .filter(n => (mountedNoteIds.has(n.id) || n.id === activeNoteId) && !n.parent_note_id && n.status !== 'history')
                               .map(note => {
                                 const isVisible = note.id === activeNoteId;
                                 const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
@@ -1856,6 +1873,7 @@ function App() {
                                       }}
                                       onUpdate={(id, updates) => handleUpdateNoteWrapper(id, updates)}
                                       onDelete={deleteNote}
+                                      onArchive={archiveNote}
                                       onExportNote={downloadNoteAsMarkdown}
                                       onCopyNote={copyNoteToClipboard}
                                       onDuplicate={duplicateNote}
@@ -1872,14 +1890,55 @@ function App() {
                                 );
                               })
                             }
-                          </div>
-                        )}
-                     </div>
-                  ) : (
+
+                            {/* SECCIÓN DE ARCHIVO (ESTILO PIZARRÓN) */}
+                            {activeGroup.notes.filter(n => n.status === 'history').length > 0 && (
+                              <div className="mt-12 space-y-6 pt-12 border-t border-zinc-200 dark:border-zinc-800 mb-20 animate-fadeIn max-w-6xl mx-auto w-full px-6 min-h-[300px]">
+                                <div className="flex items-center gap-3 text-zinc-400 font-bold uppercase tracking-[0.2em] text-[10px]">
+                                   <Archive size={16} className="text-zinc-500/50" /> 
+                                   <span>Archivo ({activeGroup.notes.filter(n => n.status === 'history').length})</span>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
+                                  {activeGroup.notes.filter(n => n.status === 'history').map(note => (
+                                    <div key={note.id} className="p-4 bg-white dark:bg-[#1A1A24]/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex items-center justify-between group hover:border-[#4940D9]/30 hover:shadow-xl transition-all">
+                                       <div className="flex items-center gap-3 truncate">
+                                         <div className="w-8 h-8 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center text-zinc-400">
+                                           <Archive size={16} />
+                                         </div>
+                                         <div className="flex flex-col truncate">
+                                           <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300 truncate">{note.title || 'Sin Título'}</span>
+                                           <span className="text-[10px] text-zinc-400 font-medium">{new Date(note.created_at || '').toLocaleDateString()}</span>
+                                         </div>
+                                       </div>
+                                       <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <button 
+                                             onClick={() => restoreNote(note.id)} 
+                                             className="p-2 rounded-xl text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all active:scale-90" 
+                                             title="Restaurar Nota"
+                                          >
+                                             <RotateCcw size={16}/>
+                                          </button>
+                                          <button 
+                                             onClick={() => deleteNote(note.id)} 
+                                             className="p-2 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-90" 
+                                             title="Eliminar Permanente"
+                                          >
+                                             <Trash2 size={16}/>
+                                          </button>
+                                       </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            </div>
+                         )}
+                      </div>
+                   ) : (
                     <div className="h-full flex flex-col items-center justify-center">
                       <p className="font-medium slide-to-unlock">Crea o selecciona un grupo para comenzar.</p>
                     </div>
-                  )}
+                   )}
                 </div>
               </main>
             </>

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash, Sparkles, FileText, PenLine, ArrowUpRight, GitBranch, Plus, Wind, ListPlus, History } from 'lucide-react';
+import { Archive, ChevronUp, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash, Sparkles, FileText, PenLine, ArrowUpRight, GitBranch, Plus, Wind, ListPlus, History } from 'lucide-react';
 import { Note, NoteFont } from '../types';
 import { SmartNotesEditor, SmartNotesEditorRef } from '../src/components/editor/SmartNotesEditor';
 import { ChecklistEditor, ChecklistEditorRef, parseMarkdownToChecklist, serializeChecklistToMarkdown, serializeChecklistToPlainMarkdown } from '../src/components/editor/ChecklistEditor';
@@ -19,6 +19,7 @@ interface AccordionItemProps {
   onToggle: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Note>) => void;
   onDelete: (id: string) => void;
+  onArchive?: (id: string) => void;
   onExportNote?: (note: Note) => void;
   onCopyNote?: (note: Note) => void;
   onDuplicate?: (noteId: string) => void;
@@ -98,17 +99,18 @@ const SummaryTabContent: React.FC<{
   noteLineHeight?: string;
   showLineNumbers?: boolean;
   searchQuery?: string;
-  onDelete: (id: string) => void;
   onPromote?: (content: string, title: string) => void;
   updateScratchpad: (id: string, text: string) => void;
   updateContent: (id: string, text: string) => void;
-}> = ({ summary, noteFont, noteFontSize, noteLineHeight, showLineNumbers, searchQuery, onDelete, onPromote, updateScratchpad, updateContent }) => {
+  showScratch: boolean;
+  setShowScratch: (val: boolean | ((v: boolean) => boolean)) => void;
+  onDelete: (id: string) => void;
+}> = ({ summary, noteFont, noteFontSize, noteLineHeight, showLineNumbers, searchQuery, onDelete, onPromote, updateScratchpad, updateContent, showScratch, setShowScratch }) => {
   const scratchRef = useRef<SmartNotesEditorRef>(null);
   const [localScratch, setLocalScratch] = useState(summary.scratchpad || '');
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showMobileWhiteboard, setShowMobileWhiteboard] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -146,10 +148,10 @@ const SummaryTabContent: React.FC<{
             {/* Botón Pizarrón (Móvil) */}
             <button
               className="md:hidden p-1.5 rounded-lg text-zinc-500 hover:text-violet-300 hover:bg-violet-500/10 transition-colors flex items-center gap-1.5"
-              onClick={(e) => { e.stopPropagation(); setShowMobileWhiteboard(!showMobileWhiteboard); }}
-              title={showMobileWhiteboard ? "Ver Resumen" : "Ver Pizarrón"}
+              onClick={(e) => { e.stopPropagation(); setShowScratch(!showScratch); }}
+              title={showScratch ? "Ver Resumen" : "Ver Pizarrón"}
             >
-              {showMobileWhiteboard ? <Sparkles size={14} /> : <PenLine size={14} />}
+              {showScratch ? <Sparkles size={14} /> : <PenLine size={14} />}
             </button>
             <div className="relative" ref={menuRef}>
                <button 
@@ -192,7 +194,7 @@ const SummaryTabContent: React.FC<{
             </div>
           </div>
         </div>
-        <div className={`px-4 py-3 min-w-0 ${showMobileWhiteboard ? 'hidden md:block' : 'block'}`}>
+        <div className={`px-4 py-3 min-w-0 ${showScratch ? 'hidden md:block' : 'block'}`}>
           <SmartNotesEditor
             noteId={`summary_${summary.id}`}
             initialContent={summary.content || ''}
@@ -206,7 +208,7 @@ const SummaryTabContent: React.FC<{
         </div>
       </div>
 
-      <div className={`flex flex-col flex-1 min-h-0 rounded-xl border border-violet-200/50 dark:border-violet-900/30 bg-violet-50/10 dark:bg-violet-900/5 animate-fadeIn overflow-hidden ${!showMobileWhiteboard ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`flex flex-col flex-1 min-h-0 rounded-xl border border-violet-200/50 dark:border-violet-900/30 bg-violet-50/10 dark:bg-violet-900/5 animate-fadeIn overflow-hidden ${!showScratch ? 'hidden md:flex' : 'flex'}`}>
         <div className="flex items-center gap-2 px-3 py-2 border-b border-violet-200/20 shrink-0">
           <PenLine size={11} className="text-violet-400" />
           <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest flex-1">Pizarrón</span>
@@ -415,6 +417,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   onToggle,
   onUpdate,
   onDelete,
+  onArchive,
   onExportNote,
   onCopyNote,
   onDuplicate,
@@ -458,10 +461,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
    const { 
      aiPanelOpenByNote, 
      activeTabByNote, 
-     pizarronVisibleByNoteAndTab,
+     isNotesPizarronOpen,
      setAiPanelOpen, 
      setActiveTab: setStoreActiveTab,
-     setPizarronVisible,
+     setIsNotesPizarronOpen,
      globalTasks
    } = useUIStore();
    const { activeNoteId, activeNote, breadcrumbPath, navigate } = useNoteTree(note.id);
@@ -530,10 +533,11 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
    const isInKanban = globalTasks?.some(t => t.id === note.id || t.linked_note_id === note.id) || false;
 
   // ── PIZARRON DE LA NOTA ORIGINAL (PERSISTENTE) ──────────────────────────────
-  const showNoteScratch = pizarronVisibleByNoteAndTab[displayNoteId]?.[activeTab] ?? false;
+  // ── PIZARRON DE LA NOTA ORIGINAL (PERSISTENTE GLOBAL - COMO TIKTOK) ────────
+  const showNoteScratch = isNotesPizarronOpen;
   const setShowNoteScratch = (val: boolean | ((v: boolean) => boolean)) => {
     const next = typeof val === 'function' ? val(showNoteScratch) : val;
-    setPizarronVisible(displayNoteId, activeTab, next);
+    setIsNotesPizarronOpen(next);
   };
   const [localNoteScratch, setLocalNoteScratch] = useState(note.scratchpad || '');
   const noteScratchRef = useRef<SmartNotesEditorRef>(null);
@@ -906,8 +910,13 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 {/* SEPARADOR 3 */}
                 <div className="border-t border-zinc-100 dark:border-zinc-700 my-0.5" />
                 
-                {/* GRUPO 4: Peligro */}
-                <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false); if (confirm('¿Estás seguro de eliminar esta nota?')) onDelete(note.id); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"><Trash2 size={14} />Eliminar Nota</button>
+                {/* GRUPO 4: Gestión */}
+                {onArchive && (
+                  <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false); onArchive(note.id); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 font-bold transition-colors">
+                    <Archive size={14} /> Archivar Nota
+                  </button>
+                )}
+                <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false); if (confirm('¿Estás seguro de eliminar esta nota?')) onDelete(note.id); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"><Trash2 size={14} />Eliminar Permanente</button>
               </div>
             )}
           </div>
@@ -1032,16 +1041,6 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               );
             })}
 
-              {/* Botón + Subnota */}
-              {session?.user && (
-                <button
-                  onClick={handleCreateSubnote}
-                  title="Crear sub-nota"
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold border shrink-0 text-emerald-400 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/15 transition-all"
-                >
-                  <Plus size={11} /> Sub
-                </button>
-              )}
             </div>
           )}
 
@@ -1091,6 +1090,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                     updateScratchpad={updateScratchpad}
                     updateContent={updateSummaryContent}
                     searchQuery={searchQuery}
+                    showScratch={showNoteScratch}
+                    setShowScratch={setShowNoteScratch}
                   />
                 </div>
               );
