@@ -50,9 +50,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       reminders: { bg: 'bg-[#1F3760]', hover: 'hover:bg-[#152643]', shadow: 'shadow-[#1F3760]/30', text: 'text-white' },
       timers: { bg: 'bg-[#2563EB]', hover: 'hover:bg-[#1D4ED8]', shadow: 'shadow-[#2563EB]/30', text: 'text-white' },
       kanban: { bg: 'bg-[#10B981]', hover: 'hover:bg-[#059669]', shadow: 'shadow-[#10B981]/30', text: 'text-emerald-950' },
-      braindump: { bg: 'bg-[#FFD700]', hover: 'hover:bg-[#E5C100]', shadow: 'shadow-[#FFD700]/30', text: 'text-amber-950' },
+      tiktok: { bg: 'bg-[#EE1D52]', hover: 'hover:bg-[#D61A4A]', shadow: 'shadow-[#EE1D52]/30', text: 'text-white' },
       translator: { bg: 'bg-[#8B5CF6]', hover: 'hover:bg-[#7C3AED]', shadow: 'shadow-[#8B5CF6]/30', text: 'text-white' },
-      tiktok: { bg: 'bg-[#EE1D52]', hover: 'hover:bg-[#D61A4A]', shadow: 'shadow-[#EE1D52]/30', text: 'text-white' }
+      braindump: { bg: 'bg-[#FFD700]', hover: 'hover:bg-[#E5C100]', shadow: 'shadow-[#FFD700]/30', text: 'text-amber-950' },
     };
 
     // ESTADO 1: ACTIVO (Color de Identidad) - Es la app que estás mirando en este momento exacto
@@ -180,15 +180,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Languages size={20} />
         </button>
 
-        {/* Botón Pizarrón */}
-        <button
-          onClick={() => setGlobalView('braindump')}
-          className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all shrink-0 ${getAppStyle('braindump')}`}
-          title={t('sidebar.braindump')}
-        >
-          <PenTool size={20} />
-        </button>
-
         {/* TikTok Button */}
         <button
           onClick={() => setGlobalView('tiktok')}
@@ -196,6 +187,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           title="TikTok a Notas"
         >
           <Play size={20} />
+        </button>
+
+        {/* Botón Pizarrón */}
+        <button
+          onClick={() => setGlobalView('braindump')}
+          className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all shrink-0 ${getAppStyle('braindump')}`}
+          title={t('sidebar.braindump')}
+        >
+          <PenTool size={20} />
         </button>
 
         <div className="w-8 h-0.5 bg-zinc-300 dark:bg-[#2D2D42] rounded-full shrink-0"></div>

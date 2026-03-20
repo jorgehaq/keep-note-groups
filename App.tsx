@@ -1791,12 +1791,12 @@ function App() {
                       <div className="max-w-6xl mx-auto relative px-0">
                           {/* Flecha Izquierda */}
                           {canScrollLeft && (
-                            <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#FAFAFA] dark:from-[#13131A] via-[#FAFAFA] dark:via-[#13131A] to-transparent z-10 flex items-center justify-start pl-6 pointer-events-none">
+                            <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#FAFAFA] dark:from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none transition-opacity duration-150 ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`}>
                               <button 
                                 onClick={() => scrollTabs('left')} 
-                                className="p-1.5 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-colors pointer-events-auto active:scale-95 border border-zinc-200 dark:border-zinc-700"
+                                className={`p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-colors active:scale-95 border border-zinc-200 dark:border-zinc-700 ml-1 ${canScrollLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
                               >
-                                <ChevronLeft size={18} />
+                                <ChevronLeft size={14} />
                               </button>
                             </div>
                           )}
@@ -1805,7 +1805,7 @@ function App() {
                           <div 
                             ref={scrollContainerRef}
                             onScroll={checkScroll}
-                            className="flex flex-nowrap items-center justify-start gap-4 overflow-x-auto hidden-scrollbar py-3 pl-32 pr-32 scroll-smooth"
+                            className={`flex flex-nowrap items-center gap-4 overflow-x-auto hidden-scrollbar py-3 px-10 scroll-smooth transition-all ${(!canScrollLeft && !canScrollRight) ? 'justify-center' : 'justify-start'}`}
                           >
                       {sortNotesArray(activeGroup.notes.filter(n => !n.parent_note_id && n.status !== 'history'), noteSortMode)
                         .map(note => {
@@ -1888,12 +1888,12 @@ function App() {
 
                       {/* Flecha Derecha */}
                       {canScrollRight && (
-                        <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#FAFAFA] dark:from-[#13131A] via-[#FAFAFA] dark:via-[#13131A] to-transparent z-10 flex items-center justify-end pr-6 pointer-events-none">
+                        <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#FAFAFA] dark:from-[#13131A] to-transparent z-10 flex items-center justify-end pointer-events-none transition-opacity duration-150 ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}>
                           <button 
                             onClick={() => scrollTabs('right')} 
-                            className="p-1.5 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-colors pointer-events-auto active:scale-95 border border-zinc-200 dark:border-zinc-700"
+                            className={`p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-colors active:scale-95 border border-zinc-200 dark:border-zinc-700 mr-1 ${canScrollRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
                           >
-                            <ChevronRight size={18} />
+                            <ChevronRight size={14} />
                           </button>
                         </div>
                       )}

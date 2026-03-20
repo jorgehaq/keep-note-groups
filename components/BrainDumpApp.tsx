@@ -770,16 +770,16 @@ export const BrainDumpApp: React.FC<{
                     <div className="max-w-6xl mx-auto relative px-0">
                         {/* Flecha Izquierda */}
                         {canScrollLeft && (
-                            <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-start pl-6 pointer-events-none">
-                                <button onClick={() => scrollTabs('left')} className="p-1.5 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors pointer-events-auto active:scale-90 border border-zinc-700">
-                                    <ChevronLeft size={18} />
+                            <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none transition-opacity duration-150 ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`}>
+                                <button onClick={() => scrollTabs('left')} className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors active:scale-95 border border-zinc-700 ml-1 ${canScrollLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+                                    <ChevronLeft size={14} />
                                 </button>
                             </div>
                         )}
                         <div 
                             ref={scrollContainerRef}
                             onScroll={checkScroll}
-                            className="flex flex-nowrap items-center justify-start gap-4 overflow-x-auto hidden-scrollbar scroll-smooth py-3 pl-32 pr-32"
+                            className={`flex flex-nowrap items-center gap-4 overflow-x-auto hidden-scrollbar scroll-smooth py-3 px-10 transition-all ${(!canScrollLeft && !canScrollRight) ? 'justify-center' : 'justify-start'}`}
                         >
                             {rootPizarrones.length === 0 ? (
                                 <div className="text-xs text-zinc-600 italic">No hay pizarrones activos</div>
@@ -817,9 +817,9 @@ export const BrainDumpApp: React.FC<{
                         </div>
                         {/* Flecha Derecha */}
                         {canScrollRight && (
-                            <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-end pr-6 pointer-events-none">
-                                <button onClick={() => scrollTabs('right')} className="p-1.5 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors pointer-events-auto active:scale-90 border border-zinc-700">
-                                    <ChevronRight size={18} />
+                            <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#13131A] to-transparent z-10 flex items-center justify-end pointer-events-none transition-opacity duration-150 ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}>
+                                <button onClick={() => scrollTabs('right')} className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors active:scale-95 border border-zinc-700 mr-1 ${canScrollRight ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+                                    <ChevronRight size={14} />
                                 </button>
                             </div>
                         )}
@@ -1079,7 +1079,7 @@ export const BrainDumpApp: React.FC<{
                                             </button>
                                         </div>
 
-                                        <div ref={tabBarRef} className="flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0 hidden-scrollbar px-10">
+                                        <div ref={tabBarRef} className={`flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0 hidden-scrollbar px-10 transition-all ${(!canScrollTabsLeft && !canScrollTabsRight) ? 'justify-center' : 'justify-start'}`}>
                                         {(() => {
                                             const originalIsMatch = Boolean(searchQuery?.trim() && (displayDump.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || displayDump.scratchpad?.toLowerCase().includes(searchQuery.trim().toLowerCase())));
                                             return (

@@ -600,7 +600,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
             <div 
               ref={videoTrayRef}
               onScroll={checkTrayScroll}
-              className="flex flex-nowrap items-center justify-start gap-4 overflow-x-auto hidden-scrollbar scroll-smooth py-3 px-10"
+              className={`flex flex-nowrap items-center gap-4 overflow-x-auto hidden-scrollbar scroll-smooth py-3 px-10 transition-all ${(!canScrollTrayLeft && !canScrollTrayRight) ? 'justify-center' : 'justify-start'}`}
             >
               {rootVideos.length === 0 ? (
                 <div className="text-xs text-zinc-600 italic px-4">No hay videos activos</div>
@@ -885,7 +885,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                   <div 
                     ref={tabBarRef}
                     onScroll={checkScroll}
-                    className="flex flex-nowrap items-center gap-2 overflow-x-auto hidden-scrollbar scroll-smooth py-1 px-10"
+                    className={`flex flex-nowrap items-center gap-2 overflow-x-auto hidden-scrollbar scroll-smooth py-1 px-10 transition-all ${(!canScrollLeft && !canScrollRight) ? 'justify-center' : 'justify-start'}`}
                   >
                     {(() => {
                       const isTranscriptionMatch = searchQuery?.trim() && (

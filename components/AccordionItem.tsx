@@ -1098,7 +1098,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 </button>
               </div>
 
-              <div ref={tabBarRef} className="flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0 hidden-scrollbar px-10">
+              <div ref={tabBarRef} className={`flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0 hidden-scrollbar px-10 transition-all ${(!canScrollLeft && !canScrollRight) ? 'justify-center' : 'justify-start'}`}>
 
               {/* Tab Original */}
               <button
