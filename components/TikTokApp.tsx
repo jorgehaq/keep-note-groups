@@ -11,7 +11,7 @@ import {
 import { supabase } from '../src/lib/supabaseClient';
 import { useUIStore } from '../src/lib/store';
 import { Session } from '@supabase/supabase-js';
-import { TikTokVideo, TikTokQueueItem } from '../types';
+import { TikTokVideo, TikTokQueueItem, BrainDump } from '../types';
 import { KanbanSemaphore } from './KanbanSemaphore';
 import { TikTokAIPanel } from './TikTokAIPanel';
 import { SmartNotesEditor, SmartNotesEditorRef } from '../src/components/editor/SmartNotesEditor';
@@ -127,7 +127,19 @@ const NewTikTokModal: React.FC<{
 
 // --- MAIN COMPONENT ---
 
-export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
+export const TikTokApp: React.FC<{ 
+  session: Session,
+  allSummaries?: any[],
+  allSubnotes?: any[],
+  searchQuery?: string,
+  onSearchQueryChange?: (q: string) => void
+}> = ({ 
+  session,
+  allSummaries = [],
+  allSubnotes = [],
+  searchQuery = "",
+  onSearchQueryChange
+}) => {
   const { 
     isTikTokMaximized, setIsTikTokMaximized, 
     tikTokVideos, setTikTokVideos, updateTikTokVideoSync, deleteTikTokVideoSync,
@@ -139,13 +151,32 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
     activeTabByVideo, setActiveTabByVideo,
     isTikTokPizarronOpen, setIsTikTokPizarronOpen,
     pizarronVisibleByNoteAndTab, setPizarronVisible,
-    groups, activeGroupId
+    groups, activeGroupId,
+    brainDumps
   } = useUIStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  
+  // Local search state for responsiveness
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+  
+  // Sync local search with external changes (like clearing from global)
+  useEffect(() => {
+    if (searchQuery !== localSearch) {
+      setLocalSearch(searchQuery);
+    }
+  }, [searchQuery]);
+
+  // Sync external search with local changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onSearchQueryChange?.(localSearch);
+    }, 50); // Minimal delay to keep it responsive
+    return () => clearTimeout(timer);
+  }, [localSearch]);
+
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const [sortMode, setSortMode] = useState<'date-desc' | 'date-asc' | 'created-desc' | 'created-asc' | 'alpha-asc' | 'alpha-desc'>(() => {
     return (localStorage.getItem('tiktok-sort-mode') as any) || 'created-asc';
@@ -261,6 +292,69 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
   useEffect(() => {
     checkScroll();
   }, [unifiedTabs, checkScroll]);
+
+  // Search Match Logic
+  const checkVideoMatch = useCallback((video: TikTokVideo, query: string): boolean => {
+    if (!query?.trim()) return false;
+    const q = query.toLowerCase();
+    
+    // 1. Info básica
+    if ((video.title || '').toLowerCase().includes(q)) return true;
+    if ((video.summary || '').toLowerCase().includes(q)) return true;
+    if ((video.author || '').toLowerCase().includes(q)) return true;
+    if ((video.content || '').toLowerCase().includes(q)) return true;
+    if ((video.scratchpad || '').toLowerCase().includes(q)) return true;
+    
+    // 2. Pizarrones asociados DIRECTAMENTE al video (árbol completo)
+    const associatedDumps = brainDumps.filter(d => d.tiktok_video_id === video.id);
+    const checkDumpTreeMatch = (dump: BrainDump): boolean => {
+      if ((dump.title || '').toLowerCase().includes(q)) return true;
+      if ((dump.content || '').toLowerCase().includes(q)) return true;
+      if ((dump.scratchpad || '').toLowerCase().includes(q)) return true;
+      const kids = brainDumps.filter(k => k.parent_id === dump.id);
+      return kids.some(checkDumpTreeMatch);
+    };
+    if (associatedDumps.some(checkDumpTreeMatch)) return true;
+
+    // 3. Subnotes y sus Pizarrones (Deep recursive for the video's notes)
+    const videoSubnotes = allSubnotes.filter(sn => sn.tiktok_video_id === video.id);
+    const checkNoteDeepMatch = (note: any): boolean => {
+      if ((note.title || '').toLowerCase().includes(q) || (note.content || '').toLowerCase().includes(q) || (note.scratchpad || '').toLowerCase().includes(q)) return true;
+      // Search summaries of this note
+      const noteSums = allSummaries.filter(s => s.note_id === note.id);
+      if (noteSums.some(s => (s.target_objective || '').toLowerCase().includes(q) || (s.content || '').toLowerCase().includes(q) || (s.scratchpad || '').toLowerCase().includes(q))) return true;
+      // Search pizarrones linked to this note
+      const snSums = allSummaries.filter(s => s.note_id === note.id);
+      if (snSums.some(s => {
+        if (!s.brain_dump_id) return false;
+        const linkedDump = brainDumps.find(d => d.id === s.brain_dump_id);
+        return linkedDump ? checkDumpTreeMatch(linkedDump) : false;
+      })) return true;
+      // Recursive children notes
+      const kids = allSubnotes.filter(n => n.parent_id === note.id);
+      return kids.some(checkNoteDeepMatch);
+    };
+    if (videoSubnotes.some(checkNoteDeepMatch)) return true;
+
+    // 4. Summaries y sus Pizarrones
+    const videoSums = allSummaries.filter(s => s.tiktok_video_id === video.id);
+    const matchSums = videoSums.some(s => {
+      if ((s.target_objective || '').toLowerCase().includes(q) || (s.content || '').toLowerCase().includes(q) || (s.scratchpad || '').toLowerCase().includes(q)) return true;
+      // Pizarrones vinculados a este resumen
+      if (s.brain_dump_id) {
+        const linkedDump = brainDumps.find(d => d.id === s.brain_dump_id);
+        if (linkedDump && checkDumpTreeMatch(linkedDump)) return true;
+      }
+      return false;
+    });
+    if (matchSums) return true;
+
+    // 5. HIJOS RECURSIVAMENTE (Sub-tiktoks)
+    const children = tikTokVideos.filter(v => v.parent_id === video.id);
+    if (children.some(child => checkVideoMatch(child, query))) return true;
+    
+    return false;
+  }, [brainDumps, allSubnotes, allSummaries, tikTokVideos]);
 
   // Video Tray Scroll Logic
   const checkTrayScroll = useCallback(() => {
@@ -507,10 +601,15 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                 <input 
                   type="text" 
                   placeholder="Buscar TikTok..." 
-                  value={searchQuery} 
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className={`h-9 pl-9 pr-8 rounded-xl border transition-all outline-none text-xs w-32 md:w-32 lg:w-40 ${searchQuery?.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 placeholder-amber-700/50 dark:placeholder-amber-400/50 font-semibold' : 'bg-zinc-900/50 border-zinc-800 text-zinc-200 placeholder:text-zinc-500 hover:border-zinc-700 focus:border-[#EE1D52]/50'}`}
+                  value={localSearch} 
+                  onChange={e => setLocalSearch(e.target.value)}
+                  className={`h-9 pl-9 pr-8 rounded-xl border transition-all outline-none text-xs w-32 md:w-32 lg:w-40 ${localSearch?.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 placeholder-amber-700/50 dark:placeholder-amber-400/50 font-semibold' : 'bg-zinc-900/50 border-zinc-800 text-zinc-200 placeholder:text-zinc-500 hover:border-zinc-700 focus:border-[#EE1D52]/50'}`}
                 />
+                {localSearch?.trim() && (
+                  <button onClick={() => setLocalSearch('')} className="absolute right-2 p-1 text-zinc-500 hover:text-white bg-zinc-800/80 rounded-full transition-colors">
+                    <X size={10} />
+                  </button>
+                )}
               </div>
 
               {/* Bell Reminder */}
@@ -606,11 +705,8 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                 <div className="text-xs text-zinc-600 italic px-4">No hay videos activos</div>
               ) : (
                 rootVideos.map(video => {
-                  const isMatch = searchQuery?.trim() && (
-                    video.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    video.summary?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    video.author?.toLowerCase().includes(searchQuery.toLowerCase())
-                  );
+                  const queryToUse = localSearch?.trim() || searchQuery?.trim() || "";
+                  const isMatch = !!queryToUse && checkVideoMatch(video, queryToUse);
                   return (
                     <button
                       key={video.id}
@@ -620,9 +716,9 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                       }}
                       className={`shrink-0 flex items-center gap-3 px-4 py-2 rounded-xl border transition-all ${
                         focusedVideoId === video.id 
-                          ? `bg-[#EE1D52] text-white border-[#EE1D52] shadow-lg shadow-[#EE1D52]/20 scale-[1.02] ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-[#13131A] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
+                          ? `bg-[#EE1D52] text-white border-[#EE1D52] shadow-lg shadow-[#EE1D52]/20 scale-[1.02] ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-[#13131A] shadow-[0_0_20px_rgba(251,192,45,0.5)]' : ''}` 
                           : isMatch
-                            ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
+                            ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_15px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
                             : 'bg-zinc-900/50 text-zinc-400 border-zinc-800 hover:border-[#EE1D52]/40 hover:text-[#EE1D52]'
                       }`}
                     >
@@ -630,7 +726,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                         <img src={video.thumbnail} className="w-full h-full object-cover" alt="" />
                       </div>
                       <div className="max-w-[150px] truncate text-[11px] font-bold">
-                        {highlightText(video.title || "Procesando...", searchQuery)}
+                        {highlightText(video.title || "Procesando...", queryToUse)}
                       </div>
                     </button>
                   );
@@ -655,13 +751,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
       <div className="flex-1 overflow-hidden flex flex-col">
         {/* If there are videos, show the editor directly. If one is focused, show it. */}
         {focusedVideo ? (() => {
-          const isGlobalVideoMatch = searchQuery?.trim() && (
-            focusedVideo.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            focusedVideo.summary?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            focusedVideo.author?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            subnotes.some(sn => sn.title?.toLowerCase().includes(searchQuery.toLowerCase()) || sn.content?.toLowerCase().includes(searchQuery.toLowerCase())) ||
-            aiSummaries.some(s => s.target_objective?.toLowerCase().includes(searchQuery.toLowerCase()) || s.content?.toLowerCase().includes(searchQuery.toLowerCase()))
-          );
+          const isGlobalVideoMatch = searchQuery?.trim() && checkVideoMatch(focusedVideo, searchQuery);
 
           const titleMatch = searchQuery?.trim() && (focusedVideo.title || '').toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -931,11 +1021,24 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                           );
                         }
                         
-                        const isMatch = searchQuery?.trim() && (
-                          (summary.target_objective || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (summary.content || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (summary.scratchpad || '').toLowerCase().includes(searchQuery.toLowerCase())
-                        );
+                        const queryToUse = localSearch?.trim() || searchQuery?.trim() || "";
+                        const isMatch = !!queryToUse && (() => {
+                          const q = queryToUse.toLowerCase();
+                          if ((summary.target_objective || '').toLowerCase().includes(q) || (summary.content || '').toLowerCase().includes(q) || (summary.scratchpad || '').toLowerCase().includes(q)) return true;
+                          // Pizarrones vinculados a este resumen
+                          if (summary.brain_dump_id) {
+                            const linkedDump = brainDumps.find(d => d.id === summary.brain_dump_id);
+                            const checkDumpTreeMatch = (dump: BrainDump): boolean => {
+                              if ((dump.title || '').toLowerCase().includes(q)) return true;
+                              if ((dump.content || '').toLowerCase().includes(q)) return true;
+                              if ((dump.scratchpad || '').toLowerCase().includes(q)) return true;
+                              const kids = brainDumps.filter(k => k.parent_id === dump.id);
+                              return kids.some(checkDumpTreeMatch);
+                            };
+                            if (linkedDump && checkDumpTreeMatch(linkedDump)) return true;
+                          }
+                          return false;
+                        })();
                         const isActive = activeTab === `summary_${summary.id}`;
 
                         return (
@@ -947,12 +1050,14 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                                 isActive 
                                   ? `bg-violet-600 text-white border-violet-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
                                   : isMatch
-                                    ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
+                                    ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_12px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
                                     : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-violet-400'
                               }`}
                             >
                               <Sparkles size={11} /> 
-                              <span className="max-w-[120px] truncate">{summary.target_objective || 'Resumen'}</span>
+                              <span className="max-w-[120px] truncate">
+                                {queryToUse ? highlightText(summary.target_objective || 'Resumen', queryToUse) : (summary.target_objective || 'Resumen')}
+                              </span>
                               {activeTab === `summary_${summary.id}` && (
                                 <span 
                                   onClick={(e) => { e.stopPropagation(); deleteSummary(summary.id); setActiveTab('original'); }}
@@ -966,78 +1071,101 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                         );
                       } else {
                         const note = tab.data;
-                        const isMatch = searchQuery?.trim() && (
-                          (note.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (note.content || '').toLowerCase().includes(searchQuery.toLowerCase())
-                        );
-                        const isActive = activeTab === `note_${note.id}`;
+                        const queryToUse = localSearch?.trim() || searchQuery?.trim() || "";
+                        const isMatch = !!queryToUse && (() => {
+                          const q = queryToUse.toLowerCase();
+                          const checkNoteDeepMatch = (n: any): boolean => {
+                            if ((n.title || '').toLowerCase().includes(q) || (n.content || '').toLowerCase().includes(q) || (n.scratchpad || '').toLowerCase().includes(q)) return true;
+                            // Search summaries of this note
+                            const nSums = allSummaries.filter(s => s.note_id === n.id);
+                            if (nSums.some(s => (s.target_objective || '').toLowerCase().includes(q) || (s.content || '').toLowerCase().includes(q) || (s.scratchpad || '').toLowerCase().includes(q))) return true;
+                            // Search pizarrones linked to this note
+                            const checkDumpTreeMatch = (dump: BrainDump): boolean => {
+                              if ((dump.title || '').toLowerCase().includes(q)) return true;
+                              if ((dump.content || '').toLowerCase().includes(q)) return true;
+                              if ((dump.scratchpad || '').toLowerCase().includes(q)) return true;
+                              const kids = brainDumps.filter(k => k.parent_id === dump.id);
+                              return kids.some(checkDumpTreeMatch);
+                            };
+                            if (nSums.some(s => {
+                              if (!s.brain_dump_id) return false;
+                              const linkedDump = brainDumps.find(d => d.id === s.brain_dump_id);
+                              return linkedDump ? checkDumpTreeMatch(linkedDump) : false;
+                            })) return true;
+                            // Recursive subnotes
+                            const kids = subnotes.filter(child => child.parent_note_id === n.id);
+                            return kids.some(checkNoteDeepMatch);
+                          };
+                          return checkNoteDeepMatch(note);
+                        })();
+                          const isActive = activeTab === `note_${note.id}`;
 
-                        return (
-                          <button 
-                            key={note.id}
-                            onClick={() => setActiveTab(`note_${note.id}`)} 
-                            data-active-tab={isActive || undefined}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
-                              isActive 
-                                ? `bg-emerald-600 text-white border-emerald-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
-                                : isMatch
-                                  ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
-                                  : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-emerald-400'
-                            }`}
-                          >
-                            <StickyNote size={11} /> 
-                            {editingSubnoteId === note.id ? (
-                              <input 
-                                autoFocus
-                                type="text"
-                                value={tempSubnoteTitle}
-                                onChange={(e) => setTempSubnoteTitle(e.target.value)}
-                                onFocus={(e) => e.currentTarget.select()} // 🚀 NUEVO: Seleccionar al entrar
-                                className="bg-zinc-800 text-white border-emerald-500 border rounded px-1 outline-none text-[11px] max-w-[120px]"
-                                placeholder="Título..."
-                                onBlur={() => {
-                                  // Solo guardar si hay un cambio real
-                                  if (tempSubnoteTitle.trim() !== (note.title || '')) {
-                                    updateSubnote(note.id, { title: tempSubnoteTitle.trim() });
-                                  }
-                                  setEditingSubnoteId(null);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
+                          return (
+                            <button 
+                              key={note.id}
+                              onClick={() => setActiveTab(`note_${note.id}`)} 
+                              data-active-tab={isActive || undefined}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
+                                isActive 
+                                  ? `bg-emerald-600 text-white border-emerald-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
+                                  : isMatch
+                                    ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_12px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
+                                    : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-emerald-400'
+                              }`}
+                            >
+                              <StickyNote size={11} /> 
+                              {editingSubnoteId === note.id ? (
+                                <input 
+                                  autoFocus
+                                  type="text"
+                                  value={tempSubnoteTitle}
+                                  onChange={(e) => setTempSubnoteTitle(e.target.value)}
+                                  onFocus={(e) => e.currentTarget.select()} // 🚀 NUEVO: Seleccionar al entrar
+                                  className="bg-zinc-800 text-white border-emerald-500 border rounded px-1 outline-none text-[11px] max-w-[120px]"
+                                  placeholder="Título..."
+                                  onBlur={() => {
+                                    // Solo guardar si hay un cambio real
                                     if (tempSubnoteTitle.trim() !== (note.title || '')) {
                                       updateSubnote(note.id, { title: tempSubnoteTitle.trim() });
                                     }
                                     setEditingSubnoteId(null);
-                                  } else if (e.key === 'Escape') {
-                                    setEditingSubnoteId(null);
-                                  }
-                                  e.stopPropagation();
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            ) : (
-                              <span 
-                                className="max-w-[120px] truncate cursor-text"
-                                onDoubleClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingSubnoteId(note.id);
-                                  setTempSubnoteTitle(note.title || '');
-                                }}
-                                title="Doble clic para renombrar"
-                              >
-                                {note.title || 'Sin título'}
-                              </span>
-                            )}
-                            {activeTab === `note_${note.id}` && (
-                              <span 
-                                onClick={(e) => { e.stopPropagation(); deleteSubnote(note.id); setActiveTab('original'); }}
-                                className="ml-1 p-0.5 hover:bg-black/20 rounded transition-colors"
-                              >
-                                <Trash2 size={10} />
-                              </span>
-                            )}
-                          </button>
-                        );
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      if (tempSubnoteTitle.trim() !== (note.title || '')) {
+                                        updateSubnote(note.id, { title: tempSubnoteTitle.trim() });
+                                      }
+                                      setEditingSubnoteId(null);
+                                    } else if (e.key === 'Escape') {
+                                      setEditingSubnoteId(null);
+                                    }
+                                    e.stopPropagation();
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              ) : (
+                                <span 
+                                  className="max-w-[120px] truncate cursor-text"
+                                  onDoubleClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingSubnoteId(note.id);
+                                    setTempSubnoteTitle(note.title || '');
+                                  }}
+                                  title="Doble clic para renombrar"
+                                >
+                                  {queryToUse ? highlightText(note.title || 'Sin título', queryToUse) : (note.title || 'Sin título')}
+                                </span>
+                              )}
+                              {activeTab === `note_${note.id}` && (
+                                <span 
+                                  onClick={(e) => { e.stopPropagation(); deleteSubnote(note.id); setActiveTab('original'); }}
+                                  className="ml-1 p-0.5 hover:bg-black/20 rounded transition-colors"
+                                >
+                                  <Trash2 size={10} />
+                                </span>
+                              )}
+                            </button>
+                          );
                       }
                     })}
                   </div>
@@ -1173,6 +1301,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                             noteId={`scratch_${focusedVideo.id}`}
                             initialContent={focusedVideo.scratchpad || ""}
                             onChange={(c) => debouncedUpdateVideo(focusedVideo.id, { scratchpad: c })}
+                            searchQuery={searchQuery}
                           />
                         )}
                         {activeTab.startsWith('summary_') && (() => {
@@ -1184,6 +1313,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                               noteId={summary.id}
                               initialContent={summary.scratchpad || ""}
                               onChange={(c) => updateSummaryScratchpad(summary.id, c)}
+                              searchQuery={searchQuery}
                             />
                           ) : null;
                         })()}
@@ -1196,6 +1326,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                               noteId={note.id}
                               initialContent={note.scratchpad || ""}
                               onChange={(c) => updateSubnote(note.id, { scratchpad: c })}
+                              searchQuery={searchQuery}
                             />
                           ) : null;
                         })()}
@@ -1214,29 +1345,26 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                   /* GRID DE VIDEOS ACTIVOS */
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {rootVideos.map(video => {
-                      const isMatch = searchQuery?.trim() && (
-                        video.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        video.summary?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        video.author?.toLowerCase().includes(searchQuery.toLowerCase())
-                      );
+                      const queryToUse = localSearch?.trim() || searchQuery?.trim() || "";
+                      const isMatch = !!queryToUse && checkVideoMatch(video, queryToUse);
                       return (
                         <div 
                           key={video.id} 
                           onClick={() => setFocusedVideoId(video.id)}
                           className={`group bg-white dark:bg-[#1A1A24] border rounded-2xl p-5 transition-all cursor-pointer flex flex-col gap-4 relative ${
                             isMatch
-                              ? 'border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
+                              ? 'border-amber-500 ring-2 ring-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
                               : 'border-zinc-200 dark:border-[#2D2D42] hover:border-[#EE1D52]/40 hover:shadow-xl'
                           }`}
                         >
-                        <div className="flex gap-4">
-                          <div className="w-16 h-20 rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 shrink-0 shadow-md">
-                            <img src={video.thumbnail} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
-                          </div>
-                          <div className="flex-1 min-w-0 flex flex-col justify-center">
-                            <h3 className="font-bold text-zinc-800 dark:text-zinc-100 truncate text-sm">
-                              {highlightText(video.title || "Procesando...", searchQuery)}
-                            </h3>
+                          <div className="flex gap-4">
+                            <div className="w-16 h-20 rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 shrink-0 shadow-md">
+                              <img src={video.thumbnail} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
+                            </div>
+                            <div className="flex-1 min-w-0 flex flex-col justify-center">
+                              <h3 className="font-bold text-zinc-800 dark:text-zinc-100 truncate text-sm">
+                                {highlightText(video.title || "Procesando...", queryToUse)}
+                              </h3>
                             <p className="text-[10px] font-medium text-zinc-500 mt-0.5 flex items-center gap-1">
                               <User size={10} /> {video.author || "Anónimo"}
                             </p>

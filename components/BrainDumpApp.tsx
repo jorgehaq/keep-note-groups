@@ -1088,7 +1088,7 @@ export const BrainDumpApp: React.FC<{
                                             </button>
                                         </div>
 
-                                        <div ref={tabBarRef} className={`flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0 hidden-scrollbar px-10 transition-all ${(!canScrollTabsLeft && !canScrollTabsRight) ? 'justify-center' : 'justify-start'}`}>
+                                        <div ref={tabBarRef} className={`flex items-center gap-1.5 overflow-x-auto pt-2 pb-1 shrink-0 min-w-0 hidden-scrollbar px-10 transition-all ${(!canScrollTabsLeft && !canScrollTabsRight) ? 'justify-center' : 'justify-start'}`}>
                                         {(() => {
                                             const originalIsMatch = Boolean(searchQuery?.trim() && (displayDump.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || displayDump.scratchpad?.toLowerCase().includes(searchQuery.trim().toLowerCase())));
                                             return (
@@ -1097,7 +1097,7 @@ export const BrainDumpApp: React.FC<{
                                                     data-active-tab={activeTab === 'original' || undefined}
                                                     className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all ${
                                                         activeTab === 'original' 
-                                                            ? `bg-amber-500 text-amber-950 border-amber-400 shadow-sm ${originalIsMatch ? 'ring-[3px] ring-amber-400 shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
+                                                            ? `bg-amber-500 text-amber-950 border-amber-400 shadow-sm ${originalIsMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
                                                             : originalIsMatch
                                                                 ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
                                                                 : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-amber-400'
@@ -1131,7 +1131,7 @@ export const BrainDumpApp: React.FC<{
                                                                 data-active-tab={isActive || undefined}
                                                                 className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all max-w-[150px] ${
                                                                     isActive 
-                                                                        ? `bg-emerald-600 text-white border-emerald-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
+                                                                        ? `bg-emerald-600 text-white border-emerald-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
                                                                         : isMatch
                                                                             ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
                                                                             : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-emerald-400 font-bold'
@@ -1168,7 +1168,7 @@ export const BrainDumpApp: React.FC<{
                                                             data-active-tab={activeTab === s.id || undefined}
                                                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all max-w-[150px] ${
                                                             activeTab === s.id 
-                                                                ? `bg-violet-600 text-white border-violet-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
+                                                                ? `bg-violet-600 text-white border-violet-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
                                                                 : isMatch
                                                                     ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
                                                                     : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-violet-400'

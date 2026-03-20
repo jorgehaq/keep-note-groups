@@ -121,7 +121,10 @@ function App() {
   }, [activeNoteId]);
 
   const isGlobalNoteTrayOpen = activeGroupId ? (noteTrayOpenByGroup[activeGroupId] ?? true) : false;
-  const currentSearchQuery = globalView === 'braindump' ? (searchQueries['braindump'] || '') : (activeGroupId ? (searchQueries[activeGroupId] || '') : '');
+  const currentSearchQuery = 
+    globalView === 'braindump' ? (searchQueries['braindump'] || '') : 
+    globalView === 'tiktok' ? (searchQueries['tiktok'] || '') :
+    (activeGroupId ? (searchQueries[activeGroupId] || '') : '');
   const [searchExemptNoteIds, setSearchExemptNoteIds] = useState<Set<string>>(new Set());
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('app-theme-preference') as Theme) || 'dark');
   const [noteFont, setNoteFont] = useState<NoteFont>(() => (localStorage.getItem('app-note-font') as NoteFont) || 'sans');
@@ -144,6 +147,8 @@ function App() {
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const [allGroupSummaries, setAllGroupSummaries] = useState<any[]>([]);
   const [allPizarronSummaries, setAllPizarronSummaries] = useState<any[]>([]);
+  const [allTikTokSummaries, setAllTikTokSummaries] = useState<any[]>([]);
+  const [allTikTokSubnotes, setAllTikTokSubnotes] = useState<any[]>([]);
   const sortMenuRef = useRef<HTMLDivElement>(null);
   const summaryCountDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -217,6 +222,21 @@ function App() {
       setAllPizarronSummaries(data || []);
     };
     fetchAllPizarronSummaries();
+  }, [session, globalView]);
+
+  useEffect(() => {
+    if (!session || globalView !== 'tiktok') {
+      setAllTikTokSummaries([]);
+      setAllTikTokSubnotes([]);
+      return;
+    }
+    const fetchAllTikTokData = async () => {
+      const { data: sums } = await supabase.from('summaries').select('*').not('tiktok_video_id', 'is', null);
+      setAllTikTokSummaries(sums || []);
+      const { data: notes } = await supabase.from('notes').select('*').not('tiktok_video_id', 'is', null);
+      setAllTikTokSubnotes(notes || []);
+    };
+    fetchAllTikTokData();
   }, [session, globalView]);
 
   const scrollTabs = (direction: 'left' | 'right') => {
@@ -1546,7 +1566,16 @@ function App() {
             }} 
           /> :
          globalView === 'translator' ? <TranslatorApp session={session!} /> :
-         globalView === 'tiktok' ? <TikTokApp session={session!} /> : (
+         globalView === 'tiktok' ? <TikTokApp 
+           session={session!} 
+           allSummaries={allTikTokSummaries}
+           allSubnotes={allTikTokSubnotes}
+           searchQuery={currentSearchQuery}
+           onSearchQueryChange={(q) => {
+             setSearchQuery('tiktok', q);
+             setSearchExemptNoteIds(new Set());
+           }}
+         /> : (
           <>
             {!isZenMode && (
               <div className="flex flex-col shrink-0">
@@ -1650,7 +1679,7 @@ function App() {
                                 title={isGlobalNoteTrayOpen ? "Ocultar bandeja de notas" : "Mostrar bandeja de notas"}
                               >
                                  <ChevronsDownUp size={18} className={`transition-transform duration-300 ${isGlobalNoteTrayOpen ? 'rotate-180' : ''}`} />
-                                 <span className="text-xs font-bold">{activeGroup.notes.length}</span>
+                                 <span className="text-xs font-bold">{activeGroup.notes.filter(n => !n.parent_note_id).length}</span>
                               </button>
 
                               {/* Botón Maximizar/Minimizar */}
