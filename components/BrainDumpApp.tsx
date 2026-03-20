@@ -613,7 +613,7 @@ export const BrainDumpApp: React.FC<{
                                     placeholder="Buscar..." 
                                     value={searchQuery || ''} 
                                     onChange={e => setSearchQuery?.(e.target.value)} 
-                                    className="h-9 pl-9 pr-8 bg-zinc-900/50 border border-zinc-800 rounded-xl text-xs text-zinc-200 placeholder:text-zinc-500 outline-none focus:border-[#FFD700]/50 transition-all font-medium w-32 md:w-32 lg:w-40"
+                                    className={`h-9 pl-9 pr-8 rounded-xl border transition-all outline-none text-xs font-medium w-32 md:w-32 lg:w-40 ${searchQuery?.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 placeholder-amber-700/50 dark:placeholder-amber-400/50 font-semibold' : 'bg-zinc-900/50 border-zinc-800 text-zinc-200 placeholder:text-zinc-500 hover:border-zinc-700 focus:border-[#FFD700]/50'}`}
                                 />
                                 {searchQuery?.trim() && (
                                     <button onClick={() => setSearchQuery?.('')} className="absolute right-2 p-1 text-zinc-500 hover:text-white bg-zinc-800/80 rounded-full transition-colors">

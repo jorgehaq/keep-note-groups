@@ -274,16 +274,9 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
     }
   }, [tikTokVideos, checkTrayScroll]);
 
-  // Hierarchy support
+  // Hierarchy support - SHOW ALL even if searching (like Pizarrón)
   const rootVideos = useMemo(() => {
     let result = tikTokVideos.filter(v => !v.parent_id && v.status !== 'archived');
-    if (searchQuery.trim()) {
-      result = result.filter(v => 
-        v.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        v.summary?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        v.author?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
     // Sorting
     return result.sort((a, b) => {
       switch (sortMode) {
@@ -494,7 +487,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                   placeholder="Buscar TikTok..." 
                   value={searchQuery} 
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="h-9 pl-9 pr-4 bg-zinc-900/50 border border-zinc-800 rounded-xl text-xs outline-none focus:border-[#EE1D52]/50 transition-all w-32 md:w-32 lg:w-40"
+                  className={`h-9 pl-9 pr-8 rounded-xl border transition-all outline-none text-xs w-32 md:w-32 lg:w-40 ${searchQuery?.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 placeholder-amber-700/50 dark:placeholder-amber-400/50 font-semibold' : 'bg-zinc-900/50 border-zinc-800 text-zinc-200 placeholder:text-zinc-500 hover:border-zinc-700 focus:border-[#EE1D52]/50'}`}
                 />
               </div>
 
@@ -571,7 +564,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
       {/* 2. ACCESS TRAY (Solo Activos) */}
       {isVideoTrayOpen && !isZenMode && (
         <div className="bg-[#13131A] shrink-0 animate-slideDown group/tray">
-          <div className="max-w-6xl mx-auto relative px-6 py-4">
+          <div className="max-w-6xl mx-auto relative px-6 py-1">
             {canScrollTrayLeft && (
               <div className="absolute left-6 top-0 bottom-0 w-12 bg-gradient-to-r from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none">
                 <button onClick={() => scrollTray('left')} className="p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors pointer-events-auto">
@@ -582,32 +575,41 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
             <div 
               ref={videoTrayRef}
               onScroll={checkTrayScroll}
-              className="flex items-center justify-start md:justify-center gap-3 overflow-x-auto hidden-scrollbar scroll-smooth"
+              className="flex items-center justify-start md:justify-center gap-3 overflow-x-auto hidden-scrollbar scroll-smooth py-3 px-1"
             >
               {rootVideos.length === 0 ? (
                 <div className="text-xs text-zinc-600 italic px-4">No hay videos activos</div>
               ) : (
-                rootVideos.map(video => (
-                  <button
-                    key={video.id}
-                    onClick={() => { 
-                      if (focusedVideoId === video.id) setFocusedVideoId(null);
-                      else setFocusedVideoId(video.id); 
-                    }}
-                    className={`shrink-0 flex items-center gap-3 px-4 py-2 rounded-xl border transition-all ${
-                      focusedVideoId === video.id 
-                        ? 'bg-[#EE1D52] text-white border-[#EE1D52] shadow-lg shadow-[#EE1D52]/20 scale-[1.02]' 
-                        : 'bg-zinc-900/50 text-zinc-400 border-zinc-800 hover:border-[#EE1D52]/40 hover:text-[#EE1D52]'
-                    }`}
-                  >
-                    <div className="w-6 h-8 rounded-md overflow-hidden bg-zinc-800 border border-zinc-700/50 shrink-0">
-                      <img src={video.thumbnail} className="w-full h-full object-cover" alt="" />
-                    </div>
-                    <div className="max-w-[150px] truncate text-[11px] font-bold">
-                      {highlightText(video.title || "Procesando...", searchQuery)}
-                    </div>
-                  </button>
-                ))
+                rootVideos.map(video => {
+                  const isMatch = searchQuery?.trim() && (
+                    video.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    video.summary?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    video.author?.toLowerCase().includes(searchQuery.toLowerCase())
+                  );
+                  return (
+                    <button
+                      key={video.id}
+                      onClick={() => { 
+                        if (focusedVideoId === video.id) setFocusedVideoId(null);
+                        else setFocusedVideoId(video.id); 
+                      }}
+                      className={`shrink-0 flex items-center gap-3 px-4 py-2 rounded-xl border transition-all ${
+                        focusedVideoId === video.id 
+                          ? `bg-[#EE1D52] text-white border-[#EE1D52] shadow-lg shadow-[#EE1D52]/20 scale-[1.02] ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-[#13131A] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
+                          : isMatch
+                            ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
+                            : 'bg-zinc-900/50 text-zinc-400 border-zinc-800 hover:border-[#EE1D52]/40 hover:text-[#EE1D52]'
+                      }`}
+                    >
+                      <div className="w-6 h-8 rounded-md overflow-hidden bg-zinc-800 border border-zinc-700/50 shrink-0">
+                        <img src={video.thumbnail} className="w-full h-full object-cover" alt="" />
+                      </div>
+                      <div className="max-w-[150px] truncate text-[11px] font-bold">
+                        {highlightText(video.title || "Procesando...", searchQuery)}
+                      </div>
+                    </button>
+                  );
+                })
               )}
             </div>
             {canScrollTrayRight && (
@@ -624,19 +626,41 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
       {/* 3. MAIN CONTENT */}
       <div className="flex-1 overflow-hidden flex flex-col">
         {/* If there are videos, show the editor directly. If one is focused, show it. */}
-        {focusedVideo ? (
-          <div className="flex-1 flex flex-col overflow-y-auto w-full p-4">
-            <div className={`flex-1 flex flex-col min-h-0 ${isTikTokMaximized ? 'max-w-full' : 'max-w-6xl mx-auto'} w-full transition-all duration-300 bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] focus-within:ring-2 focus-within:ring-[#EE1D52]/50 focus-within:border-[#EE1D52]/50 overflow-hidden animate-fadeIn`}>
+        {focusedVideo ? (() => {
+          const isGlobalVideoMatch = searchQuery?.trim() && (
+            focusedVideo.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            focusedVideo.summary?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            focusedVideo.author?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            subnotes.some(sn => sn.title?.toLowerCase().includes(searchQuery.toLowerCase()) || sn.content?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            aiSummaries.some(s => s.target_objective?.toLowerCase().includes(searchQuery.toLowerCase()) || s.content?.toLowerCase().includes(searchQuery.toLowerCase()))
+          );
+
+          const titleMatch = searchQuery?.trim() && (focusedVideo.title || '').toLowerCase().includes(searchQuery.toLowerCase());
+
+          return (
+            <div className="flex-1 flex flex-col overflow-y-auto w-full p-4">
+              <div className={`flex-1 flex flex-col min-h-0 ${isTikTokMaximized ? 'max-w-full' : 'max-w-6xl mx-auto'} w-full transition-all duration-300 bg-white dark:bg-[#1A1A24] rounded-2xl border overflow-hidden animate-fadeIn ${
+                isGlobalVideoMatch
+                  ? 'border-amber-500 ring-2 ring-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
+                  : 'shadow-lg border-zinc-200 dark:border-[#2D2D42] focus-within:ring-2 focus-within:ring-[#EE1D52]/50 focus-within:border-[#EE1D52]/50'
+              }`}>
               {/* Integrated Header */}
               <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
                 <div className="flex-1 min-w-0 pr-4 flex items-center gap-2">
                   <div className="relative flex-1">
+                    {titleMatch && (
+                      <div className="absolute inset-0 pointer-events-none text-lg font-black text-zinc-800 dark:text-zinc-100 flex items-center px-0 overflow-hidden whitespace-nowrap">
+                        <span className="truncate">
+                          {highlightText(focusedVideo.title || "", searchQuery)}
+                        </span>
+                      </div>
+                    )}
                     <input 
                       type="text"
                       value={focusedVideo.title || ""}
                       onChange={(e) => updateVideo(focusedVideo.id, { title: e.target.value })}
                       placeholder="Sin Título"
-                      className="w-full bg-transparent border-none outline-none text-lg font-black text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400 p-0 truncate"
+                      className={`w-full bg-transparent border-none outline-none text-lg font-black text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400 p-0 truncate transition-opacity ${titleMatch ? 'opacity-0 focus:opacity-100' : 'opacity-100'}`}
                     />
                   </div>
                 </div>
@@ -742,14 +766,30 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
 
                   <div 
                     ref={tabContainerRef}
-                    className="flex items-center gap-2 pb-1 overflow-x-auto hidden-scrollbar scroll-smooth"
+                    className="flex items-center gap-2 pb-1 overflow-x-auto hidden-scrollbar scroll-smooth px-1 py-1"
                   >
-                    <button 
-                      onClick={() => setActiveTab('original')} 
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${activeTab === 'original' ? 'bg-[#EE1D52] text-white border-[#EE1D52] shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-[#EE1D52]'}`}
-                    >
-                      <FileText size={11} /> Transcripción
-                    </button>
+                    {(() => {
+                      const isTranscriptionMatch = searchQuery?.trim() && (
+                        focusedVideo.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        focusedVideo.summary?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        focusedVideo.author?.toLowerCase().includes(searchQuery.toLowerCase())
+                      );
+                      const isActive = activeTab === 'original';
+                      return (
+                        <button 
+                          onClick={() => setActiveTab('original')} 
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
+                            isActive 
+                              ? `bg-[#EE1D52] text-white border-[#EE1D52] shadow-sm ${isTranscriptionMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
+                              : isTranscriptionMatch
+                                ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
+                                : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-[#EE1D52]'
+                          }`}
+                        >
+                          <FileText size={11} /> Transcripción
+                        </button>
+                      );
+                    })()}
 
                     {unifiedTabs.map(tab => {
                       if (tab.type === 'summary') {
@@ -765,11 +805,24 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                           );
                         }
                         
+                        const isMatch = searchQuery?.trim() && (
+                          (summary.target_objective || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (summary.content || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (summary.scratchpad || '').toLowerCase().includes(searchQuery.toLowerCase())
+                        );
+                        const isActive = activeTab === `summary_${summary.id}`;
+
                         return (
                           <div key={summary.id} className="relative group">
                             <button 
                               onClick={() => setActiveTab(`summary_${summary.id}`)} 
-                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${activeTab === `summary_${summary.id}` ? 'bg-violet-600 text-white border-violet-500 shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-violet-400'}`}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
+                                isActive 
+                                  ? `bg-violet-600 text-white border-violet-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
+                                  : isMatch
+                                    ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
+                                    : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-violet-400'
+                              }`}
                             >
                               <Sparkles size={11} /> 
                               <span className="max-w-[120px] truncate">{summary.target_objective || 'Resumen'}</span>
@@ -786,11 +839,23 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                         );
                       } else {
                         const note = tab.data;
+                        const isMatch = searchQuery?.trim() && (
+                          (note.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (note.content || '').toLowerCase().includes(searchQuery.toLowerCase())
+                        );
+                        const isActive = activeTab === `note_${note.id}`;
+
                         return (
                           <button 
                             key={note.id}
                             onClick={() => setActiveTab(`note_${note.id}`)} 
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${activeTab === `note_${note.id}` ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-emerald-400'}`}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
+                              isActive 
+                                ? `bg-emerald-600 text-white border-emerald-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
+                                : isMatch
+                                  ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
+                                  : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-emerald-400'
+                            }`}
                           >
                             <StickyNote size={11} /> 
                             {editingSubnoteId === note.id ? (
@@ -1006,22 +1071,33 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                       </div>
                     </div>
                   )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      ) : (
+        )
+      })() : (
         <div className={`flex-1 overflow-y-auto p-6 scroll-smooth animate-fadeIn`}>
               <div className={`${isTikTokMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto space-y-12 pb-20 px-4 md:px-10`}>
                 {rootVideos.length > 0 ? (
                   /* GRID DE VIDEOS ACTIVOS */
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {rootVideos.map(video => (
-                      <div 
-                        key={video.id} 
-                        onClick={() => setFocusedVideoId(video.id)}
-                        className={`group bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] rounded-2xl p-5 hover:border-[#EE1D52]/40 hover:shadow-xl transition-all cursor-pointer flex flex-col gap-4 relative`}
-                      >
+                    {rootVideos.map(video => {
+                      const isMatch = searchQuery?.trim() && (
+                        video.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        video.summary?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        video.author?.toLowerCase().includes(searchQuery.toLowerCase())
+                      );
+                      return (
+                        <div 
+                          key={video.id} 
+                          onClick={() => setFocusedVideoId(video.id)}
+                          className={`group bg-white dark:bg-[#1A1A24] border rounded-2xl p-5 transition-all cursor-pointer flex flex-col gap-4 relative ${
+                            isMatch
+                              ? 'border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
+                              : 'border-zinc-200 dark:border-[#2D2D42] hover:border-[#EE1D52]/40 hover:shadow-xl'
+                          }`}
+                        >
                         <div className="flex gap-4">
                           <div className="w-16 h-20 rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 shrink-0 shadow-md">
                             <img src={video.thumbnail} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
@@ -1063,8 +1139,9 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                             <ChevronRight size={16} />
                           </div>
                         </div>
-                      </div>
-                    ))}
+                        </div>
+                      )
+                    })}
                   </div>
                 ) : (
                   /* WELCOME SCREEN (Empty Root) */
