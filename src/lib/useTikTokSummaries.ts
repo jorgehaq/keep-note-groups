@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import { Summary } from '../../types';
 
@@ -14,7 +14,7 @@ export function useTikTokSummaries(videoId: string | null) {
       .from('summaries')
       .select('*')
       .eq('tiktok_video_id', videoId)
-      .order('created_at', { ascending: true });
+      .order('order_index', { ascending: true });
 
     if (!error && data) {
       setSummaries(data);
@@ -48,6 +48,8 @@ export function useTikTokSummaries(videoId: string | null) {
     };
   }, [videoId, fetchSummaries]);
 
+  const isGenerating = useRef<boolean>(false);
+
   const generateSummary = async (objective: string, context?: {
     title: string;
     author: string;
@@ -56,9 +58,15 @@ export function useTikTokSummaries(videoId: string | null) {
     transcript: string;
     subnotes: { title: string; content: string; scratchpad: string }[];
     existingSummaries: { objective: string; content: string }[];
-    createdAt?: string
+    orderIndex?: number
   }) => {
     if (!videoId) return;
+
+    // Bloqueo de llamadas concurrentes
+    if (isGenerating.current) {
+        console.warn('⚠️ Ya hay una generación de resumen en curso para este video.');
+        return null;
+    }
     
     // 1. Insert pending record
     const insertData: any = {
@@ -68,8 +76,8 @@ export function useTikTokSummaries(videoId: string | null) {
       content: ''
     };
 
-    if (context?.createdAt) {
-      insertData.created_at = context.createdAt;
+    if (context?.orderIndex !== undefined) {
+      insertData.order_index = context.orderIndex;
     }
 
     const { data: newSummary, error: insertError } = await supabase
@@ -87,6 +95,8 @@ export function useTikTokSummaries(videoId: string | null) {
     const summaryId = newSummary.id;
 
     try {
+      isGenerating.current = true;
+
       // 2. Get video info for prompt (Contexto Enriquecido)
       const { data: video } = await supabase
         .from('tiktok_videos')
@@ -103,16 +113,21 @@ export function useTikTokSummaries(videoId: string | null) {
         .eq('tiktok_video_id', videoId);
 
       const ctx = context;
+      
+      // ✂️ TRUNCADO DE SEGMENTOS ANTES DE CONSTRUIR EL PROMPT
+      const activeContentTrunc = (ctx?.activeContent || video.transcript || video.description || '').substring(0, 3000);
+      const transcriptTrunc = (ctx?.transcript || video.transcript || '').substring(0, 2000);
+
       const subnotesSec = ctx?.subnotes?.filter(n => n.content || n.scratchpad).map(n =>
-        `### Subnota: ${n.title}\n${n.content}${n.scratchpad ? `\n**Pizarrón de esta subnota:**\n${n.scratchpad}` : ''}`
+        `### Subnota: ${n.title}\n${(n.content || '').substring(0, 500)}${n.scratchpad ? `\n**Pizarrón de esta subnota:**\n${n.scratchpad.substring(0, 500)}` : ''}`
       ).join('\n\n') || '';
 
       const pizarronesSec = (pizarrones || []).filter(p => p.content).map(p =>
-        `### Pizarrón: ${p.title || 'Sin título'}\n${p.content}`
+        `### Pizarrón: ${p.title || 'Sin título'}\n${p.content.substring(0, 500)}`
       ).join('\n\n') || '';
 
       const summariesSec = ctx?.existingSummaries?.filter(s => s.content).map(s =>
-        `### Resumen previo (${s.objective}):\n${s.content}`
+        `### Resumen previo (${s.objective}):\n${s.content.substring(0, 300)}`
       ).join('\n\n') || '';
 
       const prompt = `
@@ -124,11 +139,11 @@ ${objective}
 
 ## FOCO ACTIVO (contenido sobre el que se aplica principalmente el análisis)
 ### ${ctx?.activeLabel || 'Transcripción'}
-${ctx?.activeContent || video.transcript || video.description || 'Sin contenido'}
+${activeContentTrunc || 'Sin contenido'}
 
 ## CONTEXTO COMPLETO DEL VIDEO
 ### Transcripción Whisper
-${ctx?.transcript || video.transcript || 'No disponible'}
+${transcriptTrunc || 'No disponible'}
 
 ${subnotesSec ? `## SUBNOTAS DEL USUARIO\n${subnotesSec}` : ''}
 ${pizarronesSec ? `## PIZARRONES ASOCIADOS\n${pizarronesSec}` : ''}
@@ -210,6 +225,8 @@ ${data.key_points?.find((p: string) => p.toLowerCase().includes('cta')) || 'No i
       } else {
         setSummaries(prev => prev.map(s => s.id === newSummary.id ? { ...s, ...errorPayload } : s));
       }
+    } finally {
+        isGenerating.current = false;
     }
     return newSummary;
   };

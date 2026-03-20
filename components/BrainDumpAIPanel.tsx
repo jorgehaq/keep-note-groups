@@ -6,10 +6,10 @@ interface BrainDumpAIPanelProps {
   dumpId: string;
   noteStatus?: string;
   onGenerate?: () => void;
-  getRelativeCreatedAt?: () => string;
+  getNewOrderIndex?: () => number;
 }
 
-export const BrainDumpAIPanel: React.FC<BrainDumpAIPanelProps> = ({ dumpId, noteStatus, onGenerate, getRelativeCreatedAt }) => {
+export const BrainDumpAIPanel: React.FC<BrainDumpAIPanelProps> = ({ dumpId, noteStatus, onGenerate, getNewOrderIndex }) => {
   const [objectiveInput, setObjectiveInput] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const { generateSummary } = useBrainDumpSummaries(dumpId);
@@ -17,8 +17,8 @@ export const BrainDumpAIPanel: React.FC<BrainDumpAIPanelProps> = ({ dumpId, note
   const handleGenerate = async () => {
     if (isCreating || !objectiveInput.trim()) return;
     setIsCreating(true);
-    const createdAt = getRelativeCreatedAt ? getRelativeCreatedAt() : undefined;
-    await generateSummary(objectiveInput.trim(), createdAt);
+    const orderIndex = getNewOrderIndex ? getNewOrderIndex() : undefined;
+    await generateSummary(objectiveInput.trim(), orderIndex);
     setObjectiveInput('');
     setIsCreating(false);
     if (onGenerate) onGenerate();

@@ -11,6 +11,7 @@ export interface Summary {
     scratchpad: string | null;
     status: SummaryStatus;
     created_at: string;
+    order_index: number;
 }
 
 export const useSummaries = (noteId: string | null) => {
@@ -25,7 +26,7 @@ export const useSummaries = (noteId: string | null) => {
             .from("summaries")
             .select("*")
             .eq("note_id", noteId)
-            .order("created_at", { ascending: true });
+            .order("order_index", { ascending: true });
 
         if (!error && data) {
             setSummaries(data);
@@ -74,10 +75,7 @@ export const useSummaries = (noteId: string | null) => {
                                     s.id === updatedItem.id ? updatedItem : s
                                 );
                             }
-                            return [updatedItem, ...prev].sort((a, b) =>
-                                new Date(b.created_at).getTime() -
-                                new Date(a.created_at).getTime()
-                            );
+                            return [updatedItem, ...prev].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
                         });
                     } else if (payload.eventType === "DELETE") {
                         setSummaries((prev) =>
@@ -96,7 +94,7 @@ export const useSummaries = (noteId: string | null) => {
         };
     }, [noteId, fetchSummaries]);
 
-    const generateSummary = async (objective?: string, customCreatedAt?: string) => {
+    const generateSummary = async (objective?: string, orderIndex?: number) => {
         if (!noteId) return;
 
         // 🎯 Sincronizar el objetivo en la nota para que el motor Python lo detecte
@@ -115,7 +113,7 @@ export const useSummaries = (noteId: string | null) => {
                 note_id: noteId,
                 target_objective: objective || null,
                 status: "pending",
-                created_at: customCreatedAt || new Date().toISOString(),
+                order_index: orderIndex !== undefined ? orderIndex : 1
             })
             .select()
             .single();

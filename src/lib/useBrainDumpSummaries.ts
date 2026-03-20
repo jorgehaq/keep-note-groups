@@ -14,7 +14,7 @@ export function useBrainDumpSummaries(dumpId: string | null) {
       .from('summaries')
       .select('*')
       .eq('brain_dump_id', dumpId)
-      .order('created_at', { ascending: false });
+      .order('order_index', { ascending: true });
 
     if (!error && data) {
       setSummaries(data);
@@ -44,14 +44,14 @@ export function useBrainDumpSummaries(dumpId: string | null) {
     };
   }, [dumpId, fetchSummaries]);
 
-  const generateSummary = async (objective: string, createdAt?: string) => {
+  const generateSummary = async (objective: string, orderIndex?: number) => {
     if (!dumpId) return;
     const { error } = await supabase.from('summaries').insert([{
       brain_dump_id: dumpId,
       target_objective: objective,
       status: 'pending',
       content: '',
-      ...(createdAt ? { created_at: createdAt } : {})
+      ...(orderIndex !== undefined ? { order_index: orderIndex } : {})
     }]);
     if (error) console.error('Error generating summary:', error);
   };

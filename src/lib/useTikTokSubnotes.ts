@@ -13,7 +13,7 @@ export function useTikTokSubnotes(videoId: string | null) {
       .from('notes')
       .select('*')
       .eq('tiktok_video_id', videoId)
-      .order('created_at', { ascending: true });
+      .order('order_index', { ascending: true });
 
     if (!error && data) {
       setSubnotes(data);
@@ -45,7 +45,7 @@ export function useTikTokSubnotes(videoId: string | null) {
     };
   }, [videoId, fetchSubnotes]);
 
-  const createSubnote = async (title: string, groupId?: string | null, content: string = '', createdAt?: string) => {
+  const createSubnote = async (title: string, groupId?: string | null, content: string = '', orderIndex?: number) => {
     if (!videoId) return null;
     
     const { data: { user } } = await supabase.auth.getUser();
@@ -63,8 +63,8 @@ export function useTikTokSubnotes(videoId: string | null) {
       position: 0
     };
 
-    if (createdAt) {
-      insertData.created_at = createdAt;
+    if (orderIndex !== undefined) {
+      insertData.order_index = orderIndex;
     }
 
     const { data: newNote, error } = await supabase.from('notes').insert([insertData]).select().single();

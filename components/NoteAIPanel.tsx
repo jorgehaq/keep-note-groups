@@ -6,14 +6,14 @@ interface NoteAIPanelProps {
   noteId: string;
   userId: string;
   noteStatus: string;
-  customCreatedAt?: string;
-  getRelativeCreatedAt?: () => string;
+  customOrderIndex?: number;
+  getNewOrderIndex?: () => number;
   onPromoteToNote?: (content: string, title: string) => void;
   onCancel?: () => void;
   onGenerate?: (objective: string) => Promise<void>;
 }
 
-export const NoteAIPanel: React.FC<NoteAIPanelProps> = ({ noteId, customCreatedAt, getRelativeCreatedAt, onGenerate, onCancel }) => {
+export const NoteAIPanel: React.FC<NoteAIPanelProps> = ({ noteId, customOrderIndex, getNewOrderIndex, onGenerate, onCancel }) => {
   const [objectiveInput, setObjectiveInput] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const { generateSummary } = useSummaries(noteId);
@@ -22,12 +22,12 @@ export const NoteAIPanel: React.FC<NoteAIPanelProps> = ({ noteId, customCreatedA
     if (isCreating || !objectiveInput.trim()) return;
     setIsCreating(true);
     
-    const createdAt = customCreatedAt || (getRelativeCreatedAt ? getRelativeCreatedAt() : undefined);
+    const orderIndex = customOrderIndex !== undefined ? customOrderIndex : (getNewOrderIndex ? getNewOrderIndex() : undefined);
     
     if (onGenerate) {
       await onGenerate(objectiveInput.trim());
     } else {
-      await generateSummary(objectiveInput.trim(), createdAt);
+      await generateSummary(objectiveInput.trim(), orderIndex);
     }
     
     setObjectiveInput('');

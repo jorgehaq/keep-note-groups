@@ -36,14 +36,10 @@ const sortNotesArray = (notes: Note[], mode: string) => {
         return dateA - dateB;
       }
       case 'created-desc': {
-        const dateB = new Date(b.created_at || 0).getTime();
-        const dateA = new Date(a.created_at || 0).getTime();
-        return dateB - dateA;
+        return (b.order_index || 0) - (a.order_index || 0);
       }
       case 'created-asc': {
-        const dateA = new Date(a.created_at || 0).getTime();
-        const dateB = new Date(b.created_at || 0).getTime();
-        return dateA - dateB;
+        return (a.order_index || 0) - (b.order_index || 0);
       }
       case 'alpha-asc': return (a.title || '').toLowerCase().localeCompare((b.title || '').toLowerCase());
       case 'alpha-desc': return (b.title || '').toLowerCase().localeCompare((a.title || '').toLowerCase());
@@ -169,15 +165,29 @@ function App() {
     return () => window.removeEventListener('resize', checkScroll);
   }, [groups, activeGroupId, isGlobalNoteTrayOpen, globalView]);
 
-  const getRelativeCreatedAt = () => {
-    if (!activeGroupId) return new Date().toISOString();
+  const getNewOrderIndex = () => {
+    if (!activeGroupId) return 1;
     const group = groups.find(g => g.id === activeGroupId);
-    if (!group) return new Date().toISOString();
+    if (!group || group.notes.length === 0) return 1;
 
-    const activeNote = group.notes.find(n => n.id === focusedNoteId) || group.notes.find(n => n.id === activeNoteId);
-    if (!activeNote) return new Date().toISOString();
+    // Foco principal: la nota que el usuario está viendo o editando actualmente
+    const activeNoteId = lastActiveNoteByGroup[activeGroupId] || focusedNoteByGroup[activeGroupId];
+    const activeIndex = group.notes.findIndex(n => n.id === activeNoteId);
 
-    return new Date(new Date(activeNote.created_at).getTime() + 1000).toISOString();
+    if (activeIndex === -1) {
+      // Si no hay nota activa, insertar al final
+      const last = group.notes[group.notes.length - 1];
+      return (last.order_index || 0) + 1;
+    }
+
+    const current = group.notes[activeIndex];
+    const next = group.notes[activeIndex + 1];
+
+    if (!next) {
+        return (current.order_index || 0) + 1;
+    }
+
+    return ((current.order_index || 0) + (next.order_index || 0)) / 2;
   };
 
   useEffect(() => {
@@ -658,7 +668,7 @@ function App() {
       const { data: noteData, error: noteError } = await supabase.from('notes').insert([{ title: '', content: '', group_id: groupData.id, user_id: session.user.id, position: 0 }]).select().single();
       if (noteError) throw noteError;
 
-      const newNote: Note = { id: noteData.id, title: noteData.title, content: noteData.content || '', isOpen: true, created_at: noteData.created_at, group_id: noteData.group_id, position: noteData.position };
+      const newNote: Note = { id: noteData.id, title: noteData.title, content: noteData.content || '', isOpen: true, created_at: noteData.created_at, group_id: noteData.group_id, position: noteData.position, order_index: noteData.order_index };
       const newGroup: Group = { id: groupData.id, title: groupData.name, notes: [newNote], user_id: groupData.user_id, is_pinned: false, last_accessed_at: new Date().toISOString() };
       
       // 🚀 ATOMIC STATE UPDATE
@@ -762,7 +772,8 @@ function App() {
     try {
       const currentGroup = groups.find(g => g.id === activeGroupId);
       const position = currentGroup ? currentGroup.notes.length : 0;
-      const createdAt = getRelativeCreatedAt();
+      const status = 'main'; // Notes use 'main' as default for visibility
+      const orderIndex = getNewOrderIndex();
 
       const { data, error } = await supabase.from('notes').insert([{ 
         title: '', 
@@ -770,11 +781,11 @@ function App() {
         group_id: activeGroupId, 
         user_id: session.user.id, 
         position,
-        created_at: createdAt
+        order_index: orderIndex
       }]).select().single();
       if (error) throw error;
 
-      const newNote: Note = { id: data.id, title: data.title, content: data.content || '', isOpen: true, created_at: data.created_at, group_id: data.group_id, position: data.position };
+      const newNote: Note = { id: data.id, title: data.title, content: data.content || '', isOpen: true, created_at: data.created_at, group_id: data.group_id, position: data.position, order_index: data.order_index };
 
       // Identificar si hay alguna nota abierta para insertar debajo
       const openNotes = openNotesByGroup[activeGroupId] || [];
@@ -816,7 +827,7 @@ function App() {
     }
   };
 
-  const createNoteFromAI = async (content: string, title: string, groupId?: string, createdAt?: string, parentNoteId?: string) => {
+  const createNoteFromAI = async (content: string, title: string, groupId?: string, orderIndex?: number, parentNoteId?: string) => {
     if (!session) return;
     try {
       let targetGroupId = groupId || activeGroupId;
@@ -831,19 +842,23 @@ function App() {
 
       const currentGroup = groups.find(g => g.id === targetGroupId);
       const position = currentGroup ? currentGroup.notes.length : 0;
-      const finalCreatedAt = createdAt || getRelativeCreatedAt();
+      
+      const insertPayload: any = { 
+        title, 
+        content: content || '', 
+        group_id: targetGroupId, 
+        user_id: session.user.id, 
+        position, 
+        parent_note_id: parentNoteId
+      };
 
-      const { data, error } = await supabase.from('notes').insert([
-        { 
-          title, 
-          content: content || '', 
-          group_id: targetGroupId, 
-          user_id: session.user.id, 
-          position, 
-          created_at: finalCreatedAt,
-          parent_note_id: parentNoteId
-        }
-      ]).select().single();
+      if (orderIndex !== undefined) {
+        insertPayload.order_index = orderIndex;
+      } else {
+        insertPayload.order_index = getNewOrderIndex();
+      }
+
+      const { data, error } = await supabase.from('notes').insert([insertPayload]).select().single();
 
       if (error) throw error;
 
@@ -855,7 +870,8 @@ function App() {
         created_at: data.created_at,
         group_id: data.group_id,
         position: data.position,
-        parent_note_id: data.parent_note_id
+        parent_note_id: data.parent_note_id,
+        order_index: data.order_index
       };
 
       setGroups(currentGroups => currentGroups.map(g => {
@@ -1234,7 +1250,8 @@ function App() {
         position,
         is_checklist: original.is_checklist || false,
         created_at: original.created_at, // Heredar fecha de creación
-        updated_at: original.updated_at  // Heredar fecha de actualización
+        updated_at: original.updated_at,  // Heredar fecha de actualización
+        order_index: original.order_index ? original.order_index + 0.0001 : position
       }]).select().single();
 
       if (error) throw error;
@@ -1247,7 +1264,8 @@ function App() {
         updated_at: data.updated_at,
         group_id: data.group_id, 
         position: data.position, 
-        is_checklist: data.is_checklist 
+        is_checklist: data.is_checklist,
+        order_index: data.order_index
       };
       
       setGroups(groups.map(g => {
@@ -1945,7 +1963,7 @@ function App() {
                                     noteFont={noteFont}
                                     noteFontSize={noteFontSize}
                                     noteLineHeight={noteLineHeight}
-                                     onCreateNote={(c, t, p, d) => createNoteFromAI(c, t, activeGroup.id, d, p)}
+                                     onCreateNote={(c, t, p, d) => createNoteFromAI(c, t, activeGroup?.id, d as number, p as string)}
                                     session={session}
                                     syncStatus={noteSaveStatus[note.id] || 'idle'}
                                   />

@@ -169,6 +169,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
   const editorRef = useRef<SmartNotesEditorRef>(null);
   const scratchRef = useRef<SmartNotesEditorRef>(null);
   const videoSaveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
+  const tabBarRef = useRef<HTMLDivElement>(null);
 
   const isZenMode = !!isZenModeByApp['tiktok'];
   const focusedVideo = useMemo(() => tikTokVideos.find(v => v.id === focusedVideoId), [tikTokVideos, focusedVideoId]);
@@ -192,32 +193,43 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
   const activeTab = focusedVideoId ? (activeTabByVideo[focusedVideoId] || 'original') : 'original';
   const setActiveTab = (tabId: string) => { if (focusedVideoId) setActiveTabByVideo(focusedVideoId, tabId); };
 
-  const getRelativeCreatedAt = () => {
-    // Determine the base date from the active tab
-    let baseDate = new Date(focusedVideo?.created_at || Date.now());
-    
-    if (activeTab.startsWith('summary_')) {
-      const id = activeTab.replace('summary_', '');
-      const summary = aiSummaries.find(s => s.id === id);
-      if (summary) baseDate = new Date(summary.created_at);
-    } else if (activeTab.startsWith('note_')) {
-      const id = activeTab.replace('note_', '');
-      const note = subnotes.find(n => n.id === id);
-      if (note) baseDate = new Date(note.created_at);
-    }
-    
-    // Increment by 1 second (1000 ms) to place it immediately after
-    return new Date(baseDate.getTime() + 1).toISOString();
-  };
-
+  useEffect(() => {
+    if (!tabBarRef.current) return;
+    const activeBtn = tabBarRef.current.querySelector('[data-active-tab="true"]');
+    if (activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }, [activeTab]);
   const unifiedTabs = useMemo(() => {
     const tabs = [
-      ...aiSummaries.map(s => ({ id: `summary_${s.id}`, type: 'summary' as const, created_at: s.created_at, data: s })),
-      ...subnotes.map(n => ({ id: `note_${n.id}`, type: 'note' as const, created_at: n.created_at, data: n }))
+      ...aiSummaries.map(s => ({ id: `summary_${s.id}`, type: 'summary' as const, order_index: s.order_index || 0, data: s })),
+      ...subnotes.map(n => ({ id: `note_${n.id}`, type: 'note' as const, order_index: n.order_index || 0, data: n }))
     ];
-    // Sort by created_at ascending
-    return tabs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    // Sort by order_index ascending
+    return tabs.sort((a, b) => a.order_index - b.order_index);
   }, [aiSummaries, subnotes]);
+
+  // DETERMINAR ORDEN RELATIVO (Interpolación REAL estilo Notion/Linear)
+  const getNewOrderIndex = () => {
+    if (activeTab === 'original') {
+      const first = unifiedTabs[0];
+      if (!first) return 1;
+      return first.order_index / 2;
+    }
+
+    const activeIndex = unifiedTabs.findIndex(t => t.id === activeTab);
+    if (activeIndex === -1) {
+      const last = unifiedTabs[unifiedTabs.length - 1];
+      return last ? last.order_index + 1 : 1;
+    }
+
+    const current = unifiedTabs[activeIndex];
+    const next = unifiedTabs[activeIndex + 1];
+
+    if (!next) {
+      return current.order_index + 1;
+    }
+
+    return (current.order_index + next.order_index) / 2;
+  };
 
   const checkScroll = useCallback(() => {
     if (tabContainerRef.current) {
@@ -234,7 +246,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
   };
 
   useEffect(() => {
-    const container = tabContainerRef.current;
+    const container = tabBarRef.current;
     if (container) {
       checkScroll();
       container.addEventListener('scroll', checkScroll);
@@ -681,8 +693,8 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                     onClick={async () => {
                       const tiktokGroup = groups.find(g => g.title === 'TikTok') || groups[0];
                       if (!tiktokGroup) return;
-                      const relDate = getRelativeCreatedAt();
-                      const newNote = await createSubnote('Nueva subnota', tiktokGroup.id, '', relDate);
+                      const relIndex = getNewOrderIndex();
+                      const newNote = await createSubnote('Nueva subnota', tiktokGroup.id, '', relIndex);
                       if (newNote) setActiveTab(`note_${newNote.id}`);
                     }} 
                     className="p-2 rounded-xl border text-emerald-400 border-zinc-800 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all flex items-center"
@@ -869,7 +881,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                   )}
 
                   <div 
-                    ref={tabContainerRef}
+                    ref={tabBarRef}
                     onScroll={checkScroll}
                     className="flex flex-nowrap items-center gap-2 overflow-x-auto hidden-scrollbar scroll-smooth py-1 pl-1 pr-12"
                   >
@@ -883,6 +895,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                       return (
                         <button 
                           onClick={() => setActiveTab('original')} 
+                          data-active-tab={isActive || undefined}
                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
                             isActive 
                               ? `bg-[#EE1D52] text-white border-[#EE1D52] shadow-sm ${isTranscriptionMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
@@ -921,6 +934,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                           <div key={summary.id} className="relative group">
                             <button 
                               onClick={() => setActiveTab(`summary_${summary.id}`)} 
+                              data-active-tab={isActive || undefined} 
                               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
                                 isActive 
                                   ? `bg-violet-600 text-white border-violet-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
@@ -954,6 +968,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                           <button 
                             key={note.id}
                             onClick={() => setActiveTab(`note_${note.id}`)} 
+                            data-active-tab={isActive || undefined}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
                               isActive 
                                 ? `bg-emerald-600 text-white border-emerald-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
@@ -1036,7 +1051,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                       videoId={focusedVideo.id} 
                       onGenerate={async (obj) => { 
                         setShowAIInput(false);
-                        const relDate = getRelativeCreatedAt();
+                        const orderIndex = getNewOrderIndex();
 
                         // ── Determinar el contenido del tab activo como FOCO PRINCIPAL ──
                         let activeContent = '';
@@ -1070,7 +1085,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                             objective: s.target_objective || '',
                             content: s.content || ''
                           })),
-                          createdAt: relDate
+                          orderIndex
                         };
 
                         const newSumm = await generateSummary(obj, fullContext);

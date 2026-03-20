@@ -34,6 +34,7 @@ export interface Note {
   status?: 'main' | 'history';
   children?: Note[];
   tiktok_video_id?: string | null;
+  order_index?: number;
 }
 
 export type NoteFont = "sans" | "serif" | "mono";
@@ -165,6 +166,7 @@ export interface BrainDump {
   scratchpad?: string;
   tiktok_video_id?: string | null;
   children?: BrainDump[];
+  order_index?: number;
 }
 
 export interface Summary {
@@ -178,6 +180,7 @@ export interface Summary {
   status: "pending" | "processing" | "completed" | "failed";
   created_at: string;
   user_id: string;
+  order_index?: number;
 }
 
 export interface TikTokVideo {
@@ -203,6 +206,7 @@ export interface TikTokVideo {
   generation_level?: number;
   created_at: string;
   updated_at: string;
+  order_index?: number;
 }
 
 export interface TikTokQueueItem {

@@ -24,7 +24,7 @@ interface AccordionItemProps {
   onCopyNote?: (note: Note) => void;
   onDuplicate?: (noteId: string) => void;
   onMove?: (noteId: string, targetGroupId: string) => Promise<void>;
-  onCreateNote?: (content: string, title: string, groupId?: string, createdAt?: string) => Promise<string | null>;
+  onCreateNote?: (content: string, title: string, groupId?: string, orderIndex?: number) => Promise<string | null>;
   groups?: Group[];
   searchQuery?: string;
   noteFont?: NoteFont;
@@ -512,8 +512,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       aiPanelOpenByNote, setAiPanelOpen, activeTabByNote, setActiveTab: setStoreActiveTab,
       isNotesPizarronOpen, setIsNotesPizarronOpen,
       notesSplitRatio, setNotesSplitRatio,
+      isArchiveOpenByApp, setArchiveOpenByApp,
       globalTasks
     } = useUIStore();
+
     const { activeNoteId, activeNote, breadcrumbPath, navigate } = useNoteTree(note.id);
    const isRootLevel = !activeNoteId || activeNoteId === note.id;
    const displayContent = isRootLevel ? note.content : (activeNote?.content ?? '');
@@ -532,29 +534,37 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   
     const manualChildren = groupNotes.filter(n => n.parent_note_id === displayNoteId && !n.ai_generated);
 
-    // DETERMINAR ORDEN RELATIVO (como TikTok)
-    const getRelativeCreatedAt = () => {
-      let baseDate = new Date(activeNote?.created_at || note.created_at || Date.now());
-      if (activeTab === 'original') {
-        baseDate = new Date(activeNote?.created_at || note.created_at || Date.now());
-      } else if (activeTab.startsWith('sub_')) {
-        const id = activeTab.replace('sub_', '');
-        const target = manualChildren.find(c => c.id === id);
-        if (target) baseDate = new Date(target.created_at);
-      } else {
-        const target = completedSummaries.find(s => s.id === activeTab);
-        if (target) baseDate = new Date(target.created_at);
-      }
-      return new Date(baseDate.getTime() + 1).toISOString(); // +1 ms rigorosamente como pedido
-    };
-
     const unifiedTabs = useMemo(() => {
       const items = [
-        ...manualChildren.map(c => ({ id: `sub_${c.id}`, type: 'sub' as const, created_at: c.created_at, data: c })),
-        ...aiSummaries.map(s => ({ id: s.id, type: 'summary' as const, created_at: s.created_at, data: s }))
+        ...manualChildren.map(c => ({ id: `sub_${c.id}`, type: 'sub' as const, order_index: c.order_index || 0, data: c })),
+        ...aiSummaries.map(s => ({ id: s.id, type: 'summary' as const, order_index: s.order_index || 0, data: s }))
       ];
-      return items.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      return items.sort((a, b) => a.order_index - b.order_index);
     }, [manualChildren, aiSummaries]);
+
+    // DETERMINAR ORDEN RELATIVO (Interpolación REAL estilo Notion/Linear)
+    const getNewOrderIndex = () => {
+      if (activeTab === 'original') {
+        const first = unifiedTabs[0];
+        if (!first) return 1;
+        return first.order_index / 2;
+      }
+
+      const activeIndex = unifiedTabs.findIndex(t => t.id === activeTab);
+      if (activeIndex === -1) {
+        const last = unifiedTabs[unifiedTabs.length - 1];
+        return last ? last.order_index + 1 : 1;
+      }
+
+      const current = unifiedTabs[activeIndex];
+      const next = unifiedTabs[activeIndex + 1];
+
+      if (!next) {
+        return current.order_index + 1;
+      }
+
+      return (current.order_index + next.order_index) / 2;
+    };
 
     const childrenLoaded = true; // Since we rely on global state
  
@@ -614,6 +624,18 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   const [localNoteScratch, setLocalNoteScratch] = useState(note.scratchpad || '');
   const noteScratchRef = useRef<SmartNotesEditorRef>(null);
   const scratchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const videoSaveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
+
+  const tabBarRef = useRef<HTMLDivElement>(null);
+
+  // useEffect que scrollea al tab activo tras cada cambio
+  useEffect(() => {
+    if (!tabBarRef.current) return;
+    const activeBtn = tabBarRef.current.querySelector('[data-active-tab="true"]');
+    if (activeBtn) {
+      activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [activeTab]);
 
   // ── AI INPUT COLAPSABLE ────────────────────────────────────────────────────
   const [showAIInput, setShowAIInput] = useState(false);
@@ -725,8 +747,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
   const handleCreateSubnote = async () => {
     if (!onCreateNote) return;
-    const createdAt = getRelativeCreatedAt();
-    const newId = await onCreateNote('', '', displayNoteId, createdAt);
+    const orderIndex = getNewOrderIndex();
+    console.log('🔢 orderIndex calculado:', orderIndex, '| activeTab:', activeTab);
+    console.log('📊 unifiedTabs actual:', unifiedTabs.map(t => ({ id: t.id, oi: t.order_index })));
+    const newId = await onCreateNote('', '', displayNoteId, orderIndex);
     if (newId) setActiveTab(`sub_${newId}`);
   };
 
@@ -750,7 +774,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
   const handlePromoteToNote = async (content: string, title: string) => {
     if (!onCreateNote) return;
-    const newId = await onCreateNote(content, title, note.group_id, getRelativeCreatedAt());
+    const newId = await onCreateNote(content, title, note.group_id, getNewOrderIndex());
     if (newId) setActiveTab(`sub_${newId}`);
   };
 
@@ -1017,10 +1041,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 dark:bg-[#1A1A2E]/60 p-4 animate-fadeIn shrink-0">
               <NoteAIPanel
                 noteId={displayNoteId}
-                userId={session.user.id}
+                userId={session?.user?.id || ''}
                 noteStatus={note.ai_summary_status ?? 'idle'}
-                getRelativeCreatedAt={getRelativeCreatedAt}
-                onPromoteToNote={onCreateNote ? handlePromoteToNote : undefined}
+                getNewOrderIndex={getNewOrderIndex}
+                onPromoteToNote={handlePromoteToNote}
                 onCancel={() => setShowAIPanel(false)}
               />
             </div>
@@ -1028,11 +1052,12 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
           {/* ── BARRA DE TABS UNIFICADA — siempre visible si hay hijos o summaries ── */}
           {(manualChildren.length > 0 || aiSummaries.length > 0 || childrenLoaded) && (
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0">
+            <div ref={tabBarRef} className="flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0">
 
               {/* Tab Original */}
               <button
                 onClick={() => setActiveTab('original')}
+                data-active-tab={activeTab === 'original' || undefined}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all ${
                   activeTab === 'original'
                     ? 'bg-[#4940D9] text-white border-[#4940D9] shadow-sm'
@@ -1053,6 +1078,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                     <div key={child.id} className="relative shrink-0 flex items-center group">
                       <button
                         onClick={() => setActiveTab(`sub_${child.id}`)}
+                        data-active-tab={isActive || undefined}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all max-w-[150px] ${
                           isActive
                             ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
@@ -1103,6 +1129,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                   return (
                     <button key={s.id}
                       onClick={() => setActiveTab(activeTab === s.id ? 'original' : s.id)}
+                      data-active-tab={activeTab === s.id || undefined}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all max-w-[150px] ${
                         activeTab === s.id
                           ? 'bg-violet-600 text-white border-violet-500 shadow-sm'
@@ -1143,10 +1170,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 </div>
                 <NoteAIPanel
                   noteId={displayNoteId}
-                  userId={session.user.id}
+                  userId={session?.user?.id || ''}
                   noteStatus={note.ai_summary_status ?? 'idle'}
-                  getRelativeCreatedAt={getRelativeCreatedAt}
-                  onPromoteToNote={onCreateNote ? handlePromoteToNote : undefined}
+                  getNewOrderIndex={getNewOrderIndex}
+                  onPromoteToNote={handlePromoteToNote}
                   onCancel={() => setShowAIInput(false)}
                 />
               </div>

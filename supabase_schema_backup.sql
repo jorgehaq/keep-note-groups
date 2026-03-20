@@ -210,7 +210,8 @@ CREATE TABLE IF NOT EXISTS "public"."brain_dumps" (
     "generation_level" integer DEFAULT 0,
     "generation_status" "text" DEFAULT 'idle'::"text",
     "parent_id" "uuid",
-    "scratchpad" "text"
+    "scratchpad" "text",
+    "tiktok_video_id" "uuid"
 );
 
 
@@ -251,7 +252,8 @@ CREATE TABLE IF NOT EXISTS "public"."notes" (
     "parent_note_id" "uuid",
     "scratchpad" "text" DEFAULT ''::"text",
     "is_open" boolean DEFAULT false,
-    "tiktok_video_id" "uuid"
+    "tiktok_video_id" "uuid",
+    "status" "text" DEFAULT 'main'::"text" NOT NULL
 );
 
 
@@ -515,11 +517,19 @@ CREATE INDEX "idx_brain_dumps_parent" ON "public"."brain_dumps" USING "btree" ("
 
 
 
+CREATE INDEX "idx_brain_dumps_tiktok_video_id" ON "public"."brain_dumps" USING "btree" ("tiktok_video_id");
+
+
+
 CREATE INDEX "idx_notes_ai_status" ON "public"."notes" USING "btree" ("ai_summary_status") WHERE ("ai_summary_status" = 'queued'::"public"."ai_job_status");
 
 
 
 CREATE INDEX "idx_notes_parent" ON "public"."notes" USING "btree" ("parent_note_id");
+
+
+
+CREATE INDEX "idx_notes_status" ON "public"."notes" USING "btree" ("status");
 
 
 
@@ -617,6 +627,11 @@ CREATE OR REPLACE TRIGGER "update_reminders_modtime" BEFORE UPDATE ON "public"."
 
 ALTER TABLE ONLY "public"."brain_dumps"
     ADD CONSTRAINT "brain_dumps_parent_id_fkey" FOREIGN KEY ("parent_id") REFERENCES "public"."brain_dumps"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."brain_dumps"
+    ADD CONSTRAINT "brain_dumps_tiktok_video_id_fkey" FOREIGN KEY ("tiktok_video_id") REFERENCES "public"."tiktok_videos"("id") ON DELETE CASCADE;
 
 
 
@@ -758,6 +773,10 @@ CREATE POLICY "Users can manage summaries of their own records" ON "public"."sum
   WHERE (("brain_dumps"."id" = "summaries"."brain_dump_id") AND ("brain_dumps"."user_id" = "auth"."uid"())))) OR (EXISTS ( SELECT 1
    FROM "public"."tiktok_videos"
   WHERE (("tiktok_videos"."id" = "summaries"."tiktok_video_id") AND ("tiktok_videos"."user_id" = "auth"."uid"()))))));
+
+
+
+CREATE POLICY "Users can manage their own brain_dumps" ON "public"."brain_dumps" TO "authenticated" USING (("user_id" = "auth"."uid"())) WITH CHECK (("user_id" = "auth"."uid"()));
 
 
 

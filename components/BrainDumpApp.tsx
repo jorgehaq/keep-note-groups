@@ -366,6 +366,8 @@ export const BrainDumpApp: React.FC<{
         return children.some(child => checkPizarronSearchMatch(child, query, allDumps, summaries));
     }, []);
 
+    const tabBarRef = useRef<HTMLDivElement>(null);
+
     const { activeDumpId, activeDump, breadcrumbPath, navigate } = useBrainDumpTree(focusedDumpId);
     const isRootLevel = !activeDumpId || activeDumpId === focusedDumpId;
     
@@ -377,6 +379,12 @@ export const BrainDumpApp: React.FC<{
     const showAIPanel = currentDumpId ? (aiPanelOpenByBrainDump[currentDumpId] || false) : false;
     const activeTab = currentDumpId ? (activeTabByBrainDump[currentDumpId] || 'original') : 'original';
 
+    useEffect(() => {
+      if (!tabBarRef.current) return;
+      const activeBtn = tabBarRef.current.querySelector('[data-active-tab="true"]');
+      if (activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }, [activeTab]);
+
     const { 
         summaries: aiSummaries, deleteSummary, updateScratchpad, 
         updateSummaryContent, updateSummaryMetadata, loading: summariesLoading 
@@ -386,29 +394,40 @@ export const BrainDumpApp: React.FC<{
     const manualChildren = useMemo(() => {
         return dumps
             .filter(d => d.parent_id === currentDumpId)
-            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
     }, [dumps, currentDumpId]);
 
-    // DETERMINAR ORDEN RELATIVO (como TikTok/Notas)
-    const getRelativeCreatedAt = useCallback(() => {
-        if (!currentDumpId || !displayDump) return new Date().toISOString();
-        
-        let baseDate = new Date(displayDump.created_at);
-        const activeTab = activeTabByBrainDump[currentDumpId] || 'original';
-        
-        if (activeTab === 'original') {
-            baseDate = new Date(displayDump.created_at);
-        } else if (activeTab.startsWith('sub_')) {
-            const id = activeTab.replace('sub_', '');
-            const target = manualChildren.find(c => c.id === id);
-            if (target) baseDate = new Date(target.created_at);
-        } else {
-            const target = completedSummaries.find(s => s.id === activeTab);
-            if (target) baseDate = new Date(target.created_at);
+    const unifiedTabs = useMemo(() => {
+        const items = [
+            ...manualChildren.map(c => ({ id: `sub_${c.id}`, type: 'sub' as const, order_index: c.order_index || 0, data: c })),
+            ...aiSummaries.map(s => ({ id: s.id, type: 'summary' as const, order_index: s.order_index || 0, data: s }))
+        ];
+        return items.sort((a, b) => a.order_index - b.order_index);
+    }, [manualChildren, aiSummaries]);
+
+    // DETERMINAR ORDEN RELATIVO (Interpolación REAL estilo Notion/Linear)
+    const getNewOrderIndex = useCallback(() => {
+      if (activeTab === 'original') {
+        const first = unifiedTabs[0];
+        if (!first) return 1;
+        return first.order_index / 2;
+      }
+
+        const activeIndex = unifiedTabs.findIndex(t => t.id === activeTab);
+        if (activeIndex === -1) {
+            const last = unifiedTabs[unifiedTabs.length - 1];
+            return last ? last.order_index + 1 : 1;
         }
-        // Retornamos la fecha base + 1 milisegundo rigoroso como pedido
-        return new Date(baseDate.getTime() + 1).toISOString();
-    }, [displayDump, activeTabByBrainDump, currentDumpId, manualChildren, completedSummaries]);
+
+        const current = unifiedTabs[activeIndex];
+        const next = unifiedTabs[activeIndex + 1];
+
+        if (!next) {
+            return current.order_index + 1;
+        }
+
+        return (current.order_index + next.order_index) / 2;
+    }, [activeTab, unifiedTabs]);
 
     // --- LOCAL UI STATE ---
     const [isZenMode, setIsZenMode] = useState(isZenModeByApp['braindump']);
@@ -500,7 +519,7 @@ export const BrainDumpApp: React.FC<{
 
     const handleCreateSubpizarron = async () => {
         if (!currentDumpId) return;
-        const relativeDate = getRelativeCreatedAt();
+        const orderIndex = getNewOrderIndex();
         const { data, error } = await supabase.from('brain_dumps').insert([{
             title: 'Nuevo Sub-pizarrón',
             content: '',
@@ -508,7 +527,7 @@ export const BrainDumpApp: React.FC<{
             user_id: session.user.id,
             parent_id: currentDumpId,
             generation_level: (displayDump?.generation_level || 0) + 1,
-            created_at: relativeDate
+            order_index: orderIndex
         }]).select().single();
         if (error) {
             console.error('Error creating subpizarron:', error);
@@ -1005,19 +1024,20 @@ export const BrainDumpApp: React.FC<{
                                                     <X size={13} />
                                                 </button>
                                             </div>
-                                            <BrainDumpAIPanel dumpId={displayDump.id} onGenerate={() => setShowAIInput(false)} getRelativeCreatedAt={getRelativeCreatedAt} />
+                                            <BrainDumpAIPanel dumpId={displayDump.id} onGenerate={() => setShowAIInput(false)} getNewOrderIndex={getNewOrderIndex} />
                                         </div>
                                     </div>
                                 )}
 
                                 {/* TABS UNIFICADAS */}
                                 {(manualChildren.length > 0 || completedSummaries.length > 0 || true) && (
-                                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0">
+                                    <div ref={tabBarRef} className="flex items-center gap-1.5 overflow-x-auto pb-0.5 shrink-0 min-w-0">
                                         {(() => {
                                             const originalIsMatch = Boolean(searchQuery?.trim() && (displayDump.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || displayDump.scratchpad?.toLowerCase().includes(searchQuery.trim().toLowerCase())));
                                             return (
                                                 <button 
                                                     onClick={() => setActiveTab('original')} 
+                                                    data-active-tab={activeTab === 'original' || undefined}
                                                     className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all ${
                                                         activeTab === 'original' 
                                                             ? `bg-amber-500 text-amber-950 border-amber-400 shadow-sm ${originalIsMatch ? 'ring-[3px] ring-amber-400 shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
@@ -1038,9 +1058,9 @@ export const BrainDumpApp: React.FC<{
                                         {(() => {
                                             // Unified tabs sorted by created_at (like TikTok)
                                             const allTabs = [
-                                                ...manualChildren.map(c => ({ id: `sub_${c.id}`, type: 'sub' as const, created_at: c.created_at, data: c })),
-                                                ...completedSummaries.map(s => ({ id: s.id, type: 'summary' as const, created_at: s.created_at, data: s }))
-                                            ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+                                                ...manualChildren.map(c => ({ id: `sub_${c.id}`, type: 'sub' as const, order_index: c.order_index || 0, data: c })),
+                                                ...completedSummaries.map(s => ({ id: s.id, type: 'summary' as const, order_index: s.order_index || 0, data: s }))
+                                            ].sort((a, b) => a.order_index - b.order_index);
 
                                             return allTabs.map(tab => {
                                                 if (tab.type === 'sub') {
@@ -1051,6 +1071,7 @@ export const BrainDumpApp: React.FC<{
                                                         <div key={child.id} className="relative shrink-0 flex items-center group">
                                                             <button 
                                                                 onClick={() => setActiveTab(`sub_${child.id}`)} 
+                                                                data-active-tab={isActive || undefined}
                                                                 className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all max-w-[150px] ${
                                                                     isActive 
                                                                         ? `bg-emerald-600 text-white border-emerald-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
@@ -1084,7 +1105,11 @@ export const BrainDumpApp: React.FC<{
                                                         (s.scratchpad || '').toLowerCase().includes(searchQuery.trim().toLowerCase())
                                                     );
                                                     return (
-                                                        <button key={s.id} onClick={() => setActiveTab(s.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all max-w-[150px] ${
+                                                        <button 
+                                                            key={s.id} 
+                                                            onClick={() => setActiveTab(s.id)} 
+                                                            data-active-tab={activeTab === s.id || undefined}
+                                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all max-w-[150px] ${
                                                             activeTab === s.id 
                                                                 ? `bg-violet-600 text-white border-violet-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
                                                                 : isMatch

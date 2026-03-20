@@ -32,45 +32,92 @@ serve(async (req) => {
     console.log("📥 Prompt Length:", prompt.length);
 
     const apiKey = Deno.env.get("GEMINI_API_KEY");
-    console.log("🔑 API Key presente:", !!apiKey);
+    const openRouterApiKey = Deno.env.get("OPENROUTER_API_KEY");
+    
+    console.log("🔑 API Keys presentes: Gemini:", !!apiKey, "OpenRouter:", !!openRouterApiKey);
     if (!apiKey) throw new Error("API Key de Gemini no configurada.");
 
-    console.log("🚀 Llamando a Gemini...");
+    let response;
+    let data;
 
-    // 3. Gemini Call
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{ text: prompt }],
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            topP: 0.95,
-            topK: 40,
-            maxOutputTokens: 4096,
-            responseMimeType: "application/json",
+    // --- PROVEEDOR 1: Gemini Directo ---
+    console.log("🚀 [P1] Intentando Gemini Directo...");
+    try {
+      response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.7,
+              topP: 0.95,
+              topK: 40,
+              maxOutputTokens: 4096,
+              responseMimeType: "application/json",
+            },
+            safetySettings: [
+              { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
+              { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
+              { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
+              { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
+            ]
+          }),
+        },
+      );
+      
+      data = await response.json();
+      
+      // Si hay rate limit (429) o servicio no disponible (503), intentamos fallback
+      if (response.status === 429 || response.status === 503) {
+        console.warn(`⚡ Gemini status ${response.status}, intentando fallback a OpenRouter...`);
+        throw new Error("FALLBACK_TRIGGERED");
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error?.message || "Google Gemini Error");
+      }
+    } catch (err: any) {
+      if (err.message === "FALLBACK_TRIGGERED" && openRouterApiKey) {
+        // --- PROVEEDOR 2: OpenRouter Fallback ---
+        console.log("🚀 [P2] Llamando a OpenRouter (Gemini 2.0 Flash Exp)...");
+        const orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${openRouterApiKey}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://keep-note-groups.vercel.app",
+            "X-Title": "Antigravity AI"
           },
-          safetySettings: [
-            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
-            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
-            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
-            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
-          ]
-        }),
-      },
-    );
+          body: JSON.stringify({
+            model: "google/gemini-2.0-flash-exp:free",
+            messages: [{ role: "user", content: prompt }],
+            max_tokens: 4096
+          })
+        });
 
-    console.log("📡 Gemini status:", response.status);
-    const data = await response.json();
+        const orData = await orResponse.json();
+        if (!orResponse.ok) {
+          console.error("❌ OpenRouter Error:", JSON.stringify(orData));
+          throw new Error(orData.error?.message || "OpenRouter Fallback Error");
+        }
 
-    if (!response.ok) {
-      console.error("❌ Gemini error:", JSON.stringify(data));
-      throw new Error(data.error?.message || "Google Gemini Error");
+        // Normalizamos la respuesta de OpenRouter para que el resto del código funcione
+        // OpenRouter devuelve content en choices[0].message.content
+        data = {
+          candidates: [{
+            content: {
+              parts: [{ text: orData.choices[0].message.content }]
+            }
+          }]
+        };
+      } else {
+        throw err;
+      }
     }
+
+    console.log("📡 Respuesta obtenida correctamente.");
 
     const aiResponseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
     console.log("📝 Raw AI Response (first 500 chars):", aiResponseText.substring(0, 500));
