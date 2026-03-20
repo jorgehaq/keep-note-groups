@@ -6,7 +6,7 @@ import {
   Calendar, History, PanelLeft, Settings, MoreVertical, Trash2, 
   Archive, Download, Sparkles, FileText, Quote, StickyNote, Wind, 
   PlusCircle, AlertCircle, PenLine, Brain, GitBranch, RotateCcw, 
-  Loader2, ListPlus
+  Loader2, ListPlus, ArrowUpRight
 } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
 import { useUIStore } from '../src/lib/store';
@@ -17,6 +17,7 @@ import { TikTokAIPanel } from './TikTokAIPanel';
 import { SmartNotesEditor, SmartNotesEditorRef } from '../src/components/editor/SmartNotesEditor';
 import { useTikTokSummaries } from '../src/lib/useTikTokSummaries';
 import { useTikTokSubnotes } from '../src/lib/useTikTokSubnotes';
+import { TikTokLinkerModal } from './TikTokLinkerModal';
 
 // --- HELPERS ---
 const formatDuration = (secs: number): string => {
@@ -142,6 +143,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
   } = useUIStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
@@ -405,55 +407,8 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
     setIsAdding(false);
   };
 
-  const handleConvertToNote = async () => {
-    if (!focusedVideo) return;
-    const { groups, activeGroupId } = useUIStore.getState();
-    const groupNames = groups.map((g, idx) => `${idx + 1}. ${g.title}`).join("\n");
-    const choice = prompt(`Selecciona el número del grupo para la nueva nota:\n${groupNames}\n\n(Deja vacío para el grupo activo)`);
-    
-    let targetGroupId = activeGroupId;
-    if (choice) {
-      const idx = parseInt(choice) - 1;
-      if (groups[idx]) targetGroupId = groups[idx].id;
-    }
-
-    if (!targetGroupId) {
-      alert("No hay un grupo seleccionado.");
-      return;
-    }
-
-    const content = `
-# [ANÁLISIS TIKTOK] ${focusedVideo.title}
-**Autor:** @${focusedVideo.author} | **URL:** ${focusedVideo.url}
-
-## 📝 RESUMEN EJECUTIVO
-${focusedVideo.summary || "_Sin resumen generado_"}
-
-## 💡 PUNTOS CLAVE
-${focusedVideo.key_points?.map(p => `- ${p}`).join("\n") || "_Sin puntos clave_"}
-
-## ✍️ NOTAS DE TRABAJO
-${focusedVideo.scratchpad || "_Sin notas_"}
-
----
-
-## 🎙️ TRANSCRIPCIÓN COMPLETA
-${focusedVideo.transcript || "_Sin transcripción_"}
-`.trim();
-
-    const { error } = await supabase.from("notes").insert([{
-      title: `TikTok: ${focusedVideo.title?.slice(0, 40)}`,
-      content,
-      user_id: session.user.id,
-      group_id: targetGroupId,
-      position: 0
-    }]);
-
-    if (error) {
-      alert("Error al convertir a nota: " + error.message);
-    } else {
-      alert("¡Nota creada con éxito!");
-    }
+  const handleConvertToNote = () => {
+    setIsLinkModalOpen(true);
   };
 
   const handleDividerMouseDown = (e: React.MouseEvent) => {
@@ -676,33 +631,32 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
                   <div className="relative" ref={moreMenuRef}>
                     <button
                       onClick={() => setShowMoreMenu(!showMoreMenu)}
-                      className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+                      className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors border border-transparent"
                       title="Más opciones"
                     >
-                      < MoreVertical size={16} />
+                      <MoreVertical size={16} />
                     </button>
                     
                     {showMoreMenu && (
-                      <div className="absolute right-0 top-full mt-1 z-50 bg-[#13131A] shadow-xl rounded-lg border border-zinc-800 p-1 flex flex-col gap-0.5 min-w-[180px] animate-fadeIn">
+                      <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-[#1A1A24] shadow-xl rounded-lg border border-zinc-200 dark:border-[#2D2D42] p-1 flex flex-col gap-0.5 min-w-[200px] animate-fadeIn">
                         <button 
                           onClick={() => { handleConvertToNote(); setShowMoreMenu(false); }} 
-                          className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors"
+                          className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 transition-colors"
                         >
-                          <ExternalLink size={14} /> Convertir a Nota
+                          <ArrowUpRight size={14} /> Convertir a Nota
                         </button>
                         
-                        <div className="border-t border-zinc-800 my-0.5" />
-                        
+                        <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
                         <button 
                           onClick={() => { archiveVideo(focusedVideo.id); setShowMoreMenu(false); }} 
-                          className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors"
+                          className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"
                         >
                           <Archive size={14} /> Archivar
                         </button>
                         
                         <button 
                           onClick={() => { deleteVideo(focusedVideo.id, focusedVideo.url); setShowMoreMenu(false); }} 
-                          className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-500 hover:bg-red-500/10 transition-colors"
+                          className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                         >
                           <Trash2 size={14} /> Eliminar
                         </button>
@@ -1120,6 +1074,15 @@ ${focusedVideo.transcript || "_Sin transcripción_"}
           queue={tikTokQueueItems}
           onAdd={handleAddUrls}
           isAdding={isAdding}
+        />
+      )}
+
+      {isLinkModalOpen && focusedVideo && (
+        <TikTokLinkerModal 
+          video={focusedVideo} 
+          groups={groups} 
+          onClose={() => setIsLinkModalOpen(false)} 
+          onSuccess={() => { setIsLinkModalOpen(false); }} 
         />
       )}
     </div>

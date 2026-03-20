@@ -45,6 +45,7 @@ interface UIStore {
     isTranslatorMaximized: boolean;
     isTikTokMaximized: boolean;
     isTikTokPizarronOpen: boolean;
+    isBraindumpPizarronOpen: boolean;
     pizarronVisibleByNoteAndTab: Record<string, Record<string, boolean>>;
     isZenModeByApp: Record<string, boolean>; // Zen orientation per app
 
@@ -133,6 +134,7 @@ interface UIStore {
     setIsDumpTrayOpen: (open: boolean) => void;
     setFocusedVideoId: (id: string | null) => void;
     setIsVideoTrayOpen: (open: boolean) => void;
+    setIsBraindumpPizarronOpen: (open: boolean) => void;
 
     // Dock Actions
     openGroup: (id: string) => void; // Adds to dock and sets active
@@ -209,6 +211,7 @@ export const useUIStore = create<UIStore>()(
             isDumpTrayOpen: false,
             focusedVideoId: null,
             isVideoTrayOpen: false,
+            isBraindumpPizarronOpen: false,
             aiPanelOpenByVideo: {},
             activeTabByVideo: {},
             pizarronVisibleByNoteAndTab: {},
@@ -412,6 +415,7 @@ export const useUIStore = create<UIStore>()(
             setIsDumpTrayOpen: (open) => set({ isDumpTrayOpen: open }),
             setFocusedVideoId: (id) => set({ focusedVideoId: id }),
             setIsVideoTrayOpen: (open) => set({ isVideoTrayOpen: open }),
+            setIsBraindumpPizarronOpen: (open) => set({ isBraindumpPizarronOpen: open }),
             setShowOverdueMarquee: (show) => set({ showOverdueMarquee: show }),
             toggleZenMode: (appId) =>
                 set((state) => ({
@@ -436,6 +440,7 @@ export const useUIStore = create<UIStore>()(
                 isDumpTrayOpen: false,
                 focusedVideoId: null,
                 isVideoTrayOpen: false,
+                isBraindumpPizarronOpen: false,
                 isTikTokPizarronOpen: true,
                 aiPanelOpenByVideo: {},
                 activeTabByVideo: {},
@@ -608,6 +613,7 @@ export const useUIStore = create<UIStore>()(
                 isDumpTrayOpen: state.isDumpTrayOpen,
                 focusedVideoId: state.focusedVideoId,
                 isVideoTrayOpen: state.isVideoTrayOpen,
+                isBraindumpPizarronOpen: state.isBraindumpPizarronOpen,
                 isZenModeByApp: state.isZenModeByApp,
             }),
         },
