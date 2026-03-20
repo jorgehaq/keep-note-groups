@@ -433,14 +433,14 @@ export const BrainDumpApp: React.FC<{
     const checkScroll = useCallback(() => {
         if (scrollContainerRef.current) {
             const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-            setCanScrollLeft(scrollLeft > 5);
-            setCanScrollRight(Math.ceil(scrollLeft + clientWidth) < scrollWidth - 5);
+            setCanScrollLeft(scrollLeft > 1);
+            setCanScrollRight(Math.ceil(scrollLeft + clientWidth) < scrollWidth - 1);
         }
     }, []);
 
     const scrollTabs = (direction: 'left' | 'right') => {
         if (scrollContainerRef.current) {
-            scrollContainerRef.current.scrollBy({ left: direction === 'left' ? -200 : 200, behavior: 'smooth' });
+            scrollContainerRef.current.scrollBy({ left: direction === 'left' ? -350 : 350, behavior: 'smooth' });
         }
     };
 
@@ -687,11 +687,11 @@ export const BrainDumpApp: React.FC<{
 
             {!isZenMode && isDumpTrayOpen && (
                 <div className="bg-[#13131A] shrink-0 animate-slideDown group/tray">
-                    <div className="max-w-6xl mx-auto relative px-6 py-1">
+                    <div className="max-w-6xl mx-auto relative px-0 py-1">
                         {/* Flecha Izquierda */}
                         {canScrollLeft && (
-                            <div className="absolute left-6 top-0 bottom-0 w-12 bg-gradient-to-r from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none">
-                                <button onClick={() => scrollTabs('left')} className="p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors pointer-events-auto">
+                            <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-start pl-3 pointer-events-none">
+                                <button onClick={() => scrollTabs('left')} className="p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors pointer-events-auto active:scale-90">
                                     <ChevronLeft size={16} />
                                 </button>
                             </div>
@@ -699,7 +699,7 @@ export const BrainDumpApp: React.FC<{
                         <div 
                             ref={scrollContainerRef}
                             onScroll={checkScroll}
-                            className="flex flex-nowrap items-center justify-start md:justify-center gap-3 overflow-x-auto hidden-scrollbar scroll-smooth py-3 px-1"
+                            className="flex flex-nowrap items-center justify-start gap-4 overflow-x-auto hidden-scrollbar scroll-smooth py-3 pl-20 pr-20"
                         >
                             {rootPizarrones.length === 0 ? (
                                 <div className="text-xs text-zinc-600 italic">No hay pizarrones activos</div>
@@ -737,8 +737,8 @@ export const BrainDumpApp: React.FC<{
                         </div>
                         {/* Flecha Derecha */}
                         {canScrollRight && (
-                            <div className="absolute right-6 top-0 bottom-0 w-12 bg-gradient-to-l from-[#13131A] to-transparent z-10 flex items-center justify-end pointer-events-none">
-                                <button onClick={() => scrollTabs('right')} className="p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors pointer-events-auto">
+                            <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#13131A] via-[#13131A] to-transparent z-10 flex items-center justify-end pr-2 pointer-events-none">
+                                <button onClick={() => scrollTabs('right')} className="p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors pointer-events-auto active:scale-90">
                                     <ChevronRight size={16} />
                                 </button>
                             </div>

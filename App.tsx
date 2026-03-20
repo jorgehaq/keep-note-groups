@@ -187,7 +187,7 @@ function App() {
 
   const scrollTabs = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({ left: direction === 'left' ? -200 : 200, behavior: 'smooth' });
+      scrollContainerRef.current.scrollBy({ left: direction === 'left' ? -350 : 350, behavior: 'smooth' });
     }
   };
 
@@ -1707,10 +1707,10 @@ function App() {
                 {/* 2. FRANJA DE NOTAS (INTEGRADA EN EL ENCABEZADO) */}
                 {isGlobalNoteTrayOpen && activeGroup && (
                   <div className="pt-[2px] bg-[#FAFAFA] dark:bg-[#13131A] relative group/tray border-b border-zinc-200/50 dark:border-zinc-800/50">
-                      <div className="max-w-6xl mx-auto relative px-6">
+                      <div className="max-w-6xl mx-auto relative px-0">
                           {/* Flecha Izquierda */}
                           {canScrollLeft && (
-                            <div className="absolute left-6 top-0 bottom-0 w-12 bg-gradient-to-r from-[#FAFAFA] dark:from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none">
+                            <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#FAFAFA] dark:from-[#13131A] via-[#FAFAFA] dark:via-[#13131A] to-transparent z-10 flex items-center justify-start pl-3 pointer-events-none">
                               <button 
                                 onClick={() => scrollTabs('left')} 
                                 className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-colors pointer-events-auto active:scale-95"
@@ -1724,7 +1724,7 @@ function App() {
                           <div 
                             ref={scrollContainerRef}
                             onScroll={checkScroll}
-                            className="flex flex-nowrap items-center justify-start md:justify-center gap-3 overflow-x-auto hidden-scrollbar py-3 px-1 scroll-smooth"
+                            className="flex flex-nowrap items-center justify-start gap-4 overflow-x-auto hidden-scrollbar py-3 pl-20 pr-20 scroll-smooth"
                           >
                       {sortNotesArray(activeGroup.notes.filter(n => !n.parent_note_id && n.status !== 'history'), noteSortMode)
                         .map(note => {
@@ -1807,7 +1807,7 @@ function App() {
 
                       {/* Flecha Derecha */}
                       {canScrollRight && (
-                        <div className="absolute right-6 top-0 bottom-0 w-12 bg-gradient-to-l from-[#FAFAFA] dark:from-[#13131A] to-transparent z-10 flex items-center justify-end pointer-events-none">
+                        <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#FAFAFA] dark:from-[#13131A] via-[#FAFAFA] dark:via-[#13131A] to-transparent z-10 flex items-center justify-end pr-2 pointer-events-none">
                           <button 
                             onClick={() => scrollTabs('right')} 
                             className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-colors pointer-events-auto active:scale-95"
