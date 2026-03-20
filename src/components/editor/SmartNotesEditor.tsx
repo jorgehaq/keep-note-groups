@@ -505,10 +505,10 @@ const visualMarkupPluginFactory = (translationsMapRef: React.MutableRefObject<Re
                 { type: 'mk-yo',     regex: /\[\[yo:[^\|]+\|([^\]]+)\]\]/g },
                 { type: 'mk-ruido',  regex: /\[\[ruido:[^\|]+\|([^\]]+)\]\]/g },
                 { type: 'mk-contra', regex: /\[\[contra:[^\|]+\|([^\]]+)\]\]/g },
-                { type: 'h1', regex: /^(#{1,6})\s+(.*)/gm }, 
-                { type: 'bold', regex: /\*\*([\s\S]*?)\*\*/g }, 
+                { type: 'h1', regex: /^(#{1,6})\s+(.*)/gm },
+                { type: 'bold', regex: /\*\*([\s\S]*?)\*\*/g },
                 { type: 'strikethrough', regex: /~~([\s\S]*?)~~/g },
-                { type: 'italic_under', regex: /(?<!_)_([^_]+)_(?!_)/g }, { type: 'italic_star', regex: /(?<!\*)\*([^*]+)\*(?!\*)/g }, 
+                { type: 'italic_star', regex: /(?<!\*)\*([^*]+)\*(?!\*)/g },
                 { type: 'hr', regex: /^---+$/gm }, { type: 'hr-big', regex: /^===+$/gm }, { type: 'md-link', regex: /\[([^\]]*)\]\(([^)\n]*)\)/g },
                 { type: 'raw-link', regex: /(?<!\()(https?:\/\/[^\s\n)]+)/g }
             ];
@@ -584,7 +584,7 @@ const visualMarkupPluginFactory = (translationsMapRef: React.MutableRefObject<Re
                     else if (rule.type === 'strikethrough') {
                         if (isRevealed) safeMark('cm-custom-strikethrough', mFrom, mTo); else { safeReplace(mFrom, mFrom + 2); safeMark('cm-custom-strikethrough', mFrom + 2, mTo - 2); safeReplace(mTo - 2, mTo); }
                     }
-                    else if (rule.type === 'italic_under' || rule.type === 'italic_star') {
+                    else if (rule.type === 'italic_star') {
                         if (isRevealed) safeMark('cm-custom-italic', mFrom, mTo); else { safeReplace(mFrom, mFrom + 1); safeMark('cm-custom-italic', mFrom + 1, mTo - 1); safeReplace(mTo - 1, mTo); }
                     }
                 }
@@ -1332,10 +1332,16 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         },
         mouseover: (e) => {
             const target = e.target as HTMLElement;
-            const hlNode = target.closest('[class*="cm-hl-"], .cm-custom-hl, .cm-custom-tr, .cm-custom-link, [class*="cm-custom-mk-"]');
+            // Expandimos el selector para incluir formatos básicos que pueden estar anidados
+            const hlNode = target.closest('[class*="cm-hl-"], .cm-custom-hl, .cm-custom-tr, .cm-custom-link, [class*="cm-custom-mk-"], .cm-custom-bold, .cm-custom-italic, .cm-custom-strikethrough');
             if (hlNode) {
                 const span = hlNode as HTMLElement;
-                let sibling = span?.nextElementSibling;
+                const line = span.closest('.cm-line');
+                if (!line) return;
+
+                // Buscamos hacia adelante en los hermanos hasta encontrar el wrapper del botón
+                let sibling: Element | null = span;
+                // Intentamos encontrar el botón de este bloque específico navegando hermanos
                 while (sibling) {
                     if (sibling.classList.contains('cm-remove-btn-wrapper')) {
                         const btn = sibling.querySelector('.cm-remove-btn');
@@ -1348,7 +1354,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         },
         mouseout: (e) => {
             const target = e.target as HTMLElement;
-            if (target.closest('[class*="cm-hl-"], .cm-custom-hl, .cm-custom-tr, .cm-custom-link, [class*="cm-custom-mk-"]')) {
+            if (target.closest('[class*="cm-hl-"], .cm-custom-hl, .cm-custom-tr, .cm-custom-link, [class*="cm-custom-mk-"], .cm-custom-bold, .cm-custom-italic, .cm-custom-strikethrough')) {
                 const line = target.closest('.cm-line');
                 if (line) line.querySelectorAll('.cm-remove-btn-visible').forEach(btn => btn.classList.remove('cm-remove-btn-visible'));
             }
