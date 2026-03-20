@@ -770,7 +770,7 @@ export const BrainDumpApp: React.FC<{
                 </div>
             )}
 
-            <div className={`flex-1 ${focusedDumpId ? 'overflow-hidden' : 'overflow-y-auto'} bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 ${!isZenMode && isDumpTrayOpen ? 'pt-0' : 'pt-5'} hidden-scrollbar flex flex-col`}>
+            <div className={`flex-1 ${focusedDumpId ? 'overflow-hidden' : 'overflow-y-auto'} bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 ${!isZenMode && isDumpTrayOpen ? 'pt-1' : 'pt-5'} hidden-scrollbar flex flex-col`}>
                 <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto flex flex-col ${focusedDumpId ? 'gap-0 pb-0 flex-1 w-full min-h-0' : 'gap-12 pb-20 w-full'}`}>
                     
                     {focusedDumpId && displayDump && (() => {

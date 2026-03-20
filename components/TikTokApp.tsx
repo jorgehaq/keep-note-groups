@@ -638,7 +638,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
           const titleMatch = searchQuery?.trim() && (focusedVideo.title || '').toLowerCase().includes(searchQuery.toLowerCase());
 
           return (
-            <div className={`flex-1 flex flex-col overflow-y-auto w-full px-4 pb-4 ${isVideoTrayOpen && !isZenMode ? 'pt-0' : 'pt-4'}`}>
+            <div className={`flex-1 flex flex-col overflow-y-auto w-full px-4 pb-4 ${isVideoTrayOpen && !isZenMode ? 'pt-1' : 'pt-4'}`}>
               <div className={`flex-1 flex flex-col min-h-0 ${isTikTokMaximized ? 'max-w-full' : 'max-w-6xl mx-auto'} w-full transition-all duration-300 bg-white dark:bg-[#1A1A24] rounded-2xl border overflow-hidden animate-fadeIn ${
                 isGlobalVideoMatch
                   ? 'border-amber-500 ring-2 ring-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.3)]'

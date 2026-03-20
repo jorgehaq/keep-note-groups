@@ -296,7 +296,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                 <Wrench size={16} className="fill-current" /> Creación de Cronómetro ({drafts.length})
                             </div>
                             {drafts.map(draft => (
-                                <div key={draft.id} className="bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] transition-all duration-300 hover:border-[#2563EB]/50 hover:shadow-xl hover:shadow-[#2563EB]/5 flex flex-col overflow-hidden">
+                                <div key={draft.id} className="bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] transition-all duration-300 hover:border-[#2563EB]/50 hover:shadow-xl hover:shadow-[#2563EB]/5 focus-within:ring-2 focus-within:ring-[#2563EB]/50 flex flex-col overflow-hidden animate-fadeIn">
                                     <div className="flex items-center justify-between p-4 pb-2">
                                         <input 
                                             type="text" placeholder="¿Qué vamos a medir? (ej. Sprint Programación)" 
@@ -386,7 +386,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                     const isRunning = timer.last_started_at !== null;
 
                                     return (
-                                        <div key={timer.id} className="bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg transition-all duration-300 flex flex-col border border-zinc-200 dark:border-[#2D2D42] hover:border-[#2563EB]/50 hover:shadow-xl hover:shadow-[#2563EB]/5 focus-within:ring-2 focus-within:ring-[#2563EB]/50 overflow-hidden">
+                                        <div key={timer.id} className="bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg transition-all duration-300 flex flex-col border border-zinc-200 dark:border-[#2D2D42] hover:border-[#2563EB]/50 hover:shadow-xl hover:shadow-[#2563EB]/5 focus-within:ring-2 focus-within:ring-[#2563EB]/50 overflow-hidden animate-fadeIn">
                                             <div className="p-5 pb-4">
                                                 {/* HEADER */}
                                                 <div className="flex justify-between items-start mb-4">

@@ -392,7 +392,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                 <Wrench size={16} /> Creación ({drafts.length})
                             </div>
                             {drafts.map(draft => (
-                                <div key={draft.id} className="bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] transition-all duration-300 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5 focus-within:ring-2 focus-within:ring-indigo-500/50 flex flex-col overflow-hidden animate-fadeIn">
+                                <div key={draft.id} className="bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] transition-all duration-300 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5 focus-within:ring-2 focus-within:ring-[#1F3760]/50 flex flex-col overflow-hidden animate-fadeIn">
                                     {/* HEADER CON BOTONES ESTILO PIZARRON */}
                                     <div className="flex items-center justify-between p-4 pb-2">
                                         <input 
@@ -518,7 +518,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
 
                                     return (
                                         /* 🚀 FIX: border-0 removed because we already have overflow-hidden in container if we อยาก edge-to-edge but let's keep the user shadow approach */
-                                        <div key={r.id} className="bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg transition-all duration-300 flex flex-col border border-zinc-200 dark:border-[#2D2D42] hover:border-[#225B49]/50 hover:shadow-xl hover:shadow-[#225B49]/5 focus-within:ring-2 focus-within:ring-indigo-500/50 overflow-hidden">
+                                        <div key={r.id} className="bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg transition-all duration-300 flex flex-col border border-zinc-200 dark:border-[#2D2D42] hover:border-[#225B49]/50 hover:shadow-xl hover:shadow-[#225B49]/5 focus-within:ring-2 focus-within:ring-[#1F3760]/50 overflow-hidden">
                                             <div className="p-5 pb-4">
                                                 {/* HEADER */}
                                                 <div className="flex justify-between items-start mb-2">

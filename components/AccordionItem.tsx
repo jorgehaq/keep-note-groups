@@ -782,7 +782,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
     <div className={`m-1 transition-all duration-300 flex-1 flex flex-col min-h-0 bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border select-text ${
       isHighlightedBySearch
         ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50/30 dark:bg-amber-900/10 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
-        : 'border-zinc-200 dark:border-[#2D2D42] hover:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/50'
+        : 'border-zinc-200 dark:border-[#2D2D42] hover:border-indigo-500/50 focus-within:ring-2 focus-within:ring-[#4940D9]/50'
     }`}>
 
       {/* HEADER */}

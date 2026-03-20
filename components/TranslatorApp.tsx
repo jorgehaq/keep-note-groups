@@ -240,7 +240,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                 {/* 1. MÓDULO DE CREACIÓN */}
                 <div className="space-y-4 animate-fadeIn">
                     {/* 🚀 FIX: focus-within EN LA TARJETA EXTERIOR EXCLUSIVAMENTE */}
-                    <div className="bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] transition-all duration-300 hover:border-violet-500/50 hover:shadow-xl hover:shadow-violet-500/5 focus-within:ring-2 focus-within:ring-violet-500/50 overflow-hidden">
+                    <div className="bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border border-zinc-200 dark:border-[#2D2D42] transition-all duration-300 hover:border-violet-500/50 hover:shadow-xl hover:shadow-violet-500/5 focus-within:ring-2 focus-within:ring-[#8B5CF6]/50 overflow-hidden">
                         
                         <div className="mx-4 mt-4 flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-zinc-400">
                             <div className="flex items-center gap-2">
@@ -336,7 +336,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                             const isExpanded = expandedTranslationIds.has(t.id);
                             
                             return (
-                            <div key={t.id} className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-[#1A1A24]/50 rounded-lg border border-zinc-200 dark:border-[#2D2D42] transition-colors">
+                            <div key={t.id} className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-[#1A1A24]/50 rounded-lg border border-zinc-200 dark:border-[#2D2D42] transition-colors hover:border-violet-500/50 focus-within:ring-2 focus-within:ring-[#8B5CF6]/50 animate-fadeIn">
                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                                     
                                     {/* Cabecera / Fila Compacta */}
