@@ -916,7 +916,12 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                     <Archive size={14} /> Archivar Nota
                   </button>
                 )}
-                <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false); if (confirm('¿Estás seguro de eliminar esta nota?')) onDelete(note.id); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"><Trash2 size={14} />Eliminar Permanente</button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false); if (confirm('¿Estás seguro de eliminar esta nota?')) onDelete(note.id); }} 
+                  className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium"
+                >
+                  <Trash2 size={14} /> Eliminar Permanentemente
+                </button>
               </div>
             )}
           </div>

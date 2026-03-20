@@ -909,8 +909,19 @@ export const BrainDumpApp: React.FC<{
                                                 </button>
  
                                                 <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
-                                                <button onClick={() => { changeStatus(displayDump.id, 'history'); setOpenMenuId(null); }} className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"><ArchiveIcon size={14} />Archivar</button>
-                                                <button onClick={() => { deleteDump(displayDump.id); setOpenMenuId(null); }} className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"><Trash2 size={14} />Eliminar</button>
+                                                <button 
+                                                    onClick={() => { changeStatus(displayDump.id, 'history'); setOpenMenuId(null); }} 
+                                                    className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors font-medium"
+                                                >
+                                                    <ArchiveIcon size={14} /> Archivar Pizarrón
+                                                </button>
+                                                
+                                                <button 
+                                                    onClick={() => { deleteDump(displayDump.id); setOpenMenuId(null); }} 
+                                                    className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium"
+                                                >
+                                                    <Trash2 size={14} /> Eliminar Permanentemente
+                                                </button>
                                             </div>
                                         )}
                                     </div>

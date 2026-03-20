@@ -713,7 +713,7 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                     </button>
                     
                     {showMoreMenu && (
-                      <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-[#1A1A24] shadow-xl rounded-lg border border-zinc-200 dark:border-[#2D2D42] p-1 flex flex-col gap-0.5 min-w-[200px] animate-fadeIn">
+                      <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-[#1A1A24] shadow-xl rounded-lg border border-zinc-200 dark:border-[#2D2D42] p-1 flex flex-col gap-0.5 min-w-[210px] animate-fadeIn">
                         <button 
                           onClick={() => { handleConvertToNote(); setShowMoreMenu(false); }} 
                           className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 transition-colors"
@@ -722,18 +722,19 @@ export const TikTokApp: React.FC<{ session: Session }> = ({ session }) => {
                         </button>
                         
                         <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
+                        
                         <button 
                           onClick={() => { archiveVideo(focusedVideo.id); setShowMoreMenu(false); }} 
-                          className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"
+                          className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors font-medium"
                         >
-                          <Archive size={14} /> Archivar
+                          <Archive size={14} /> Archivar TikTok
                         </button>
                         
                         <button 
                           onClick={() => { deleteVideo(focusedVideo.id, focusedVideo.url); setShowMoreMenu(false); }} 
-                          className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium"
                         >
-                          <Trash2 size={14} /> Eliminar
+                          <Trash2 size={14} /> Eliminar Permanentemente
                         </button>
                       </div>
                     )}

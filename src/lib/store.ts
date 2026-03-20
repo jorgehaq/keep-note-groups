@@ -139,6 +139,7 @@ interface UIStore {
     // Dock Actions
     openGroup: (id: string) => void; // Adds to dock and sets active
     closeGroup: (id: string) => void; // Removes from dock
+    setActiveNoteId: (groupId: string, noteId: string | null) => void;
     setLauncherTab: (tab: LauncherTab) => void;
     setNoteSortMode: (
         mode:
@@ -420,6 +421,9 @@ export const useUIStore = create<UIStore>()(
             setIsVideoTrayOpen: (open) => set({ isVideoTrayOpen: open }),
             setIsNotesPizarronOpen: (open) => set({ isNotesPizarronOpen: open }),
             setIsBraindumpPizarronOpen: (open) => set({ isBraindumpPizarronOpen: open }),
+            setActiveNoteId: (groupId, noteId) => set((state) => ({
+                lastActiveNoteByGroup: { ...state.lastActiveNoteByGroup, [groupId]: noteId }
+            })),
             setShowOverdueMarquee: (show) => set({ showOverdueMarquee: show }),
             toggleZenMode: (appId) =>
                 set((state) => ({

@@ -15,6 +15,7 @@ import { supabase } from './src/lib/supabaseClient';
 import { Auth } from './components/Auth';
 import { Session } from '@supabase/supabase-js';
 import { useUIStore } from './src/lib/store';
+import { KanbanSemaphore } from './components/KanbanSemaphore';
 
 const sortNotesArray = (notes: Note[], mode: string) => {
   return [...notes].sort((a, b) => {
@@ -58,6 +59,16 @@ function App() {
   const hasLoadedOnce = React.useRef(false);
   const sessionRef = useRef(session);
   useEffect(() => { sessionRef.current = session; }, [session]);
+
+  const highlightTitle = (text: string) => {
+    if (!currentSearchQuery.trim()) return text;
+    const parts = text.split(new RegExp(`(${currentSearchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+    return parts.map((part, i) => 
+        part.toLowerCase() === currentSearchQuery.toLowerCase() 
+            ? <span key={i} className="bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-100 ring-1 ring-amber-500/30 rounded-sm px-0.5">{part}</span> 
+            : part
+    );
+  };
   
   const saveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({}); 
   const pendingUpdatesRef = useRef<Record<string, any>>({});
@@ -77,7 +88,8 @@ function App() {
     focusedNoteByGroup, lastActiveNoteByGroup, setFocusedNoteId,
     noteTrayOpenByGroup, setIsGlobalNoteTrayOpen,
     isZenModeByApp, toggleZenMode,
-    isNotesPizarronOpen, setIsNotesPizarronOpen
+    isNotesPizarronOpen, setIsNotesPizarronOpen,
+    setActiveNoteId
   } = useUIStore();
 
   const [showLineNumbers, setShowLineNumbers] = useState<boolean>(
@@ -1891,8 +1903,51 @@ function App() {
                               })
                             }
 
+                            {/* 2. SI HAY NOTA ACTIVA — MUESTRA GRID DE NOTAS ACTIVAS Y ARCHIVO (COMO PIZARRÓN) */}
+                            {activeNoteId && (
+                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12 animate-fadeIn max-w-6xl mx-auto w-full px-6 py-8">
+                                 {activeGroup.notes.filter(n => !n.parent_note_id && n.status !== 'history').map(note => {
+                                   const isMatch = currentSearchQuery.trim() && checkNoteSearchMatch(note, currentSearchQuery.trim(), activeGroup.notes, allGroupSummaries);
+                                   return (
+                                     <div 
+                                       key={note.id} 
+                                       onClick={() => setActiveNoteId(activeGroupId!, note.id)} 
+                                       className={`group bg-white dark:bg-[#1A1A24] border rounded-2xl p-5 hover:shadow-xl transition-all cursor-pointer flex flex-col gap-3 relative animate-fadeIn group/card ${
+                                         isMatch 
+                                           ? 'border-amber-500 shadow-[0_0_20px_rgba(251,192,45,0.2)]' 
+                                           : 'border-zinc-200 dark:border-[#2D2D42] hover:border-[#4940D9]/40'
+                                       }`}
+                                     >
+                                       <div className="flex items-center justify-between gap-2">
+                                          <h3 className="font-bold text-zinc-800 dark:text-[#CCCCCC] truncate flex-1">
+                                             {currentSearchQuery.trim() ? highlightTitle(note.title || 'Sin Título') : (note.title || 'Sin Título')}
+                                          </h3>
+                                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                             <KanbanSemaphore sourceType="note" sourceId={note.id} sourceTitle={note.title || ''} onInteract={() => setActiveNoteId(activeGroupId!, note.id)} />
+                                             <button 
+                                               onClick={(e) => { e.stopPropagation(); archiveNote(note.id); }} 
+                                               className="p-1.5 text-zinc-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors" 
+                                               title="Archivar"
+                                             >
+                                               <Archive size={14}/>
+                                             </button>
+                                          </div>
+                                       </div>
+                                       <div className="text-xs text-zinc-500 line-clamp-3 leading-relaxed min-h-[4.5em] overflow-hidden">
+                                          {note.content || <span className="italic opacity-40">Nota vacía...</span>}
+                                       </div>
+                                       <div className="flex items-center justify-between pt-2 border-t border-zinc-50 dark:border-zinc-800/50 mt-auto">
+                                           <span className="text-[10px] font-bold text-zinc-400">{new Date(note.created_at || '').toLocaleDateString()}</span>
+                                           <div className="w-6 h-6 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center text-zinc-400 group-hover:bg-[#4940D9] group-hover:text-white transition-all"><ChevronRight size={14} /></div>
+                                       </div>
+                                     </div>
+                                   )
+                                 })}
+                               </div>
+                            )}
+
                             {/* SECCIÓN DE ARCHIVO (ESTILO PIZARRÓN) */}
-                            {activeGroup.notes.filter(n => n.status === 'history').length > 0 && (
+                            {activeNoteId && activeGroup.notes.filter(n => n.status === 'history').length > 0 && (
                               <div className="mt-12 space-y-6 pt-12 border-t border-zinc-200 dark:border-zinc-800 mb-20 animate-fadeIn max-w-6xl mx-auto w-full px-6 min-h-[300px]">
                                 <div className="flex items-center gap-3 text-zinc-400 font-bold uppercase tracking-[0.2em] text-[10px]">
                                    <Archive size={16} className="text-zinc-500/50" /> 
