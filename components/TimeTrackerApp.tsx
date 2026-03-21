@@ -263,7 +263,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                         <button
                           onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
                           disabled={overdueRemindersCount === 0}
-                          className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
+                          className={`hidden md:flex h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 items-center gap-2 border ${
                             showOverdueMarquee 
                               ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
                               : overdueRemindersCount > 0
