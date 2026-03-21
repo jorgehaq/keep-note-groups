@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell, Grid, ChevronsDownUp, MoreVertical, ListTodo, CheckSquare, Square, GripVertical, Search, X, ChevronLeft, ChevronRight, ArrowUpRight, Download, ArrowUpDown, Calendar, Type, Check, Wind, Sparkles, PenLine, FileText, GitBranch, Loader2, CloudCheck, KanbanSquare, ListPlus, Hash } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Archive as ArchiveIcon, Zap, Play, RotateCcw, PenTool, ChevronDown, ChevronUp, Maximize2, Minimize2, Bell, Grid, ChevronsDownUp, Pin, MoreVertical, ListTodo, CheckSquare, Square, GripVertical, Search, X, ChevronLeft, ChevronRight, ArrowUpRight, Download, ArrowUpDown, Calendar, Type, Check, Wind, Sparkles, PenLine, FileText, GitBranch, Loader2, CloudCheck, KanbanSquare, ListPlus, Hash } from 'lucide-react';
+
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { KanbanSemaphore } from './KanbanSemaphore';
 import { PizarronLinkerModal } from './PizarronLinkerModal';
@@ -121,8 +122,9 @@ const SubnoteTitle: React.FC<{
   searchQuery?: string;
   onRename: (id: string, title: string) => void;
 }> = ({ child, isActive, searchQuery, onRename }) => {
-  // 🚀 NUEVO: Si es nuevo (título vacío o el de defecto), empezar editando
-  const [editing, setEditing] = useState(!child.title || child.title === 'Nuevo Sub-pizarrón');
+  // 🚀 NUEVO: Solo empezar editando si fue creada hace muy poco (nueva creación)
+  const isJustCreated = (!child.title || child.title === 'Nuevo Sub-pizarrón') && (Date.now() - new Date(child.created_at || 0).getTime() < 3000);
+  const [editing, setEditing] = useState(isJustCreated);
   const [val, setVal] = useState(child.title || '');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -650,7 +652,9 @@ export const BrainDumpApp: React.FC<{
     const rootPizarrones = useMemo(() => {
         let result = dumps.filter(d => d.status !== 'history' && !d.parent_id);
         result.sort((a, b) => {
+            if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
             switch (sortMode) {
+
                 case 'date-desc': {
                     const dateB = new Date(b.updated_at || b.created_at || 0).getTime();
                     const dateA = new Date(a.updated_at || a.created_at || 0).getTime();
@@ -773,7 +777,8 @@ export const BrainDumpApp: React.FC<{
                             </div>
 
                             <button onClick={createNewDraft} className="h-9 bg-[#FFD700] hover:bg-[#E5C100] text-amber-950 px-4 rounded-xl shadow-lg shadow-amber-500/10 border border-amber-400/30 flex items-center gap-2 active:scale-95 transition-all">
-                                <Plus size={18} className="ml-2" /> <span className="text-sm font-bold mr-4">Nuevo Pizarrón</span>
+                                <Plus size={18} className="ml-2" /> <span className="text-sm font-bold mr-4">Pizarron
+</span>
                             </button>
                         </div>
                     </div>
@@ -805,13 +810,10 @@ export const BrainDumpApp: React.FC<{
                                         <button
                                             key={p.id}
                                             onClick={() => {
-                                                if (focusedDumpId === p.id) {
-                                                    setFocusedDumpId(null);
-                                                } else {
-                                                    setFocusedDumpId(p.id);
-                                                }
+                                                if (focusedDumpId === p.id) setFocusedDumpId(null);
+                                                else setFocusedDumpId(p.id);
                                             }}
-                                            className={`relative shrink-0 flex items-center px-3 py-1.5 rounded-lg border transition-all ${
+                                            className={`relative shrink-0 flex items-center px-4 py-2 rounded-xl border transition-all ${
                                                 focusedDumpId === p.id 
                                                     ? `bg-[#FFD700] text-amber-950 border-amber-300 shadow-sm shadow-amber-500/20 ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-[#13131A] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
                                                     : isMatch
@@ -819,9 +821,22 @@ export const BrainDumpApp: React.FC<{
                                                         : 'bg-zinc-900/50 text-zinc-400 border-zinc-800 hover:border-amber-500/40 hover:text-amber-600'
                                             }`}
                                         >
-                                            <div className="max-w-[150px] truncate text-xs font-bold">
-                                                {searchQuery?.trim() ? highlightText(p.title || 'Sin Título', searchQuery.trim()) : (p.title || 'Sin Título')}
+
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-1 rounded-md transition-colors ${focusedDumpId === p.id ? 'bg-amber-950/10 text-amber-950' : 'bg-zinc-800 text-zinc-500'}`}>
+                                                    <Grid size={13} />
+                                                </div>
+                                                <div className="max-w-[150px] truncate text-xs font-bold">
+                                                    {searchQuery?.trim() ? highlightText(p.title || 'Sin Título', searchQuery.trim()) : (p.title || 'Sin Título')}
+                                                </div>
                                             </div>
+
+                                            {p.is_pinned && (
+                                                <span className="flex items-center ml-1">
+                                                    <Pin size={9} className={`fill-current ${focusedDumpId === p.id ? 'text-amber-950/70' : 'text-[#85858C]'}`} />
+                                                </span>
+                                            )}
+
                                             {globalTasks?.some(t => t.id === p.id || t.linked_board_id === p.id) && (
                                                 <div className="absolute -top-1.5 -right-1.5"><KanbanSemaphore sourceType="board" sourceId={p.id} sourceTitle={p.title || ''} /></div>
                                             )}
@@ -842,8 +857,8 @@ export const BrainDumpApp: React.FC<{
                 </div>
             )}
 
-            <div className={`flex-1 ${focusedDumpId ? 'overflow-hidden' : 'overflow-y-auto'} bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 ${!isZenMode && isDumpTrayOpen ? 'pt-1' : 'pt-5'} hidden-scrollbar flex flex-col`}>
-                <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto flex flex-col ${focusedDumpId ? 'gap-0 pb-0 flex-1 w-full min-h-0' : 'gap-12 pb-20 w-full'}`}>
+            <div className={`flex-1 ${focusedDumpId ? 'overflow-hidden px-4' : 'overflow-y-auto px-0'} bg-zinc-50 dark:bg-[#13131A] pb-4 ${!isZenMode && isDumpTrayOpen ? 'pt-0' : 'pt-5'} hidden-scrollbar flex flex-col`}>
+                <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto flex flex-col ${focusedDumpId ? 'gap-0 pb-0 flex-1 w-full min-h-0' : 'gap-12 pb-20 w-full px-4 md:px-10'}`}>
                     
                     {focusedDumpId && displayDump && (() => {
                         const isDisplayDumpMatch = searchQuery?.trim() && checkPizarronSearchMatch(displayDump, searchQuery.trim(), dumps, allSummaries);
@@ -853,28 +868,32 @@ export const BrainDumpApp: React.FC<{
                                     ? 'border-amber-500 ring-2 ring-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
                                     : 'shadow-lg border-zinc-200 dark:border-[#2D2D42] focus-within:ring-2 focus-within:ring-amber-500/50 focus-within:border-amber-500/50'
                             }`}>
-                            <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
-                                <div className="flex-1 min-w-0 pr-4 flex items-center gap-2">
-                                    {!isRootLevel && (
-                                        <button 
-                                            onClick={() => navigate(displayDump.parent_id || focusedDumpId)} 
-                                            className="p-1 px-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-amber-600 transition-all flex items-center gap-1 text-[10px] font-bold"
-                                            title="Volver"
-                                        >
-                                            <ChevronLeft size={14} /> Volver
-                                        </button>
-                                    )}
-                                    <div className="relative flex-1">
-                                        <input 
-                                            type="text"
-                                            value={displayDump.title || ""}
-                                            onChange={(e) => autoSave(displayDump.id, { title: e.target.value })}
-                                            placeholder="Nombre del pizarrón..."
-                                            className="w-full bg-transparent border-none outline-none text-lg font-black text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400 p-0 truncate"
-                                        />
+                            <div className="flex items-center justify-between px-4 pt-4 pb-2 transition-colors gap-2 min-w-0 shrink-0">
+                                <div className="flex items-center gap-3 flex-1 overflow-hidden pl-1 min-w-0">
+                                    <div className="flex flex-col min-w-0 justify-center w-full">
+                                        {!isRootLevel && (
+                                            <button 
+                                                onClick={() => navigate(displayDump.parent_id || focusedDumpId)} 
+                                                className="mb-1 p-1 px-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-amber-600 transition-all flex items-center gap-1 text-[10px] font-bold w-fit"
+                                                title="Volver"
+                                            >
+                                                <ChevronLeft size={14} /> Volver
+                                            </button>
+                                        )}
+                                        <div className="relative flex w-full">
+                                            <input 
+                                                type="text"
+                                                value={displayDump.title || ""}
+                                                onChange={(e) => autoSave(displayDump.id, { title: e.target.value })}
+                                                placeholder="Nombre del pizarrón..."
+                                                className="w-full bg-transparent border-none outline-none text-lg font-bold text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400 p-0 truncate"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                                           <div className="flex items-center gap-1.5 shrink-0">
+
+                                <div className="flex items-center gap-1.5 shrink-0">
+
                                     <button 
                                         onClick={handleCreateSubpizarron} 
                                         className="p-2 rounded-xl border text-emerald-400 border-zinc-800 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all flex items-center"
@@ -906,8 +925,6 @@ export const BrainDumpApp: React.FC<{
                                     >
                                         <Wind size={13} />
                                     </button>
-                                    
- 
                                      {showLineNumbers && onToggleLineNumbers && (
                                          <button
                                              onClick={(e) => { e.stopPropagation(); onToggleLineNumbers(); }}
@@ -917,6 +934,17 @@ export const BrainDumpApp: React.FC<{
                                              <Hash size={14} />
                                          </button>
                                      )}
+
+                                     {displayDump.is_pinned && (
+                                         <button
+                                             onClick={(e) => { e.stopPropagation(); autoSave(displayDump.id, { is_pinned: false }); }}
+                                             className="p-1.5 rounded-lg transition-colors text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 shrink-0"
+                                             title="Desfijar Pizarrón"
+                                         >
+                                             <Pin size={14} className="fill-current" />
+                                         </button>
+                                     )}
+
                                     <div className="relative" ref={openMenuId === displayDump.id ? menuRef : undefined}>
                                         <div className="flex items-center gap-1.5">
                                             {isInKanban && (
@@ -944,9 +972,13 @@ export const BrainDumpApp: React.FC<{
                                                         <button onClick={(e) => { e.stopPropagation(); onToggleLineNumbers(); setOpenMenuId(null); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${showLineNumbers ? "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20" : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42]"}`}>
                                                             <Hash size={14} /> {showLineNumbers ? "Ocultar números" : "Mostrar números"}
                                                         </button>
+                                                        <button onClick={(e) => { e.stopPropagation(); autoSave(displayDump.id, { is_pinned: !displayDump.is_pinned }); setOpenMenuId(null); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${displayDump.is_pinned ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42]'}`}>
+                                                            <Pin size={14} className={displayDump.is_pinned ? "fill-current" : ""} /> {displayDump.is_pinned ? 'Desfijar Pizarrón' : 'Fijar Pizarrón'}
+                                                        </button>
                                                         <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
                                                     </>
                                                 )}
+
                                                 <button onClick={() => { 
                                                     const willBeChecklist = !displayDump.is_checklist;
                                                     let contentToSave = displayDump.content;
@@ -1254,34 +1286,56 @@ export const BrainDumpApp: React.FC<{
                     })()}
 
                     {!focusedDumpId && (
-                        <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto w-full px-4 md:px-10 animate-fadeIn pt-10 pb-10`}>
+                        <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto w-full px-4 md:px-10 animate-fadeIn pb-10`}>
                             {/* LISTA PRINCIPAL DE PIZARRONES */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className={`grid ${isBraindumpMaximized ? 'grid-cols-[repeat(auto-fit,340px)] w-full max-w-[2160px]' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl'} gap-6 justify-center mx-auto`}>
+
+
                                 {rootPizarrones.map(p => {
                                     const isMatch = searchQuery?.trim() && checkPizarronSearchMatch(p, searchQuery.trim(), dumps, allSummaries);
                                     return (
-                                        <div key={p.id} onClick={() => setFocusedDumpId(p.id)} className={`group bg-white dark:bg-[#1A1A24] border rounded-2xl p-5 hover:shadow-xl transition-all cursor-pointer flex flex-col gap-3 relative ${
-                                            isMatch 
-                                                ? 'border-amber-500 shadow-[0_0_20px_rgba(251,192,45,0.2)]' 
-                                                : 'border-zinc-200 dark:border-[#2D2D42] hover:border-amber-500/30'
-                                        }`}>
+                                        <div 
+                                            key={p.id} 
+                                            onClick={() => setFocusedDumpId(p.id)} 
+                                            className={`group bg-white dark:bg-[#1A1A24] border rounded-2xl p-5 hover:shadow-xl transition-all cursor-pointer flex flex-col gap-3 relative animate-fadeIn ${
+                                                isMatch 
+                                                    ? 'border-amber-500 shadow-[0_0_20px_rgba(251,192,45,0.2)]' 
+                                                    : 'border-zinc-200 dark:border-[#2D2D42] hover:border-amber-500/30'
+                                            }`}
+                                        >
                                             <div className="flex items-center justify-between gap-2">
                                                 <h3 className="font-bold text-zinc-800 dark:text-[#CCCCCC] truncate flex-1">
                                                     {searchQuery?.trim() ? highlightText(p.title || 'Sin Título', searchQuery.trim()) : (p.title || 'Sin Título')}
                                                 </h3>
-                                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+
+                                                <div className={`${globalTasks?.some(t => t.id === p.id || t.linked_board_id === p.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
                                                     <KanbanSemaphore sourceType="board" sourceId={p.id} sourceTitle={p.title || ''} onInteract={() => setFocusedDumpId(p.id)} />
-                                                    <button onClick={(e) => { e.stopPropagation(); changeStatus(p.id, 'history'); }} className="p-1.5 text-zinc-400 hover:text-amber-600 transition-colors"><ArchiveIcon size={14}/></button>
                                                 </div>
                                             </div>
-                                            <div className="text-xs text-zinc-500 line-clamp-3 leading-relaxed min-h-[4.5em]">
+                                            <div className="text-xs text-zinc-500 line-clamp-3 leading-relaxed min-h-[4.5em] overflow-hidden">
                                                 {searchQuery?.trim() ? highlightText(p.content || '', searchQuery.trim()) : (p.content || <span className="italic opacity-40">Pizarrón vacío...</span>)}
                                             </div>
                                             <div className="flex items-center justify-between pt-2 border-t border-zinc-50 dark:border-zinc-800/50 mt-auto">
                                                 <span className="text-[10px] font-bold text-zinc-400">{formatCleanDate(p.updated_at || p.created_at)}</span>
-                                                <div className="flex items-center gap-1.5">
+                                                <div className="flex items-center gap-2">
                                                     {p.is_checklist && <ListTodo size={12} className="text-amber-500/60" />}
-                                                    <div className="w-6 h-6 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center text-zinc-400 group-hover:bg-amber-500 group-hover:text-white transition-all"><ChevronRight size={14} /></div>
+                                                    <button 
+                                                      onClick={(e) => { e.stopPropagation(); autoSave(p.id, { is_pinned: !p.is_pinned }); }} 
+                                                      className={`p-1.5 rounded-lg transition-all active:scale-95 hover:bg-amber-50 dark:hover:bg-amber-900/20 ${p.is_pinned ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-400 hover:text-amber-600'}`} 
+                                                      title={p.is_pinned ? 'Quitar fijado' : 'Fijar pizarrón'}
+                                                    >
+                                                      <Pin size={14} className={p.is_pinned ? 'fill-current' : ''} />
+                                                    </button>
+                                                    <button 
+                                                      onClick={(e) => { e.stopPropagation(); changeStatus(p.id, 'history'); }} 
+                                                      className="p-1 text-zinc-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors" 
+                                                      title="Archivar"
+                                                    >
+                                                      <ArchiveIcon size={14} />
+                                                    </button>
+
+                                                    <div className="w-6 h-6 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center text-zinc-400 group-hover:bg-[#4940D9] group-hover:text-white transition-all"><ChevronRight size={14} /></div>
+
                                                 </div>
                                             </div>
                                         </div>
@@ -1294,7 +1348,8 @@ export const BrainDumpApp: React.FC<{
                                 <div className={`mt-12 space-y-4 pt-8 border-t border-zinc-100 dark:border-[#2D2D42]/40 animate-fadeIn ${isArchiveOpenByApp['braindump'] ? 'pb-20' : 'pb-10'}`}>
                                     <button 
                                         onClick={() => setArchiveOpenByApp('braindump', !isArchiveOpenByApp['braindump'])}
-                                        className="flex items-center gap-3 text-zinc-400 font-bold uppercase tracking-widest text-[10px] px-2 hover:text-amber-600 transition-colors group/archheader"
+                                        className="flex items-center gap-3 text-zinc-400 font-bold uppercase tracking-widest text-xs
+ px-2 hover:text-amber-600 transition-colors group/archheader"
                                     >
                                         <ArchiveIcon size={16} className="text-zinc-500/50 group-hover/archheader:text-amber-500/50 transition-colors" /> 
                                         <span>Archivo ({archivo.length})</span>
@@ -1302,10 +1357,20 @@ export const BrainDumpApp: React.FC<{
                                     </button>
                                     
                                     {isArchiveOpenByApp['braindump'] && (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <div className={`grid ${isBraindumpMaximized ? 'grid-cols-[repeat(auto-fit,340px)] w-full max-w-[2160px]' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl'} gap-4 justify-center mx-auto`}>
+
+
+
                                             {archivo.map(a => (
                                                 <div key={a.id} className="p-4 bg-white dark:bg-[#1A1A24]/50 border border-zinc-200 dark:border-[#2D2D42] rounded-2xl flex items-center justify-between group hover:border-amber-500/30 transition-all">
-                                                    <div className="flex items-center gap-3 truncate"><ArchiveIcon size={14} className="text-zinc-300" /><span className="text-sm font-bold text-zinc-700 dark:text-zinc-300 truncate">{a.title || 'Sin Título'}</span></div>
+                                                    <div className="flex items-center gap-3 truncate"><div className="w-8 h-8 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center text-zinc-400">
+                                                         <ArchiveIcon size={16} />
+                                                       </div>
+                                                       <div className="flex flex-col truncate">
+                                                         <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300 truncate">{a.title || 'Sin Título'}</span>
+                                                         <span className="text-[10px] text-zinc-400 font-medium">{formatCleanDate(a.updated_at || a.created_at)}</span>
+                                                       </div>
+</div>
                                                     <div className="flex items-center gap-1 shrink-0">
                                                         <button onClick={() => changeStatus(a.id, 'main')} className="p-1.5 hover:text-indigo-500" title="Restaurar"><RotateCcw size={14}/></button>
                                                         <button onClick={() => deleteDump(a.id)} className="p-1.5 hover:text-red-500" title="Eliminar"><Trash2 size={14}/></button>

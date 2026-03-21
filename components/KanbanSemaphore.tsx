@@ -6,7 +6,7 @@ import { useUIStore } from '../src/lib/store';
 interface KanbanSemaphoreProps {
     sourceId?: string;
     sourceTitle?: string;
-    sourceType?: 'note' | 'board';
+    sourceType?: 'note' | 'board' | 'tiktok';
     onInteract?: () => void;
     status?: TaskStatus;
     onStatusChange?: (status: TaskStatus) => void;
@@ -41,7 +41,8 @@ export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({
     } else if (sourceId && sourceType) {
         const task = globalTasks?.find(t => 
             (sourceType === 'note' && (t.id === sourceId || t.linked_note_id === sourceId)) ||
-            (sourceType === 'board' && (t.id === sourceId || t.linked_board_id === sourceId))
+            (sourceType === 'board' && (t.id === sourceId || t.linked_board_id === sourceId)) ||
+            (sourceType === 'tiktok' && (t.id === sourceId || t.linked_tiktok_id === sourceId))
         );
         currentStatus = task ? (task.status as TaskStatus) : 'none';
     }
@@ -70,11 +71,13 @@ export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({
         if (!sourceId || !sourceType) return;
 
         // Primero buscamos la tarea existente
-        const query = supabase.from('tasks').select('id, linked_note_id, linked_board_id');
+        const query = supabase.from('tasks').select('id, linked_note_id, linked_board_id, linked_tiktok_id');
         if (sourceType === 'note') {
             query.or(`id.eq.${sourceId},linked_note_id.eq.${sourceId}`);
-        } else {
+        } else if (sourceType === 'board') {
             query.or(`id.eq.${sourceId},linked_board_id.eq.${sourceId}`);
+        } else {
+            query.or(`id.eq.${sourceId},linked_tiktok_id.eq.${sourceId}`);
         }
         const { data: existing } = await query.maybeSingle();
 
@@ -87,7 +90,8 @@ export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({
                     // MODERN: Creada via KanbanLinkerModal con id diferente → solo quitar el FK
                     const updates: any = {};
                     if (sourceType === 'note') updates.linked_note_id = null;
-                    else updates.linked_board_id = null;
+                    else if (sourceType === 'board') updates.linked_board_id = null;
+                    else updates.linked_tiktok_id = null;
                     await supabase.from('tasks').update(updates).eq('id', existing.id);
                 }
             }
@@ -106,7 +110,8 @@ export const KanbanSemaphore: React.FC<KanbanSemaphoreProps> = ({
                 };
                 
                 if (sourceType === 'note') newTask.linked_note_id = sourceId;
-                else newTask.linked_board_id = sourceId;
+                else if (sourceType === 'board') newTask.linked_board_id = sourceId;
+                else newTask.linked_tiktok_id = sourceId;
 
                 await supabase.from('tasks').insert([newTask]);
             }

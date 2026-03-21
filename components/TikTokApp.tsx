@@ -6,8 +6,9 @@ import {
   Calendar, History, PanelLeft, Settings, MoreVertical, Trash2, 
   Archive, Download, Sparkles, FileText, Quote, StickyNote, Wind, 
   PlusCircle, AlertCircle, PenLine, Brain, GitBranch, RotateCcw, 
-  Loader2, ListPlus, ArrowUpRight, Hash
+  Loader2, ListPlus, ArrowUpRight, Hash, CheckSquare, Pin
 } from 'lucide-react';
+
 import { supabase } from '../src/lib/supabaseClient';
 import { useUIStore } from '../src/lib/store';
 import { Session } from '@supabase/supabase-js';
@@ -156,7 +157,8 @@ export const TikTokApp: React.FC<{
     isTikTokPizarronOpen, setIsTikTokPizarronOpen,
     pizarronVisibleByNoteAndTab, setPizarronVisible,
     groups, activeGroupId,
-    brainDumps
+    brainDumps, globalTasks,
+    isArchiveOpenByApp, setArchiveOpenByApp
   } = useUIStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -207,6 +209,30 @@ export const TikTokApp: React.FC<{
 
   const isZenMode = !!isZenModeByApp['tiktok'];
   const focusedVideo = useMemo(() => tikTokVideos.find(v => v.id === focusedVideoId), [tikTokVideos, focusedVideoId]);
+  const isInKanban = focusedVideo ? globalTasks?.some(t => t.id === focusedVideo.id || t.linked_tiktok_id === focusedVideo.id || t.source_id === focusedVideo.id) : false;
+
+  const handleAddToKanban = async () => {
+    if (!focusedVideo) return;
+    
+    // 🚀 CRITICAL: Use SAME ID instead of generated one for full sync context
+    const { error } = await supabase.from('tasks').insert([{
+      id: focusedVideo.id, // Using THE SAME ID for full sync potential
+      title: focusedVideo.title || 'Análisis TikTok',
+      content: focusedVideo.content || '',
+      status: 'backlog',
+      user_id: session.user.id,
+      linked_tiktok_id: focusedVideo.id
+    }]);
+
+    if (error) {
+      console.error('Error linking to Kanban:', error);
+      alert(`Error al vincular con Kanban: ${error.message}`);
+      return;
+    }
+
+    setShowMoreMenu(false);
+    window.dispatchEvent(new CustomEvent('kanban-updated'));
+  };
   
   const { 
     summaries: aiSummaries, 
@@ -380,7 +406,9 @@ export const TikTokApp: React.FC<{
     let result = tikTokVideos.filter(v => !v.parent_id && v.status !== 'archived');
     // Sorting
     return result.sort((a, b) => {
+      if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
       switch (sortMode) {
+
         case 'date-desc': {
           const dateB = new Date(b.updated_at || b.created_at || 0).getTime();
           const dateA = new Date(a.updated_at || a.created_at || 0).getTime();
@@ -521,8 +549,8 @@ export const TikTokApp: React.FC<{
 
   const restoreVideo = async (id: string) => {
     await supabase.from("tiktok_videos").update({ status: 'active' }).eq("id", id);
-    setFocusedVideoId(id);
   };
+
 
   const handleCreateSubTikTok = async () => {
     if (!focusedVideoId) return;
@@ -679,7 +707,8 @@ export const TikTokApp: React.FC<{
                 onClick={() => setIsModalOpen(true)}
                 className="h-9 bg-[#EE1D52] hover:bg-[#D61A4A] text-white px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 active:scale-95 transition-all shadow-[#EE1D52]/10 border border-[#EE1D52]/30"
               >
-                <Plus size={18} /> <span className="text-sm font-bold">Nuevo TikTok</span>
+                <Plus size={18} /> <span className="text-sm font-bold">Tiktok
+</span>
               </button>
             </div>
           </div>
@@ -718,7 +747,7 @@ export const TikTokApp: React.FC<{
                         if (focusedVideoId === video.id) setFocusedVideoId(null);
                         else setFocusedVideoId(video.id); 
                       }}
-                      className={`shrink-0 flex items-center gap-3 px-4 py-2 rounded-xl border transition-all ${
+                      className={`shrink-0 flex items-center gap-3 px-4 py-2 rounded-xl border transition-all relative ${
                         focusedVideoId === video.id 
                           ? `bg-[#EE1D52] text-white border-[#EE1D52] shadow-lg shadow-[#EE1D52]/20 scale-[1.02] ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-[#13131A] shadow-[0_0_20px_rgba(251,192,45,0.5)]' : ''}` 
                           : isMatch
@@ -726,12 +755,23 @@ export const TikTokApp: React.FC<{
                             : 'bg-zinc-900/50 text-zinc-400 border-zinc-800 hover:border-[#EE1D52]/40 hover:text-[#EE1D52]'
                       }`}
                     >
+                      {globalTasks?.some(t => t.id === video.id || t.linked_tiktok_id === video.id) && (
+                        <div className="absolute -top-1.5 -right-1.5 z-10">
+                          <KanbanSemaphore sourceType="tiktok" sourceId={video.id} sourceTitle={video.title || 'TikTok'} />
+                        </div>
+                      )}
                       <div className="w-6 h-8 rounded-md overflow-hidden bg-zinc-800 border border-zinc-700/50 shrink-0">
                         <img src={video.thumbnail} className="w-full h-full object-cover" alt="" />
                       </div>
                       <div className="max-w-[150px] truncate text-[11px] font-bold">
                         {highlightText(video.title || "Procesando...", queryToUse)}
                       </div>
+                      {video.is_pinned && (
+                          <span className="flex items-center ml-1">
+                              <Pin size={9} className={`fill-current ${focusedVideoId === video.id ? 'text-white' : 'text-[#85858C]'}`} />
+                          </span>
+                      )}
+
                     </button>
                   );
                 })
@@ -760,32 +800,35 @@ export const TikTokApp: React.FC<{
           const titleMatch = searchQuery?.trim() && (focusedVideo.title || '').toLowerCase().includes(searchQuery.toLowerCase());
 
           return (
-            <div className={`flex-1 flex flex-col overflow-y-auto w-full px-4 pb-4 ${isVideoTrayOpen && !isZenMode ? 'pt-1' : 'pt-4'}`}>
+            <div className={`flex-1 flex flex-col overflow-y-auto w-full px-4 pb-4 ${isVideoTrayOpen && !isZenMode ? 'pt-0' : 'pt-5'}`}>
               <div className={`flex-1 flex flex-col min-h-0 ${isTikTokMaximized ? 'max-w-full' : 'max-w-6xl mx-auto'} w-full transition-all duration-300 bg-white dark:bg-[#1A1A24] rounded-2xl border overflow-hidden animate-fadeIn ${
                 isGlobalVideoMatch
                   ? 'border-amber-500 ring-2 ring-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
                   : 'shadow-lg border-zinc-200 dark:border-[#2D2D42] focus-within:ring-2 focus-within:ring-[#EE1D52]/50 focus-within:border-[#EE1D52]/50'
               }`}>
               {/* Integrated Header */}
-              <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
-                <div className="flex-1 min-w-0 pr-4 flex items-center gap-2">
-                  <div className="relative flex-1">
-                    {titleMatch && (
-                      <div className="absolute inset-0 pointer-events-none text-lg font-black text-zinc-800 dark:text-zinc-100 flex items-center px-0 overflow-hidden whitespace-nowrap">
-                        <span className="truncate">
-                          {highlightText(focusedVideo.title || "", searchQuery)}
-                        </span>
-                      </div>
-                    )}
-                    <input 
-                      type="text"
-                      value={focusedVideo.title || ""}
-                      onChange={(e) => updateVideo(focusedVideo.id, { title: e.target.value })}
-                      placeholder="Sin Título"
-                      className={`w-full bg-transparent border-none outline-none text-lg font-black text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400 p-0 truncate transition-opacity ${titleMatch ? 'opacity-0 focus:opacity-100' : 'opacity-100'}`}
-                    />
+              <div className="flex items-center justify-between px-4 pt-4 pb-2 transition-colors gap-2 min-w-0 shrink-0">
+                <div className="flex items-center gap-3 flex-1 overflow-hidden pl-1 min-w-0">
+                  <div className="flex flex-col min-w-0 justify-center w-full">
+                    <div className="relative flex w-full">
+                      {titleMatch && (
+                        <div className="absolute inset-0 pointer-events-none text-lg font-bold text-zinc-800 dark:text-zinc-100 flex items-center px-0 overflow-hidden whitespace-nowrap">
+                          <span className="truncate">
+                            {highlightText(focusedVideo.title || "", searchQuery)}
+                          </span>
+                        </div>
+                      )}
+                      <input 
+                        type="text"
+                        value={focusedVideo.title || ""}
+                        onChange={(e) => updateVideo(focusedVideo.id, { title: e.target.value })}
+                        placeholder="Sin Título"
+                        className={`w-full bg-transparent border-none outline-none text-lg font-bold text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400 p-0 truncate transition-opacity ${titleMatch ? 'opacity-0 focus:opacity-100' : 'opacity-100'}`}
+                      />
+                    </div>
                   </div>
                 </div>
+
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button 
                     onClick={async (e) => { 
@@ -840,15 +883,38 @@ export const TikTokApp: React.FC<{
                       <Hash size={14} />
                     </button>
                   )}
+
+                  {focusedVideo.is_pinned && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); updateVideo(focusedVideo.id, { is_pinned: false }); }}
+                      className="p-1.5 rounded-lg transition-colors text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 shrink-0 mr-1"
+                      title="Desfijar TikTok"
+                    >
+                      <Pin size={14} className="fill-current" />
+                    </button>
+                  )}
+
+
                   
                   <div className="relative" ref={moreMenuRef}>
-                    <button
-                      onClick={() => setShowMoreMenu(!showMoreMenu)}
-                      className={`p-2 rounded-xl border transition-all ${showMoreMenu ? 'bg-[#EE1D52] border-[#EE1D52]/80 text-white font-bold shadow-lg shadow-[#EE1D52]/20' : 'text-zinc-500 border-zinc-800 hover:border-[#EE1D52]/30'}`}
-                      title="Más opciones"
-                    >
-                      <MoreVertical size={13} />
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      {isInKanban && focusedVideo && (
+                        <div className="mr-0.5 shadow-sm">
+                          <KanbanSemaphore 
+                            sourceType="tiktok" 
+                            sourceId={focusedVideo.id} 
+                            sourceTitle={focusedVideo.title || 'Análisis TikTok'} 
+                          />
+                        </div>
+                      )}
+                      <button
+                        onClick={() => setShowMoreMenu(!showMoreMenu)}
+                        className={`p-2 rounded-xl border transition-all ${showMoreMenu ? 'bg-[#EE1D52] border-[#EE1D52]/80 text-white font-bold shadow-lg shadow-[#EE1D52]/20' : 'text-zinc-500 border-zinc-800 hover:border-[#EE1D52]/30'}`}
+                        title="Más opciones"
+                      >
+                        <MoreVertical size={13} />
+                      </button>
+                    </div>
                     
                     {showMoreMenu && (
                       <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-[#1A1A24] shadow-xl rounded-lg border border-zinc-200 dark:border-[#2D2D42] p-1 flex flex-col gap-0.5 min-w-[210px] animate-fadeIn">
@@ -857,15 +923,26 @@ export const TikTokApp: React.FC<{
                             <button onClick={(e) => { e.stopPropagation(); onToggleLineNumbers(); setShowMoreMenu(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${showLineNumbers ? "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20" : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42]"}`}>
                               <Hash size={14} /> {showLineNumbers ? "Ocultar números" : "Mostrar números"}
                             </button>
+                            <button onClick={(e) => { e.stopPropagation(); debouncedUpdateVideo(focusedVideo.id, { is_pinned: !focusedVideo.is_pinned }); setShowMoreMenu(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${focusedVideo.is_pinned ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42]'}`}>
+
+                              <Pin size={14} className={focusedVideo.is_pinned ? "fill-current" : ""} /> {focusedVideo.is_pinned ? 'Desfijar TikTok' : 'Fijar TikTok'}
+                            </button>
                             <div className="border-t border-zinc-100 dark:border-[#2D2D42] my-0.5" />
                           </>
                         )}
-                               <button 
+
+                        <button 
                           onClick={() => { handleConvertToNote(); setShowMoreMenu(false); }} 
                           className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 transition-colors font-bold"
                         >
                           <ArrowUpRight size={14} /> Convertir a Nota
                         </button>
+
+                        {!isInKanban && (
+                          <button onClick={handleAddToKanban} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors">
+                            <CheckSquare size={14} /> Añadir a Kanban
+                          </button>
+                        )}
                         
                         <button 
                           onClick={async () => { 
@@ -1003,7 +1080,7 @@ export const TikTokApp: React.FC<{
                   <div 
                     ref={tabBarRef}
                     onScroll={checkScroll}
-                    className={`flex flex-nowrap items-center gap-2 overflow-x-auto hidden-scrollbar scroll-smooth py-1 px-10 transition-all ${(!canScrollLeft && !canScrollRight) ? 'justify-center' : 'justify-start'}`}
+                    className={`flex flex-nowrap items-center gap-2 overflow-x-auto hidden-scrollbar scroll-smooth pt-2 pb-1 px-10 transition-all ${(!canScrollLeft && !canScrollRight) ? 'justify-center' : 'justify-start'}`}
                   >
                     {(() => {
                       const isTranscriptionMatch = searchQuery?.trim() && (
@@ -1016,7 +1093,7 @@ export const TikTokApp: React.FC<{
                         <button 
                           onClick={() => setActiveTab('original')} 
                           data-active-tab={isActive || undefined}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
+                          className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
                             isActive 
                               ? `bg-[#EE1D52] text-white border-[#EE1D52] shadow-sm ${isTranscriptionMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
                               : isTranscriptionMatch
@@ -1024,6 +1101,11 @@ export const TikTokApp: React.FC<{
                                 : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-[#EE1D52]'
                           }`}
                         >
+                          {isInKanban && focusedVideo && (
+                            <div className="absolute -top-1.5 -right-1.5 z-10">
+                              <KanbanSemaphore sourceType="tiktok" sourceId={focusedVideo.id} sourceTitle={focusedVideo.title || 'Análisis TikTok'} />
+                            </div>
+                          )}
                           <FileText size={11} /> Transcripción
                         </button>
                       );
@@ -1068,7 +1150,7 @@ export const TikTokApp: React.FC<{
                             <button 
                               onClick={() => setActiveTab(`summary_${summary.id}`)} 
                               data-active-tab={isActive || undefined} 
-                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
+                              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
                                 isActive 
                                   ? `bg-violet-600 text-white border-violet-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
                                   : isMatch
@@ -1127,7 +1209,7 @@ export const TikTokApp: React.FC<{
                               key={note.id}
                               onClick={() => setActiveTab(`note_${note.id}`)} 
                               data-active-tab={isActive || undefined}
-                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
+                              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
                                 isActive 
                                   ? `bg-emerald-600 text-white border-emerald-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
                                   : isMatch
@@ -1367,11 +1449,14 @@ export const TikTokApp: React.FC<{
           </div>
         )
       })() : (
-        <div className={`flex-1 overflow-y-auto p-6 scroll-smooth animate-fadeIn`}>
+        <div className={`flex-1 overflow-y-auto hidden-scrollbar scroll-smooth animate-fadeIn ${!isZenMode && isVideoTrayOpen ? 'pt-0' : 'pt-5'}`}>
+
+
               <div className={`${isTikTokMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto space-y-12 pb-20 px-4 md:px-10`}>
                 {rootVideos.length > 0 ? (
                   /* GRID DE VIDEOS ACTIVOS */
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className={`grid ${isTikTokMaximized ? 'grid-cols-[repeat(auto-fit,340px)] w-full max-w-[2160px]' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl'} gap-6 justify-center mx-auto`}>
+
                     {rootVideos.map(video => {
                       const queryToUse = localSearch?.trim() || searchQuery?.trim() || "";
                       const isMatch = !!queryToUse && checkVideoMatch(video, queryToUse);
@@ -1379,53 +1464,65 @@ export const TikTokApp: React.FC<{
                         <div 
                           key={video.id} 
                           onClick={() => setFocusedVideoId(video.id)}
-                          className={`group bg-white dark:bg-[#1A1A24] border rounded-2xl p-5 transition-all cursor-pointer flex flex-col gap-4 relative ${
+                          className={`group bg-white dark:bg-[#1A1A24] border rounded-2xl p-5 hover:shadow-xl transition-all cursor-pointer flex flex-col gap-3 relative animate-fadeIn ${
                             isMatch
-                              ? 'border-amber-500 ring-2 ring-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
-                              : 'border-zinc-200 dark:border-[#2D2D42] hover:border-[#EE1D52]/40 hover:shadow-xl'
+                              ? 'border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
+                              : 'border-zinc-200 dark:border-[#2D2D42] hover:border-[#EE1D52]/40'
                           }`}
                         >
+                          <div className="flex items-center justify-between gap-2">
+                             <h3 className="font-bold text-zinc-800 dark:text-[#CCCCCC] truncate flex-1 text-sm">
+                                {highlightText(video.title || "Procesando...", queryToUse)}
+                             </h3>
+                             <div className={`${globalTasks?.some(t => t.id === video.id || t.linked_tiktok_id === video.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
+                                <KanbanSemaphore sourceType="tiktok" sourceId={video.id} sourceTitle={video.title || 'TikTok'} onInteract={() => setFocusedVideoId(video.id)} />
+                             </div>
+                          </div>
+
                           <div className="flex gap-4">
                             <div className="w-16 h-20 rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 shrink-0 shadow-md">
                               <img src={video.thumbnail} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
                             </div>
                             <div className="flex-1 min-w-0 flex flex-col justify-center">
-                              <h3 className="font-bold text-zinc-800 dark:text-zinc-100 truncate text-sm">
-                                {highlightText(video.title || "Procesando...", queryToUse)}
-                              </h3>
-                            <p className="text-[10px] font-medium text-zinc-500 mt-0.5 flex items-center gap-1">
-                              <User size={10} /> {video.author || "Anónimo"}
-                            </p>
-                            <div className="flex items-center gap-3 mt-2">
-                               <span className="text-[10px] font-black text-white px-1.5 py-0.5 bg-[#EE1D52] rounded flex items-center gap-1">
-                                 <Clock size={10} /> {formatDuration(video.duration)}
-                               </span>
-                               <span className="text-[9px] font-bold text-zinc-400 flex items-center gap-1 uppercase tracking-tighter">
-                                 <Calendar size={10} /> {new Date(video.created_at).toLocaleDateString()}
-                               </span>
+                              <p className="text-[10px] font-medium text-zinc-500 mt-0.5 flex items-center gap-1">
+                                <User size={10} /> {video.author || "Anónimo"}
+                              </p>
+                              <div className="flex items-center gap-3 mt-2">
+                                <span className="text-[10px] font-black text-white px-1.5 py-0.5 bg-[#EE1D52] rounded flex items-center gap-1">
+                                  <Clock size={10} /> {formatDuration(video.duration)}
+                                </span>
+                                <span className="text-[9px] font-bold text-zinc-400 flex items-center gap-1 uppercase tracking-tighter">
+                                  <Calendar size={10} /> {new Date(video.created_at).toLocaleDateString()}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                          <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <button 
-                               onClick={(e) => { e.stopPropagation(); archiveVideo(video.id); }} 
-                               className="p-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-[#EE1D52] hover:bg-[#EE1D52]/10 rounded-xl transition-all"
-                               title="Archivar"
-                             >
-                               <Archive size={14} />
-                             </button>
+                          
+                          <div className="flex items-center justify-between pt-2 border-t border-zinc-50 dark:border-zinc-800/50 mt-auto">
+                            <div className="flex items-center gap-1.5">
+                               <span className="text-[10px] font-bold text-zinc-400 capitalize">{video.author ? 'Creador' : 'Video'}</span>
+                               <span className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"></span>
+                               <span className="text-[10px] font-black text-[#EE1D52]/60 uppercase tracking-tighter italic">AI READY</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                               <button 
+                                 onClick={(e) => { e.stopPropagation(); updateVideo(video.id, { is_pinned: !video.is_pinned }); }}
+                                 className={`p-1.5 rounded-lg transition-all active:scale-95 hover:bg-amber-50 dark:hover:bg-amber-900/20 ${video.is_pinned ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-400 hover:text-amber-600'}`}
+                                 title={video.is_pinned ? 'Quitar fijado' : 'Fijar TikTok'}
+                               >
+                                 <Pin size={14} className={video.is_pinned ? 'fill-current' : ''} />
+                               </button>
+                               <button 
+                                 onClick={(e) => { e.stopPropagation(); archiveVideo(video.id); }} 
+                                 className="p-1 text-zinc-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors" 
+                                 title="Archivar"
+                               >
+                                 <Archive size={14} />
+                               </button>
+
+                               <div className="w-6 h-6 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center text-zinc-400 group-hover:bg-[#EE1D52] group-hover:text-white transition-all"><ChevronRight size={14} /></div>
+                            </div>
                           </div>
-                        </div>
-                        
-                        <div className="flex items-center justify-between pt-3 border-t border-zinc-50 dark:border-zinc-800/50 mt-auto">
-                          <div className="flex items-center gap-1.5">
-                             <span className="text-[10px] font-bold text-zinc-400 capitalize">{video.author ? 'Creador' : 'Video'}</span>
-                             <span className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"></span>
-                             <span className="text-[10px] font-black text-[#EE1D52]/60 uppercase tracking-tighter italic">AI READY</span>
-                          </div>
-                          <div className="w-7 h-7 rounded-full bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center text-zinc-400 group-hover:bg-[#EE1D52] group-hover:text-white transition-all shadow-sm">
-                            <ChevronRight size={16} />
-                          </div>
-                        </div>
                         </div>
                       )
                     })}
@@ -1452,13 +1549,23 @@ export const TikTokApp: React.FC<{
 
                 {/* SECCIÓN DE ARCHIVO (Visible even if root is empty) */}
                 {archivedVideos.length > 0 && (
-                  <div className="space-y-4 pt-8 border-t border-zinc-100 dark:border-zinc-800/50">
-                    <div className="flex items-center gap-2 text-zinc-400 font-bold uppercase tracking-widest text-xs px-2">
-                      <Archive size={16} /> Archivo ({archivedVideos.length})
-                    </div>
-                    <div className="grid grid-cols-1 gap-2.5">
-                      {archivedVideos.map(video => (
-                        <div key={video.id} className="p-4 bg-white dark:bg-[#1A1A24]/60 border border-zinc-200 dark:border-[#2D2D42]/40 rounded-2xl flex items-center justify-between group hover:border-[#EE1D52]/30 transition-all">
+                  <div className={`space-y-4 pt-8 border-t border-zinc-100 dark:border-zinc-800/50 ${isArchiveOpenByApp['tiktok'] ? 'pb-20' : 'pb-10'}`}>
+                    <button 
+                      onClick={() => setArchiveOpenByApp('tiktok', !isArchiveOpenByApp['tiktok'])}
+                      className="flex items-center gap-3 text-zinc-400 font-bold uppercase tracking-widest text-xs px-2 hover:text-[#EE1D52] transition-colors group/archheader"
+                    >
+                      <Archive size={16} className="text-zinc-500/50 group-hover/archheader:text-[#EE1D52]/50 transition-colors" /> 
+                      <span>Archivo ({archivedVideos.length})</span>
+                      <ChevronDown size={14} className={`transition-transform duration-300 ${isArchiveOpenByApp['tiktok'] ? '' : '-rotate-90'}`} />
+                    </button>
+
+                    {isArchiveOpenByApp['tiktok'] && (
+                      <div className={`grid ${isTikTokMaximized ? 'grid-cols-[repeat(auto-fit,340px)] w-full max-w-[2160px]' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl'} gap-4 justify-center mx-auto pb-20`}>
+
+
+                        {archivedVideos.map(video => (
+                        <div key={video.id} className="p-4 bg-white dark:bg-[#1A1A24]/50 border border-zinc-200 dark:border-[#2D2D42] rounded-2xl flex items-center justify-between group hover:border-[#EE1D52]/30 transition-all">
+
                           <div className="flex items-center gap-4 truncate">
                             <div className="w-8 h-10 rounded bg-zinc-900 border border-zinc-800 overflow-hidden shrink-0 opacity-60">
                               <img src={video.thumbnail} className="w-full h-full object-cover" alt="" />
@@ -1475,8 +1582,9 @@ export const TikTokApp: React.FC<{
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+              )}
               </div>
             </div>
         )}

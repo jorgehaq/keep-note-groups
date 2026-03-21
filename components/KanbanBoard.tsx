@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Task, TaskStatus, Group } from '../types';
 import { useTranslation } from 'react-i18next';
-import { Archive, Inbox, Trash2, GripVertical, Link as LinkIcon, Pencil, MoreVertical, ArrowRight, Maximize2, Minimize2, History, Eye, PenTool } from 'lucide-react';
+import { Archive, Inbox, Trash2, GripVertical, Link as LinkIcon, Pencil, MoreVertical, ArrowRight, Maximize2, Minimize2, History, Eye, PenTool, Film } from 'lucide-react';
 import { KanbanLinkerModal } from './KanbanLinkerModal';
 import { KanbanTaskViewerModal } from './KanbanTaskViewerModal';
 
@@ -228,6 +228,9 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
                                 {task.title || <span className="text-zinc-400 italic font-normal">Sin título</span>}
                                 {task.linked_board_id && (
                                     <PenTool size={10} className="inline-block ml-1.5 text-amber-500 mb-0.5" />
+                                )}
+                                {task.linked_tiktok_id && (
+                                    <Film size={10} className="inline-block ml-1.5 text-[#EE1D52] mb-0.5" />
                                 )}
                             </h4>
                         </div>

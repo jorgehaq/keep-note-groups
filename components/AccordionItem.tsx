@@ -291,8 +291,9 @@ const SubnoteTitle: React.FC<{
   onRename: (id: string, title: string) => void;
   searchQuery?: string;
 }> = ({ child, isActive, onRename, searchQuery }) => {
-  // 🚀 NUEVO: Si no tiene título (recién creada), empezar editando
-  const [editing, setEditing] = useState(!child.title);
+  // 🚀 NUEVO: Solo empezar editando si fue creada hace muy poco (nueva creación)
+  const isJustCreated = !child.title && (Date.now() - new Date(child.created_at || 0).getTime() < 3000);
+  const [editing, setEditing] = useState(isJustCreated);
   const [val, setVal] = useState(child.title || '');
   const inputRef = useRef<HTMLInputElement>(null);
 

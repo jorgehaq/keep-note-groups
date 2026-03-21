@@ -90,6 +90,7 @@ export interface Task {
   source_id?: string;
   linked_note_id?: string;
   linked_board_id?: string;
+  linked_tiktok_id?: string;
 }
 
 export type GlobalAppView =
@@ -147,7 +148,9 @@ export interface BrainDump {
   user_id: string;
   created_at: string;
   updated_at: string;
+  is_pinned?: boolean;
   parent_id?: string | null;
+
   generation_level?: number;
   focus_prompt?: string | null;
   ai_summary_status?:
@@ -206,7 +209,9 @@ export interface TikTokVideo {
   generation_level?: number;
   created_at: string;
   updated_at: string;
+  is_pinned?: boolean;
   order_index?: number;
+
 }
 
 export interface TikTokQueueItem {
