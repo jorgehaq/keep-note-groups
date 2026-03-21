@@ -837,6 +837,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".dark .cm-panels": {
             backgroundColor: "#18181b !important",
             borderTop: "1px solid #27272a !important",
+            color: "#f4f4f5 !important",
         },
         ".cm-panels-bottom": {
             borderTop: "1px solid #e4e4e7 !important",
@@ -883,11 +884,31 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             border: "1px solid #4a4a4e !important",
             color: "#eeeeee !important",
         },
+        ".cm-search button:hover": {
+            backgroundColor: "#e5e7eb !important",
+            borderColor: "#9ca3af !important",
+        },
+        ".dark .cm-search button:hover": {
+            backgroundColor: "#52525b !important",
+            borderColor: "#71717a !important",
+        },
         ".cm-search [name=close]": {
             marginLeft: "auto !important",
             cursor: "pointer !important",
             color: "#ef4444 !important",
             opacity: "0.7 !important",
+            padding: "4px 10px !important",
+            borderRadius: "6px !important",
+            display: "inline-flex !important",
+            alignItems: "center !important",
+            justifyContent: "center !important",
+            transition: "all 0.2s !important",
+            border: "1px solid transparent !important",
+        },
+        ".cm-search [name=close]:hover": {
+            backgroundColor: "rgba(239, 68, 68, 0.1) !important",
+            opacity: "1 !important",
+            borderColor: "rgba(239, 68, 68, 0.3) !important",
         }
     });
 };

@@ -398,14 +398,39 @@ export const BrainDumpApp: React.FC<{
 
     const [canScrollTabsLeft, setCanScrollTabsLeft] = useState(false);
     const [canScrollTabsRight, setCanScrollTabsRight] = useState(false);
+    const [hasSearchMatchTabsLeft, setHasSearchMatchTabsLeft] = useState(false);
+    const [hasSearchMatchTabsRight, setHasSearchMatchTabsRight] = useState(false);
 
     const checkTabsScroll = useCallback(() => {
         if (tabBarRef.current) {
             const { scrollLeft, scrollWidth, clientWidth } = tabBarRef.current;
             setCanScrollTabsLeft(scrollLeft > 5);
             setCanScrollTabsRight(scrollLeft + clientWidth < scrollWidth - 5);
+
+            // --- Lógica de Iluminación de Flechas por Búsqueda ---
+            const query = searchQuery?.trim();
+            if (!query) {
+                setHasSearchMatchTabsLeft(false);
+                setHasSearchMatchTabsRight(false);
+                return;
+            }
+
+            let matchLeft = false;
+            let matchRight = false;
+            const tabs = tabBarRef.current.querySelectorAll('button[data-is-match="true"]');
+            
+            tabs.forEach(tab => {
+                const t = tab as HTMLElement;
+                const tabStart = t.offsetLeft;
+                const tabEnd = tabStart + t.offsetWidth;
+                if (tabStart < scrollLeft + 35) matchLeft = true;
+                if (tabEnd > scrollLeft + clientWidth - 35) matchRight = true;
+            });
+
+            setHasSearchMatchTabsLeft(matchLeft);
+            setHasSearchMatchTabsRight(matchRight);
         }
-    }, [tabBarRef]);
+    }, [tabBarRef, searchQuery]);
 
     const scrollTabsHorizontally = (direction: 'left' | 'right') => {
         if (tabBarRef.current) {
@@ -504,6 +529,8 @@ export const BrainDumpApp: React.FC<{
 
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(false);
+    const [hasSearchMatchLeft, setHasSearchMatchLeft] = useState(false);
+    const [hasSearchMatchRight, setHasSearchMatchRight] = useState(false);
 
     const menuRef = useRef<HTMLDivElement>(null);
     const sortMenuRef = useRef<HTMLDivElement>(null);
@@ -532,10 +559,33 @@ export const BrainDumpApp: React.FC<{
     const checkScroll = useCallback(() => {
         if (scrollContainerRef.current) {
             const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-            setCanScrollLeft(scrollLeft > 1);
-            setCanScrollRight(Math.ceil(scrollLeft + clientWidth) < scrollWidth - 1);
+            setCanScrollLeft(scrollLeft > 5);
+            setCanScrollRight(Math.ceil(scrollLeft + clientWidth) < scrollWidth - 5);
+
+            // --- Lógica de Iluminación de Flechas por Búsqueda (Bandeja Principal) ---
+            const query = searchQuery?.trim();
+            if (!query) {
+                setHasSearchMatchLeft(false);
+                setHasSearchMatchRight(false);
+                return;
+            }
+
+            let matchLeft = false;
+            let matchRight = false;
+            const tabs = scrollContainerRef.current.querySelectorAll('button[data-is-match="true"]');
+            
+            tabs.forEach(tab => {
+                const t = tab as HTMLElement;
+                const tabStart = t.offsetLeft;
+                const tabEnd = tabStart + t.offsetWidth;
+                if (tabStart < scrollLeft + 35) matchLeft = true;
+                if (tabEnd > scrollLeft + clientWidth - 35) matchRight = true;
+            });
+
+            setHasSearchMatchLeft(matchLeft);
+            setHasSearchMatchRight(matchRight);
         }
-    }, []);
+    }, [searchQuery]);
 
     const scrollTabs = (direction: 'left' | 'right') => {
         if (scrollContainerRef.current) {
@@ -554,7 +604,7 @@ export const BrainDumpApp: React.FC<{
                 window.removeEventListener('resize', checkScroll);
             };
         }
-    }, [dumps, checkScroll]);
+    }, [dumps, checkScroll, searchQuery]);
 
     // --- HANDLERS ---
     const autoSave = (id: string, updates: Partial<BrainDump>) => {
@@ -795,7 +845,10 @@ export const BrainDumpApp: React.FC<{
                         {/* Flecha Izquierda */}
                         {canScrollLeft && (
                             <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none transition-opacity duration-150 ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`}>
-                                <button onClick={() => scrollTabs('left')} className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors active:scale-95 border border-zinc-700 ml-1 ${canScrollLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+                                <button 
+                                    onClick={() => scrollTabs('left')} 
+                                    className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-all active:scale-95 border ${hasSearchMatchLeft ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-700'} ml-1 ${canScrollLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                                >
                                     <ChevronLeft size={14} />
                                 </button>
                             </div>
@@ -813,6 +866,7 @@ export const BrainDumpApp: React.FC<{
                                     return (
                                         <button
                                             key={p.id}
+                                            data-is-match={isMatch}
                                             onClick={() => {
                                                 if (focusedDumpId === p.id) setFocusedDumpId(null);
                                                 else setFocusedDumpId(p.id);
@@ -852,7 +906,10 @@ export const BrainDumpApp: React.FC<{
                         {/* Flecha Derecha */}
                         {canScrollRight && (
                             <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#13131A] to-transparent z-10 flex items-center justify-end pointer-events-none transition-opacity duration-150 ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}>
-                                <button onClick={() => scrollTabs('right')} className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors active:scale-95 border border-zinc-700 mr-1 ${canScrollRight ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+                                <button 
+                                    onClick={() => scrollTabs('right')} 
+                                    className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-all active:scale-95 border ${hasSearchMatchRight ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-700'} mr-1 ${canScrollRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                                >
                                     <ChevronRight size={14} />
                                 </button>
                             </div>
@@ -875,15 +932,6 @@ export const BrainDumpApp: React.FC<{
                             <div className="flex items-center justify-between px-4 pt-4 pb-2 transition-colors gap-2 min-w-0 shrink-0">
                                 <div className="flex items-center gap-3 flex-1 overflow-hidden pl-1 min-w-0">
                                     <div className="flex flex-col min-w-0 justify-center w-full">
-                                        {!isRootLevel && (
-                                            <button 
-                                                onClick={() => navigate(displayDump.parent_id || focusedDumpId)} 
-                                                className="mb-1 p-1 px-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-amber-600 transition-all flex items-center gap-1 text-[10px] font-bold w-fit"
-                                                title="Volver"
-                                            >
-                                                <ChevronLeft size={14} /> Volver
-                                            </button>
-                                        )}
                                         <div className="relative flex w-full">
                                             <input 
                                                 type="text"
@@ -1155,7 +1203,7 @@ export const BrainDumpApp: React.FC<{
                                         <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white dark:from-[#1A1A24] to-transparent z-10 flex items-center justify-start pointer-events-none transition-opacity duration-150 ${canScrollTabsLeft ? 'opacity-100' : 'opacity-0'}`}>
                                             <button 
                                                 onClick={() => scrollTabsHorizontally('left')} 
-                                                className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors active:scale-95 border border-zinc-700 ml-1 ${canScrollTabsLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                                                className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-all active:scale-95 border ${hasSearchMatchTabsLeft ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-700'} ml-1 ${canScrollTabsLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
                                             >
                                                 <ChevronLeft size={14} />
                                             </button>
@@ -1168,6 +1216,7 @@ export const BrainDumpApp: React.FC<{
                                                 <button 
                                                     onClick={() => setActiveTab('original')} 
                                                     data-active-tab={activeTab === 'original' || undefined}
+                                                    data-is-match={originalIsMatch}
                                                     className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all ${
                                                         activeTab === 'original' 
                                                             ? `bg-amber-500 text-amber-950 border-amber-400 shadow-sm ${originalIsMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
@@ -1202,6 +1251,7 @@ export const BrainDumpApp: React.FC<{
                                                             <button 
                                                                 onClick={() => setActiveTab(`sub_${child.id}`)} 
                                                                 data-active-tab={isActive || undefined}
+                                                                data-is-match={isMatch}
                                                                 className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all max-w-[150px] ${
                                                                     isActive 
                                                                         ? `bg-emerald-600 text-white border-emerald-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
@@ -1239,6 +1289,7 @@ export const BrainDumpApp: React.FC<{
                                                             key={s.id} 
                                                             onClick={() => setActiveTab(s.id)} 
                                                             data-active-tab={activeTab === s.id || undefined}
+                                                            data-is-match={isMatch}
                                                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all max-w-[150px] ${
                                                             activeTab === s.id 
                                                                 ? `bg-violet-600 text-white border-violet-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
@@ -1264,7 +1315,7 @@ export const BrainDumpApp: React.FC<{
                                         <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white dark:from-[#1A1A24] to-transparent z-10 flex items-center justify-end pointer-events-none transition-opacity duration-150 ${canScrollTabsRight ? 'opacity-100' : 'opacity-0'}`}>
                                             <button 
                                                 onClick={() => scrollTabsHorizontally('right')} 
-                                                className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-colors active:scale-95 border border-zinc-700 mr-1 ${canScrollTabsRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                                                className={`p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-all active:scale-95 border ${hasSearchMatchTabsRight ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-200 dark:border-zinc-700'} mr-1 ${canScrollTabsRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
                                             >
                                                 <ChevronRight size={14} />
                                             </button>

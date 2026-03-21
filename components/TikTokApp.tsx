@@ -194,6 +194,10 @@ export const TikTokApp: React.FC<{
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [canScrollTrayLeft, setCanScrollTrayLeft] = useState(false);
   const [canScrollTrayRight, setCanScrollTrayRight] = useState(false);
+  const [hasSearchMatchLeft, setHasSearchMatchLeft] = useState(false);
+  const [hasSearchMatchRight, setHasSearchMatchRight] = useState(false);
+  const [hasSearchMatchTrayLeft, setHasSearchMatchTrayLeft] = useState(false);
+  const [hasSearchMatchTrayRight, setHasSearchMatchTrayRight] = useState(false);
   const [editingSubnoteId, setEditingSubnoteId] = useState<string | null>(null);
   const [tempSubnoteTitle, setTempSubnoteTitle] = useState("");
   const moreMenuRef = useRef<HTMLDivElement>(null);
@@ -296,8 +300,31 @@ export const TikTokApp: React.FC<{
       const { scrollLeft, scrollWidth, clientWidth } = tabBarRef.current;
       setCanScrollLeft(scrollLeft > 5);
       setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 5);
+
+      // --- Lógica de Iluminación de Flechas por Búsqueda (Tabs Secundarias) ---
+      const query = localSearch?.trim();
+      if (!query) {
+        setHasSearchMatchLeft(false);
+        setHasSearchMatchRight(false);
+        return;
+      }
+
+      let matchLeft = false;
+      let matchRight = false;
+      const tabs = tabBarRef.current.querySelectorAll('button[data-is-match="true"]');
+      
+      tabs.forEach(tab => {
+        const t = tab as HTMLElement;
+        const tabStart = t.offsetLeft;
+        const tabEnd = tabStart + t.offsetWidth;
+        if (tabStart < scrollLeft + 35) matchLeft = true;
+        if (tabEnd > scrollLeft + clientWidth - 35) matchRight = true;
+      });
+
+      setHasSearchMatchLeft(matchLeft);
+      setHasSearchMatchRight(matchRight);
     }
-  }, []);
+  }, [localSearch]);
 
   const scrollTabs = (direction: 'left' | 'right') => {
     if (tabBarRef.current) {
@@ -316,7 +343,7 @@ export const TikTokApp: React.FC<{
         window.removeEventListener('resize', checkScroll);
       };
     }
-  }, [checkScroll]);
+  }, [checkScroll, localSearch]);
 
   // Recalcular scroll cuando cambien las pestañas
   useEffect(() => {
@@ -390,10 +417,33 @@ export const TikTokApp: React.FC<{
   const checkTrayScroll = useCallback(() => {
     if (videoTrayRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = videoTrayRef.current;
-      setCanScrollTrayLeft(scrollLeft > 1);
-      setCanScrollTrayRight(Math.ceil(scrollLeft + clientWidth) < scrollWidth - 1);
+      setCanScrollTrayLeft(scrollLeft > 5);
+      setCanScrollTrayRight(Math.ceil(scrollLeft + clientWidth) < scrollWidth - 5);
+
+      // --- Lógica de Iluminación de Flechas por Búsqueda (Bandeja Principal) ---
+      const query = localSearch?.trim();
+      if (!query) {
+        setHasSearchMatchTrayLeft(false);
+        setHasSearchMatchTrayRight(false);
+        return;
+      }
+
+      let matchLeft = false;
+      let matchRight = false;
+      const tabs = videoTrayRef.current.querySelectorAll('button[data-is-match="true"]');
+      
+      tabs.forEach(tab => {
+        const t = tab as HTMLElement;
+        const tabStart = t.offsetLeft;
+        const tabEnd = tabStart + t.offsetWidth;
+        if (tabStart < scrollLeft + 35) matchLeft = true;
+        if (tabEnd > scrollLeft + clientWidth - 35) matchRight = true;
+      });
+
+      setHasSearchMatchTrayLeft(matchLeft);
+      setHasSearchMatchTrayRight(matchRight);
     }
-  }, []);
+  }, [localSearch]);
 
   const scrollTray = (direction: 'left' | 'right') => {
     if (videoTrayRef.current) {
@@ -451,7 +501,7 @@ export const TikTokApp: React.FC<{
         window.removeEventListener('resize', checkTrayScroll);
       };
     }
-  }, [tikTokVideos, rootVideos, isVideoTrayOpen, checkTrayScroll]);
+  }, [tikTokVideos, rootVideos, isVideoTrayOpen, checkTrayScroll, localSearch]);
 
 
 
@@ -723,7 +773,7 @@ export const TikTokApp: React.FC<{
               <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none transition-opacity duration-150 ${canScrollTrayLeft ? 'opacity-100' : 'opacity-0'}`}>
                 <button 
                   onClick={() => scrollTray('left')} 
-                  className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors active:scale-95 border border-zinc-700 ml-1 ${canScrollTrayLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                  className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-all active:scale-95 border ${hasSearchMatchTrayLeft ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-700'} ml-1 ${canScrollTrayLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
                 >
                   <ChevronLeft size={14} />
                 </button>
@@ -743,6 +793,7 @@ export const TikTokApp: React.FC<{
                   return (
                     <button
                       key={video.id}
+                      data-is-match={isMatch}
                       onClick={() => { 
                         if (focusedVideoId === video.id) setFocusedVideoId(null);
                         else setFocusedVideoId(video.id); 
@@ -781,7 +832,7 @@ export const TikTokApp: React.FC<{
               <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#13131A] to-transparent z-10 flex items-center justify-end pointer-events-none transition-opacity duration-150 ${canScrollTrayRight ? 'opacity-100' : 'opacity-0'}`}>
                 <button 
                   onClick={() => scrollTray('right')} 
-                  className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors active:scale-95 border border-zinc-700 mr-1 ${canScrollTrayRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                  className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-all active:scale-95 border ${hasSearchMatchTrayRight ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-700'} mr-1 ${canScrollTrayRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
                 >
                   <ChevronRight size={14} />
                 </button>
@@ -1071,7 +1122,7 @@ export const TikTokApp: React.FC<{
                   <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#1A1A24] to-transparent z-10 flex items-center justify-start pointer-events-none transition-opacity duration-150 ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`}>
                     <button 
                       onClick={() => scrollTabs('left')} 
-                      className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors active:scale-95 border border-zinc-700 ml-1 ${canScrollLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                      className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-all active:scale-95 border ${hasSearchMatchLeft ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-700'} ml-1 ${canScrollLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
                     >
                       <ChevronLeft size={14} />
                     </button>
@@ -1093,6 +1144,7 @@ export const TikTokApp: React.FC<{
                         <button 
                           onClick={() => setActiveTab('original')} 
                           data-active-tab={isActive || undefined}
+                          data-is-match={isTranscriptionMatch}
                           className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
                             isActive 
                               ? `bg-[#EE1D52] text-white border-[#EE1D52] shadow-sm ${isTranscriptionMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
@@ -1101,11 +1153,6 @@ export const TikTokApp: React.FC<{
                                 : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-[#EE1D52]'
                           }`}
                         >
-                          {isInKanban && focusedVideo && (
-                            <div className="absolute -top-1.5 -right-1.5 z-10">
-                              <KanbanSemaphore sourceType="tiktok" sourceId={focusedVideo.id} sourceTitle={focusedVideo.title || 'Análisis TikTok'} />
-                            </div>
-                          )}
                           <FileText size={11} /> Transcripción
                         </button>
                       );
@@ -1150,6 +1197,7 @@ export const TikTokApp: React.FC<{
                             <button 
                               onClick={() => setActiveTab(`summary_${summary.id}`)} 
                               data-active-tab={isActive || undefined} 
+                              data-is-match={isMatch}
                               className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
                                 isActive 
                                   ? `bg-violet-600 text-white border-violet-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}` 
@@ -1207,6 +1255,7 @@ export const TikTokApp: React.FC<{
                           return (
                             <button 
                               key={note.id}
+                              data-is-match={isMatch}
                               onClick={() => setActiveTab(`note_${note.id}`)} 
                               data-active-tab={isActive || undefined}
                               className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
@@ -1278,7 +1327,7 @@ export const TikTokApp: React.FC<{
                   <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#1A1A24] to-transparent z-10 flex items-center justify-end pointer-events-none transition-opacity duration-150 ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}>
                     <button 
                       onClick={() => scrollTabs('right')} 
-                      className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-colors active:scale-95 border border-zinc-700 mr-1 ${canScrollRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                      className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-all active:scale-95 border ${hasSearchMatchRight ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-700'} mr-1 ${canScrollRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
                     >
                       <ChevronRight size={14} />
                     </button>

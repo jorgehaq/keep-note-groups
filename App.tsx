@@ -156,12 +156,40 @@ function App() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [hasSearchMatchLeft, setHasSearchMatchLeft] = useState(false);
+  const [hasSearchMatchRight, setHasSearchMatchRight] = useState(false);
 
   const checkScroll = () => {
     if (scrollContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(Math.ceil(scrollLeft + clientWidth) < scrollWidth - 1); // tolerance
+      setCanScrollLeft(scrollLeft > 5);
+      setCanScrollRight(Math.ceil(scrollLeft + clientWidth) < scrollWidth - 5);
+
+      // --- Lógica de Iluminación de Flechas por Búsqueda ---
+      const query = currentSearchQuery.trim();
+      if (!query) {
+        setHasSearchMatchLeft(false);
+        setHasSearchMatchRight(false);
+        return;
+      }
+
+      let matchLeft = false;
+      let matchRight = false;
+      const tabs = scrollContainerRef.current.querySelectorAll('button[data-is-match="true"]');
+      
+      tabs.forEach(tab => {
+        const t = tab as HTMLElement;
+        const tabStart = t.offsetLeft;
+        const tabEnd = tabStart + t.offsetWidth;
+        
+        // Un tab está a la izquierda si su inicio entra en la zona de la flecha/gradiente (offset de px-10 es 40)
+        if (tabStart < scrollLeft + 35) matchLeft = true;
+        // Un tab está a la derecha si su final entra en la zona de la flecha/gradiente
+        if (tabEnd > scrollLeft + clientWidth - 35) matchRight = true;
+      });
+
+      setHasSearchMatchLeft(matchLeft);
+      setHasSearchMatchRight(matchRight);
     }
   };
 
@@ -169,7 +197,7 @@ function App() {
     checkScroll();
     window.addEventListener('resize', checkScroll);
     return () => window.removeEventListener('resize', checkScroll);
-  }, [groups, activeGroupId, isGlobalNoteTrayOpen, globalView]);
+  }, [groups, activeGroupId, isGlobalNoteTrayOpen, globalView, currentSearchQuery]);
 
   const getNewOrderIndex = () => {
     if (!activeGroupId) return 1;
@@ -1840,7 +1868,7 @@ function App() {
                             <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#FAFAFA] dark:from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none transition-opacity duration-150 ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`}>
                               <button 
                                 onClick={() => scrollTabs('left')} 
-                                className={`p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-colors active:scale-95 border border-zinc-200 dark:border-zinc-700 ml-1 ${canScrollLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                                className={`p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-all active:scale-95 border ${hasSearchMatchLeft ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-200 dark:border-zinc-700'} ml-1 ${canScrollLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
                               >
                                 <ChevronLeft size={14} />
                               </button>
@@ -1888,6 +1916,7 @@ function App() {
                           return (
                             <button
                               key={note.id}
+                              data-is-match={isSearchActive}
                               onClick={() => {
                                 const isNowFocused = focusedNoteId !== note.id;
                                 const currentOpen = openNotesByGroup[activeGroup.id] || [];
@@ -1943,7 +1972,7 @@ function App() {
                         <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#FAFAFA] dark:from-[#13131A] to-transparent z-10 flex items-center justify-end pointer-events-none transition-opacity duration-150 ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}>
                           <button 
                             onClick={() => scrollTabs('right')} 
-                            className={`p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-colors active:scale-95 border border-zinc-200 dark:border-zinc-700 mr-1 ${canScrollRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                            className={`p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-all active:scale-95 border ${hasSearchMatchRight ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-200 dark:border-zinc-700'} mr-1 ${canScrollRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
                           >
                             <ChevronRight size={14} />
                           </button>

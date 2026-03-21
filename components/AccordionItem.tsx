@@ -656,14 +656,41 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [hasSearchMatchLeft, setHasSearchMatchLeft] = useState(false);
+  const [hasSearchMatchRight, setHasSearchMatchRight] = useState(false);
 
   const checkScroll = useCallback(() => {
     if (tabBarRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = tabBarRef.current;
       setCanScrollLeft(scrollLeft > 5);
       setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 5);
+
+      // --- Lógica de Iluminación de Flechas por Búsqueda ---
+      const query = searchQuery?.trim();
+      if (!query) {
+        setHasSearchMatchLeft(false);
+        setHasSearchMatchRight(false);
+        return;
+      }
+
+      let matchLeft = false;
+      let matchRight = false;
+      const tabs = tabBarRef.current.querySelectorAll('button[data-is-match="true"]');
+      
+      tabs.forEach(tab => {
+        const t = tab as HTMLElement;
+        const tabStart = t.offsetLeft;
+        const tabEnd = tabStart + t.offsetWidth;
+        
+        // Ajuste de sensibilidad para detectar tabs ocultos tras el gradiente/flecha
+        if (tabStart < scrollLeft + 35) matchLeft = true;
+        if (tabEnd > scrollLeft + clientWidth - 35) matchRight = true;
+      });
+
+      setHasSearchMatchLeft(matchLeft);
+      setHasSearchMatchRight(matchRight);
     }
-  }, []);
+  }, [searchQuery]);
 
   const scrollTabs = (direction: 'left' | 'right') => {
     if (tabBarRef.current) {
@@ -1129,7 +1156,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white dark:from-[#1A1A24] to-transparent z-10 flex items-center justify-start pointer-events-none transition-opacity duration-150 ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`}>
                 <button 
                   onClick={() => scrollTabs('left')} 
-                  className={`p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-400 hover:text-emerald-500 transition-colors active:scale-95 border border-zinc-200 dark:border-zinc-700 ml-1 ${canScrollLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                  className={`p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-400 hover:text-emerald-500 transition-all active:scale-95 border ${hasSearchMatchLeft ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-200 dark:border-zinc-700'} ml-1 ${canScrollLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
                 >
                   <ChevronLeft size={14} />
                 </button>
@@ -1176,6 +1203,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                       <button
                         onClick={() => setActiveTab(`sub_${child.id}`)}
                         data-active-tab={isActive || undefined}
+                        data-is-match={isMatch}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all max-w-[150px] ${
                           isActive
                             ? `bg-emerald-600 text-white border-emerald-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
@@ -1227,6 +1255,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                     <button key={s.id}
                       onClick={() => setActiveTab(activeTab === s.id ? 'original' : s.id)}
                       data-active-tab={activeTab === s.id || undefined}
+                      data-is-match={isMatch}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all max-w-[150px] ${
                         activeTab === s.id
                           ? `bg-violet-600 text-white border-violet-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
@@ -1254,7 +1283,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white dark:from-[#1A1A24] to-transparent z-10 flex items-center justify-end pointer-events-none transition-opacity duration-150 ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}>
                 <button 
                   onClick={() => scrollTabs('right')} 
-                  className={`p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-400 hover:text-emerald-500 transition-colors active:scale-95 border border-zinc-200 dark:border-zinc-700 mr-1 ${canScrollRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                  className={`p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-400 hover:text-emerald-500 transition-all active:scale-95 border ${hasSearchMatchRight ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-200 dark:border-zinc-700'} mr-1 ${canScrollRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
                 >
                   <ChevronRight size={14} />
                 </button>
