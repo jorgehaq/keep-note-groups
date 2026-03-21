@@ -1623,14 +1623,14 @@ function App() {
                 <div className={`sticky top-0 z-30 bg-white/80 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-200 dark:border-zinc-800 shadow-sm transition-all`}>
                   <div className={`min-h-[72px] h-auto flex flex-col items-center justify-center`}>
 
-                    <div className="max-w-6xl mx-auto w-full flex flex-row items-center justify-center lg:justify-between px-4 sm:px-10 lg:px-0 gap-4">
+                    <div className="max-w-6xl mx-auto w-full flex flex-row items-center justify-center md:justify-between px-6 gap-4">
 
 
 
                  {activeGroup ? (
                     <>
                       {/* Lado Izquierdo: Icono, Título Editable y Contador */}
-                      <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
+                      <div className="hidden md:flex flex-wrap items-center gap-3 flex-1 min-w-0">
                           <button
                           onClick={() => setIsLauncherOpen(true)}
                             className="hidden md:flex h-9 p-2 bg-[#4940D9] hover:bg-[#3D35C0] rounded-lg text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 shrink-0 transition-all"
@@ -1823,7 +1823,7 @@ function App() {
                     </>
                  ) : (
                     <>
-                      <h1 className="text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] flex items-center gap-3">
+                      <h1 className="hidden md:flex text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] items-center gap-3">
                         <div className="h-9 p-2 bg-[#4940D9] hover:bg-[#3D35C0] rounded-lg text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 transition-all cursor-default">
                           <StickyNote size={20} />
                         </div>
