@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Archive, Inbox, Trash2, GripVertical, Link as LinkIcon, Pencil, MoreVertical, ArrowRight, Maximize2, Minimize2, History, Eye, PenTool, Film } from 'lucide-react';
 import { KanbanLinkerModal } from './KanbanLinkerModal';
 import { KanbanTaskViewerModal } from './KanbanTaskViewerModal';
+import { KanbanSemaphore } from './KanbanSemaphore';
 
 interface KanbanBoardProps {
     tasks: Task[];
@@ -101,17 +102,17 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], on
                     if (activeStatus && window.innerWidth < 1024 && col.status !== activeStatus) return null;
                     const colTasks = getColumnTasks(col.status);
                     return (
-                        <div key={col.status} className="w-full shrink-0 lg:w-auto lg:shrink lg:flex-1 min-w-[280px] max-w-[400px] flex flex-col snap-center">
-                            {/* Column Header */}
-                            <div className="flex items-center gap-2 mb-4 px-1">
+                        <div key={col.status} className="w-full shrink-0 lg:w-auto lg:shrink lg:flex-1 min-w-[280px] max-w-[400px] flex flex-col snap-center bg-zinc-100/30 dark:bg-[#1A1A24]/40 border border-zinc-200 dark:border-zinc-800/50 rounded-3xl shadow-sm overflow-hidden animte-fadeIn">
+                            {/* Column Header (Style from Backlog) */}
+                            <div className="flex items-center gap-2 p-5 border-b border-zinc-200 dark:border-zinc-800/50 bg-white/50 dark:bg-[#1A1A24]/80 backdrop-blur-sm shrink-0">
                                 <div 
                                     className={`w-3.5 h-3.5 rounded-full ${col.accent}`}
                                     style={{ boxShadow: `0 0 6px ${col.hex}88` }}
                                 ></div>
-                                <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">
                                     {col.label}
                                 </h3>
-                                <span className="text-[10px] font-mono text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded-full ml-auto">
+                                <span className="ml-auto bg-zinc-200 dark:bg-zinc-800 text-zinc-500 text-[10px] font-bold px-2 py-0.5 rounded-full">
                                     {colTasks.length}
                                 </span>
                             </div>
@@ -122,9 +123,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], on
                                     <div
                                         ref={provided.innerRef}
                                         {...provided.droppableProps}
-                                        className={`flex-1 flex flex-col gap-4 rounded-xl p-4 min-h-[200px] transition-colors border ${snapshot.isDraggingOver
-                                            ? 'bg-zinc-200/70 dark:bg-zinc-700/40 ring-2 ring-zinc-300 dark:ring-zinc-600 ring-dashed border-zinc-300 dark:border-zinc-600'
-                                            : 'bg-zinc-100/50 dark:bg-zinc-800/30 border-zinc-200 dark:border-zinc-800'
+                                        className={`flex-1 flex flex-col gap-4 p-5 min-h-[200px] transition-colors ${snapshot.isDraggingOver
+                                            ? 'bg-zinc-200/70 dark:bg-zinc-700/40 ring-2 ring-zinc-300 dark:ring-zinc-600 ring-dashed'
+                                            : ''
                                             }`}
                                     >
                                         {colTasks.map((task, index) => (
@@ -255,6 +256,14 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
                 </span>
 
                 <div className="flex items-center gap-1">
+                    {/* Mobile Only: Semaphore (Change Status) */}
+                    <div className="lg:hidden mr-1">
+                        <KanbanSemaphore 
+                            status={task.status as any} 
+                            onStatusChange={(newStatus) => onUpdate(task.id, { status: newStatus as any })} 
+                        />
+                    </div>
+
                     <button
                         onClick={() => onView(task)}
                         className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"

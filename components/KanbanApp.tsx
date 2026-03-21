@@ -205,8 +205,8 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                           )}
                         </button>
                         
-                        <button onClick={handleAdd} className="h-9 w-9 sm:w-auto bg-[#10B981] hover:bg-emerald-600 text-emerald-950 rounded-full sm:rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0 border border-emerald-400/30 font-bold">
-                            <Plus size={20} /> <span className="text-sm hidden sm:inline mr-2">Nueva Tarea</span>
+                        <button onClick={handleAdd} className="h-9 w-9 bg-[#10B981] hover:bg-emerald-600 text-emerald-950 rounded-full shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center active:scale-95 shrink-0 border border-emerald-400/30 font-bold" title="Nueva tarea">
+                            <Plus size={20} />
                         </button>
                     </div>
                 </div>

@@ -755,9 +755,10 @@ export const TikTokApp: React.FC<{
               {/* New Button */}
               <button 
                 onClick={() => setIsModalOpen(true)}
-                className="h-9 w-9 sm:w-auto bg-[#EE1D52] hover:bg-[#D61A4A] text-white rounded-full sm:rounded-xl shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all shadow-[#EE1D52]/10 border border-[#EE1D52]/30"
+                className="h-9 w-9 bg-[#EE1D52] hover:bg-[#D61A4A] text-white rounded-full shadow-lg flex items-center justify-center active:scale-95 transition-all shadow-[#EE1D52]/10 border border-[#EE1D52]/30"
+                title="Añadir TikTok"
               >
-                <Plus size={18} /> <span className="text-sm font-bold hidden sm:inline mr-2">Tiktok</span>
+                <Plus size={18} />
               </button>
             </div>
           </div>

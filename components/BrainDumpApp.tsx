@@ -830,8 +830,12 @@ export const BrainDumpApp: React.FC<{
                                 )}
                             </div>
 
-                            <button onClick={createNewDraft} className="h-9 w-9 sm:w-auto bg-[#FFD700] hover:bg-[#E5C100] text-amber-950 rounded-full sm:rounded-xl shadow-lg shadow-amber-500/10 border border-amber-400/30 flex items-center justify-center gap-2 active:scale-95 transition-all">
-                                <Plus size={18} /> <span className="text-sm font-bold hidden sm:inline mr-2">Pizarrón</span>
+                            <button 
+                                onClick={createNewDraft} 
+                                className="h-9 w-9 bg-[#FFD700] hover:bg-[#E5C100] text-amber-950 rounded-full shadow-lg shadow-amber-500/10 border border-amber-400/30 flex items-center justify-center active:scale-95 transition-all"
+                                title="Nuevo Pizarrón"
+                            >
+                                <Plus size={18} />
                             </button>
                         </div>
                     </div>

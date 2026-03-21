@@ -279,8 +279,8 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                             </span>
                           )}
                         </button>
-                        <button onClick={createNewDraft} className="h-9 w-9 sm:w-auto bg-[#2563EB] hover:bg-blue-700 text-white rounded-full sm:rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0 border border-blue-400/30 font-bold">
-                            <Plus size={20} /> <span className="text-sm hidden sm:inline mr-2">Nuevo</span>
+                        <button onClick={createNewDraft} className="h-9 w-9 bg-[#2563EB] hover:bg-blue-700 text-white rounded-full shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center active:scale-95 shrink-0 border border-blue-400/30 font-bold" title="Nuevo cronómetro">
+                            <Plus size={20} />
                         </button>
                     </div>
                 </div>

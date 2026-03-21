@@ -375,8 +375,8 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                           )}
                         </button>
 
-                        <button onClick={createNewDraft} className="h-9 w-9 sm:w-auto bg-[#1F3760] hover:bg-[#152643] text-white rounded-full sm:rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0 border border-[#1F3760]/30 font-bold">
-                            <Plus size={20} /> <span className="text-sm hidden sm:inline mr-2">Nuevo</span>
+                        <button onClick={createNewDraft} className="h-9 w-9 bg-[#1F3760] hover:bg-[#152643] text-white rounded-full shadow-lg shadow-[#1F3760]/20 transition-all flex items-center justify-center active:scale-95 shrink-0 border border-[#1F3760]/30 font-bold" title="Nuevo recordatorio">
+                            <Plus size={20} />
                         </button>
                     </div>
                 </div>

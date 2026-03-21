@@ -1784,32 +1784,17 @@ function App() {
                           {/* Controles de Grupo (En una mini-cápsula gris) */}
                           <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-1 shadow-sm relative" ref={groupMenuRef}>
 
-                              <button 
-                                  onClick={downloadGroupAsMarkdown} 
-                                  className="hidden md:flex p-1.5 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                                  title="Exportar Grupo"
-                              >
-                                  <Download size={16} />
-                              </button>
-                              <button 
-                                  onClick={() => deleteGroup(activeGroup.id)} 
-                                  className="hidden md:flex p-1.5 text-zinc-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                  title="Eliminar Grupo"
-                              >
-                                  <Trash2 size={16} />
-                              </button>
-
-                              {/* Mobile 3-dots Menu */}
+                               {/* Grupo Action Menu (Consolidated for Mobile & Desktop) */}
                               <button 
                                   onClick={() => setIsGroupMenuOpen(!isGroupMenuOpen)} 
-                                  className="md:hidden p-1.5 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                  className="p-1.5 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                                   title="Opciones de Grupo"
                               >
                                   <MoreVertical size={16} />
                               </button>
 
                               {isGroupMenuOpen && (
-                                <div className="md:hidden absolute right-0 top-full mt-2 w-48 bg-white dark:bg-[#1A1A24] shadow-xl rounded-xl border border-zinc-200 dark:border-zinc-700 py-1 flex flex-col z-50 animate-fadeIn">
+                                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-[#1A1A24] shadow-xl rounded-xl border border-zinc-200 dark:border-zinc-700 py-1 flex flex-col z-50 animate-fadeIn font-bold">
                                   <button 
                                       onClick={() => { downloadGroupAsMarkdown(); setIsGroupMenuOpen(false); }} 
                                       className="flex items-center gap-2.5 px-4 py-2 text-sm text-left text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors w-full"
@@ -1829,11 +1814,10 @@ function App() {
                           {/* Botón Principal (Nueva Nota) */}
                           <button 
                               onClick={addNote} 
-                              className="h-9 w-9 sm:w-auto bg-[#4940D9] hover:bg-[#3D35C0] text-white rounded-full sm:rounded-xl shadow-lg shadow-[#4940D9]/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
+                              className="h-9 w-9 bg-[#4940D9] hover:bg-[#3D35C0] text-white rounded-full shadow-lg shadow-[#4940D9]/20 transition-all flex items-center justify-center active:scale-95 shrink-0"
+                              title="Nueva Nota"
                           >
                               <Plus size={18} /> 
-                              <span className="text-sm font-normal hidden sm:inline pr-1 text-white">Nota
-</span>
                           </button>
                       </div>
                     </>

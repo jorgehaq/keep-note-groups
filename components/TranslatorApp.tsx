@@ -225,10 +225,10 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                         <button 
                             onClick={saveTranslation} 
                             disabled={!originalText.trim() || !translatedText.trim() || isTranslating || isSaving}
-                            className="h-9 w-9 sm:w-auto bg-[#8B5CF6] hover:bg-violet-600 text-white rounded-full sm:rounded-xl shadow-lg shadow-violet-500/10 border border-violet-400/30 flex items-center justify-center gap-2 active:scale-95 transition-all font-bold"
+                            className="h-9 w-9 bg-[#8B5CF6] hover:bg-violet-600 text-white rounded-full shadow-lg shadow-violet-500/10 border border-violet-400/30 flex items-center justify-center active:scale-95 transition-all font-bold"
+                            title="Guardar traducción en el archivo"
                         >
                             {isSaving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
-                            <span className="text-sm hidden sm:inline mr-2">Guardar</span>
                         </button>
                     </div>
                 </div>
