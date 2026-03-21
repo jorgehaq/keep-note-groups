@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, FileText, StickyNote, Grid, Maximize2, Minimize2, ChevronsDownUp, Bell, Pin, PanelLeft, ChevronLeft, ChevronRight, Wind, PenLine, Archive, RotateCcw, ChevronDown } from 'lucide-react';
+import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, FileText, StickyNote, Grid, Maximize2, Minimize2, ChevronsDownUp, Bell, Pin, PanelLeft, ChevronLeft, ChevronRight, Wind, PenLine, Archive, RotateCcw, ChevronDown, MoreVertical } from 'lucide-react';
 
 import { Note, Group, Theme, NoteFont, Reminder, NoteSortMode, BrainDump, TikTokVideo, TikTokQueueItem } from './types';
 import { AccordionItem } from './components/AccordionItem';
@@ -147,6 +147,8 @@ function App() {
   const [groupTitleSyncStatus, setGroupTitleSyncStatus] = useState<'saved' | 'saving' | ''>('');
 
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+  const [isGroupMenuOpen, setIsGroupMenuOpen] = useState(false);
+  const groupMenuRef = useRef<HTMLDivElement>(null);
   const [allGroupSummaries, setAllGroupSummaries] = useState<any[]>([]);
   const [allPizarronSummaries, setAllPizarronSummaries] = useState<any[]>([]);
   const [allTikTokSummaries, setAllTikTokSummaries] = useState<any[]>([]);
@@ -279,6 +281,9 @@ function App() {
     const handleClickOutside = (e: MouseEvent) => {
       if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
         setIsSortMenuOpen(false);
+      }
+      if (groupMenuRef.current && !groupMenuRef.current.contains(e.target as Node)) {
+        setIsGroupMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -1777,24 +1782,48 @@ function App() {
                              </div>
 
                           {/* Controles de Grupo (En una mini-cápsula gris) */}
-                          <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-1 shadow-sm">
-
-
+                          <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-1 shadow-sm relative" ref={groupMenuRef}>
 
                               <button 
                                   onClick={downloadGroupAsMarkdown} 
-                                  className="p-1.5 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                  className="hidden md:flex p-1.5 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                                   title="Exportar Grupo"
                               >
                                   <Download size={16} />
                               </button>
                               <button 
                                   onClick={() => deleteGroup(activeGroup.id)} 
-                                  className="p-1.5 text-zinc-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                  className="hidden md:flex p-1.5 text-zinc-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                                   title="Eliminar Grupo"
                               >
                                   <Trash2 size={16} />
                               </button>
+
+                              {/* Mobile 3-dots Menu */}
+                              <button 
+                                  onClick={() => setIsGroupMenuOpen(!isGroupMenuOpen)} 
+                                  className="md:hidden p-1.5 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                  title="Opciones de Grupo"
+                              >
+                                  <MoreVertical size={16} />
+                              </button>
+
+                              {isGroupMenuOpen && (
+                                <div className="md:hidden absolute right-0 top-full mt-2 w-48 bg-white dark:bg-[#1A1A24] shadow-xl rounded-xl border border-zinc-200 dark:border-zinc-700 py-1 flex flex-col z-50 animate-fadeIn">
+                                  <button 
+                                      onClick={() => { downloadGroupAsMarkdown(); setIsGroupMenuOpen(false); }} 
+                                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-left text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors w-full"
+                                  >
+                                      <Download size={14} /> Exportar (.md)
+                                  </button>
+                                  <button 
+                                      onClick={() => { deleteGroup(activeGroup.id); setIsGroupMenuOpen(false); }} 
+                                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors w-full"
+                                  >
+                                      <Trash2 size={14} /> Eliminar Grupo
+                                  </button>
+                                </div>
+                              )}
                           </div>
 
                           {/* Botón Principal (Nueva Nota) */}
