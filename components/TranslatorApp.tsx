@@ -181,7 +181,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
             
             <div className="sticky top-0 z-30 bg-zinc-50/90 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-200 dark:border-zinc-800/50">
-                <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between px-6 py-4 gap-4">
+                <div className="max-w-6xl mx-auto flex flex-row items-center justify-center md:justify-between px-6 py-4 gap-4">
                     <h1 className="hidden md:flex text-xl font-bold text-zinc-900 dark:text-zinc-100 items-center gap-3">
                         <div className="h-9 p-2 bg-[#8B5CF6] rounded-lg text-white shadow-lg shadow-violet-500/20 shrink-0">
                             <Languages size={20} />
@@ -189,7 +189,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                         <span className="truncate">Traductor</span>
                     </h1>
 
-                    <div className="flex items-center gap-3 shrink-0 ml-auto">
+                    <div className="flex items-center justify-center gap-2 sm:gap-3 shrink-0">
                         {/* 1. Bell */}
                         <button
                           onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
@@ -225,10 +225,10 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                         <button 
                             onClick={saveTranslation} 
                             disabled={!originalText.trim() || !translatedText.trim() || isTranslating || isSaving}
-                            className="h-9 bg-[#8B5CF6] hover:bg-violet-600 text-white px-4 rounded-xl shadow-lg shadow-violet-500/10 border border-violet-400/30 flex items-center gap-2 active:scale-95 transition-all font-bold"
+                            className="h-9 w-9 sm:w-auto bg-[#8B5CF6] hover:bg-violet-600 text-white rounded-full sm:rounded-xl shadow-lg shadow-violet-500/10 border border-violet-400/30 flex items-center justify-center gap-2 active:scale-95 transition-all font-bold"
                         >
-                            {isSaving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                            <span className="text-sm">Guardar</span>
+                            {isSaving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
+                            <span className="text-sm hidden sm:inline mr-2">Guardar</span>
                         </button>
                     </div>
                 </div>
