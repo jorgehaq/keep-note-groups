@@ -497,6 +497,10 @@ export const BrainDumpApp: React.FC<{
     const [showAIInput, setShowAIInput] = useState(false);
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [linkingPizarron, setLinkingPizarron] = useState<BrainDump | null>(null);
+    const [tempTitle, setTempTitle] = useState('');
+    useEffect(() => {
+        if (displayDump) setTempTitle(displayDump.title || '');
+    }, [displayDump?.id]);
 
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(false);
@@ -857,7 +861,7 @@ export const BrainDumpApp: React.FC<{
                 </div>
             )}
 
-            <div className={`flex-1 ${focusedDumpId ? 'overflow-hidden px-4' : 'overflow-y-auto px-0'} bg-zinc-50 dark:bg-[#13131A] pb-4 ${!isZenMode && isDumpTrayOpen ? 'pt-0' : 'pt-5'} hidden-scrollbar flex flex-col`}>
+            <div className={`flex-1 ${focusedDumpId ? 'overflow-hidden px-4' : 'overflow-y-auto px-0'} bg-zinc-50 dark:bg-[#13131A] pb-4 ${!isZenMode && isDumpTrayOpen ? 'pt-[2px]' : 'pt-5'} hidden-scrollbar flex flex-col`}>
                 <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto flex flex-col ${focusedDumpId ? 'gap-0 pb-0 flex-1 w-full min-h-0' : 'gap-12 pb-20 w-full px-4 md:px-10'}`}>
                     
                     {focusedDumpId && displayDump && (() => {
@@ -883,8 +887,20 @@ export const BrainDumpApp: React.FC<{
                                         <div className="relative flex w-full">
                                             <input 
                                                 type="text"
-                                                value={displayDump.title || ""}
-                                                onChange={(e) => autoSave(displayDump.id, { title: e.target.value })}
+                                                value={tempTitle}
+                                                onChange={(e) => setTempTitle(e.target.value)}
+                                                onBlur={() => {
+                                                    if (tempTitle !== (displayDump?.title || '')) {
+                                                        autoSave(displayDump.id, { title: tempTitle });
+                                                    }
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') e.currentTarget.blur();
+                                                    if (e.key === 'Escape') {
+                                                        setTempTitle(displayDump?.title || '');
+                                                        e.currentTarget.blur();
+                                                    }
+                                                }}
                                                 placeholder="Nombre del pizarrón..."
                                                 className="w-full bg-transparent border-none outline-none text-lg font-bold text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400 p-0 truncate"
                                             />

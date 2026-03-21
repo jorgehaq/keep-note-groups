@@ -706,12 +706,23 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
     if (activeTab === id) setActiveTab('original');
   };
 
+  // Debounce ref para guardado del título durante la escritura
+  const titleSaveDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sincronizar tempTitle cuando la nota cambia (solo cuando el input no está enfocado)
+  useEffect(() => {
+    if (document.activeElement !== titleInputRef.current) {
+      setTempTitle(note.title ?? '');
+    }
+  }, [note.id]);
+
+  // Sync from external title updates (e.g. Kanban), only when not editing
   useEffect(() => {
     const isActuallyFocused = document.activeElement === titleInputRef.current;
-    if (!isEditingTitle && !isActuallyFocused && note.title !== undefined && note.title !== tempTitle) {
-      setTempTitle(note.title);
+    if (!isActuallyFocused && !isEditingTitle && note.title !== undefined && note.title !== tempTitle) {
+      setTempTitle(note.title ?? '');
     }
-  }, [note.title, isEditingTitle, tempTitle]);
+  }, [note.title]);
 
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -817,8 +828,20 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   };
 
   const handleSaveTitle = (shouldFocusEditor = false) => {
+    // Cancel any pending debounced save, we're saving now
+    if (titleSaveDebounceRef.current) clearTimeout(titleSaveDebounceRef.current);
     setIsEditingTitle(false);
     onUpdate(note.id, { title: tempTitle.trim() });
+  };
+
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setTempTitle(val);
+    // Debounced pre-save while typing (800ms) — keeps DB in sync without blocking input
+    if (titleSaveDebounceRef.current) clearTimeout(titleSaveDebounceRef.current);
+    titleSaveDebounceRef.current = setTimeout(() => {
+      onUpdate(note.id, { title: val.trim() });
+    }, 800);
   };
 
   const handlePromoteToNote = async (content: string, title: string) => {
@@ -851,7 +874,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 ref={titleInputRef}
                 type="text"
                 value={tempTitle}
-                onChange={(e) => setTempTitle(e.target.value)}
+                onChange={handleTitleChange}
                 onFocus={() => setIsEditingTitle(true)}
                 onBlur={() => handleSaveTitle(false)}
                 onKeyDown={(e) => {

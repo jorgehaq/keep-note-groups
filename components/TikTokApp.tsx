@@ -800,7 +800,7 @@ export const TikTokApp: React.FC<{
           const titleMatch = searchQuery?.trim() && (focusedVideo.title || '').toLowerCase().includes(searchQuery.toLowerCase());
 
           return (
-            <div className={`flex-1 flex flex-col overflow-y-auto w-full px-4 pb-4 ${isVideoTrayOpen && !isZenMode ? 'pt-0' : 'pt-5'}`}>
+            <div className={`flex-1 flex flex-col overflow-y-auto w-full px-4 pb-4 ${isVideoTrayOpen && !isZenMode ? 'pt-[2px]' : 'pt-5'}`}>
               <div className={`flex-1 flex flex-col min-h-0 ${isTikTokMaximized ? 'max-w-full' : 'max-w-6xl mx-auto'} w-full transition-all duration-300 bg-white dark:bg-[#1A1A24] rounded-2xl border overflow-hidden animate-fadeIn ${
                 isGlobalVideoMatch
                   ? 'border-amber-500 ring-2 ring-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
@@ -1449,7 +1449,7 @@ export const TikTokApp: React.FC<{
           </div>
         )
       })() : (
-        <div className={`flex-1 overflow-y-auto hidden-scrollbar scroll-smooth animate-fadeIn ${!isZenMode && isVideoTrayOpen ? 'pt-0' : 'pt-5'}`}>
+        <div className={`flex-1 overflow-y-auto hidden-scrollbar scroll-smooth animate-fadeIn ${!isZenMode && isVideoTrayOpen ? 'pt-[2px]' : 'pt-5'}`}>
 
 
               <div className={`${isTikTokMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto space-y-12 pb-20 px-4 md:px-10`}>
