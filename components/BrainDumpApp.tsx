@@ -798,7 +798,7 @@ export const BrainDumpApp: React.FC<{
                             </button>
 
                             {/* 3. Maximize */}
-                            <button onClick={() => setIsBraindumpMaximized(!isBraindumpMaximized)} className="h-9 p-2 bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all">
+                            <button onClick={() => setIsBraindumpMaximized(!isBraindumpMaximized)} className="hidden md:flex h-9 p-2 bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all">
                                 {isBraindumpMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                             </button>
 
@@ -918,7 +918,7 @@ export const BrainDumpApp: React.FC<{
             )}
 
             <div className={`flex-1 ${focusedDumpId ? 'overflow-hidden px-4' : 'overflow-y-auto px-0'} bg-zinc-50 dark:bg-[#13131A] pb-4 ${!isZenMode && isDumpTrayOpen ? 'pt-[2px]' : 'pt-5'} hidden-scrollbar flex flex-col`}>
-                <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto flex flex-col ${focusedDumpId ? 'gap-0 pb-0 flex-1 w-full min-h-0' : 'gap-12 pb-20 w-full px-4 md:px-10'}`}>
+                <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-full md:max-w-6xl'} mx-auto flex flex-col ${focusedDumpId ? 'gap-0 pb-0 flex-1 w-full min-h-0' : 'gap-12 pb-20 w-full px-4 md:px-10'}`}>
                     
                     {focusedDumpId && displayDump && (() => {
                         const isDisplayDumpMatch = searchQuery?.trim() && checkPizarronSearchMatch(displayDump, searchQuery.trim(), dumps, allSummaries);
@@ -1352,7 +1352,7 @@ export const BrainDumpApp: React.FC<{
                     })()}
 
                     {!focusedDumpId && (
-                        <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto w-full px-4 md:px-10 animate-fadeIn pb-10`}>
+                        <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-full md:max-w-6xl'} mx-auto w-full px-4 md:px-10 animate-fadeIn pb-10`}>
                             {/* LISTA PRINCIPAL DE PIZARRONES */}
                             <div className={`grid ${isBraindumpMaximized ? 'grid-cols-[repeat(auto-fit,340px)] w-full max-w-[2160px]' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl'} gap-6 justify-center mx-auto`}>
 

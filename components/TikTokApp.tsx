@@ -720,7 +720,7 @@ export const TikTokApp: React.FC<{
               </button>
 
               {/* Maximize */}
-              <button onClick={() => setIsTikTokMaximized(!isTikTokMaximized)} className="h-9 p-2 bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all">
+              <button onClick={() => setIsTikTokMaximized(!isTikTokMaximized)} className="hidden md:flex h-9 p-2 bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all">
                 {isTikTokMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
               </button>
 
@@ -851,7 +851,7 @@ export const TikTokApp: React.FC<{
 
           return (
             <div className={`flex-1 flex flex-col overflow-y-auto w-full px-4 pb-4 ${isVideoTrayOpen && !isZenMode ? 'pt-[2px]' : 'pt-5'}`}>
-              <div className={`flex-1 flex flex-col min-h-0 ${isTikTokMaximized ? 'max-w-full' : 'max-w-6xl mx-auto'} w-full transition-all duration-300 bg-white dark:bg-[#1A1A24] rounded-2xl border overflow-hidden animate-fadeIn ${
+              <div className={`flex-1 flex flex-col min-h-0 ${isTikTokMaximized ? 'max-w-full' : 'max-w-full md:max-w-6xl mx-auto'} w-full transition-all duration-300 bg-white dark:bg-[#1A1A24] rounded-2xl border overflow-hidden animate-fadeIn ${
                 isGlobalVideoMatch
                   ? 'border-amber-500 ring-2 ring-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
                   : 'shadow-lg border-zinc-200 dark:border-[#2D2D42] focus-within:ring-2 focus-within:ring-[#EE1D52]/50 focus-within:border-[#EE1D52]/50'
@@ -1500,7 +1500,7 @@ export const TikTokApp: React.FC<{
         <div className={`flex-1 overflow-y-auto hidden-scrollbar scroll-smooth animate-fadeIn ${!isZenMode && isVideoTrayOpen ? 'pt-[2px]' : 'pt-5'}`}>
 
 
-              <div className={`${isTikTokMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto space-y-12 pb-20 px-4 md:px-10`}>
+              <div className={`${isTikTokMaximized ? 'max-w-full' : 'max-w-full md:max-w-6xl'} mx-auto space-y-12 pb-20 px-4 md:px-10`}>
                 {rootVideos.length > 0 ? (
                   /* GRID DE VIDEOS ACTIVOS */
                   <div className={`grid ${isTikTokMaximized ? 'grid-cols-[repeat(auto-fit,340px)] w-full max-w-[2160px]' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl'} gap-6 justify-center mx-auto`}>

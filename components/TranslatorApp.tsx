@@ -217,7 +217,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                         </button>
 
                         {/* 3. Maximize */}
-                        <button onClick={() => setIsTranslatorMaximized(!isTranslatorMaximized)} className="h-9 p-2 bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all">
+                        <button onClick={() => setIsTranslatorMaximized(!isTranslatorMaximized)} className="hidden md:flex h-9 p-2 bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all">
                             {isTranslatorMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                         </button>
 
@@ -235,7 +235,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
             </div>
 
         <div className="flex-1 overflow-y-auto p-4 hidden-scrollbar">
-            <div className={`${isTranslatorMaximized ? 'max-w-full' : 'max-w-4xl'} mx-auto flex flex-col [&>*:not(:first-child)]:mt-12 [&>*:not(:first-child)]:pt-8 [&>*:not(:first-child)]:border-t [&>*:not(:first-child)]:border-zinc-100 dark:[&>*:not(:first-child)]:border-[#2D2D42]/40 pb-20`}>
+            <div className={`${isTranslatorMaximized ? 'max-w-full' : 'max-w-full md:max-w-4xl'} mx-auto flex flex-col [&>*:not(:first-child)]:mt-12 [&>*:not(:first-child)]:pt-8 [&>*:not(:first-child)]:border-t [&>*:not(:first-child)]:border-zinc-100 dark:[&>*:not(:first-child)]:border-[#2D2D42]/40 pb-20`}>
                 
                 {/* 1. MÓDULO DE CREACIÓN */}
                 <div className="space-y-4 animate-fadeIn">

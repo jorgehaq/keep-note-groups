@@ -1726,7 +1726,7 @@ function App() {
                               {/* Botón Maximizar/Minimizar */}
                              <button
                                onClick={() => setIsMaximized(!isMaximized)}
-                               className="h-9 p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all active:scale-95 shrink-0"
+                               className="hidden md:flex h-9 p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all active:scale-95 shrink-0"
                                title={isMaximized ? "Minimizar" : "Maximizar"}
                              >
                                {isMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
@@ -1991,7 +1991,7 @@ function App() {
               {/* AREA DE LA NOTA - OCUPA EL RESTO DEL ESPACIO */}
               <main ref={mainRef} className={`flex-1 flex flex-col overflow-hidden px-4 pb-4 ${!isZenMode && isGlobalNoteTrayOpen && activeGroup ? 'pt-0' : 'pt-5'}`}>
 
-                <div className={`flex-1 flex flex-col min-h-0 ${isMaximized ? 'max-w-full' : 'max-w-6xl'} w-full mx-auto`}>
+                <div className={`flex-1 flex flex-col min-h-0 ${isMaximized ? 'max-w-full' : 'max-w-full md:max-w-6xl'} w-full mx-auto`}>
                   {activeGroup ? (
                     <div className="flex-1 flex flex-col min-h-0">
                       {activeGroup.notes.length === 0 ? (
@@ -2060,7 +2060,7 @@ function App() {
                         </div>
                       ) : (
                         <div className="flex-1 flex flex-col overflow-y-auto hidden-scrollbar scroll-smooth">
-                          <div className={`${isMaximized ? 'max-w-full' : 'max-w-6xl'} mx-auto w-full px-4 md:px-10 animate-fadeIn pb-10`}>
+                          <div className={`${isMaximized ? 'max-w-full' : 'max-w-full md:max-w-6xl'} mx-auto w-full px-4 md:px-10 animate-fadeIn pb-10`}>
                             {/* DASHBOARD (GRID) */}
                             <div className={`grid ${isMaximized ? 'grid-cols-[repeat(auto-fit,340px)] w-full max-w-[2160px]' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl'} gap-6 justify-center mx-auto`}>
 
