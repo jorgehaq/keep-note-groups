@@ -26,7 +26,11 @@ const formatCleanDate = (isoString?: string) => {
     const minutes = d.getMinutes().toString().padStart(2, '0');
     const ampm = hours >= 12 ? ' PM' : ' AM';
     hours = hours % 12 || 12;
-    return `${day}/${month}/${year}, ${hours.toString().padStart(2, '0')}:${minutes}${ampm}`;
+    return (
+        <span className="text-[9px] sm:text-[10px] text-center sm:text-left block sm:inline font-medium whitespace-nowrap">
+            {day}/{month}/{year}, {hours.toString().padStart(2, '0')}:{minutes} {ampm}
+        </span>
+    );
 };
 
 const highlightText = (text: string, highlight?: string): React.ReactNode => {
