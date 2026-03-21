@@ -182,7 +182,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
             
             <div className="sticky top-0 z-30 bg-zinc-50/90 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-200 dark:border-zinc-800/50">
                 <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between px-6 py-4 gap-4">
-                    <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-3">
+                    <h1 className="hidden md:flex text-xl font-bold text-zinc-900 dark:text-zinc-100 items-center gap-3">
                         <div className="h-9 p-2 bg-[#8B5CF6] rounded-lg text-white shadow-lg shadow-violet-500/20 shrink-0">
                             <Languages size={20} />
                         </div>

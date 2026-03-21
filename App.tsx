@@ -1628,13 +1628,13 @@ function App() {
                       <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
                           <button
                           onClick={() => setIsLauncherOpen(true)}
-                            className="h-9 p-2 bg-[#4940D9] hover:bg-[#3D35C0] rounded-lg text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 shrink-0 transition-all"
+                            className="hidden md:flex h-9 p-2 bg-[#4940D9] hover:bg-[#3D35C0] rounded-lg text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 shrink-0 transition-all"
                             title="Menú de Grupos"
                           >
                               <Grid size={20} />
                           </button>
                           
-                          <div className="flex-1 relative flex items-center min-w-0">
+                          <div className="hidden md:flex flex-1 relative items-center min-w-0">
                             <div className="absolute inset-0 w-full pointer-events-none text-xl md:text-2xl font-bold px-2 flex items-center overflow-hidden whitespace-nowrap">
                               <span className="truncate opacity-0">.</span> {/* Spacer for alignment if needed, but we'll use same style as AccordionItem */}
                             </div>
