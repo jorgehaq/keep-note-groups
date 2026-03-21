@@ -831,8 +831,7 @@ export const BrainDumpApp: React.FC<{
                             </div>
 
                             <button onClick={createNewDraft} className="h-9 bg-[#FFD700] hover:bg-[#E5C100] text-amber-950 px-4 rounded-xl shadow-lg shadow-amber-500/10 border border-amber-400/30 flex items-center gap-2 active:scale-95 transition-all">
-                                <Plus size={18} className="ml-2" /> <span className="text-sm font-bold mr-4">Pizarron
-</span>
+                                <Plus size={18} className="ml-2" /> <span className="text-sm font-bold mr-4 hidden sm:inline">Pizarrón</span>
                             </button>
                         </div>
                     </div>

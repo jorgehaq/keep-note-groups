@@ -757,8 +757,7 @@ export const TikTokApp: React.FC<{
                 onClick={() => setIsModalOpen(true)}
                 className="h-9 bg-[#EE1D52] hover:bg-[#D61A4A] text-white px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 active:scale-95 transition-all shadow-[#EE1D52]/10 border border-[#EE1D52]/30"
               >
-                <Plus size={18} /> <span className="text-sm font-bold">Tiktok
-</span>
+                <Plus size={18} /> <span className="text-sm font-bold hidden sm:inline">Tiktok</span>
               </button>
             </div>
           </div>
