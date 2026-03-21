@@ -149,9 +149,9 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
 
     return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
-            <div className="sticky top-0 z-30 bg-[#13131A]/90 backdrop-blur-md border-b border-zinc-800/50 shrink-0">
+            <div className="sticky top-0 z-30 bg-zinc-50/90 dark:bg-[#13131A]/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800/50 shrink-0">
                 <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4 gap-4">
-                    <h1 className="text-xl font-bold text-white flex items-center gap-3">
+                    <h1 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
                         <div className="h-9 p-2 bg-[#10B981] rounded-lg text-emerald-950 shadow-lg shadow-emerald-500/20 shrink-0">
                             <KanbanSquare size={20} />
                         </div>
@@ -160,7 +160,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
 
                     <div className="flex items-center gap-3 shrink-0">
                         {/* TABS EN EL HEADER (Desktop) */}
-                        <div className="h-9 hidden lg:flex bg-zinc-900/50 p-1 rounded-xl border border-zinc-800 shadow-sm shrink-0 items-center mr-2">
+                        <div className="h-9 hidden lg:flex bg-zinc-200 dark:bg-zinc-900/50 p-1 rounded-xl border border-zinc-300 dark:border-zinc-800 shadow-sm shrink-0 items-center mr-2">
                             {TABS.map((tab) => (
                                 <button
                                     key={tab.key}
@@ -168,13 +168,13 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                                     className={`flex items-center justify-center gap-2 px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ${
                                         activeTab === tab.key
                                             ? 'bg-[#10B981] text-emerald-950 shadow-sm'
-                                            : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+                                            : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-300 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800'
                                     }`}
                                 >
                                     {tab.icon}
                                     <span className="hidden xl:inline">{t(tab.labelKey)}</span>
                                     <span className={`ml-1 px-1 py-0.5 rounded-md text-[8px] font-bold transition-colors ${
-                                        activeTab === tab.key ? 'bg-emerald-400/20 text-emerald-900' : 'bg-zinc-800 text-zinc-500'
+                                        activeTab === tab.key ? 'bg-emerald-400/20 text-emerald-900' : 'bg-zinc-300 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-500'
                                     }`}>
                                         {tab.key === 'board' ? todoCount + inProgressCount : tab.key === 'backlog' ? backlogCount : archivedCount}
                                     </span>
@@ -191,7 +191,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                               ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
                               : overdueRemindersCount > 0
                                 ? 'bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20'
-                                : 'bg-zinc-900/50 border-zinc-800 text-zinc-500 opacity-60 cursor-not-allowed'
+                                : 'bg-zinc-200 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 text-zinc-400 dark:text-zinc-500 opacity-60 cursor-not-allowed'
                           }`}
                           title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                         >
@@ -211,7 +211,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
 
                 {/* Mobile Tabs (Below Header) */}
                 <div className="flex lg:hidden px-6 overflow-x-auto hidden-scrollbar">
-                    <div className="flex bg-zinc-900/50 p-1 rounded-xl w-full border border-zinc-800 shadow-sm">
+                    <div className="flex bg-zinc-200 dark:bg-zinc-900/50 p-1 rounded-xl w-full border border-zinc-300 dark:border-zinc-800 shadow-sm">
                         {TABS.map((tab) => (
                             <button
                                 key={tab.key}
@@ -219,13 +219,13 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                                 className={`flex-1 flex items-center justify-center gap-2 py-2 text-[11px] font-bold rounded-lg transition-all ${
                                     activeTab === tab.key
                                         ? 'bg-[#10B981] text-emerald-950 shadow-sm'
-                                        : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+                                        : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-300 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800'
                                 }`}
                             >
                                 {tab.icon}
                                 <span>{t(tab.labelKey)}</span>
                                 <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold ${
-                                    activeTab === tab.key ? 'bg-emerald-400/20 text-emerald-900' : 'bg-zinc-800 text-zinc-500'
+                                    activeTab === tab.key ? 'bg-emerald-400/20 text-emerald-900' : 'bg-zinc-300 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-500'
                                 }`}>
                                     {tab.key === 'board' ? todoCount + inProgressCount : tab.key === 'backlog' ? backlogCount : archivedCount}
                                 </span>

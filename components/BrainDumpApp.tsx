@@ -748,9 +748,9 @@ export const BrainDumpApp: React.FC<{
     return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
             {!isZenMode && (
-                <div className="sticky top-0 z-30 bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-800/50">
+                <div className="sticky top-0 z-30 bg-zinc-50/90 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-200 dark:border-zinc-800/50">
                     <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between px-6 py-4 gap-4">
-                        <h1 className="text-xl font-bold text-zinc-100 flex items-center gap-3">
+                        <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-3">
                             <div className="h-9 p-2 bg-[#FFD700] rounded-lg text-amber-950 shadow-lg shadow-amber-500/20 shrink-0">
                                 <PenTool size={20} />
                             </div>
@@ -766,10 +766,10 @@ export const BrainDumpApp: React.FC<{
                                     placeholder="Buscar..." 
                                     value={searchQuery || ''} 
                                     onChange={e => setSearchQuery?.(e.target.value)} 
-                                    className={`h-9 pl-9 pr-8 rounded-xl border transition-all outline-none text-xs font-medium w-32 md:w-32 lg:w-40 ${searchQuery?.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 placeholder-amber-700/50 dark:placeholder-amber-400/50 font-semibold' : 'bg-zinc-900/50 border-zinc-800 text-zinc-200 placeholder:text-zinc-500 hover:border-zinc-700 focus:border-[#FFD700]/50'}`}
+                                    className={`h-9 pl-9 pr-8 rounded-xl border transition-all outline-none text-xs font-medium w-32 md:w-32 lg:w-40 ${searchQuery?.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 placeholder-amber-700/50 dark:placeholder-amber-400/50 font-semibold' : 'bg-zinc-200/50 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-500 hover:border-zinc-400 dark:hover:border-zinc-700 focus:border-[#FFD700]/50'}`}
                                 />
                                 {searchQuery?.trim() && (
-                                    <button onClick={() => setSearchQuery?.('')} className="absolute right-2 p-1 text-zinc-500 hover:text-white bg-zinc-800/80 rounded-full transition-colors">
+                                    <button onClick={() => setSearchQuery?.('')} className="absolute right-2 p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-white bg-zinc-300/80 dark:bg-zinc-800/80 rounded-full transition-colors">
                                         <X size={10} />
                                     </button>
                                 )}
@@ -784,7 +784,7 @@ export const BrainDumpApp: React.FC<{
                                   ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
                                   : overdueRemindersCount > 0
                                     ? 'bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20'
-                                    : 'bg-zinc-900/50 border-zinc-800 text-zinc-500 opacity-60 cursor-not-allowed'
+                                    : 'bg-zinc-200 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 text-zinc-400 dark:text-zinc-500 opacity-60 cursor-not-allowed'
                               }`}
                             >
                               <Bell size={18} className={overdueRemindersCount > 0 ? 'animate-pulse' : ''} />
@@ -798,13 +798,13 @@ export const BrainDumpApp: React.FC<{
                             </button>
 
                             {/* 3. Maximize */}
-                            <button onClick={() => setIsBraindumpMaximized(!isBraindumpMaximized)} className="h-9 p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-white transition-all">
+                            <button onClick={() => setIsBraindumpMaximized(!isBraindumpMaximized)} className="h-9 p-2 bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all">
                                 {isBraindumpMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                             </button>
 
                             {/* 4. Sort */}
                             <div className="relative" ref={sortMenuRef}>
-                                <button onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} className="h-9 p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-white transition-all">
+                                <button onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} className="h-9 p-2 bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all">
                                     <ArrowUpDown size={18} />
                                 </button>
                                 {isSortMenuOpen && (
@@ -840,14 +840,14 @@ export const BrainDumpApp: React.FC<{
             )}
 
             {!isZenMode && isDumpTrayOpen && (
-                <div className="bg-[#13131A] shrink-0 animate-slideDown group/tray">
+                <div className="bg-zinc-50 dark:bg-[#13131A] shrink-0 animate-slideDown group/tray border-b border-zinc-200 dark:border-transparent">
                     <div className="max-w-6xl mx-auto relative px-0">
                         {/* Flecha Izquierda */}
                         {canScrollLeft && (
-                            <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none transition-opacity duration-150 ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`}>
+                            <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-zinc-50 dark:from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none transition-opacity duration-150 ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`}>
                                 <button 
                                     onClick={() => scrollTabs('left')} 
-                                    className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-all active:scale-95 border ${hasSearchMatchLeft ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-700'} ml-1 ${canScrollLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                                    className={`p-1 rounded-full bg-zinc-200 dark:bg-zinc-800 shadow-md text-zinc-600 dark:text-zinc-400 hover:text-amber-600 transition-all active:scale-95 border ${hasSearchMatchLeft ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-300 dark:border-zinc-700'} ml-1 ${canScrollLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
                                 >
                                     <ChevronLeft size={14} />
                                 </button>
@@ -874,14 +874,14 @@ export const BrainDumpApp: React.FC<{
                                             className={`relative shrink-0 flex items-center px-4 py-2 rounded-xl border transition-all ${
                                                 focusedDumpId === p.id 
                                                     ? `bg-[#FFD700] text-amber-950 border-amber-300 shadow-sm shadow-amber-500/20 ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-[#13131A] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
-                                                    : isMatch
-                                                        ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
-                                                        : 'bg-zinc-900/50 text-zinc-400 border-zinc-800 hover:border-amber-500/40 hover:text-amber-600'
+                                                    : isMatch 
+                                                        ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-500/20 text-zinc-600 dark:text-zinc-400 hover:bg-amber-100 dark:hover:bg-amber-900/20' 
+                                                        : 'bg-zinc-100 dark:bg-zinc-800/30 border-zinc-200 dark:border-zinc-800/50 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800/50'
                                             }`}
                                         >
 
                                             <div className="flex items-center gap-3">
-                                                <div className={`p-1 rounded-md transition-colors ${focusedDumpId === p.id ? 'bg-amber-950/10 text-amber-950' : 'bg-zinc-800 text-zinc-500'}`}>
+                                                <div className={`p-1 rounded-md transition-colors ${focusedDumpId === p.id ? 'bg-amber-950/10 text-amber-950' : 'bg-zinc-300 dark:bg-zinc-800 text-zinc-500'}`}>
                                                     <Grid size={13} />
                                                 </div>
                                                 <div className="max-w-[150px] truncate text-xs font-bold">
@@ -905,10 +905,10 @@ export const BrainDumpApp: React.FC<{
                         </div>
                         {/* Flecha Derecha */}
                         {canScrollRight && (
-                            <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#13131A] to-transparent z-10 flex items-center justify-end pointer-events-none transition-opacity duration-150 ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}>
+                            <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-zinc-50 dark:from-[#13131A] to-transparent z-10 flex items-center justify-end pointer-events-none transition-opacity duration-150 ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}>
                                 <button 
                                     onClick={() => scrollTabs('right')} 
-                                    className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-amber-500 transition-all active:scale-95 border ${hasSearchMatchRight ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-700'} mr-1 ${canScrollRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                                    className={`p-1 rounded-full bg-zinc-200 dark:bg-zinc-800 shadow-md text-zinc-600 dark:text-zinc-400 hover:text-amber-600 transition-all active:scale-95 border ${hasSearchMatchRight ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-300 dark:border-zinc-700'} mr-1 ${canScrollRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
                                 >
                                     <ChevronRight size={14} />
                                 </button>

@@ -180,9 +180,9 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
   return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
             
-            <div className="sticky top-0 z-30 bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-800/50">
+            <div className="sticky top-0 z-30 bg-zinc-50/90 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-200 dark:border-zinc-800/50">
                 <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between px-6 py-4 gap-4">
-                    <h1 className="text-xl font-bold text-zinc-100 flex items-center gap-3">
+                    <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-3">
                         <div className="h-9 p-2 bg-[#8B5CF6] rounded-lg text-white shadow-lg shadow-violet-500/20 shrink-0">
                             <Languages size={20} />
                         </div>
@@ -199,7 +199,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                               ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
                               : overdueRemindersCount > 0
                                 ? 'bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20'
-                                : 'bg-zinc-900/50 border-zinc-800 text-zinc-500 opacity-60 cursor-not-allowed'
+                                : 'bg-zinc-200 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 text-zinc-400 dark:text-zinc-500 opacity-60 cursor-not-allowed'
                           }`}
                         >
                           <Bell size={18} className={overdueRemindersCount > 0 ? 'animate-pulse' : ''} />
@@ -210,14 +210,14 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                         <button 
                             onClick={() => { setOriginalText(''); setTranslatedText(''); }} 
                             disabled={!originalText.trim()}
-                            className="h-9 p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-red-500 transition-all disabled:opacity-30"
+                            className="h-9 p-2 bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl text-zinc-500 dark:text-zinc-400 hover:text-red-500 transition-all disabled:opacity-30"
                             title="Limpiar traductor"
                         >
                             <Eraser size={18} />
                         </button>
 
                         {/* 3. Maximize */}
-                        <button onClick={() => setIsTranslatorMaximized(!isTranslatorMaximized)} className="h-9 p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-white transition-all">
+                        <button onClick={() => setIsTranslatorMaximized(!isTranslatorMaximized)} className="h-9 p-2 bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all">
                             {isTranslatorMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                         </button>
 

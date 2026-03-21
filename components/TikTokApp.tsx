@@ -663,13 +663,13 @@ export const TikTokApp: React.FC<{
   }, []);
 
   return (
-    <div className={`flex flex-col h-full bg-[#13131A] text-zinc-100 font-sans transition-all duration-300 ${isZenMode ? 'fixed inset-0 z-[60]' : 'relative'}`}>
+    <div className={`flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] text-zinc-900 dark:text-zinc-100 font-sans transition-all duration-300 ${isZenMode ? 'fixed inset-0 z-[60]' : 'relative'}`}>
       
       {/* 1. HEADER */}
       {!isZenMode && (
-        <div className="sticky top-0 z-30 bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-800/50">
+        <div className="sticky top-0 z-30 bg-zinc-50/90 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-200 dark:border-zinc-800/50">
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between px-6 py-4 gap-4">
-            <h1 className="text-xl font-bold text-white flex items-center gap-3">
+            <h1 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
               <div className="h-9 p-2 bg-[#EE1D52] rounded-lg text-white shadow-lg shadow-[#EE1D52]/20 shrink-0">
                 <Music size={20} />
               </div>
@@ -685,10 +685,10 @@ export const TikTokApp: React.FC<{
                   placeholder="Buscar TikTok..." 
                   value={localSearch} 
                   onChange={e => setLocalSearch(e.target.value)}
-                  className={`h-9 pl-9 pr-8 rounded-xl border transition-all outline-none text-xs w-32 md:w-32 lg:w-40 ${localSearch?.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 placeholder-amber-700/50 dark:placeholder-amber-400/50 font-semibold' : 'bg-zinc-900/50 border-zinc-800 text-zinc-200 placeholder:text-zinc-500 hover:border-zinc-700 focus:border-[#EE1D52]/50'}`}
+                  className={`h-9 pl-9 pr-8 rounded-xl border transition-all outline-none text-xs w-32 md:w-32 lg:w-40 ${localSearch?.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 placeholder-amber-700/50 dark:placeholder-amber-400/50 font-semibold' : 'bg-zinc-200/50 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-500 hover:border-zinc-400 dark:hover:border-zinc-700 focus:border-[#EE1D52]/50'}`}
                 />
                 {localSearch?.trim() && (
-                  <button onClick={() => setLocalSearch('')} className="absolute right-2 p-1 text-zinc-500 hover:text-white bg-zinc-800/80 rounded-full transition-colors">
+                  <button onClick={() => setLocalSearch('')} className="absolute right-2 p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-white bg-zinc-300/80 dark:bg-zinc-800/80 rounded-full transition-colors">
                     <X size={10} />
                   </button>
                 )}
@@ -703,7 +703,7 @@ export const TikTokApp: React.FC<{
                     ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
                     : overdueRemindersCount > 0
                       ? 'bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20'
-                      : 'bg-zinc-900/50 border-zinc-800 text-zinc-500 opacity-60 cursor-not-allowed'
+                      : 'bg-zinc-200 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 text-zinc-400 dark:text-zinc-500 opacity-60 cursor-not-allowed'
                 }`}
               >
                 <Bell size={18} className={overdueRemindersCount > 0 ? 'animate-pulse' : ''} />
@@ -720,13 +720,13 @@ export const TikTokApp: React.FC<{
               </button>
 
               {/* Maximize */}
-              <button onClick={() => setIsTikTokMaximized(!isTikTokMaximized)} className="h-9 p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-white transition-all">
+              <button onClick={() => setIsTikTokMaximized(!isTikTokMaximized)} className="h-9 p-2 bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all">
                 {isTikTokMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
               </button>
 
               {/* Sort */}
               <div className="relative" ref={sortMenuRef}>
-                <button onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} className="h-9 p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-white transition-all">
+                <button onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} className="h-9 p-2 bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all">
                   <ArrowUpDown size={18} />
                 </button>
                 {isSortMenuOpen && (
@@ -767,13 +767,13 @@ export const TikTokApp: React.FC<{
 
       {/* 2. ACCESS TRAY (Solo Activos) */}
       {isVideoTrayOpen && !isZenMode && (
-        <div className="pt-[2px] bg-[#13131A] shrink-0 animate-slideDown group/tray">
+        <div className="pt-[2px] bg-zinc-50 dark:bg-[#13131A] shrink-0 animate-slideDown group/tray border-b border-zinc-200 dark:border-transparent">
           <div className="max-w-6xl mx-auto relative px-0">
             {canScrollTrayLeft && (
-              <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none transition-opacity duration-150 ${canScrollTrayLeft ? 'opacity-100' : 'opacity-0'}`}>
+              <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-zinc-50 dark:from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none transition-opacity duration-150 ${canScrollTrayLeft ? 'opacity-100' : 'opacity-0'}`}>
                 <button 
                   onClick={() => scrollTray('left')} 
-                  className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-all active:scale-95 border ${hasSearchMatchTrayLeft ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-700'} ml-1 ${canScrollTrayLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                  className={`p-1 rounded-full bg-zinc-200 dark:bg-zinc-800 shadow-md text-zinc-600 dark:text-zinc-400 hover:text-[#EE1D52] transition-all active:scale-95 border ${hasSearchMatchTrayLeft ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-300 dark:border-zinc-700'} ml-1 ${canScrollTrayLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
                 >
                   <ChevronLeft size={14} />
                 </button>
@@ -803,7 +803,7 @@ export const TikTokApp: React.FC<{
                           ? `bg-[#EE1D52] text-white border-[#EE1D52] shadow-lg shadow-[#EE1D52]/20 scale-[1.02] ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-[#13131A] shadow-[0_0_20px_rgba(251,192,45,0.5)]' : ''}` 
                           : isMatch
                             ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_15px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
-                            : 'bg-zinc-900/50 text-zinc-400 border-zinc-800 hover:border-[#EE1D52]/40 hover:text-[#EE1D52]'
+                            : 'bg-zinc-100 dark:bg-zinc-900/50 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-[#EE1D52]/40 hover:bg-zinc-200 dark:hover:bg-zinc-800/80 hover:text-[#EE1D52]'
                       }`}
                     >
                       {globalTasks?.some(t => t.id === video.id || t.linked_tiktok_id === video.id) && (
@@ -811,7 +811,7 @@ export const TikTokApp: React.FC<{
                           <KanbanSemaphore sourceType="tiktok" sourceId={video.id} sourceTitle={video.title || 'TikTok'} />
                         </div>
                       )}
-                      <div className="w-6 h-8 rounded-md overflow-hidden bg-zinc-800 border border-zinc-700/50 shrink-0">
+                      <div className="w-6 h-8 rounded-md overflow-hidden bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700/50 shrink-0">
                         <img src={video.thumbnail} className="w-full h-full object-cover" alt="" />
                       </div>
                       <div className="max-w-[150px] truncate text-[11px] font-bold">
@@ -829,10 +829,10 @@ export const TikTokApp: React.FC<{
               )}
             </div>
             {canScrollTrayRight && (
-              <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#13131A] to-transparent z-10 flex items-center justify-end pointer-events-none transition-opacity duration-150 ${canScrollTrayRight ? 'opacity-100' : 'opacity-0'}`}>
+              <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-zinc-50 dark:from-[#13131A] to-transparent z-10 flex items-center justify-end pointer-events-none transition-opacity duration-150 ${canScrollTrayRight ? 'opacity-100' : 'opacity-0'}`}>
                 <button 
                   onClick={() => scrollTray('right')} 
-                  className={`p-1 rounded-full bg-zinc-800 shadow-md text-zinc-400 hover:text-[#EE1D52] transition-all active:scale-95 border ${hasSearchMatchTrayRight ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-700'} mr-1 ${canScrollTrayRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                  className={`p-1 rounded-full bg-zinc-200 dark:bg-zinc-800 shadow-md text-zinc-600 dark:text-zinc-400 hover:text-[#EE1D52] transition-all active:scale-95 border ${hasSearchMatchTrayRight ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-300 dark:border-zinc-700'} mr-1 ${canScrollTrayRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
                 >
                   <ChevronRight size={14} />
                 </button>

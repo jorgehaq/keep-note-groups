@@ -250,9 +250,9 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
 
     return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
-            <div className="sticky top-0 z-30 bg-[#13131A]/90 backdrop-blur-md border-b border-zinc-800/50 shrink-0">
+            <div className="sticky top-0 z-30 bg-zinc-50/90 dark:bg-[#13131A]/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800/50 shrink-0">
                 <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4 gap-4">
-                    <h1 className="text-xl font-bold text-white flex items-center gap-3">
+                    <h1 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
                         <div className="h-9 p-2 bg-[#2563EB] rounded-lg text-white shadow-lg shadow-blue-500/20 shrink-0">
                             <Clock size={20} />
                         </div>
@@ -268,7 +268,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                               ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
                               : overdueRemindersCount > 0
                                 ? 'bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20'
-                                : 'bg-zinc-900/50 border-zinc-800 text-zinc-500 opacity-60 cursor-not-allowed'
+                                : 'bg-zinc-200 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 text-zinc-400 dark:text-zinc-500 opacity-60 cursor-not-allowed'
                           }`}
                           title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                         >

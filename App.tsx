@@ -1935,12 +1935,12 @@ function App() {
                                   ? `bg-[#4940D9] text-white border-[#4940D9] shadow-sm shadow-[#4940D9]/20 scale-[1.02] ${isSearchActive ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-[#FAFAFA] dark:ring-offset-[#13131A] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
                                   : isSearchActive
                                     ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_10px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
-                                    : 'bg-zinc-900/50 text-zinc-400 border-zinc-800 hover:border-indigo-500/40 hover:text-indigo-600'
+                                    : 'bg-zinc-100 dark:bg-zinc-900/50 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/40 hover:bg-zinc-200 dark:hover:bg-zinc-800/80 hover:text-indigo-600'
                               }`}
                             >
                               <div className="flex items-center gap-2.5">
 
-                                <div className={`p-1 rounded-md transition-colors ${isSelected ? 'bg-white/10 text-white' : 'bg-zinc-800 text-zinc-500'}`}>
+                                <div className={`p-1 rounded-md transition-colors ${isSelected ? 'bg-white/10 text-white' : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500'}`}>
                                   <FileText size={13} />
                                 </div>
                                 <span className="whitespace-nowrap">
