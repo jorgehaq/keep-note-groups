@@ -828,88 +828,156 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             borderRadius: "50%",
             boxShadow: "0 0 2px #f59e0b"
         },
-        // 🚀 BÚSQUEDA PREMIUM (Modo Bottom)
+        // ✨ SEARCH PANEL — Diseño suave e integrado
         ".cm-panels": {
-            backgroundColor: "#ffffff !important",
+            backgroundColor: "#fafafa !important",
             borderTop: "1px solid #e4e4e7 !important",
             zIndex: "50 !important",
+            boxShadow: "0 -2px 12px rgba(0,0,0,0.06) !important",
         },
-        ".dark .cm-panels": {
-            backgroundColor: "#18181b !important",
-            borderTop: "1px solid #27272a !important",
-            color: "#f4f4f5 !important",
+        ".dark & .cm-panels": {
+            backgroundColor: "#141417 !important",
+            borderTop: "1px solid rgba(255,255,255,0.07) !important",
+            color: "#d4d4d8 !important",
+            boxShadow: "0 -4px 20px rgba(0,0,0,0.4) !important",
         },
         ".cm-panels-bottom": {
             borderTop: "1px solid #e4e4e7 !important",
         },
         ".cm-search": {
-            padding: "6px 10px !important",
+            padding: "8px 14px !important",
             display: "flex !important",
             flexWrap: "wrap !important",
-            gap: "10px !important",
+            gap: "6px !important",
             alignItems: "center !important",
-            fontSize: "13px !important",
+            fontSize: "12.5px !important",
         },
         ".cm-search label": {
             display: "inline-flex !important",
             alignItems: "center !important",
-            gap: "4px !important",
+            gap: "5px !important",
             whiteSpace: "nowrap !important",
             color: "inherit !important",
-        },
-        ".cm-search input": {
-            backgroundColor: "#ffffff !important",
-            border: "1px solid #d1d5db !important",
-            borderRadius: "4px !important",
+            fontSize: "11.5px !important",
+            opacity: "0.75 !important",
+            cursor: "pointer !important",
             padding: "2px 6px !important",
+            borderRadius: "20px !important",
+            transition: "all 0.15s !important",
+        },
+        ".cm-search label:hover": {
+            opacity: "1 !important",
+            backgroundColor: "rgba(0,0,0,0.05) !important",
+        },
+        ".dark & .cm-search label:hover": {
+            backgroundColor: "rgba(255,255,255,0.06) !important",
+        },
+        // Checkbox dentro de label
+        ".cm-search input[type=checkbox]": {
+            accentColor: "#6366f1 !important",
+            width: "13px !important",
+            height: "13px !important",
+            cursor: "pointer !important",
+            border: "none !important",
+            backgroundColor: "transparent !important",
+            borderRadius: "3px !important",
+            padding: "0 !important",
+            margin: "0 !important",
+            outline: "none !important",
+        },
+        // Input de texto (el campo de búsqueda)
+        ".cm-search input[type=text], .cm-search input:not([type])": {
+            backgroundColor: "#ffffff !important",
+            border: "1px solid #e4e4e7 !important",
+            borderRadius: "8px !important",
+            padding: "4px 10px !important",
             margin: "0 !important",
             color: "#1f2937 !important",
             outline: "none !important",
+            fontSize: "13px !important",
+            minWidth: "160px !important",
+            transition: "border-color 0.15s !important",
+            boxShadow: "inset 0 1px 2px rgba(0,0,0,0.04) !important",
         },
-        ".dark .cm-search input": {
-            backgroundColor: "#27272a !important",
-            border: "1px solid #4a4a4e !important",
-            color: "#ffffff !important",
+        ".cm-search input[type=text]:focus, .cm-search input:not([type]):focus": {
+            borderColor: "#6366f1 !important",
+            boxShadow: "0 0 0 2px rgba(99,102,241,0.15) !important",
         },
+        ".dark & .cm-search input[type=text], .dark & .cm-search input:not([type])": {
+            backgroundColor: "#1c1c22 !important",
+            border: "1px solid rgba(255,255,255,0.1) !important",
+            color: "#e4e4e7 !important",
+            boxShadow: "inset 0 1px 3px rgba(0,0,0,0.3) !important",
+        },
+        ".dark & .cm-search input[type=text]:focus, .dark & .cm-search input:not([type]):focus": {
+            borderColor: "#818cf8 !important",
+            boxShadow: "0 0 0 2px rgba(129,140,248,0.2) !important",
+        },
+        // Botones Next / Prev / Replace
         ".cm-search button": {
-            backgroundColor: "#f3f4f6 !important",
-            border: "1px solid #d1d5db !important",
-            borderRadius: "4px !important",
-            padding: "2px 8px !important",
+            backgroundImage: "none !important",
+            backgroundColor: "#f4f4f5 !important",
+            border: "1px solid #e4e4e7 !important",
+            borderRadius: "8px !important",
+            padding: "4px 12px !important",
             cursor: "pointer !important",
-            color: "#374151 !important",
+            color: "#3f3f46 !important",
+            fontSize: "12px !important",
+            fontWeight: "500 !important",
+            lineHeight: "1.4 !important",
+            transition: "all 0.15s ease !important",
         },
-        ".dark .cm-search button": {
-            backgroundColor: "#3f3f46 !important",
-            border: "1px solid #4a4a4e !important",
-            color: "#eeeeee !important",
+        ".dark & .cm-search button": {
+            backgroundImage: "none !important",
+            backgroundColor: "#27272a !important",
+            border: "1px solid rgba(255,255,255,0.1) !important",
+            color: "#a1a1aa !important",
         },
         ".cm-search button:hover": {
-            backgroundColor: "#e5e7eb !important",
-            borderColor: "#9ca3af !important",
+            backgroundImage: "none !important",
+            backgroundColor: "#e4e4e7 !important",
+            borderColor: "#d1d5db !important",
+            color: "#18181b !important",
+            transform: "translateY(-1px) !important",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.08) !important",
         },
-        ".dark .cm-search button:hover": {
-            backgroundColor: "#52525b !important",
-            borderColor: "#71717a !important",
+        ".dark & .cm-search button:hover": {
+            backgroundImage: "none !important",
+            backgroundColor: "#3f3f46 !important",
+            borderColor: "rgba(255,255,255,0.18) !important",
+            color: "#f4f4f5 !important",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.3) !important",
         },
+        // Botón de cierre (X)
         ".cm-search [name=close]": {
-            marginLeft: "auto !important",
+            position: "absolute !important",
+            right: "12px !important",
+            top: "8px !important",
+            width: "28px !important",
+            height: "28px !important",
             cursor: "pointer !important",
-            color: "#ef4444 !important",
-            opacity: "0.7 !important",
-            padding: "4px 10px !important",
-            borderRadius: "6px !important",
+            color: "#a1a1aa !important",
+            padding: "0 !important",
+            margin: "0 !important",
+            borderRadius: "50% !important",
             display: "inline-flex !important",
             alignItems: "center !important",
             justifyContent: "center !important",
             transition: "all 0.2s !important",
             border: "1px solid transparent !important",
+            backgroundColor: "transparent !important",
+            backgroundImage: "none !important",
+            fontSize: "18px !important",
+            lineHeight: "1 !important",
+            fontWeight: "300 !important",
         },
         ".cm-search [name=close]:hover": {
-            backgroundColor: "rgba(239, 68, 68, 0.1) !important",
-            opacity: "1 !important",
-            borderColor: "rgba(239, 68, 68, 0.3) !important",
+            color: "#ef4444 !important",
+            backgroundColor: "rgba(239,68,68,0.08) !important",
+            borderColor: "rgba(239,68,68,0.25) !important",
+            transform: "scale(1.1) !important",
         }
+
     });
 };
 
@@ -2073,20 +2141,87 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         dragDropExtension
     ]);
 
+    // 🔍 SEARCH-PANEL OUTER-SCROLL FIX
+    // When Ctrl+F is open and the user navigates (Next/Prev/Enter/keyboard), CodeMirror
+    // scrolls its INNER scroller but the OUTER container (note/pizarron area) stays put.
+    // We attach an updateListener to the EditorView and, whenever the selection changes while
+    // the search panel is open, we use view.coordsAtPos() to get the exact pixel position of
+    // the cursor and then scroll the nearest scrollable ancestor if needed.
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const getScrollParent = (el: HTMLElement | null): HTMLElement | null => {
+            let cur = el?.parentElement ?? null;
+            while (cur && cur !== document.body) {
+                const { overflow, overflowY } = window.getComputedStyle(cur);
+                if (/auto|scroll/.test(overflow + overflowY) && cur.scrollHeight > cur.clientHeight) return cur;
+                cur = cur.parentElement;
+            }
+            return document.documentElement as HTMLElement;
+        };
+
+
+        // Helper: scroll outer container to reveal position using view.coordsAtPos()
+        const scrollToCurrentMatch = () => {
+            requestAnimationFrame(() => {
+                const view = editorRef.current?.view;
+                if (!view) return;
+                // Only act when the Ctrl+F panel is open
+                const panel = container.querySelector('.cm-search');
+                if (!panel) return;
+
+                const head = view.state.selection.main.head;
+                const coords = view.coordsAtPos(head);
+                if (!coords) return;
+
+                const scrollParent = getScrollParent(container);
+                if (!scrollParent) return;
+
+                const parentRect = scrollParent === document.documentElement
+                    ? { top: 0, bottom: window.innerHeight }
+                    : scrollParent.getBoundingClientRect();
+
+                const margin = 120;
+                const midY = (coords.top + coords.bottom) / 2;
+                if (midY < parentRect.top + margin) {
+                    scrollParent.scrollBy({ top: midY - parentRect.top - margin, behavior: 'smooth' });
+                } else if (midY > parentRect.bottom - margin) {
+                    scrollParent.scrollBy({ top: midY - parentRect.bottom + margin, behavior: 'smooth' });
+                }
+            });
+        };
+
+        const onCmPanelNav = (e: KeyboardEvent) => {
+            const panel = container.querySelector('.cm-search');
+            if (!panel) return;
+            if (e.key === 'Enter' || e.key === 'F3') scrollToCurrentMatch();
+        };
+
+        const onCmPanelClick = (e: MouseEvent) => {
+            const panel = container.querySelector('.cm-search');
+            if (!panel || !panel.contains(e.target as HTMLElement)) return;
+            if (!(e.target as HTMLElement).closest('button')) return;
+            scrollToCurrentMatch();
+        };
+
+        document.addEventListener('keydown', onCmPanelNav, true);
+        document.addEventListener('click', onCmPanelClick, true);
+        return () => {
+            document.removeEventListener('keydown', onCmPanelNav, true);
+            document.removeEventListener('click', onCmPanelClick, true);
+        };
+    }, [noteId]);
+
+
     // 🚀 LAYOUT STABILITY FIX: Detect container resize and force CodeMirror to recalibrate.
-    // This prevents "deformity" when side panels (like Pizarrón) are toggled or window resizes.
     useLayoutEffect(() => {
         if (!containerRef.current || !editorRef.current?.view) return;
-        
         const view = editorRef.current.view;
-        const resizeObserver = new ResizeObserver(() => {
-            // requestMeasure is more efficient than a full dispatch/refresh
-            view.requestMeasure();
-        });
-        
+        const resizeObserver = new ResizeObserver(() => { view.requestMeasure(); });
         resizeObserver.observe(containerRef.current);
         return () => resizeObserver.disconnect();
-    }, [noteId]); // Re-bind if noteId changes (CodeMirror usually remounts anyway)
+    }, [noteId]);
 
     return (
         <div 
