@@ -668,7 +668,7 @@ export const TikTokApp: React.FC<{
       {/* 1. HEADER */}
       {!isZenMode && (
         <div className="sticky top-0 z-30 bg-zinc-50/90 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-200 dark:border-zinc-800/50">
-          <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between px-6 py-4 gap-4">
+          <div className="max-w-6xl mx-auto flex flex-row items-center justify-center md:justify-between px-6 py-4 gap-4">
             <h1 className="hidden md:flex text-xl font-bold text-zinc-900 dark:text-white items-center gap-3">
               <div className="h-9 p-2 bg-[#EE1D52] rounded-lg text-white shadow-lg shadow-[#EE1D52]/20 shrink-0">
                 <Music size={20} />
@@ -676,7 +676,7 @@ export const TikTokApp: React.FC<{
               <span className="truncate">TikTok</span>
             </h1>
             
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center justify-center gap-2 sm:gap-3 shrink-0">
               {/* Search Bar */}
               <div className="relative flex items-center group">
                 <Search size={15} className={`absolute left-3 text-zinc-500 transition-colors ${searchQuery ? 'text-[#EE1D52]' : ''}`} />
@@ -755,9 +755,9 @@ export const TikTokApp: React.FC<{
               {/* New Button */}
               <button 
                 onClick={() => setIsModalOpen(true)}
-                className="h-9 bg-[#EE1D52] hover:bg-[#D61A4A] text-white px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 active:scale-95 transition-all shadow-[#EE1D52]/10 border border-[#EE1D52]/30"
+                className="h-9 w-9 sm:w-auto bg-[#EE1D52] hover:bg-[#D61A4A] text-white rounded-full sm:rounded-xl shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all shadow-[#EE1D52]/10 border border-[#EE1D52]/30"
               >
-                <Plus size={18} /> <span className="text-sm font-bold hidden sm:inline">Tiktok</span>
+                <Plus size={18} /> <span className="text-sm font-bold hidden sm:inline mr-2">Tiktok</span>
               </button>
             </div>
           </div>

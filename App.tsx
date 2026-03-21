@@ -1618,7 +1618,7 @@ function App() {
                 <div className={`sticky top-0 z-30 bg-white/80 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-200 dark:border-zinc-800 shadow-sm transition-all`}>
                   <div className={`min-h-[72px] h-auto flex flex-col items-center justify-center`}>
 
-                    <div className="max-w-6xl mx-auto w-full flex flex-col lg:flex-row lg:items-center justify-between px-0 gap-4">
+                    <div className="max-w-6xl mx-auto w-full flex flex-row items-center justify-center lg:justify-between px-4 sm:px-10 lg:px-0 gap-4">
 
 
 
@@ -1665,7 +1665,7 @@ function App() {
                       </div>
 
                           {/* Lado Derecho: Controles de Grupo y Acciones */}
-                      <div className="flex flex-wrap items-center gap-3 shrink-0 pb-1 md:pb-0">
+                      <div className="flex items-center justify-center gap-2 sm:gap-3 shrink-0 pb-1 md:pb-0">
                           
                           {/* Buscador (Posicionado como en TikTok) */}
                           <div className="relative flex items-center group">
@@ -1800,7 +1800,7 @@ function App() {
                           {/* Botón Principal (Nueva Nota) */}
                           <button 
                               onClick={addNote} 
-                              className="h-9 bg-[#4940D9] hover:bg-[#3D35C0] text-white px-4 py-2 rounded-xl shadow-lg shadow-[#4940D9]/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
+                              className="h-9 w-9 sm:w-auto bg-[#4940D9] hover:bg-[#3D35C0] text-white rounded-full sm:rounded-xl shadow-lg shadow-[#4940D9]/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
                           >
                               <Plus size={18} /> 
                               <span className="text-sm font-normal hidden sm:inline pr-1 text-white">Nota

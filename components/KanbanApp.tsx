@@ -150,7 +150,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
     return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
             <div className="sticky top-0 z-30 bg-zinc-50/90 dark:bg-[#13131A]/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800/50 shrink-0">
-                <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4 gap-4">
+                <div className="max-w-6xl mx-auto flex flex-row items-center justify-center md:justify-between px-6 py-4 gap-4">
                     <h1 className="hidden md:flex text-xl font-bold text-zinc-900 dark:text-white items-center gap-3">
                         <div className="h-9 p-2 bg-[#10B981] rounded-lg text-emerald-950 shadow-lg shadow-[#10B981]/20 shrink-0">
                             <KanbanSquare size={20} />
@@ -158,7 +158,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                         <span className="truncate">Kanban</span>
                     </h1>
 
-                    <div className="flex items-center gap-3 shrink-0">
+                    <div className="flex items-center justify-center gap-2 sm:gap-3 shrink-0">
                         {/* TABS EN EL HEADER (Desktop) */}
                         <div className="h-9 hidden lg:flex bg-zinc-200 dark:bg-zinc-900/50 p-1 rounded-xl border border-zinc-300 dark:border-zinc-800 shadow-sm shrink-0 items-center mr-2">
                             {TABS.map((tab) => (
@@ -203,8 +203,8 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                           )}
                         </button>
                         
-                        <button onClick={handleAdd} className="h-9 bg-[#10B981] hover:bg-emerald-600 text-emerald-950 px-4 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 active:scale-95 shrink-0 border border-emerald-400/30 font-bold">
-                            <Plus size={20} /> <span className="text-sm hidden sm:inline">Nueva Tarea</span>
+                        <button onClick={handleAdd} className="h-9 w-9 sm:w-auto bg-[#10B981] hover:bg-emerald-600 text-emerald-950 rounded-full sm:rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0 border border-emerald-400/30 font-bold">
+                            <Plus size={20} /> <span className="text-sm hidden sm:inline mr-2">Nueva Tarea</span>
                         </button>
                     </div>
                 </div>

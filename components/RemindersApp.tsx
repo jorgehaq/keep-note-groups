@@ -345,7 +345,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
     return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
             <div className="sticky top-0 z-30 bg-zinc-50/90 dark:bg-[#13131A]/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800/50 shrink-0">
-                <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4 gap-4">
+                <div className="max-w-6xl mx-auto flex flex-row items-center justify-center md:justify-between px-6 py-4 gap-4">
                     <h1 className="hidden md:flex text-xl font-bold text-zinc-900 dark:text-white items-center gap-3">
                         <div className="h-9 p-2 bg-[#1F3760] rounded-lg text-white shadow-lg shadow-[#1F3760]/20 shrink-0">
                             <Bell size={20} />
@@ -353,7 +353,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                         <span className="truncate">Recordatorios</span>
                     </h1>
                     
-                    <div className="flex items-center gap-3 shrink-0">
+                    <div className="flex items-center justify-center gap-2 sm:gap-3 shrink-0">
                         {/* Botón Toggle Reminder */}
                         <button
                           onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
@@ -375,8 +375,8 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                           )}
                         </button>
 
-                        <button onClick={createNewDraft} className="h-9 bg-[#1F3760] hover:bg-[#152643] text-white px-4 rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all flex items-center gap-2 active:scale-95 shrink-0 border border-[#1F3760]/30 font-bold">
-                            <Plus size={20} /> <span className="text-sm hidden sm:inline">Nuevo</span>
+                        <button onClick={createNewDraft} className="h-9 w-9 sm:w-auto bg-[#1F3760] hover:bg-[#152643] text-white rounded-full sm:rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0 border border-[#1F3760]/30 font-bold">
+                            <Plus size={20} /> <span className="text-sm hidden sm:inline mr-2">Nuevo</span>
                         </button>
                     </div>
                 </div>

@@ -251,14 +251,14 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
     return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
             <div className="sticky top-0 z-30 bg-zinc-50/90 dark:bg-[#13131A]/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800/50 shrink-0">
-                <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4 gap-4">
+                <div className="max-w-6xl mx-auto flex flex-row items-center justify-center md:justify-between px-6 py-4 gap-4">
                     <h1 className="hidden md:flex text-xl font-bold text-zinc-900 dark:text-white items-center gap-3">
                         <div className="h-9 p-2 bg-[#2563EB] rounded-lg text-white shadow-lg shadow-blue-500/20 shrink-0">
                             <Clock size={20} />
                         </div>
                         <span className="truncate">Cronómetro</span>
                     </h1>
-                                 <div className="flex items-center gap-3 shrink-0">
+                                 <div className="flex items-center justify-center gap-2 sm:gap-3 shrink-0">
                         {/* Botón Toggle Reminder */}
                         <button
                           onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
@@ -279,8 +279,8 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                             </span>
                           )}
                         </button>
-                        <button onClick={createNewDraft} className="h-9 bg-[#2563EB] hover:bg-blue-700 text-white px-4 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 active:scale-95 shrink-0 border border-blue-400/30 font-bold">
-                            <Plus size={20} /> <span className="text-sm hidden sm:inline">Nuevo</span>
+                        <button onClick={createNewDraft} className="h-9 w-9 sm:w-auto bg-[#2563EB] hover:bg-blue-700 text-white rounded-full sm:rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0 border border-blue-400/30 font-bold">
+                            <Plus size={20} /> <span className="text-sm hidden sm:inline mr-2">Nuevo</span>
                         </button>
                     </div>
                 </div>

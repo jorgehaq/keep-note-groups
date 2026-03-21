@@ -749,7 +749,7 @@ export const BrainDumpApp: React.FC<{
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
             {!isZenMode && (
                 <div className="sticky top-0 z-30 bg-zinc-50/90 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-200 dark:border-zinc-800/50">
-                    <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between px-6 py-4 gap-4">
+                    <div className="max-w-6xl mx-auto flex flex-row items-center justify-center md:justify-between px-6 py-4 gap-4">
                         <h1 className="hidden md:flex text-xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-3">
                             <div className="h-9 p-2 bg-[#FFD700] rounded-lg text-amber-950 shadow-lg shadow-amber-500/20 shrink-0">
                                 <PenTool size={20} />
@@ -757,7 +757,7 @@ export const BrainDumpApp: React.FC<{
                             <span className="truncate">Pizarrón</span>
                         </h1>
 
-                        <div className="flex flex-wrap items-center gap-3 shrink-0">
+                        <div className="flex items-center justify-center gap-2 sm:gap-3 shrink-0">
                             {/* Search Bar - Linked to TikTok style */}
                             <div className="relative flex items-center group">
                                 <Search size={15} className={`absolute left-3 transition-colors ${searchQuery?.trim() ? 'text-[#FFD700]' : 'text-zinc-500'}`} />
@@ -830,8 +830,8 @@ export const BrainDumpApp: React.FC<{
                                 )}
                             </div>
 
-                            <button onClick={createNewDraft} className="h-9 bg-[#FFD700] hover:bg-[#E5C100] text-amber-950 px-4 rounded-xl shadow-lg shadow-amber-500/10 border border-amber-400/30 flex items-center gap-2 active:scale-95 transition-all">
-                                <Plus size={18} className="ml-2" /> <span className="text-sm font-bold mr-4 hidden sm:inline">Pizarrón</span>
+                            <button onClick={createNewDraft} className="h-9 w-9 sm:w-auto bg-[#FFD700] hover:bg-[#E5C100] text-amber-950 rounded-full sm:rounded-xl shadow-lg shadow-amber-500/10 border border-amber-400/30 flex items-center justify-center gap-2 active:scale-95 transition-all">
+                                <Plus size={18} /> <span className="text-sm font-bold hidden sm:inline mr-2">Pizarrón</span>
                             </button>
                         </div>
                     </div>
