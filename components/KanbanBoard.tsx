@@ -15,6 +15,7 @@ interface KanbanBoardProps {
     onEdit?: (task: Task) => void;
     dateFormat?: string;
     timeFormat?: string;
+    activeStatus?: TaskStatus;
 }
 
 const COLUMNS: { status: TaskStatus; label: string; accent: string; hex: string }[] = [
@@ -43,7 +44,7 @@ const formatCustomDate = (isoString: string, dateFormat: string, timeFormat: str
     }
 };
 
-export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], onOpenNote, onUpdate, onDelete, onEdit, dateFormat = 'dd/mm/yyyy', timeFormat = '12h' }) => {
+export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], onOpenNote, onUpdate, onDelete, onEdit, dateFormat = 'dd/mm/yyyy', timeFormat = '12h', activeStatus }) => {
     const { t } = useTranslation();
     const [viewingTask, setViewingTask] = useState<Task | null>(null);
 
@@ -97,9 +98,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], on
         <DragDropContext onDragEnd={handleDragEnd}>
             <div className="flex-1 flex justify-center gap-2 sm:gap-4 py-5 px-4 overflow-x-auto overflow-y-hidden hidden-scrollbar snap-x snap-mandatory sm:snap-none">
                 {COLUMNS.map(col => {
+                    if (activeStatus && window.innerWidth < 1024 && col.status !== activeStatus) return null;
                     const colTasks = getColumnTasks(col.status);
                     return (
-                        <div key={col.status} className="w-[72vw] shrink-0 sm:w-auto sm:shrink sm:flex-1 min-w-[220px] max-w-[400px] flex flex-col snap-center">
+                        <div key={col.status} className="w-full shrink-0 lg:w-auto lg:shrink lg:flex-1 min-w-[280px] max-w-[400px] flex flex-col snap-center">
                             {/* Column Header */}
                             <div className="flex items-center gap-2 mb-4 px-1">
                                 <div 

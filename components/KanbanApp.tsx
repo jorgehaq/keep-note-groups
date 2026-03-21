@@ -27,6 +27,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<KanbanTab>('board');
+    const [activeStatus, setActiveStatus] = useState<TaskStatus>('todo');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTask, setEditingTask] = useState<Partial<Task> | null>(null);
     const { t } = useTranslation();
@@ -64,6 +65,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
     const backlogCount = tasks.filter(t => t.status === 'backlog').length;
     const todoCount = tasks.filter(t => t.status === 'todo').length;
     const inProgressCount = tasks.filter(t => t.status === 'in_progress').length;
+    const doneCount = tasks.filter(t => t.status === 'done').length;
     const archivedCount = tasks.filter(t => t.status === 'archived').length;
 
     // --- HANDLERS (FUNCIONALIDAD INTACTA) ---
@@ -159,21 +161,21 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                     </h1>
 
                     <div className="flex items-center justify-center gap-2 sm:gap-3 shrink-0">
-                        {/* TABS EN EL HEADER (Desktop) */}
-                        <div className="h-9 hidden lg:flex bg-zinc-200 dark:bg-zinc-900/50 p-1 rounded-xl border border-zinc-300 dark:border-zinc-800 shadow-sm shrink-0 items-center mr-2">
+                        {/* TABS EN EL HEADER (Mobile & Desktop) */}
+                        <div className="h-9 flex bg-zinc-200 dark:bg-zinc-900/50 p-1 rounded-xl border border-zinc-300 dark:border-zinc-800 shadow-sm shrink-0 items-center mr-0 sm:mr-2">
                             {TABS.map((tab) => (
                                 <button
                                     key={tab.key}
                                     onClick={() => setActiveTab(tab.key)}
-                                    className={`flex items-center justify-center gap-2 px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ${
+                                    className={`flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ${
                                         activeTab === tab.key
                                             ? 'bg-[#10B981] text-emerald-950 shadow-sm'
                                             : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-300 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800'
                                     }`}
                                 >
-                                    {tab.icon}
-                                    <span className="hidden xl:inline">{t(tab.labelKey)}</span>
-                                    <span className={`ml-1 px-1 py-0.5 rounded-md text-[8px] font-bold transition-colors ${
+                                    <span className="shrink-0 scale-90 sm:scale-100">{tab.icon}</span>
+                                    <span className="hidden sm:inline">{t(tab.labelKey)}</span>
+                                    <span className={`px-1 py-0.5 rounded-md text-[8px] font-bold transition-colors ${
                                         activeTab === tab.key ? 'bg-emerald-400/20 text-emerald-900' : 'bg-zinc-300 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-500'
                                     }`}>
                                         {tab.key === 'board' ? todoCount + inProgressCount : tab.key === 'backlog' ? backlogCount : archivedCount}
@@ -209,30 +211,35 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                     </div>
                 </div>
 
-                {/* Mobile Tabs (Below Header) */}
-                <div className="flex lg:hidden px-6 overflow-x-auto hidden-scrollbar">
-                    <div className="flex bg-zinc-200 dark:bg-zinc-900/50 p-1 rounded-xl w-full border border-zinc-300 dark:border-zinc-800 shadow-sm">
-                        {TABS.map((tab) => (
-                            <button
-                                key={tab.key}
-                                onClick={() => setActiveTab(tab.key)}
-                                className={`flex-1 flex items-center justify-center gap-2 py-2 text-[11px] font-bold rounded-lg transition-all ${
-                                    activeTab === tab.key
-                                        ? 'bg-[#10B981] text-emerald-950 shadow-sm'
-                                        : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-300 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800'
-                                }`}
-                            >
-                                {tab.icon}
-                                <span>{t(tab.labelKey)}</span>
-                                <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold ${
-                                    activeTab === tab.key ? 'bg-emerald-400/20 text-emerald-900' : 'bg-zinc-300 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-500'
-                                }`}>
-                                    {tab.key === 'board' ? todoCount + inProgressCount : tab.key === 'backlog' ? backlogCount : archivedCount}
-                                </span>
-                            </button>
-                        ))}
+                {/* Removed redundant Mobile Tabs block - now integrated in header */}
+
+                {/* Status Switch for Mobile (Column Navigation) */}
+                {activeTab === 'board' && (
+                    <div className="flex lg:hidden px-6 pt-1 pb-3 justify-center">
+                        <div className="flex bg-zinc-200 dark:bg-zinc-900/50 p-1 rounded-xl w-full max-w-[280px] border border-zinc-300 dark:border-zinc-800 shadow-sm gap-1">
+                            {[
+                                { status: 'todo', color: 'bg-[#FFD60A]', count: todoCount },
+                                { status: 'in_progress', color: 'bg-[#38BDF8]', count: inProgressCount },
+                                { status: 'done', color: 'bg-[#4ADE80]', count: doneCount }
+                            ].map((col) => (
+                                <button
+                                    key={col.status}
+                                    onClick={() => setActiveStatus(col.status as TaskStatus)}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg transition-all ${
+                                        activeStatus === col.status
+                                            ? 'bg-white dark:bg-zinc-800 shadow-sm border border-zinc-200 dark:border-zinc-700'
+                                            : 'hover:bg-zinc-300 dark:hover:bg-zinc-800/50'
+                                    }`}
+                                >
+                                    <div className={`w-2.5 h-2.5 rounded-full ${col.color}`} />
+                                    <span className={`text-[10px] font-bold ${activeStatus === col.status ? 'text-zinc-900 dark:text-white' : 'text-zinc-500'}`}>
+                                        {col.count}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
             {/* CONTENIDO PRINCIPAL */}
@@ -241,7 +248,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                     {/* VISTAS FUNCIONALES INTACTAS */}
                     <div className="flex-1 flex flex-col min-h-0 animate-fadeIn">
                         {activeTab === 'board' && (
-                            <KanbanBoard tasks={tasks} groups={groups} onOpenNote={onOpenNote} onUpdate={updateTask} onDelete={deleteTask} onEdit={(task) => { setEditingTask(task); setIsModalOpen(true); }} dateFormat={dateFormat} timeFormat={timeFormat} />
+                            <KanbanBoard tasks={tasks} groups={groups} onOpenNote={onOpenNote} onUpdate={updateTask} onDelete={deleteTask} onEdit={(task) => { setEditingTask(task); setIsModalOpen(true); }} dateFormat={dateFormat} timeFormat={timeFormat} activeStatus={activeStatus} />
                         )}
                         {activeTab === 'backlog' && (
                             <KanbanList view="backlog" tasks={tasks} groups={groups} onOpenNote={onOpenNote} onUpdate={updateTask} onDelete={deleteTask} onEdit={(task) => { setEditingTask(task); setIsModalOpen(true); }} />
