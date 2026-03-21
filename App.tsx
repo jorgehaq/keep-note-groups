@@ -88,7 +88,8 @@ function App() {
     isNotesPizarronOpen, setIsNotesPizarronOpen,
     setActiveNoteId,
     searchQueries, setSearchQuery,
-    isArchiveOpenByGroup, setArchiveOpenByGroup
+    isArchiveOpenByGroup, setArchiveOpenByGroup,
+    setSidebarFocusMode
   } = useUIStore();
 
   const [showLineNumbers, setShowLineNumbers] = useState<boolean>(
@@ -1385,6 +1386,7 @@ function App() {
           onSelectGroup={(id) => { 
             setActiveGroup(id); 
             setGlobalView('notes');
+            setSidebarFocusMode('group');
             // Al hacer clic en el grupo, ya NO le quitamos el foco a las notas
             // para que se mantenga el contexto como en el Pizarrón.
           }}
@@ -1409,6 +1411,7 @@ function App() {
               if (!isOpen) toggleNote(groupId, noteId);
               setFocusedNoteId(noteId, groupId);
               setIsGlobalNoteTrayOpen(true, groupId);
+              setSidebarFocusMode('note');
             }
           }}
           focusedNoteId={focusedNoteId}

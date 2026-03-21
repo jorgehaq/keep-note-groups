@@ -30,7 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectDockedNote,
   focusedNoteId,
 }) => {
-  const { dockedGroupIds, closeGroup, globalView, setGlobalView, activeTimersCount, overdueRemindersCount, overdueRemindersList, imminentRemindersCount, lastAppView, kanbanTodoCount, kanbanInProgressCount, kanbanDoneCount, lastUsedApp, globalTasks, lastActiveNoteByGroup } = useUIStore();
+  const { dockedGroupIds, closeGroup, globalView, setGlobalView, activeTimersCount, overdueRemindersCount, overdueRemindersList, imminentRemindersCount, lastAppView, kanbanTodoCount, kanbanInProgressCount, kanbanDoneCount, lastUsedApp, globalTasks, lastActiveNoteByGroup, sidebarFocusMode, setSidebarFocusMode } = useUIStore();
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
   const { t } = useTranslation();
 
@@ -63,11 +63,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
     // ESTADO 2: RECIÉN PERDIÓ EL FOCO (Gris Medio) - Fue la última app en la que estuviste
     if (lastUsedApp === appId) {
-      return 'bg-zinc-300 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-inner ring-1 ring-zinc-400/30 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:ring-0 hover:scale-105 active:scale-95';
+      return 'bg-zinc-300 dark:bg-zinc-700 border border-zinc-400/30 dark:border-transparent text-zinc-700 dark:text-zinc-200 shadow-inner hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:scale-105 active:scale-95';
     }
 
     // ESTADO 3: MUERTO / INACTIVO (Gris Oscuro)
-    return 'bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-700 hover:shadow-sm hover:scale-105 active:scale-95';
+    return 'bg-zinc-200/80 dark:bg-zinc-800/80 border border-zinc-300 dark:border-zinc-700/50 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-700 hover:shadow-sm hover:scale-105 active:scale-95';
   };
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -262,14 +262,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={() => {
                     onSelectGroup(group.id);
                     setGlobalView('notes');
+                    setSidebarFocusMode('group');
                   }}
                   className={`
                     relative flex items-center justify-center w-full transition-all duration-300 overflow-hidden rounded-xl group/dockedbtn
-                    ${isGroupActive && isNotesView && !focusedNoteIsDocked
+                    ${isGroupActive && isNotesView && sidebarFocusMode === 'group'
                       ? 'h-32 bg-[#4940D9] hover:bg-[#3D35C0] text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 scale-[1.02] active:scale-95'
-                      : isGroupActive && (!isNotesView || focusedNoteIsDocked)
+                      : isGroupActive && (!isNotesView || sidebarFocusMode === 'note')
                         ? 'h-32 bg-zinc-300 dark:bg-[#2D2D42] text-zinc-700 dark:text-zinc-200 shadow-inner ring-1 ring-zinc-400/30 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:ring-0 hover:scale-[1.04] active:scale-95'
-                        : 'h-24 bg-zinc-200/50 dark:bg-zinc-800/50 text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:scale-[1.04] active:scale-95'}
+                        : 'h-24 bg-zinc-200/50 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700/50 text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:scale-[1.04] active:scale-95'}
                     `}
                   title={group.title}
                 >
@@ -291,13 +292,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                       // LOGICA DE COLOR Y RASTRO
                       const isFocused = note.id === focusedNoteId;
-                      const isActiveFocus = isFocused && isNotesView;
+                      const isActiveFocus = isFocused && isNotesView && sidebarFocusMode === 'note';
                       
                       const bubbleClass = isActiveFocus
                         ? 'bg-[#4940D9] hover:bg-[#3D35C0] text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 scale-[1.15] active:scale-95' // Activa enfocada
-                        : isGroupActive
-                          ? 'bg-zinc-300 dark:bg-[#2D2D42] text-zinc-700 dark:text-zinc-200 shadow-inner ring-1 ring-zinc-400/30 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:ring-0 hover:scale-110 active:scale-95' // Parte de grupo activo o rastro (Gris Medio)
-                          : 'bg-zinc-200/80 dark:bg-zinc-800/50 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:scale-110 active:scale-95'; // Muerta / Inactiva
+                        : isGroupActive || (isFocused && isNotesView && sidebarFocusMode === 'group')
+                          ? 'bg-zinc-300 dark:bg-[#2D2D42] border border-zinc-400/30 dark:border-transparent text-zinc-700 dark:text-zinc-200 shadow-inner hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:scale-110 active:scale-95' // Parte de grupo activo o rastro (Gris Medio)
+                          : 'bg-zinc-200/80 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700/50 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:scale-110 active:scale-95'; // Muerta / Inactiva
 
                       // NUEVO: LÓGICA DEL SEMÁFORO KANBAN
                       const linkedTask = globalTasks?.find(t => t.id === note.id);
@@ -315,7 +316,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       return (
                         <div key={note.id} className="relative group/bubble">
                           <button
-                            onClick={() => onSelectDockedNote(group.id, note.id)}
+                            onClick={() => {
+                              onSelectDockedNote(group.id, note.id);
+                              setSidebarFocusMode('note');
+                            }}
                             className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] font-normal uppercase transition-all duration-200 ${bubbleClass}`}
                             title={note.title || 'Sin título'}
                           >

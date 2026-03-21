@@ -65,6 +65,8 @@ interface UIStore {
     isDumpTrayOpen: boolean;
     focusedVideoId: string | null;
     isVideoTrayOpen: boolean;
+    sidebarFocusMode: 'group' | 'note'; // Visual focus in sidebar
+
 
     // Search & Archive states
     searchQueries: Record<string, string>;
@@ -140,6 +142,8 @@ interface UIStore {
     setFocusedVideoId: (id: string | null) => void;
     setIsVideoTrayOpen: (open: boolean) => void;
     setIsBraindumpPizarronOpen: (open: boolean) => void;
+    setSidebarFocusMode: (mode: 'group' | 'note') => void;
+
 
     // Search & Archive Actions
     setSearchQuery: (id: string, query: string) => void;
@@ -235,6 +239,8 @@ export const useUIStore = create<UIStore>()(
             summaryCounts: {},
             tikTokVideos: [],
             tikTokQueueItems: [],
+            sidebarFocusMode: 'note',
+
 
             searchQueries: {},
             isArchiveOpenByGroup: {},
@@ -440,6 +446,8 @@ export const useUIStore = create<UIStore>()(
             notesSplitRatio: 0.5,
             setNotesSplitRatio: (ratio) => set({ notesSplitRatio: ratio }),
             setIsBraindumpPizarronOpen: (open) => set({ isBraindumpPizarronOpen: open }),
+            setSidebarFocusMode: (mode) => set({ sidebarFocusMode: mode }),
+
             setActiveNoteId: (groupId, noteId) => set((state) => ({
                 lastActiveNoteByGroup: { ...state.lastActiveNoteByGroup, [groupId]: noteId }
             })),
@@ -669,6 +677,7 @@ export const useUIStore = create<UIStore>()(
                 searchQueries: state.searchQueries,
                 isArchiveOpenByGroup: state.isArchiveOpenByGroup,
                 isArchiveOpenByApp: state.isArchiveOpenByApp,
+                sidebarFocusMode: state.sidebarFocusMode,
             }),
         },
     ),
