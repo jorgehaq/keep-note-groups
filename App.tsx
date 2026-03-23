@@ -447,7 +447,7 @@ function App() {
     const activeSession = overrideSession || sessionRef.current;
     if (!activeSession) return;
     try {
-      const { data, error } = await supabase.from('summaries').select('note_id').eq('user_id', activeSession.user.id);
+      const { data, error } = await supabase.from('summaries').select('note_id');
       if (error) throw error;
       const counts: Record<string, number> = {};
       data?.forEach(s => { counts[s.note_id] = (counts[s.note_id] || 0) + 1; });

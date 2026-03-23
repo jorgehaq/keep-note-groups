@@ -137,6 +137,16 @@
       .dark .cm-cursor, .dark .cm-dropCursor {
         border-left-color: #CCCCCC !important;
       }
+
+      /* CSS Custom Highlight API support for table selections */
+      ::highlight(cm-table-selection) {
+        background-color: rgba(73, 64, 217, 0.75) !important;
+        color: #ffffff !important;
+      }
+      .dark ::highlight(cm-table-selection) {
+        background-color: rgba(139, 92, 246, 0.75) !important;
+        color: #ffffff !important;
+      }
     </style>
   </head>
 

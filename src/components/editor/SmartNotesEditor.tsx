@@ -178,7 +178,7 @@ const blockMarkupField = StateField.define<RangeSet<Decoration>>({
                         const tableText = doc.sliceString(startObj.from, endObj.to);
                         // block: true es vital para la estabilidad de redimensionado
                         builder.add(startObj.from, endObj.to, Decoration.replace({ 
-                            widget: new TableHtmlWidget(tableText), 
+                            widget: new TableHtmlWidget(tableText, startObj.from, endObj.to), 
                             block: true 
                         }));
                     }
@@ -290,6 +290,60 @@ const escapeHtml = (text: string) => {
 };
 
 // Simple Markdown Table to HTML converter to avoid React root complexity inside CM6 widgets
+const renderInlineMarkdown = (text: string): string => {
+    // Escapar HTML básico primero para seguridad, pero permitir nuestras etiquetas después
+    let html = escapeHtml(text.trim());
+
+    // 1. Highlights: [[hl:ts|texto|c]] -> <span class="cm-hl-c">texto</span>
+    html = html.replace(/\[\[hl:[^|]+\|([^|\]]+)\|([yrbg])\]\]/g, '<span class="cm-hl-$2">$1</span>');
+
+    // 2. Markers: [[ins:ts|texto]] -> <span class="cm-custom-mk-ins">texto</span>
+    const markers = ['ins', 'duda', 'idea', 'op', 'wow', 'pat', 'yo', 'ruido', 'contra'];
+    markers.forEach(m => {
+        const regex = new RegExp(`\\[\\[${m}:[^|]*\\|([^\\]]+)\\]\\]`, 'g');
+        html = html.replace(regex, `<span class="cm-custom-mk-${m}">$1</span>`);
+    });
+
+    // 3. Translations: [[tr:lang|text]]
+    html = html.replace(/\[\[tr:([^|\]]+)\|([\s\S]*?)\]\]/g, '<span class="cm-custom-tr" data-translation-text="$1">$2</span>');
+
+    // 4. Bold: **text**
+    html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<span class="cm-custom-bold">$1</span>');
+
+    // 5. Italic: *text* (solo si no es parte de un bold)
+    html = html.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<span class="cm-custom-italic">$1</span>');
+
+    // 6. Strikethrough: ~~text~~
+    html = html.replace(/~~([\s\S]*?)~~/g, '<span class="cm-custom-strikethrough">$1</span>');
+
+    // 7. Links: [text](url)
+    html = html.replace(/\[([^\]]*)\]\(([^)\n]*)\)/g, '<a href="$2" class="cm-custom-link" target="_blank" rel="noopener noreferrer">$1</a>');
+
+    return html;
+};
+
+const splitTableCells = (line: string): string[] => {
+    const cells: string[] = [];
+    let current = "";
+    let inTag = 0;
+    
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '[' && line[i+1] === '[') { inTag++; current += '[['; i++; continue; }
+        if (char === ']' && line[i+1] === ']') { inTag--; current += ']]'; i++; continue; }
+        
+        if (char === '|' && inTag === 0) {
+            cells.push(current);
+            current = "";
+        } else {
+            current += char;
+        }
+    }
+    cells.push(current);
+    // Filtrar los extremos vacíos (antes del primer | y después del último |)
+    return cells.filter((_, i, arr) => i > 0 && i < arr.length - 1);
+};
+
 const renderMarkdownTable = (md: string): string => {
     const lines = md.trim().split('\n');
     if (lines.length < 2) return '';
@@ -297,13 +351,13 @@ const renderMarkdownTable = (md: string): string => {
     let html = '<table class="cm-rendered-table"><thead>';
     
     // Header
-    const headerCells = lines[0].split('|').filter((_, i, arr) => i > 0 && i < arr.length - 1);
-    html += '<tr>' + headerCells.map(c => `<th>${escapeHtml(c.trim())}</th>`).join('') + '</tr></thead><tbody>';
+    const headerCells = splitTableCells(lines[0]);
+    html += '<tr>' + headerCells.map(c => `<th>${renderInlineMarkdown(c)}</th>`).join('') + '</tr></thead><tbody>';
 
     // Rows (skip index 1 which is the separator |---|---|)
     for (let i = 2; i < lines.length; i++) {
-        const cells = lines[i].split('|').filter((_, j, arr) => j > 0 && j < arr.length - 1);
-        html += '<tr>' + cells.map(c => `<td>${escapeHtml(c.trim())}</td>`).join('') + '</tr>';
+        const cells = splitTableCells(lines[i]);
+        html += '<tr>' + cells.map(c => `<td>${renderInlineMarkdown(c)}</td>`).join('') + '</tr>';
     }
 
     html += '</tbody></table>';
@@ -311,13 +365,57 @@ const renderMarkdownTable = (md: string): string => {
 };
 
 class TableHtmlWidget extends WidgetType {
-    constructor(readonly content: string) { super(); }
-    eq(other: TableHtmlWidget) { return other.content === this.content; }
-    toDOM() {
+    constructor(readonly content: string, readonly from: number, readonly to: number) { super(); }
+    eq(other: TableHtmlWidget) { return other.content === this.content && other.from === this.from && other.to === this.to; }
+    toDOM(view: EditorView) {
         const div = document.createElement("div");
-        div.className = "cm-table-container";
+        div.className = "cm-table-container outline-none";
+        div.tabIndex = 0;
         div.innerHTML = renderMarkdownTable(this.content);
+        
+        // --- SOPORTE PARA SELECCIÓN ---
+        div.onmouseup = (e) => {
+            e.stopPropagation(); // Evitar que CodeMirror procese este mouseup
+            const selection = window.getSelection();
+            const selectedText = selection ? selection.toString().trim() : "";
+            
+            if (selectedText && div.contains(selection?.anchorNode || null)) {
+                const range = selection!.getRangeAt(0);
+
+                // --- HIGHLIGHT API (Moderno) ---
+                if (typeof CSS !== 'undefined' && 'highlights' in CSS) {
+                    try {
+                        const highlight = new (window as any).Highlight(range.cloneRange());
+                        (CSS as any).highlights.set('cm-table-selection', highlight);
+                    } catch (err) {}
+                }
+
+                const rect = range.getBoundingClientRect();
+                
+                const event = new CustomEvent('cm-table-selection', {
+                    detail: {
+                        text: selectedText,
+                        from: this.from,
+                        to: this.to,
+                        rect: { top: rect.top, left: rect.left + rect.width / 2 }
+                    },
+                    bubbles: true
+                });
+                div.dispatchEvent(event);
+            }
+        };
+        
+        div.onmousedown = (e) => {
+            e.stopPropagation(); // Evitar que el editor reciba el foco o limpie selección al clicar aquí
+        };
+
         return div;
+    }
+    ignoreEvent(event: Event) {
+        // Permitir que el navegador maneje la selección de texto nativa (mousedown -> mousemove -> mouseup)
+        // Ignorar estos eventos en CodeMirror para que pasen al DOM del Widget.
+        return event.type === 'mousedown' || event.type === 'mouseup' || event.type === 'mousemove' || 
+               event.type === 'touchstart' || event.type === 'touchend' || event.type === 'dragstart';
     }
 }
 const cursorDotPlugin = ViewPlugin.fromClass(class {
@@ -1035,7 +1133,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
             }
         }
     }));
-    const [menuState, setMenuState] = useState<{top: number, left: number, from: number, to: number, text: string, isMobile?: boolean} | null>(null);
+    const [menuState, setMenuState] = useState<{top: number, left: number, from: number, to: number, text: string, isMobile?: boolean, isFromTable?: boolean} | null>(null);
     const [tooltipState, setTooltipState] = useState<{text: React.ReactNode, top: number, left: number} | null>(null);
     const [isTranslating, setIsTranslating] = useState(false);
     const [hlColor, setHlColor] = useState<HlColorKey>('y');
@@ -1270,6 +1368,30 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         return () => cancelAnimationFrame(timer);
     }, [noteId]);
 
+    // Escuchar selección dentro de tablas (WidgetType)
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+        
+        const handleTableSelection = (e: any) => {
+            const { text, from, to, rect } = e.detail;
+            const isMobile = window.innerWidth < 768;
+            
+            setMenuState({
+                top: rect.top - 8,
+                left: rect.left,
+                from: from,
+                to: to,
+                text: text,
+                isMobile,
+                isFromTable: true
+            });
+        };
+        
+        container.addEventListener('cm-table-selection', handleTableSelection);
+        return () => container.removeEventListener('cm-table-selection', handleTableSelection);
+    }, [noteId]);
+
     // Escuchar scroll con retraso para asegurar que CodeMirror montó
     useEffect(() => {
         // Esperar a que CodeMirror monte
@@ -1500,22 +1622,50 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         }
 
         const ts = generateMarkerTimestamp();
-        let formatted = '';
-        if (type === 'highlight') {
-            formatted = `[[hl:${ts}|${innerClean}|${targetColor}]]`;
-        } else if (type === 'strikethrough') {
-            formatted = `~~${innerClean}~~`;
-        } else if (type === 'bold') {
-            formatted = `**${innerClean}**`;
-        } else {
-            formatted = `[[${type}:${ts}|${innerClean}]]`;
-        }
+        
+        const wrapChunk = (content: string) => {
+            if (type === 'highlight') return `[[hl:${ts}|${content}|${targetColor}]]`;
+            if (type === 'strikethrough') return `~~${content}~~`;
+            if (type === 'bold') return `**${content}**`;
+            return `[[${type}:${ts}|${content}]]`;
+        };
 
-        editorRef.current.view.dispatch({ 
-            changes: { from: menuState.from, to: menuState.to, insert: formatted }, 
-            selection: { anchor: menuState.from + formatted.length },
-            effects: [setRevealedLine.of(null), ForceRedrawEffect.of(null)] // 🚀 Limpiar modo markdown tras formatear
-        });
+        // Respetamos los saltos de línea y los pipes de las tablas
+        // para evitar encapsularlos dentro de las etiquetas personalizadas
+        // previniendo que se corrompa el renderizado.
+        const parts = innerClean.split(/(\n|\|)/);
+        const formatted = parts.map(part => {
+            if (part === '\n' || part === '|') return part;
+            if (!part.trim()) return part;
+            
+            // Conservamos espacios alrededor fuera de la etiqueta
+            const match = part.match(/^(\s*)(.*?)(\s*)$/);
+            if (match) {
+                const [, leading, content, trailing] = match;
+                if (!content) return part;
+                return `${leading}${wrapChunk(content)}${trailing}`;
+            }
+            return wrapChunk(part);
+        }).join('');
+
+        if (menuState.isFromTable) {
+            const fullTableText = editorRef.current.view.state.doc.sliceString(menuState.from, menuState.to);
+            // Reemplazamos la primera ocurrencia del texto seleccionado dentro de la tabla
+            // Usamos rawSelected en lugar de innerClean para el match inicial si es posible
+            const newTableText = fullTableText.replace(rawSelected, formatted);
+            
+            editorRef.current.view.dispatch({ 
+                changes: { from: menuState.from, to: menuState.to, insert: newTableText }, 
+                selection: { anchor: menuState.from + newTableText.length },
+                effects: [setRevealedLine.of(null), ForceRedrawEffect.of(null)]
+            });
+        } else {
+            editorRef.current.view.dispatch({ 
+                changes: { from: menuState.from, to: menuState.to, insert: formatted }, 
+                selection: { anchor: menuState.from + formatted.length },
+                effects: [setRevealedLine.of(null), ForceRedrawEffect.of(null)] // 🚀 Limpiar modo markdown tras formatear
+            });
+        }
         
         setMenuState(null);
         setShowLinkInput(false);
@@ -1530,11 +1680,21 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         // Si hay una URL, aplicamos formato link. Si no, dejamos el texto limpio.
         const replacement = currentUrl ? `[${textToLink}](${currentUrl})` : textToLink;
         
-        editorRef.current.view.dispatch({ 
-            changes: { from: menuState.from, to: menuState.to, insert: replacement }, 
-            selection: { anchor: menuState.from + replacement.length },
-            effects: [setRevealedLine.of(null), ForceRedrawEffect.of(null)] // 🚀 Limpiar modo markdown tras link
-        });
+        if (menuState.isFromTable) {
+            const fullTableText = editorRef.current.view.state.doc.sliceString(menuState.from, menuState.to);
+            const newTableText = fullTableText.replace(menuState.text, replacement);
+            editorRef.current.view.dispatch({ 
+                changes: { from: menuState.from, to: menuState.to, insert: newTableText }, 
+                selection: { anchor: menuState.from + newTableText.length },
+                effects: [setRevealedLine.of(null), ForceRedrawEffect.of(null)]
+            });
+        } else {
+            editorRef.current.view.dispatch({ 
+                changes: { from: menuState.from, to: menuState.to, insert: replacement }, 
+                selection: { anchor: menuState.from + replacement.length },
+                effects: [setRevealedLine.of(null), ForceRedrawEffect.of(null)] // 🚀 Limpiar modo markdown tras link
+            });
+        }
         
         setMenuState(null);
         setShowLinkInput(false);
@@ -1573,11 +1733,21 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                 target_lang: targetLang
             }]);
 
-            editorRef.current.view.dispatch({
-                changes: { from: menuState.from, to: menuState.to, insert: replacement },
-                selection: { anchor: menuState.from + replacement.length },
-                effects: [setRevealedLine.of(null), ForceRedrawEffect.of(null)]
-            });
+            if (menuState.isFromTable) {
+                const fullTableText = editorRef.current.view.state.doc.sliceString(menuState.from, menuState.to);
+                const newTableText = fullTableText.replace(textToTranslate, replacement);
+                editorRef.current.view.dispatch({
+                    changes: { from: menuState.from, to: menuState.to, insert: newTableText },
+                    selection: { anchor: menuState.from + newTableText.length },
+                    effects: [setRevealedLine.of(null), ForceRedrawEffect.of(null)]
+                });
+            } else {
+                editorRef.current.view.dispatch({
+                    changes: { from: menuState.from, to: menuState.to, insert: replacement },
+                    selection: { anchor: menuState.from + replacement.length },
+                    effects: [setRevealedLine.of(null), ForceRedrawEffect.of(null)]
+                });
+            }
             setMenuState(null);
 
         } catch (err: any) {
