@@ -829,7 +829,7 @@ export const TikTokApp: React.FC<{
                         else setFocusedVideoId(video.id); 
                         triggerScrollToActive(); // Trigger scroll to active
                       }}
-                      className={`shrink-0 flex items-center gap-3 px-4 py-2 rounded-xl border transition-all relative ${
+                      className={`shrink-0 flex items-center justify-start gap-3 px-4 py-2 rounded-xl border transition-all relative ${
                         focusedVideoId === video.id 
                           ? `bg-[#EE1D52] text-white border-[#EE1D52] shadow-lg shadow-[#EE1D52]/20 scale-[1.02] ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-[#13131A] shadow-[0_0_20px_rgba(251,192,45,0.5)]' : ''}` 
                           : isMatch
@@ -1247,7 +1247,7 @@ export const TikTokApp: React.FC<{
                               }`}
                             >
                               <Sparkles size={11} /> 
-                              <span className="max-w-[120px] truncate">
+                              <span className="max-w-[150px] truncate">
                                 {queryToUse ? highlightText(summary.target_objective || 'Resumen', queryToUse) : (summary.target_objective || 'Resumen')}
                               </span>
                               {activeTab === `summary_${summary.id}` && (
@@ -1314,7 +1314,7 @@ export const TikTokApp: React.FC<{
                                   value={tempSubnoteTitle}
                                   onChange={(e) => setTempSubnoteTitle(e.target.value)}
                                   onFocus={(e) => e.currentTarget.select()} // 🚀 NUEVO: Seleccionar al entrar
-                                  className="bg-zinc-800 text-white border-emerald-500 border rounded px-1 outline-none text-[11px] max-w-[120px]"
+                                  className="bg-zinc-800 text-white border-emerald-500 border rounded px-1 outline-none text-[11px] max-w-[150px]"
                                   placeholder="Título..."
                                   onBlur={() => {
                                     // Solo guardar si hay un cambio real
@@ -1338,7 +1338,7 @@ export const TikTokApp: React.FC<{
                                 />
                               ) : (
                                 <span 
-                                  className="max-w-[120px] truncate cursor-text"
+                                  className="max-w-[150px] truncate cursor-text"
                                   onDoubleClick={(e) => {
                                     e.stopPropagation();
                                     setEditingSubnoteId(note.id);

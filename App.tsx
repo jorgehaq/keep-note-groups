@@ -1967,7 +1967,7 @@ function App() {
                                   if (isOpen) toggleNote(activeGroup.id, note.id);
                                 }
                               }}
-                              className={`relative flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border shrink-0 ${
+                              className={`relative flex items-center justify-start gap-3 px-4 py-2 rounded-xl text-xs font-bold transition-all border shrink-0 ${
                                 isSelected
                                   ? `bg-[#4940D9] text-white border-[#4940D9] shadow-sm shadow-[#4940D9]/20 scale-[1.02] ${isSearchActive ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-[#FAFAFA] dark:ring-offset-[#13131A] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
                                   : isSearchActive
@@ -1980,7 +1980,7 @@ function App() {
                                 <div className={`p-1 rounded-md transition-colors ${isSelected ? 'bg-white/10 text-white' : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500'}`}>
                                   <FileText size={13} />
                                 </div>
-                                <span className="whitespace-nowrap">
+                                <span className="max-w-[150px] truncate">
                                   {highlightTitle(note.title || 'Sin Título')}
                                   {summaryCounts[note.id] > 0 && ` (${summaryCounts[note.id]})`}
                                 </span>
