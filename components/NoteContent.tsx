@@ -23,7 +23,7 @@ export const NoteContent: React.FC<NoteContentProps> = ({ content }) => {
 
   return (
     <div 
-      className="raw-note-content font-mono text-sm bg-zinc-50 dark:bg-zinc-900/50 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800"
+      className="raw-note-content font-mono text-sm bg-zinc-50 dark:bg-[#131314] p-4 rounded-xl border border-zinc-200 dark:border-zinc-800"
     >
       {safeContent}
     </div>

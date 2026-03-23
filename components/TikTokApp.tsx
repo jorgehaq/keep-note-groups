@@ -1389,7 +1389,7 @@ export const TikTokApp: React.FC<{
                 {/* CONTENT AREA (EDITOR + SCRATCHPAD) */}
                 <div ref={splitContainerRef} className="flex-1 flex min-h-0 gap-2 overflow-hidden animate-fadeIn">
                   <div 
-                    className="flex-1 min-h-0 overflow-hidden bg-zinc-50 dark:bg-zinc-900/20 rounded-xl border border-zinc-200 dark:border-zinc-800 scroll-smooth"
+                    className="flex-1 min-h-0 overflow-hidden bg-zinc-50 dark:bg-[#131314] rounded-xl border border-zinc-200 dark:border-zinc-800 scroll-smooth"
                     style={isTikTokPizarronOpen ? { width: `${splitRatio * 100}%`, flex: 'none' } : { flex: 1 }}
                   >
                     <div 

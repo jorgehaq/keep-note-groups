@@ -76,7 +76,7 @@ const SummaryTabContent: React.FC<{
 
   return (
     <div className="flex flex-col gap-3 flex-1 min-h-0">
-      <div className={`bg-violet-50 dark:bg-[#1A1A2E] rounded-2xl border ${searchQuery?.trim() && summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ? 'border-amber-500' : 'border-violet-200 dark:border-violet-500/20'}`}>
+      <div className={`bg-violet-50 dark:bg-[#131314] rounded-2xl border ${searchQuery?.trim() && summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ? 'border-amber-500' : 'border-violet-200 dark:border-violet-500/20'}`}>
         <div className="flex items-center justify-between px-4 py-2.5 bg-violet-100/60 dark:bg-violet-500/5 border-b border-violet-200 dark:border-violet-500/10">
           <div className="flex items-center gap-2 min-w-0">
             <Sparkles size={12} className="text-violet-400 shrink-0" />
@@ -265,7 +265,7 @@ const SubnoteTabContent: React.FC<{
       className={`flex-1 flex min-h-0 ${isMobile ? 'flex-col' : 'flex-row'} gap-2 animate-fadeIn`}
     >
       <div
-        className={`min-h-0 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/20`}
+        className={`min-h-0 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#131314]`}
         style={showScratch
           ? (isMobile
               ? { height: `${splitRatio * 100}%`, flex: 'none' }

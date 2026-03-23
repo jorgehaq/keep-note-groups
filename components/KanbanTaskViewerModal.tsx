@@ -52,7 +52,7 @@ export const KanbanTaskViewerModal: React.FC<KanbanTaskViewerModalProps> = ({ ta
                         <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
                             <Type size={14} /> Título
                         </label>
-                        <div className="w-full bg-zinc-50/50 dark:bg-[#101018]/50 border border-zinc-200 dark:border-[#2D2D42] p-4 rounded-xl text-zinc-800 dark:text-[#CCCCCC] font-bold text-xl leading-snug">
+                        <div className="w-full bg-zinc-50/50 dark:bg-[#131314] border border-zinc-200 dark:border-[#2D2D42] p-4 rounded-xl text-zinc-800 dark:text-[#CCCCCC] font-bold text-xl leading-snug">
                             {task.title || <span className="text-zinc-400 italic font-normal">Sin título</span>}
                         </div>
                     </div>
@@ -62,7 +62,7 @@ export const KanbanTaskViewerModal: React.FC<KanbanTaskViewerModalProps> = ({ ta
                         <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
                             <Check size={14} /> Contenido / Notas
                         </label>
-                        <div className="flex-1 rounded-xl border border-zinc-200 dark:border-[#2D2D42] bg-white dark:bg-[#101018] overflow-hidden flex flex-col shadow-inner">
+                        <div className="flex-1 rounded-xl border border-zinc-200 dark:border-[#2D2D42] bg-white dark:bg-[#131314] overflow-hidden flex flex-col shadow-inner">
                             <div className="flex-1 overflow-y-auto min-h-0 note-editor-scroll p-2">
                                 <SmartNotesEditor 
                                     noteId={`view-${task.id}`}

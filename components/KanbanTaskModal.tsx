@@ -90,7 +90,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({ task, onClose,
                             value={title}
                             onChange={e => setTitle(e.target.value)}
                             placeholder="Escribe el título de la tarea..."
-                            className="w-full bg-zinc-50 dark:bg-[#101018] border border-zinc-200 dark:border-[#2D2D42] p-4 rounded-xl text-zinc-800 dark:text-[#CCCCCC] font-bold text-lg outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all"
+                            className="w-full bg-zinc-50 dark:bg-[#131314] border border-zinc-200 dark:border-[#2D2D42] p-4 rounded-xl text-zinc-800 dark:text-[#CCCCCC] font-bold text-lg outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all"
                             autoFocus={isNew}
                             title={title} // Permite ver el título completo en el tooltip si es muy grande
                         />
@@ -109,7 +109,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({ task, onClose,
                                     className={`px-3 py-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${
                                         status === opt.value 
                                             ? `${opt.textClass} scale-[1.02]` 
-                                            : 'bg-white dark:bg-[#101018] border-zinc-200 dark:border-[#2D2D42] text-zinc-500 dark:text-zinc-500 hover:border-emerald-500/40'
+                                            : 'bg-white dark:bg-[#131314] border-zinc-200 dark:border-[#2D2D42] text-zinc-500 dark:text-zinc-500 hover:border-emerald-500/40'
                                     }`}
                                     style={status === opt.value ? { 
                                         backgroundColor: opt.hex, 
@@ -129,7 +129,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({ task, onClose,
                         <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
                             <Check size={14} /> Contenido / Notas
                         </label>
-                        <div className="flex-1 rounded-xl border border-zinc-200 dark:border-[#2D2D42] bg-zinc-50 dark:bg-[#101018] overflow-hidden flex flex-col">
+                        <div className="flex-1 rounded-xl border border-zinc-200 dark:border-[#2D2D42] bg-zinc-50 dark:bg-[#131314] overflow-hidden flex flex-col">
                             {/* 
                                 🚀 FIX: Contenedor con scroll interno para el editor.
                                 El editor puede crecer internamente pero el contenedor mantiene el scroll.
