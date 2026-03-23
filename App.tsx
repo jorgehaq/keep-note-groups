@@ -2046,11 +2046,12 @@ function App() {
                                   className="flex-1 flex flex-col min-h-0"
                                   style={{ display: isVisible ? 'flex' : 'none' }}
                                 >
-                                  <AccordionItem
-                                    note={note}
-                                    searchQuery={currentSearchQuery}
-                                    allSummaries={allGroupSummaries}
-                                    groupNotes={activeGroup.notes}
+                                    <AccordionItem
+                                      note={note}
+                                      allSaveStatuses={noteSaveStatus}
+                                      searchQuery={currentSearchQuery}
+                                      allSummaries={allGroupSummaries}
+                                      groupNotes={activeGroup.notes}
                                     isHighlightedBySearch={!!(currentSearchQuery.trim() && checkNoteSearchMatch(note, currentSearchQuery.trim(), activeGroup.notes, allGroupSummaries))}
                                     showLineNumbers={showLineNumbers}
                                     onToggleLineNumbers={() => {
@@ -2084,7 +2085,6 @@ function App() {
                                     noteLineHeight={noteLineHeight}
                                     onCreateNote={(c, t, p, d) => createNoteFromAI(c, t, activeGroup?.id, d as number, p as string)}
                                     session={session}
-                                    syncStatus={noteSaveStatus[note.id] || 'idle'}
                                     triggerGlobalScrollToActive={triggerGlobalScrollToActive}
                                   />
                                 </div>

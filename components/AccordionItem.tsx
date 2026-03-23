@@ -34,7 +34,7 @@ interface AccordionItemProps {
   showLineNumbers?: boolean;
   onToggleLineNumbers?: () => void;
   session?: Session | null;
-  syncStatus?: 'idle' | 'saving' | 'saved';
+  allSaveStatuses?: Record<string, 'saving' | 'saved' | 'idle'>;
   groupNotes?: Note[];
   allSummaries?: any[];
   triggerGlobalScrollToActive?: () => void;
@@ -393,7 +393,8 @@ const SubnoteTabContent: React.FC<{
   editorRef,
   scratchRef,
   checklistRef,
-  triggerScrollToActive
+  triggerScrollToActive,
+  syncStatus
 }) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const borderColor = note.parent_note_id ? 'border-emerald-500/30' : 'border-zinc-200 dark:border-[#2D2D42]';
@@ -509,7 +510,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   showLineNumbers = false,
   onToggleLineNumbers,
   session,
-  syncStatus: propSyncStatus = 'idle',
+  allSaveStatuses = {},
   allSummaries = [],
   groupNotes = [],
   triggerGlobalScrollToActive
@@ -963,6 +964,20 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Permanent Sync Symbol */}
+          {(() => {
+            const currentSyncStatus = allSaveStatuses[displayNoteId] || 'idle';
+            return (
+              <div className="mr-0.5 flex items-center justify-center w-6 h-6" title={currentSyncStatus === 'saving' ? 'Sincronizando...' : 'Sincronizado'}>
+                {currentSyncStatus === 'saving' ? (
+                  <Loader2 size={13} className="animate-spin text-indigo-500" />
+                ) : (
+                  <CloudCheck size={13} className={currentSyncStatus === 'saved' ? "text-emerald-500" : "text-zinc-300 dark:text-zinc-600"} />
+                )}
+              </div>
+            );
+          })()}
+
           {/* Botón Nueva subnota */}
           {session?.user && (
             <button
@@ -1157,11 +1172,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         </div>
       </div>
 
-      {/* METADATA BAR (like TikTok/Pizarron) */}
-      <div className="px-4 py-2 bg-zinc-50 dark:bg-zinc-900/30 border-y border-zinc-200 dark:border-zinc-800/50 flex flex-wrap items-center gap-4 text-[10px] uppercase tracking-widest font-bold text-zinc-400">
-          <span className="flex items-center gap-1.5"><Calendar size={10} /> {formatCleanDate(note.created_at)}</span>
-          {note.updated_at && <span className="flex items-center gap-1.5"><Calendar size={10} /> {formatCleanDate(note.updated_at)}</span>}
-      </div>
+
 
       {/* CONTENT */}
       <div
