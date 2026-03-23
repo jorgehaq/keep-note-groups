@@ -164,6 +164,8 @@ export const TikTokApp: React.FC<{
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [scrollToActiveCount, setScrollToActiveCount] = useState(0);
+  const triggerScrollToActive = () => setScrollToActiveCount(prev => prev + 1);
   
   // Local search state for responsiveness
   const [localSearch, setLocalSearch] = useState(searchQuery);
@@ -496,12 +498,41 @@ export const TikTokApp: React.FC<{
       checkTrayScroll();
       container.addEventListener('scroll', checkTrayScroll);
       window.addEventListener('resize', checkTrayScroll);
+      
+      const ro = new ResizeObserver(checkTrayScroll);
+      ro.observe(container);
+
       return () => {
         container.removeEventListener('scroll', checkTrayScroll);
         window.removeEventListener('resize', checkTrayScroll);
+        ro.disconnect();
       };
     }
-  }, [tikTokVideos, rootVideos, isVideoTrayOpen, checkTrayScroll, localSearch]);
+  }, [checkTrayScroll]);
+
+  // 🚀 NEW: Auto-scroll video tray to focused video
+  useEffect(() => {
+    if (!videoTrayRef.current || !focusedVideoId || !isVideoTrayOpen) return;
+    const timer = setTimeout(() => {
+        const activeBtn = videoTrayRef.current?.querySelector('[data-active-tab="true"]');
+        if (activeBtn) {
+            activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [focusedVideoId, isVideoTrayOpen, scrollToActiveCount]);
+
+  // 🚀 NEW: Auto-scroll inner tabs
+  useEffect(() => {
+    if (!tabBarRef.current || !activeTab) return;
+    const timer = setTimeout(() => {
+        const activeBtn = tabBarRef.current?.querySelector('[data-active-tab="true"]');
+        if (activeBtn) {
+            activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [activeTab, scrollToActiveCount]);
 
 
 
@@ -794,9 +825,11 @@ export const TikTokApp: React.FC<{
                     <button
                       key={video.id}
                       data-is-match={isMatch}
+                      data-active-tab={focusedVideoId === video.id}
                       onClick={() => { 
                         if (focusedVideoId === video.id) setFocusedVideoId(null);
                         else setFocusedVideoId(video.id); 
+                        triggerScrollToActive(); // Trigger scroll to active
                       }}
                       className={`shrink-0 flex items-center gap-3 px-4 py-2 rounded-xl border transition-all relative ${
                         focusedVideoId === video.id 
@@ -1142,7 +1175,7 @@ export const TikTokApp: React.FC<{
                       const isActive = activeTab === 'original';
                       return (
                         <button 
-                          onClick={() => setActiveTab('original')} 
+                          onClick={() => { setActiveTab('original'); triggerScrollToActive(); }} 
                           data-active-tab={isActive || undefined}
                           data-is-match={isTranscriptionMatch}
                           className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all ${
@@ -1387,7 +1420,12 @@ export const TikTokApp: React.FC<{
                 )}
 
                 {/* CONTENT AREA (EDITOR + SCRATCHPAD) */}
-                <div ref={splitContainerRef} className="flex-1 flex min-h-0 gap-2 overflow-hidden animate-fadeIn">
+                <div 
+                    ref={splitContainerRef} 
+                    onFocusCapture={triggerScrollToActive}
+                    onClickCapture={triggerScrollToActive}
+                    className="flex-1 flex min-h-0 gap-2 overflow-hidden animate-fadeIn"
+                >
                   <div 
                     className="flex-1 min-h-0 overflow-hidden bg-zinc-50 dark:bg-[#131314] rounded-xl border border-zinc-200 dark:border-zinc-800 scroll-smooth"
                     style={isTikTokPizarronOpen ? { width: `${splitRatio * 100}%`, flex: 'none' } : { flex: 1 }}
