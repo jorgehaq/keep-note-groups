@@ -113,11 +113,12 @@ const blockMarkupField = StateField.define<RangeSet<Decoration>>({
             const text = line.text;
             
             // 1. Code Blocks
-            if (text.startsWith('```') && (text.trimEnd() !== '```' ? /^```\w*$/.test(text.trimEnd()) : text.trimEnd() === '```')) {
+            const trimmedText = text.trim();
+            if (trimmedText.startsWith('```')) {
                 const openLine = lineNum;
                 let closeLine = -1;
                 for (let s = openLine + 1; s <= totalLines; s++) {
-                    if (doc.line(s).text.trimEnd() === '```') { closeLine = s; break; }
+                    if (doc.line(s).text.trim() === '```') { closeLine = s; break; }
                 }
                 if (closeLine > 0) {
                     const openObj = doc.line(openLine);
@@ -345,10 +346,10 @@ const KNOWN_LANGS = new Set(['bash','sh','zsh','javascript','js','typescript','t
  */
 const trimCodeBlocks = (text: string) => {
     // Busca bloques ```lang\nCONTENIDO\n+``` y quita los \n extras del final del contenido
-    return text.replace(/(^|\n)```(\w*)\n([\s\S]*?)(\n+)```/g, (match, prefix, lang, code, newlines) => {
+    return text.replace(/(^|\n)([ \t]*```[^\n]*)\n([\s\S]*?)(\n+)[ \t]*```/g, (match, prefix, opening, code, newlines) => {
         // Mantenemos solo un salto de línea antes del ``` de cierre
         const fence = '```';
-        return prefix + fence + lang + '\n' + code.trimEnd() + '\n' + fence;
+        return prefix + opening + '\n' + code.trimEnd() + '\n' + fence;
     });
 };
 
