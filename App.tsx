@@ -717,7 +717,7 @@ function App() {
     const title = prompt('Nombre del nuevo grupo (ej. "Trabajo", "Ideas"):');
     if (!title || !session) return;
     try {
-      const { data: groupData, error: groupError } = await supabase.from('groups').insert([{ name: title.slice(0, 15), user_id: session.user.id }]).select().single();
+      const { data: groupData, error: groupError } = await supabase.from('groups').insert([{ name: title.trim(), user_id: session.user.id }]).select().single();
       if (groupError) throw groupError;
 
       const { data: noteData, error: noteError } = await supabase.from('notes').insert([{ title: '', content: '', group_id: groupData.id, user_id: session.user.id, position: 0 }]).select().single();
