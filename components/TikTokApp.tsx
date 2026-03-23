@@ -751,9 +751,7 @@ export const TikTokApp: React.FC<{
               </button>
 
               {/* Maximize */}
-              <button onClick={() => setIsTikTokMaximized(!isTikTokMaximized)} className="hidden md:flex h-9 p-2 bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all">
-                {isTikTokMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-              </button>
+
 
               {/* Sort */}
               <div className="relative" ref={sortMenuRef}>
@@ -956,6 +954,15 @@ export const TikTokApp: React.FC<{
                     title={isZenMode ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
                   >
                     <Wind size={13} />
+                  </button>
+
+                  {/* Botón Maximizar/Minimizar */}
+                  <button 
+                    onClick={() => setIsTikTokMaximized(!isTikTokMaximized)} 
+                    className={`hidden md:flex p-2 rounded-xl border transition-all ${isTikTokMaximized ? 'bg-[#EE1D52] border-[#EE1D52]/80 text-white font-bold shadow-lg shadow-[#EE1D52]/20' : 'text-zinc-500 border-zinc-800 hover:border-[#EE1D52]/30'}`}
+                    title={isTikTokMaximized ? "Minimizar" : "Maximizar"}
+                  >
+                    {isTikTokMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
                   </button>
 
                   {showLineNumbers && onToggleLineNumbers && (

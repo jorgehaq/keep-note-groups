@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Archive, ChevronUp, ChevronLeft, ChevronRight, Trash2, Check, Pin, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash, Sparkles, FileText, PenLine, ArrowUpRight, GitBranch, Plus, Wind, ListPlus, History, Calendar } from 'lucide-react';
+import { Archive, ChevronUp, ChevronLeft, ChevronRight, Trash2, Check, Pin, Maximize2, Minimize2, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash, Sparkles, FileText, PenLine, ArrowUpRight, GitBranch, Plus, Wind, ListPlus, History, Calendar } from 'lucide-react';
 import { Note, NoteFont } from '../types';
 import { SmartNotesEditor, SmartNotesEditorRef } from '../src/components/editor/SmartNotesEditor';
 import { ChecklistEditor, ChecklistEditorRef, parseMarkdownToChecklist, serializeChecklistToMarkdown, serializeChecklistToPlainMarkdown } from '../src/components/editor/ChecklistEditor';
@@ -541,6 +541,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       isNotesPizarronOpen, setIsNotesPizarronOpen,
       notesSplitRatio, setNotesSplitRatio,
       isArchiveOpenByApp, setArchiveOpenByApp,
+      isMaximized, setIsMaximized,
       globalTasks
     } = useUIStore();
 
@@ -1012,6 +1013,19 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             title={useUIStore.getState().isZenModeByApp['notes'] ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
           >
             <Wind size={13} />
+          </button>
+
+          {/* Botón Maximizar/Minimizar */}
+          <button
+            onClick={(e) => { e.stopPropagation(); setIsMaximized(!isMaximized); }}
+            className={`hidden md:flex p-2 rounded-xl border transition-all ${
+              isMaximized
+                ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
+                : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
+            }`}
+            title={isMaximized ? "Minimizar" : "Maximizar"}
+          >
+            {isMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
           </button>
 
           {showLineNumbers && onToggleLineNumbers && (

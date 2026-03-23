@@ -1755,14 +1755,7 @@ function App() {
                                  <span className="text-xs font-bold">{activeGroup.notes.filter(n => !n.parent_note_id).length}</span>
                               </button>
 
-                              {/* Botón Maximizar/Minimizar */}
-                             <button
-                               onClick={() => setIsMaximized(!isMaximized)}
-                               className="hidden md:flex h-9 p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all active:scale-95 shrink-0"
-                               title={isMaximized ? "Minimizar" : "Maximizar"}
-                             >
-                               {isMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-                             </button>
+
                               <div className="relative" ref={sortMenuRef}>
                                <button 
                                    onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} 

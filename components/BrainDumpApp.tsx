@@ -842,9 +842,7 @@ export const BrainDumpApp: React.FC<{
                             </button>
 
                             {/* 3. Maximize */}
-                            <button onClick={() => setIsBraindumpMaximized(!isBraindumpMaximized)} className="hidden md:flex h-9 p-2 bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all">
-                                {isBraindumpMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-                            </button>
+
 
                             {/* 4. Sort */}
                             <div className="relative" ref={sortMenuRef}>
@@ -1048,6 +1046,14 @@ export const BrainDumpApp: React.FC<{
                                         title={isZenMode ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
                                     >
                                         <Wind size={13} />
+                                    </button>
+
+                                    <button 
+                                        onClick={() => setIsBraindumpMaximized(!isBraindumpMaximized)} 
+                                        className={`hidden md:flex p-2 rounded-xl border transition-all ${isBraindumpMaximized ? 'bg-amber-500 border-amber-400/80 text-amber-950 font-bold shadow-lg shadow-amber-500/20' : 'text-zinc-500 border-zinc-800 hover:border-amber-500/30'}`}
+                                        title={isBraindumpMaximized ? "Minimizar" : "Maximizar"}
+                                    >
+                                        {isBraindumpMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
                                     </button>
                                      {showLineNumbers && onToggleLineNumbers && (
                                          <button
