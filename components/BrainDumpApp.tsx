@@ -86,6 +86,7 @@ const SummaryTabContent: React.FC<{
         </div>
         <div className="px-4 py-3 min-w-0">
           <SmartNotesEditor
+            key={`summary_${summary.id}`}
             noteId={`summary_${summary.id}`}
             initialContent={summary.content || ''}
             onChange={(text) => updateContent(summary.id, text)}
@@ -104,6 +105,7 @@ const SummaryTabContent: React.FC<{
           </div>
           <div className={`flex-1 p-4 overflow-y-auto cursor-text`}>
             <SmartNotesEditor
+              key={`scratch_summary_${summary.id}`}
               ref={scratchRef}
               noteId={`scratch_${summary.id}`}
               initialContent={localScratch}
@@ -278,6 +280,7 @@ const SubnoteTabContent: React.FC<{
             className="p-4 h-full overflow-y-auto cursor-text note-editor-scroll"
         >
             <SmartNotesEditor
+                key={dump.id}
                 ref={editorRef}
                 noteId={dump.id}
                 initialContent={dump.content || ''}
@@ -317,6 +320,7 @@ const SubnoteTabContent: React.FC<{
             className="flex-1 p-4 overflow-y-auto cursor-text note-editor-scroll"
           >
             <SmartNotesEditor
+              key={`scratch_note_${dump.id}`}
               ref={scratchRef}
               noteId={`scratch_dump_${dump.id}`}
               initialContent={dump.scratchpad || ''}
@@ -597,18 +601,29 @@ export const BrainDumpApp: React.FC<{
         }
     };
 
+    // 🚀 SCROLL FIX: More robust scroll checking and mount-time recalibration
     useEffect(() => {
         const container = scrollContainerRef.current;
         if (container) {
             checkScroll();
+            // Recalculate after children have potentially finished rendering
+            const timer = setTimeout(checkScroll, 300);
+            
             container.addEventListener('scroll', checkScroll);
             window.addEventListener('resize', checkScroll);
+            
+            // Also observe resizing of the container itself
+            const ro = new ResizeObserver(checkScroll);
+            ro.observe(container);
+
             return () => {
+                clearTimeout(timer);
                 container.removeEventListener('scroll', checkScroll);
                 window.removeEventListener('resize', checkScroll);
+                ro.disconnect();
             };
         }
-    }, [dumps, checkScroll, searchQuery]);
+    }, [dumps.length, checkScroll, searchQuery, isDumpTrayOpen]);
 
     // --- HANDLERS ---
     const autoSave = (id: string, updates: Partial<BrainDump>) => {
@@ -850,16 +865,14 @@ export const BrainDumpApp: React.FC<{
                 <div className="bg-zinc-50 dark:bg-[#13131A] shrink-0 animate-slideDown group/tray border-b border-zinc-200 dark:border-transparent">
                     <div className="max-w-6xl mx-auto relative px-0">
                         {/* Flecha Izquierda */}
-                        {canScrollLeft && (
-                            <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-zinc-50 dark:from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none transition-opacity duration-150 ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`}>
-                                <button 
-                                    onClick={() => scrollTabs('left')} 
-                                    className={`p-1 rounded-full bg-zinc-200 dark:bg-zinc-800 shadow-md text-zinc-600 dark:text-zinc-400 hover:text-amber-600 transition-all active:scale-95 border ${hasSearchMatchLeft ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-300 dark:border-zinc-700'} ml-1 ${canScrollLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
-                                >
-                                    <ChevronLeft size={14} />
-                                </button>
-                            </div>
-                        )}
+                        <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-zinc-50 dark:from-[#13131A] to-transparent z-10 flex items-center justify-start pointer-events-none transition-opacity duration-150 ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`}>
+                            <button 
+                                onClick={() => scrollTabs('left')} 
+                                className={`p-1 rounded-full bg-zinc-200 dark:bg-zinc-800 shadow-md text-zinc-600 dark:text-zinc-400 hover:text-amber-600 transition-all active:scale-95 border ${hasSearchMatchLeft ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-300 dark:border-zinc-700'} ml-1 ${canScrollLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                            >
+                                <ChevronLeft size={14} />
+                            </button>
+                        </div>
                         <div 
                             ref={scrollContainerRef}
                             onScroll={checkScroll}
@@ -911,16 +924,14 @@ export const BrainDumpApp: React.FC<{
                             )}
                         </div>
                         {/* Flecha Derecha */}
-                        {canScrollRight && (
-                            <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-zinc-50 dark:from-[#13131A] to-transparent z-10 flex items-center justify-end pointer-events-none transition-opacity duration-150 ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}>
-                                <button 
-                                    onClick={() => scrollTabs('right')} 
-                                    className={`p-1 rounded-full bg-zinc-200 dark:bg-zinc-800 shadow-md text-zinc-600 dark:text-zinc-400 hover:text-amber-600 transition-all active:scale-95 border ${hasSearchMatchRight ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-300 dark:border-zinc-700'} mr-1 ${canScrollRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
-                                >
-                                    <ChevronRight size={14} />
-                                </button>
-                            </div>
-                        )}
+                        <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-zinc-50 dark:from-[#13131A] to-transparent z-10 flex items-center justify-end pointer-events-none transition-opacity duration-150 ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}>
+                            <button 
+                                onClick={() => scrollTabs('right')} 
+                                className={`p-1 rounded-full bg-zinc-200 dark:bg-zinc-800 shadow-md text-zinc-600 dark:text-zinc-400 hover:text-amber-600 transition-all active:scale-95 border ${hasSearchMatchRight ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-300 dark:border-zinc-700'} mr-1 ${canScrollRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                            >
+                                <ChevronRight size={14} />
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -940,10 +951,24 @@ export const BrainDumpApp: React.FC<{
                                 <div className="flex items-center gap-3 flex-1 overflow-hidden pl-1 min-w-0">
                                     <div className="flex flex-col min-w-0 justify-center w-full">
                                         <div className="relative flex w-full">
+                                            {/* GHOST layer for highlighting matches in title */}
+                                            <div className="absolute inset-0 w-full pointer-events-none text-lg font-bold p-0 min-h-[1.5em] flex items-center overflow-hidden whitespace-nowrap">
+                                                <span className="truncate">
+                                                    {searchQuery ? highlightText(tempTitle, searchQuery) : ""}
+                                                </span>
+                                            </div>
                                             <input 
                                                 type="text"
                                                 value={tempTitle}
-                                                onChange={(e) => setTempTitle(e.target.value)}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setTempTitle(val);
+                                                    // Sync title debounce (800ms) - matches AccordionItem
+                                                    if (saveTimeoutRef.current[`title_${displayDump.id}`]) clearTimeout(saveTimeoutRef.current[`title_${displayDump.id}`]);
+                                                    saveTimeoutRef.current[`title_${displayDump.id}`] = setTimeout(() => {
+                                                        autoSave(displayDump.id, { title: val });
+                                                    }, 800);
+                                                }}
                                                 onBlur={() => {
                                                     if (tempTitle !== (displayDump?.title || '')) {
                                                         autoSave(displayDump.id, { title: tempTitle });
@@ -957,7 +982,7 @@ export const BrainDumpApp: React.FC<{
                                                     }
                                                 }}
                                                 placeholder="Nombre del pizarrón..."
-                                                className="w-full bg-transparent border-none outline-none text-lg font-bold text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400 p-0 truncate"
+                                                className={`w-full bg-transparent border-none outline-none text-lg font-bold placeholder:text-zinc-400 p-0 truncate transition-colors ${searchQuery && tempTitle.toLowerCase().includes(searchQuery.toLowerCase()) ? 'text-transparent caret-zinc-800 dark:caret-[#CCCCCC]' : 'text-zinc-800 dark:text-zinc-100'}`}
                                             />
                                         </div>
                                     </div>
