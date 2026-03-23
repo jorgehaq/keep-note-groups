@@ -37,6 +37,7 @@ interface AccordionItemProps {
   syncStatus?: 'idle' | 'saving' | 'saved';
   groupNotes?: Note[];
   allSummaries?: any[];
+  triggerGlobalScrollToActive?: () => void;
 }
 
 const formatCleanDate = (isoString?: string) => {
@@ -109,7 +110,8 @@ const SummaryTabContent: React.FC<{
   showScratch: boolean;
   setShowScratch: (val: boolean | ((v: boolean) => boolean)) => void;
   onDelete: (id: string) => void;
-}> = ({ summary, noteFont, noteFontSize, noteLineHeight, showLineNumbers, searchQuery, onDelete, onPromote, updateScratchpad, updateContent, showScratch, setShowScratch }) => {
+  triggerScrollToActive: () => void;
+}> = ({ summary, noteFont, noteFontSize, noteLineHeight, showLineNumbers, searchQuery, onDelete, onPromote, updateScratchpad, updateContent, showScratch, setShowScratch, triggerScrollToActive }) => {
   const scratchRef = useRef<SmartNotesEditorRef>(null);
   const [localScratch, setLocalScratch] = useState(summary.scratchpad || '');
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -136,7 +138,11 @@ const SummaryTabContent: React.FC<{
   };
 
   return (
-    <div className="flex flex-col gap-3 flex-1 min-h-0">
+    <div 
+        onFocusCapture={triggerScrollToActive}
+        onClickCapture={triggerScrollToActive}
+        className="flex flex-col gap-3 flex-1 min-h-0"
+    >
       <div className={`bg-violet-50 dark:bg-[#131314] rounded-2xl border ${searchQuery?.trim() && summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ? 'border-amber-500' : 'border-violet-200 dark:border-violet-500/20'}`}>
         <div className="flex items-center justify-between px-4 py-2.5 bg-violet-100/60 dark:bg-violet-500/5 border-b border-violet-200 dark:border-violet-500/10">
           <div className="flex items-center gap-2 min-w-0">
@@ -386,7 +392,8 @@ const SubnoteTabContent: React.FC<{
   onUpdateContent,
   editorRef,
   scratchRef,
-  checklistRef
+  checklistRef,
+  triggerScrollToActive
 }) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const borderColor = note.parent_note_id ? 'border-emerald-500/30' : 'border-zinc-200 dark:border-[#2D2D42]';
@@ -394,6 +401,8 @@ const SubnoteTabContent: React.FC<{
   return (
     <div
       ref={splitContainerRef}
+      onFocusCapture={triggerScrollToActive}
+      onClickCapture={triggerScrollToActive}
       className={`flex-1 flex min-h-0 ${isMobile ? 'flex-col' : 'flex-row'} gap-2 animate-fadeIn`}
     >
       <div
@@ -502,7 +511,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   session,
   syncStatus: propSyncStatus = 'idle',
   allSummaries = [],
-  groupNotes = []
+  groupNotes = [],
+  triggerGlobalScrollToActive
 }) => {
 
   const checkNoteMatch = (n: Note, q: string, all: Note[], sums: any[]): boolean => {
@@ -643,17 +653,25 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   const noteScratchRef = useRef<SmartNotesEditorRef>(null);
   const scratchDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const videoSaveTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
+  const [scrollToActiveCount, setScrollToActiveCount] = useState(0);
+  const triggerScrollToActive = () => {
+    setScrollToActiveCount(prev => prev + 1);
+    if (triggerGlobalScrollToActive) triggerGlobalScrollToActive();
+  };
 
   const tabBarRef = useRef<HTMLDivElement>(null);
 
   // useEffect que scrollea al tab activo tras cada cambio
   useEffect(() => {
-    if (!tabBarRef.current) return;
-    const activeBtn = tabBarRef.current.querySelector('[data-active-tab="true"]');
-    if (activeBtn) {
-      activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    }
-  }, [activeTab]);
+    if (!tabBarRef.current || !activeTab) return;
+    const timer = setTimeout(() => {
+        const activeBtn = tabBarRef.current?.querySelector('[data-active-tab="true"]');
+        if (activeBtn) {
+            activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [activeTab, scrollToActiveCount]);
 
   // ── AI INPUT COLAPSABLE ────────────────────────────────────────────────────
   const [showAIInput, setShowAIInput] = useState(false);
@@ -706,11 +724,21 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
     const container = tabBarRef.current;
     if (container) {
       checkScroll();
+
+      // Recalculate after render
+      const timer = setTimeout(checkScroll, 300);
+
       container.addEventListener('scroll', checkScroll);
       window.addEventListener('resize', checkScroll);
+      
+      const ro = new ResizeObserver(checkScroll);
+      ro.observe(container);
+
       return () => {
+        clearTimeout(timer);
         container.removeEventListener('scroll', checkScroll);
         window.removeEventListener('resize', checkScroll);
+        ro.disconnect();
       };
     }
   }, [checkScroll]);
@@ -1345,12 +1373,12 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                     searchQuery={searchQuery}
                     showScratch={showNoteScratch}
                     setShowScratch={setShowNoteScratch}
+                    triggerScrollToActive={triggerScrollToActive}
                   />
                 </div>
               );
             }
-
-            // Current target note context
+            
             const currentNote: Note = activeSubnote ? activeSubnote : {
               ...note,
               id: displayNoteId,
@@ -1389,6 +1417,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 editorRef={editorRef}
                 scratchRef={noteScratchRef}
                 checklistRef={checklistRef}
+                triggerScrollToActive={triggerScrollToActive}
               />
             );
           })()}

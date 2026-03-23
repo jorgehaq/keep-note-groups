@@ -102,6 +102,9 @@ function App() {
   const focusedNoteId = activeGroupId ? (focusedNoteByGroup[activeGroupId] ?? null) : null;
   const activeNoteId = activeGroupId ? (lastActiveNoteByGroup[activeGroupId] ?? null) : null;
 
+  const [scrollToActiveCount, setScrollToActiveCount] = useState(0);
+  const triggerGlobalScrollToActive = () => setScrollToActiveCount(prev => prev + 1);
+
   // Preservar estado de las notas una vez montadas
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -197,10 +200,34 @@ function App() {
   };
 
   useEffect(() => {
-    checkScroll();
-    window.addEventListener('resize', checkScroll);
-    return () => window.removeEventListener('resize', checkScroll);
-  }, [groups, activeGroupId, isGlobalNoteTrayOpen, globalView, currentSearchQuery]);
+    const container = scrollContainerRef.current;
+    if (container) {
+      checkScroll();
+      container.addEventListener('scroll', checkScroll);
+      window.addEventListener('resize', checkScroll);
+      
+      const ro = new ResizeObserver(checkScroll);
+      ro.observe(container);
+
+      return () => {
+        container.removeEventListener('scroll', checkScroll);
+        window.removeEventListener('resize', checkScroll);
+        ro.disconnect();
+      };
+    }
+  }, []);
+
+  // 🚀 NEW: Auto-scroll global tray to focused note
+  useEffect(() => {
+    if (!scrollContainerRef.current || !focusedNoteId || !isGlobalNoteTrayOpen) return;
+    const timer = setTimeout(() => {
+        const activeBtn = scrollContainerRef.current?.querySelector('[data-active-tab="true"]');
+        if (activeBtn) {
+            activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [focusedNoteId, isGlobalNoteTrayOpen, scrollToActiveCount]);
 
   const getNewOrderIndex = () => {
     if (!activeGroupId) return 1;
@@ -970,7 +997,7 @@ function App() {
 
   const updateNote = async (noteId: string, updates: Partial<Note>) => {
     const shouldPreserveScroll = updates.is_pinned !== undefined;
-    const savedScrollTop = shouldPreserveScroll ? mainRef.current?.scrollTop : undefined;
+    const savedScrollTop = mainRef.current?.scrollTop;
 
     const dbUpdates: any = {};
     if (updates.title !== undefined) dbUpdates.title = updates.title;
@@ -1933,6 +1960,7 @@ function App() {
                             <button
                               key={note.id}
                               data-is-match={isSearchActive}
+                              data-active-tab={isFocused}
                               onClick={() => {
                                 const isNowFocused = focusedNoteId !== note.id;
                                 const currentOpen = openNotesByGroup[activeGroup.id] || [];
@@ -2018,7 +2046,6 @@ function App() {
                             .filter(n => (mountedNoteIds.has(n.id) || n.id === activeNoteId) && !n.parent_note_id && n.status !== 'history')
                             .map(note => {
                               const isVisible = note.id === activeNoteId;
-                              const isOpen = (openNotesByGroup[activeGroup.id] || []).includes(note.id);
                               return (
                                 <div
                                   key={note.id}
@@ -2027,7 +2054,7 @@ function App() {
                                   style={{ display: isVisible ? 'flex' : 'none' }}
                                 >
                                   <AccordionItem
-                                    note={{ ...note, isOpen }}
+                                    note={note}
                                     searchQuery={currentSearchQuery}
                                     allSummaries={allGroupSummaries}
                                     groupNotes={activeGroup.notes}
@@ -2062,9 +2089,10 @@ function App() {
                                     noteFont={noteFont}
                                     noteFontSize={noteFontSize}
                                     noteLineHeight={noteLineHeight}
-                                     onCreateNote={(c, t, p, d) => createNoteFromAI(c, t, activeGroup?.id, d as number, p as string)}
+                                    onCreateNote={(c, t, p, d) => createNoteFromAI(c, t, activeGroup?.id, d as number, p as string)}
                                     session={session}
                                     syncStatus={noteSaveStatus[note.id] || 'idle'}
+                                    triggerGlobalScrollToActive={triggerGlobalScrollToActive}
                                   />
                                 </div>
                               );
