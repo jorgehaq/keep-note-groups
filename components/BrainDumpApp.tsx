@@ -354,6 +354,9 @@ export const BrainDumpApp: React.FC<{
 }> = ({ session, noteFont = 'sans', noteFontSize = 'medium', noteLineHeight = 'standard', searchQuery, allSummaries = [], groups = [], onOpenNote, setSearchQuery, showLineNumbers = false, onToggleLineNumbers }) => {
     
     // --- STORE & HOOKS ---
+    const [scrollToActiveCount, setScrollToActiveCount] = useState(0);
+    const triggerScrollToActive = () => setScrollToActiveCount(prev => prev + 1);
+
     const { 
         isBraindumpMaximized, setIsBraindumpMaximized, 
         brainDumps: dumps, setBrainDumps: setDumps, 
@@ -462,10 +465,16 @@ export const BrainDumpApp: React.FC<{
 
 
     useEffect(() => {
-      if (!tabBarRef.current) return;
-      const activeBtn = tabBarRef.current.querySelector('[data-active-tab="true"]');
-      if (activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    }, [activeTab]);
+        if (!tabBarRef.current || !activeTab) return;
+        // Small delay to ensure DOM is updated
+        const timer = setTimeout(() => {
+            const activeBtn = tabBarRef.current?.querySelector('[data-active-tab="true"]');
+            if (activeBtn) {
+                activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }, 100);
+        return () => clearTimeout(timer);
+    }, [activeTab, scrollToActiveCount]);
 
     const { 
         summaries: aiSummaries, deleteSummary, updateScratchpad, 
@@ -624,6 +633,22 @@ export const BrainDumpApp: React.FC<{
             };
         }
     }, [dumps.length, checkScroll, searchQuery, isDumpTrayOpen]);
+
+    // 🚀 NEW: Auto-scroll focused tab into view
+    useEffect(() => {
+        if (!scrollContainerRef.current || !focusedDumpId || !isDumpTrayOpen) return;
+        
+        // Small delay to ensure the DOM is updated and layout is ready
+        const timer = setTimeout(() => {
+            const container = scrollContainerRef.current;
+            if (!container) return;
+            const activeBtn = container.querySelector('[data-active-tab="true"]');
+            if (activeBtn) {
+                activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }, 150); // Increased delay for stability
+        return () => clearTimeout(timer);
+    }, [focusedDumpId, isDumpTrayOpen, scrollToActiveCount]);
 
     // --- HANDLERS ---
     const autoSave = (id: string, updates: Partial<BrainDump>) => {
@@ -887,6 +912,7 @@ export const BrainDumpApp: React.FC<{
                                         <button
                                             key={p.id}
                                             data-is-match={isMatch}
+                                            data-active-tab={focusedDumpId === p.id}
                                             onClick={() => {
                                                 if (focusedDumpId === p.id) setFocusedDumpId(null);
                                                 else setFocusedDumpId(p.id);
@@ -942,7 +968,9 @@ export const BrainDumpApp: React.FC<{
                     {focusedDumpId && displayDump && (() => {
                         const isDisplayDumpMatch = searchQuery?.trim() && checkPizarronSearchMatch(displayDump, searchQuery.trim(), dumps, allSummaries);
                         return (
-                            <div className={`flex-1 flex flex-col min-h-0 bg-white dark:bg-[#1A1A24] rounded-2xl border overflow-hidden animate-fadeIn transition-all duration-300 ${
+                            <div 
+                                onClickCapture={triggerScrollToActive}
+                                className={`flex-1 flex flex-col min-h-0 bg-white dark:bg-[#1A1A24] rounded-2xl border overflow-hidden animate-fadeIn transition-all duration-300 ${
                                 isDisplayDumpMatch
                                     ? 'border-amber-500 ring-2 ring-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
                                     : 'shadow-lg border-zinc-200 dark:border-[#2D2D42] focus-within:ring-2 focus-within:ring-amber-500/50 focus-within:border-amber-500/50'
