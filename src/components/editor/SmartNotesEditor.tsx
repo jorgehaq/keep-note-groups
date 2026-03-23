@@ -2128,7 +2128,38 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         clipboardExtension, 
         dragDropExtension, 
         EditorView.lineWrapping, 
-        EditorView.editable.of(!readOnly)
+        EditorView.editable.of(!readOnly),
+        EditorView.updateListener.of((update) => {
+            if (update.docChanged && update.selectionSet) {
+                const isUserType = update.transactions.some(tr => tr.isUserEvent('input') || tr.isUserEvent('keyboard') || tr.isUserEvent('delete'));
+                if (isUserType) {
+                    const head = update.state.selection.main.head;
+                    requestAnimationFrame(() => {
+                        const view = update.view;
+                        if (!view) return;
+                        // Forzar scroll nativo de CodeMirror por si aporta estabilidad
+                        view.dispatch({ effects: EditorView.scrollIntoView(head, { y: "nearest", yMargin: 80 }) });
+                        
+                        // Forzar scroll en el contenedor principal outer-scroll
+                        const coords = view.coordsAtPos(head);
+                        if (!coords) return;
+                        
+                        const scrollEl = document.querySelector('.note-editor-scroll') as HTMLElement;
+                        if (scrollEl) {
+                            const parentRect = scrollEl.getBoundingClientRect();
+                            const margin = 100; // Margen de respiro para que el cursor no quede al ras de la pantalla
+                            const midY = (coords.top + coords.bottom) / 2;
+                            
+                            if (midY > parentRect.bottom - margin) {
+                                scrollEl.scrollBy({ top: midY - parentRect.bottom + margin, behavior: 'auto' });
+                            } else if (midY < parentRect.top + margin) {
+                                scrollEl.scrollBy({ top: midY - parentRect.top - margin, behavior: 'auto' });
+                            }
+                        }
+                    });
+                }
+            }
+        })
     ], [
         showLineNumbers, 
         searchExtension,
