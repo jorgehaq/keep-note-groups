@@ -1389,10 +1389,16 @@ export const TikTokApp: React.FC<{
                 {/* CONTENT AREA (EDITOR + SCRATCHPAD) */}
                 <div ref={splitContainerRef} className="flex-1 flex min-h-0 gap-2 overflow-hidden animate-fadeIn">
                   <div 
-                    className="flex-1 min-h-0 overflow-y-auto bg-zinc-50 dark:bg-zinc-900/20 rounded-xl border border-zinc-200 dark:border-zinc-800 scroll-smooth"
+                    className="flex-1 min-h-0 overflow-hidden bg-zinc-50 dark:bg-zinc-900/20 rounded-xl border border-zinc-200 dark:border-zinc-800 scroll-smooth"
                     style={isTikTokPizarronOpen ? { width: `${splitRatio * 100}%`, flex: 'none' } : { flex: 1 }}
                   >
-                    <div className="p-4 h-full">
+                    <div 
+                      className="p-4 h-full overflow-y-auto cursor-text note-editor-scroll"
+                      onClick={(e) => {
+                        if ((e.target as HTMLElement).closest('.cm-panel, .cm-search')) return;
+                        editorRef.current?.focus();
+                      }}
+                    >
                       {activeTab === 'original' && (
                         <SmartNotesEditor 
                           ref={editorRef}
@@ -1412,7 +1418,7 @@ export const TikTokApp: React.FC<{
                             initialContent={summary.content || ""}
                             onChange={(c) => updateSummaryContent(summary.id, c)}
                             searchQuery={searchQuery}
-                          showLineNumbers={showLineNumbers}
+                            showLineNumbers={showLineNumbers}
                           />
                         ) : null;
                       })()}
@@ -1425,7 +1431,7 @@ export const TikTokApp: React.FC<{
                             initialContent={note.content || ""}
                             onChange={(c) => updateSubnote(note.id, { content: c })}
                             searchQuery={searchQuery}
-                          showLineNumbers={showLineNumbers}
+                            showLineNumbers={showLineNumbers}
                           />
                         ) : null;
                       })()}
@@ -1445,12 +1451,18 @@ export const TikTokApp: React.FC<{
 
                   {/* Scratchpad (Pizarrón) */}
                   {isTikTokPizarronOpen && (
-                    <div className="flex-1 min-h-0 overflow-y-auto bg-violet-50/10 dark:bg-violet-900/5 rounded-xl border border-violet-200/50 dark:border-violet-900/30 animate-fadeIn flex flex-col">
+                    <div className="flex-1 min-h-0 overflow-hidden bg-violet-50/10 dark:bg-violet-900/5 rounded-xl border border-violet-200/50 dark:border-violet-900/30 animate-fadeIn flex flex-col">
                       <div className="px-3 py-2 border-b border-violet-200/20 flex items-center gap-2">
                         <PenLine size={11} className="text-violet-400" />
                         <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest">Pizarrón</span>
                       </div>
-                      <div className="flex-1 p-4">
+                      <div 
+                        className="flex-1 p-4 overflow-y-auto cursor-text note-editor-scroll"
+                        onClick={(e) => {
+                          if ((e.target as HTMLElement).closest('.cm-panel, .cm-search')) return;
+                          scratchRef.current?.focus();
+                        }}
+                      >
                         {activeTab === 'original' && (
                           <SmartNotesEditor 
                             ref={scratchRef}
@@ -1458,7 +1470,7 @@ export const TikTokApp: React.FC<{
                             initialContent={focusedVideo.scratchpad || ""}
                             onChange={(c) => debouncedUpdateVideo(focusedVideo.id, { scratchpad: c })}
                             searchQuery={searchQuery}
-                          showLineNumbers={showLineNumbers}
+                            showLineNumbers={showLineNumbers}
                           />
                         )}
                         {activeTab.startsWith('summary_') && (() => {
@@ -1471,7 +1483,7 @@ export const TikTokApp: React.FC<{
                               initialContent={summary.scratchpad || ""}
                               onChange={(c) => updateSummaryScratchpad(summary.id, c)}
                               searchQuery={searchQuery}
-                          showLineNumbers={showLineNumbers}
+                              showLineNumbers={showLineNumbers}
                             />
                           ) : null;
                         })()}

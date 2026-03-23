@@ -2144,16 +2144,32 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                         const coords = view.coordsAtPos(head);
                         if (!coords) return;
                         
-                        const scrollEl = document.querySelector('.note-editor-scroll') as HTMLElement;
+                        const getScrollParent = (el: HTMLElement | null): HTMLElement | null => {
+                            let cur = el?.parentElement ?? null;
+                            while (cur && cur !== document.body) {
+                                const { overflow, overflowY } = window.getComputedStyle(cur);
+                                if (/auto|scroll/.test(overflow + overflowY) && cur.scrollHeight > cur.clientHeight) return cur;
+                                cur = cur.parentElement;
+                            }
+                            return document.documentElement;
+                        };
+                        
+                        const scrollEl = getScrollParent(view.dom);
                         if (scrollEl) {
-                            const parentRect = scrollEl.getBoundingClientRect();
+                            const parentRect = scrollEl === document.documentElement
+                                ? { top: 0, bottom: window.innerHeight }
+                                : scrollEl.getBoundingClientRect();
+                            
                             const margin = 100; // Margen de respiro para que el cursor no quede al ras de la pantalla
                             const midY = (coords.top + coords.bottom) / 2;
                             
+                            // Para document.documentElement se utiliza window.scrollBy
+                            const scroller = scrollEl === document.documentElement ? window : scrollEl;
+                            
                             if (midY > parentRect.bottom - margin) {
-                                scrollEl.scrollBy({ top: midY - parentRect.bottom + margin, behavior: 'auto' });
+                                scroller.scrollBy({ top: midY - parentRect.bottom + margin, behavior: 'auto' });
                             } else if (midY < parentRect.top + margin) {
-                                scrollEl.scrollBy({ top: midY - parentRect.top - margin, behavior: 'auto' });
+                                scroller.scrollBy({ top: midY - parentRect.top - margin, behavior: 'auto' });
                             }
                         }
                     });
