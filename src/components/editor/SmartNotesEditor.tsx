@@ -652,6 +652,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             whiteSpace: "pre-wrap !important",
             overflowWrap: "anywhere !important",
             wordBreak: "break-word !important",
+            textAlign: "justify !important",
             paddingBottom: "20px !important", // 🚀 ESPACIO DE RESPIRACIÓN: Ajustado a 20px según preferencia
         },
         "&.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important", borderLeftWidth: "2px !important" },
@@ -683,6 +684,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             borderLeft: "3px solid transparent",
             transition: "border-color 0.2s ease",
             overflowWrap: "anywhere !important",
+            textAlign: "justify !important",
         },
         ".cm-cursor-indicator-line": { 
             borderLeftColor: "#6366f1 !important"
