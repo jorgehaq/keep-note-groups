@@ -418,23 +418,26 @@ class TableHtmlWidget extends WidgetType {
                event.type === 'touchstart' || event.type === 'touchend' || event.type === 'dragstart';
     }
 }
-const cursorDotPlugin = ViewPlugin.fromClass(class {
-    decorations: RangeSet<Decoration>;
-    constructor(view: EditorView) { this.decorations = this.build(view); }
-    update(update: ViewUpdate) {
-        if (update.selectionSet || update.docChanged || update.focusChanged) {
-            this.decorations = this.build(update.view);
-        }
-    }
-    build(view: EditorView): RangeSet<Decoration> {
-        if (!view.hasFocus) return Decoration.none;
-        const pos = view.state.selection.main.head;
-        const line = view.state.doc.lineAt(pos);
-        return Decoration.set([
+const activeLineField = StateField.define<RangeSet<Decoration>>({
+    create(state) {
+        const pos = state.selection.main.head;
+        const line = state.doc.lineAt(pos);
+        return RangeSet.of([
             Decoration.line({ class: 'cm-cursor-indicator-line' }).range(line.from)
         ]);
-    }
-}, { decorations: v => v.decorations });
+    },
+    update(decos, tr) {
+        if (tr.selection || tr.docChanged) {
+            const pos = tr.state.selection.main.head;
+            const line = tr.state.doc.lineAt(pos);
+            return RangeSet.of([
+                Decoration.line({ class: 'cm-cursor-indicator-line' }).range(line.from)
+            ]);
+        }
+        return decos;
+    },
+    provide: f => EditorView.decorations.from(f)
+});
 
 const KNOWN_LANGS = new Set(['bash','sh','zsh','javascript','js','typescript','ts','python','py','css','html','json','sql','java','go','rust','c','cpp','jsx','tsx','yaml','yml','xml','ruby','rb','php','swift','kotlin','dart','lua','r','scala','perl','powershell','dockerfile','makefile','graphql','toml','ini','markdown','md','plaintext','text','diff']);
 
@@ -780,7 +783,6 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             lineHeight: lHeight, 
             paddingLeft: "12px !important", 
             borderLeft: "3px solid transparent",
-            transition: "border-color 0.2s ease",
             overflowWrap: "anywhere !important",
             textAlign: "justify !important",
         },
@@ -1404,6 +1406,13 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
             let scrollTimer: NodeJS.Timeout | null = null;
             const handleScroll = () => {
                 if (scrollTimer) clearTimeout(scrollTimer);
+                // 🚀 BUG FIX: No guardar scroll si el elemento está oculto (display: none)
+                // El browser resetea scrollTop a 0 cuando el contenedor se oculta, 
+                // provocando una sobreescritura errónea en localStorage.
+                if (!scrollEl || scrollEl.offsetParent === null || scrollEl.getBoundingClientRect().height === 0) {
+                    return;
+                }
+
                 scrollTimer = setTimeout(() => {
                     localStorage.setItem(`scroll-pos-${noteId}`, String(scrollEl.scrollTop));
                 }, 250);
@@ -1413,6 +1422,10 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
 
             // Guardar cleanup en ref para poder limpiar al desmontar
             (window as any)[`__scrollCleanup_${noteId}`] = () => {
+                // Intento final de guardado con la misma protección
+                if (scrollEl && scrollEl.offsetParent !== null && scrollEl.getBoundingClientRect().height > 0) {
+                    localStorage.setItem(`scroll-pos-${noteId}`, String(scrollEl.scrollTop));
+                }
                 scrollEl.removeEventListener('scroll', handleScroll);
                 if (scrollTimer) clearTimeout(scrollTimer);
             };
@@ -2222,6 +2235,15 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
     const searchExtension = useMemo(() => search({ top: false }), []);
     const visualMarkupPlugin = useMemo(() => visualMarkupPluginFactory(translationsMapRef, searchQueryRef), [noteId, searchQuery]);
 
+    const initialSelection = useMemo(() => {
+        const saved = localStorage.getItem(`cursor-pos-${noteId}`);
+        if (!saved) return undefined;
+        const pos = parseInt(saved, 10);
+        // Usar length de initialContent para clamping inicial
+        const safePos = Math.min(pos, initialContent.length);
+        return { anchor: safePos, head: safePos };
+    }, [noteId]);
+
     const extensions = useMemo(() => [
         // 🚀 MAGIA ANTI-HIJACKING: Prec.highest toma el control absoluto del evento
         Prec.highest(
@@ -2285,7 +2307,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         
         ...(showLineNumbers ? [lineNumbers()] : []),
         searchExtension, // 🚀 CORE FIX: Garantiza que el buscador es estable y persistente
-        cursorDotPlugin,
+        activeLineField,
         markdown({ base: markdownLanguage, codeLanguages: languages }),
         dynamicTheme,
         revealedLineField,
@@ -2453,6 +2475,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                 key={`${noteId}-${String(showLineNumbers)}`}
                 ref={editorRef} 
                 value={content} 
+                selection={initialSelection}
                 onChange={handleChange} 
                 onBlur={handleBlur} 
                 theme="none" 
