@@ -1969,7 +1969,7 @@ function App() {
                                   if (isOpen) toggleNote(activeGroup.id, note.id);
                                 }
                               }}
-                              className={`relative flex items-center justify-start gap-3 px-4 py-2 rounded-lg text-xs font-medium transition-all border shrink-0 ${
+                              className={`relative flex items-center justify-start gap-3 px-4 py-2 rounded-xl text-xs font-medium transition-all border shrink-0 active:scale-95 ${
                                 isSelected
                                   ? `bg-indigo-50/80 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-500/40 shadow-sm ${isSearchActive ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-[#FAFAFA] dark:ring-offset-[#13131A] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
                                   : isSearchActive
@@ -2099,9 +2099,9 @@ function App() {
                         </div>
                       ) : (
                         <div className="flex-1 flex flex-col overflow-y-auto hidden-scrollbar scroll-smooth">
-                          <div className={`${isMaximized ? 'max-w-full' : 'max-w-full md:max-w-6xl'} mx-auto w-full px-4 md:px-10 animate-fadeIn pb-10`}>
+                          <div className={`${isMaximized ? 'max-w-full' : 'max-w-full md:max-w-6xl'} mx-auto w-full px-4 md:px-10 animate-fadeIn`}>
                             {/* DASHBOARD (GRID) */}
-                            <div className={`grid ${isMaximized ? 'grid-cols-[repeat(auto-fit,340px)] w-full max-w-[2160px]' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl'} gap-6 justify-center mx-auto`}>
+                            <div className={`grid ${isMaximized ? 'grid-cols-[repeat(auto-fit,340px)] w-full max-w-[2160px]' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl'} gap-4 justify-center mx-auto`}>
 
 
                             {activeGroup.notes.filter(n => !n.parent_note_id && n.status !== 'history').map(note => {
@@ -2129,25 +2129,24 @@ function App() {
                                   </div>
                                   <div className="flex items-center justify-between pt-2 border-t border-zinc-50 dark:border-zinc-800/50 mt-auto">
                                       <span className="text-[10px] font-bold text-zinc-400">{new Date(note.created_at || '').toLocaleDateString()}</span>
-                                      <div className="flex items-center gap-2">
-                                          <button 
-                                            onClick={(e) => { e.stopPropagation(); updateNote(note.id, { is_pinned: !note.is_pinned }); }} 
-                                            className={`p-1.5 rounded-lg transition-all active:scale-95 hover:bg-amber-50 dark:hover:bg-amber-900/20 ${note.is_pinned ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-400 hover:text-amber-600'}`} 
-                                            title={note.is_pinned ? 'Quitar fijado' : 'Fijar nota'}
-                                          >
-                                            <Pin size={14} className={note.is_pinned ? 'fill-current' : ''} />
-                                          </button>
+                                          <div className="flex items-center gap-2">
+                                              <button 
+                                                onClick={(e) => { e.stopPropagation(); updateNote(note.id, { is_pinned: !note.is_pinned }); }} 
+                                                className={`p-1.5 rounded-xl border transition-all active:scale-95 ${note.is_pinned ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500/40 text-amber-600 dark:text-amber-400' : 'bg-transparent border-transparent hover:bg-amber-50 dark:hover:bg-amber-900/20 text-zinc-400 hover:text-amber-600 hover:border-amber-500/30'}`} 
+                                                title={note.is_pinned ? 'Quitar fijado' : 'Fijar nota'}
+                                              >
+                                                <Pin size={14} className={note.is_pinned ? 'fill-current' : ''} />
+                                              </button>
 
 
-                                          <button 
-                                            onClick={(e) => { e.stopPropagation(); archiveNote(note.id); }} 
-                                            className="p-1 text-zinc-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors" 
-                                            title="Archivar"
-                                          >
-                                            <Archive size={14}/>
-                                          </button>
-                                         <div className="w-6 h-6 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center text-zinc-400 group-hover:bg-[#4940D9] group-hover:text-white transition-all"><ChevronRight size={14} /></div>
-                                      </div>
+                                              <button 
+                                                onClick={(e) => { e.stopPropagation(); archiveNote(note.id); }} 
+                                                className="p-1.5 text-zinc-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-xl border border-transparent hover:border-amber-500/30 transition-all active:scale-95" 
+                                                title="Archivar"
+                                              >
+                                                <Archive size={14}/>
+                                              </button>
+                                          </div>
                                   </div>
                                 </div>
                               )
@@ -2156,7 +2155,7 @@ function App() {
 
                           {/* SECCIÓN DE ARCHIVO (ESTILO PIZARRÓN) */}
                           {activeGroup.notes.filter(n => n.status === 'history').length > 0 && (
-                            <div className={`mt-12 space-y-4 pt-8 border-t border-zinc-100 dark:border-zinc-800/50 mb-20 animate-fadeIn ${isArchiveOpenByGroup[activeGroupId!] ? 'min-h-[300px]' : ''}`}>
+                            <div className={`mt-5 space-y-4 pt-5 border-t border-zinc-100 dark:border-zinc-800/50 mb-20 animate-fadeIn ${isArchiveOpenByGroup[activeGroupId!] ? 'min-h-[300px]' : ''}`}>
 
                               <button 
                                 onClick={() => setArchiveOpenByGroup(activeGroupId!, !isArchiveOpenByGroup[activeGroupId!])}
@@ -2185,14 +2184,14 @@ function App() {
                                         <div className="flex items-center gap-1.5 shrink-0">
                                           <button 
                                              onClick={() => restoreNote(note.id)} 
-                                             className="p-2 rounded-xl text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all active:scale-90" 
+                                             className="p-2 rounded-xl border border-transparent hover:border-indigo-500/30 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all active:scale-95" 
                                              title="Restaurar Nota"
                                           >
                                              <RotateCcw size={16}/>
                                           </button>
                                           <button 
                                              onClick={() => deleteNote(note.id)} 
-                                             className="p-2 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-90" 
+                                             className="p-2 rounded-xl border border-transparent hover:border-red-500/30 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-95" 
                                              title="Eliminar Permanente"
                                           >
                                              <Trash2 size={16}/>

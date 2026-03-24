@@ -1324,7 +1324,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                   <button
                     onClick={() => setActiveTab('original')}
                     data-active-tab={activeTab === 'original' || undefined}
-                    className={`relative flex items-center justify-center gap-1.5 px-4 h-[32.5px] rounded-lg text-[13px] font-medium whitespace-nowrap border shrink-0 transition-all ${
+                    className={`relative flex items-center justify-center gap-1.5 px-4 h-[32.5px] rounded-xl text-[13px] font-medium whitespace-nowrap border shrink-0 transition-all active:scale-95 ${
                       activeTab === 'original'
                         ? `bg-indigo-50/80 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-500/40 shadow-sm ${isOriginalMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
                         : isOriginalMatch
@@ -1353,7 +1353,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                           onClick={() => setActiveTab(`sub_${child.id}`)}
                           data-active-tab={isActive || undefined}
                           data-is-match={isMatch}
-                          className={`flex items-center ${editingTabId === child.id ? 'gap-0' : 'gap-1.5'} px-3 h-[32.5px] rounded-lg text-[13px] font-medium whitespace-nowrap border transition-all max-w-[320px] ${
+                          className={`flex items-center ${editingTabId === child.id ? 'gap-0' : 'gap-1.5'} px-3 h-[32.5px] rounded-xl text-[13px] font-medium whitespace-nowrap border transition-all active:scale-95 max-w-[320px] ${
                             isActive
                               ? `bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/40 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
                               : isMatch
@@ -1373,7 +1373,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                           {isActive && editingTabId !== child.id && (
                             <span 
                               onClick={(e) => { e.stopPropagation(); if (confirm('¿Borrar esta sub-nota?')) onDelete(child.id); }} 
-                              className="ml-1 p-0.5 hover:bg-black/20 rounded transition-colors text-white/70 hover:text-white" 
+                              className="ml-1 p-1 rounded-lg border border-transparent hover:border-white/20 hover:bg-black/20 transition-all text-white/70 hover:text-white active:scale-90" 
                               title="Borrar sub-nota"
                             >
                               <Trash2 size={10} />
@@ -1407,7 +1407,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                       onClick={() => setActiveTab(activeTab === s.id ? 'original' : s.id)}
                       data-active-tab={activeTab === s.id || undefined}
                       data-is-match={isMatch}
-                      className={`flex items-center ${editingTabId === s.id ? 'gap-0' : 'gap-1.5'} px-3 h-[32.5px] rounded-lg text-[13px] font-medium whitespace-nowrap border shrink-0 transition-all max-w-[320px] ${
+                      className={`flex items-center ${editingTabId === s.id ? 'gap-0' : 'gap-1.5'} px-3 h-[32.5px] rounded-xl text-[13px] font-medium whitespace-nowrap border shrink-0 transition-all active:scale-95 max-w-[320px] ${
                         activeTab === s.id
                           ? `bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/40 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
                           : isMatch
