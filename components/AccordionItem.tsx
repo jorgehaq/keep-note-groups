@@ -151,7 +151,7 @@ const SummaryTabContent: React.FC<{
         onClickCapture={triggerScrollToActive}
         className={`flex-1 flex min-h-0 ${layoutCol ? 'flex-col' : 'flex-row'} gap-3`}
     >
-      <div className={`flex-1 flex flex-col min-h-0 bg-violet-50 dark:bg-[#131314] rounded-2xl border ${searchQuery?.trim() && (summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || summary.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase())) ? 'border-amber-500' : 'border-violet-300 dark:border-violet-500/30'} overflow-hidden`}>
+      <div className={`flex-1 flex flex-col min-h-0 bg-violet-50 dark:bg-[#131314] rounded-2xl border focus-within:border-violet-400 dark:focus-within:border-violet-500/60 transition-colors ${searchQuery?.trim() && (summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || summary.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase())) ? 'border-amber-500' : 'border-violet-300 dark:border-violet-500/30'} overflow-hidden`}>
         <div className="flex items-center justify-between px-4 py-2.5 bg-violet-100/60 dark:bg-violet-500/5 border-b border-violet-200 dark:border-violet-500/10">
           <div className="flex items-center gap-2 min-w-0">
             <Sparkles size={12} className="text-violet-400 shrink-0" />
@@ -212,7 +212,7 @@ const SummaryTabContent: React.FC<{
             </div>
           </div>
         </div>
-        <div className={`flex-1 flex flex-col min-h-0 bg-violet-50 dark:bg-[#131314] rounded-2xl border ${searchQuery?.trim() && (summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || summary.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase())) ? 'border-amber-500' : 'border-violet-200 dark:border-violet-500/20'} overflow-hidden`}
+        <div className={`flex-1 flex flex-col min-h-0 bg-violet-50 dark:bg-[#131314] rounded-2xl border focus-within:border-violet-400 dark:focus-within:border-violet-500/60 transition-colors ${searchQuery?.trim() && (summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || summary.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase())) ? 'border-amber-500' : 'border-violet-200 dark:border-violet-500/20'} overflow-hidden`}
           style={showScratch
             ? (layoutCol
                 ? { height: `${splitRatio * 100}%`, flex: 'none' }
@@ -254,7 +254,7 @@ const SummaryTabContent: React.FC<{
       )}
 
       <div 
-        className={`flex flex-col flex-1 min-h-0 rounded-xl border border-[#291B46] focus-within:border-[#4E3884] bg-white dark:bg-[#1A1A24] animate-fadeIn overflow-hidden transition-colors ${!showScratch ? 'hidden md:flex' : 'flex'}`}
+        className={`flex flex-col flex-1 min-h-0 rounded-xl border border-violet-200 dark:border-[#291B46] focus-within:border-violet-400 dark:focus-within:border-[#4E3884] bg-white dark:bg-[#1A1A24] animate-fadeIn overflow-hidden transition-colors ${!showScratch ? 'hidden md:flex' : 'flex'}`}
         style={showScratch && !layoutCol ? { width: `${(1 - splitRatio) * 100}%`, flex: 'none' } : { flex: 1 }}
       >
         <div className="relative flex items-center justify-center gap-2 px-3 py-2 border-b border-violet-200/20 shrink-0">
@@ -475,8 +475,8 @@ const SubnoteTabContent: React.FC<{
 }) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const borderColor = note.parent_note_id 
-    ? 'border-[#291B46] focus-within:border-[#17634F]' 
-    : 'border-[#291B46] focus-within:border-[#40418E]';
+    ? 'border-emerald-200 dark:border-[#291B46] focus-within:border-emerald-400 dark:focus-within:border-[#17634F]' 
+    : 'border-indigo-200 dark:border-[#291B46] focus-within:border-indigo-400 dark:focus-within:border-[#40418E]';
 
   const forcedOrientation = useUIStore(s => s.forcedPizarronOrientation);
   const layoutCol = forcedOrientation
@@ -556,7 +556,7 @@ const SubnoteTabContent: React.FC<{
 
       {showScratch && (
         <div
-          className="min-h-0 overflow-hidden flex flex-col rounded-xl border border-[#291B46] focus-within:border-[#4E3884] bg-white dark:bg-[#1A1A24] animate-fadeIn transition-colors"
+          className="min-h-0 overflow-hidden flex flex-col rounded-xl border border-violet-200 dark:border-[#291B46] focus-within:border-violet-400 dark:focus-within:border-[#4E3884] bg-white dark:bg-[#1A1A24] animate-fadeIn transition-colors"
           style={{ flex: 1 }}
         >
           <div className="relative flex items-center justify-center gap-2 px-4 py-2 border-b border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-[#1A1A24] shrink-0">
@@ -1033,7 +1033,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
     <div className={`m-1 transition-all duration-300 flex-1 flex flex-col min-h-0 bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border select-text ${
       isHighlightedBySearch
         ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50/30 dark:bg-amber-900/10 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
-        : 'border-zinc-200 dark:border-[#2D2D42] hover:border-[#3D3E89]/60 focus-within:border-[#3D3E89] dark:focus-within:border-[#3D3E89]'
+        : 'border-zinc-200 dark:border-[#2D2D42] hover:border-indigo-400/60 dark:hover:border-[#3D3E89]/60 focus-within:border-indigo-500 dark:focus-within:border-[#3D3E89] shadow-sm focus-within:shadow-indigo-500/10 dark:focus-within:shadow-[#3D3E89]/10 focus-within:shadow-md'
     }`}>
 
       {/* HEADER: TITLE + BUTTONS + ACCESSES */}

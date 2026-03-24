@@ -194,31 +194,39 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
                             {filteredGroups.map(group => {
                                 const isDocked = dockedGroupIds.includes(group.id);
                                 const borderClass = group.is_favorite
-                                    ? 'border-yellow-400/50 dark:border-yellow-500/30'
+                                    ? 'border-yellow-400/50 dark:border-[#3F3F46]'
                                     : group.is_pinned
-                                        ? 'border-amber-400/50 dark:border-amber-500/30'
+                                        ? 'border-amber-400/50 dark:border-[#3F3F46]'
                                         : isDocked
-                                            ? 'border-indigo-500/40'
-                                            : 'border-zinc-200 dark:border-zinc-700';
+                                            ? 'border-indigo-500/40 dark:border-[#3F3F46]'
+                                            : 'border-zinc-200 dark:border-[#3F3F46]';
+                                // Mismo hover que las tarjetas de notas: indigo-500/50 + bg indigo
 
                                 return (
                                     <div
                                         key={group.id}
-                                        className={`group relative flex flex-col gap-2 p-3 rounded-xl border bg-white dark:bg-[#1A1A24] transition-all cursor-pointer active:scale-[0.98] hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:shadow-lg ${borderClass}`}
+                                        className={`group relative flex items-center justify-between gap-2 p-2.5 rounded-xl border bg-white dark:bg-[#1A1A24] transition-all cursor-pointer active:scale-[0.98] hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:shadow-xl ${borderClass}`}
                                         onClick={() => {
                                             openGroup(group.id);
                                             setGlobalView('notes');
                                             onClose();
                                         }}
                                     >
-                                        {/* TOP ROW: icon + actions */}
-                                        <div className="flex items-center justify-between">
+                                        {/* Icon and Title */}
+                                        <div className="flex items-center gap-2 flex-1 min-w-0">
                                             <div className="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-800/60 flex items-center justify-center shrink-0">
                                                 {isDocked
                                                     ? <FolderOpen size={14} className="text-indigo-500 fill-indigo-500/20" />
                                                     : <FolderOpen size={14} className="text-zinc-400" />
                                                 }
                                             </div>
+                                            <span className="text-[13px] font-bold leading-tight truncate text-zinc-800 dark:text-[#CCCCCC]">
+                                                {highlightMatch(group.title.length > 40 ? group.title.substring(0, 40) + '...' : group.title)}
+                                            </span>
+                                        </div>
+
+                                        {/* Actions, Badges, and Count */}
+                                        <div className="flex items-center gap-1.5 shrink-0">
                                             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); onToggleFavorite(group.id, !!group.is_favorite); }}
@@ -250,20 +258,7 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
                                                     {group.is_pinned && <Pin size={11} className="text-amber-500 fill-current" />}
                                                 </div>
                                             )}
-                                        </div>
-
-                                        {/* BOTTOM: title + count */}
-                                        <div className="flex items-end justify-between gap-1 min-w-0">
-                                            <span className={`text-[13px] font-bold leading-tight truncate ${
-                                                group.is_favorite
-                                                    ? 'text-yellow-700 dark:text-yellow-400'
-                                                    : isDocked
-                                                        ? 'text-indigo-600 dark:text-indigo-400'
-                                                        : 'text-zinc-800 dark:text-zinc-200'
-                                            }`}>
-                                                {highlightMatch(group.title)}
-                                            </span>
-                                            <span className="text-[10px] font-bold text-zinc-400 shrink-0">
+                                            <span className="text-[10px] font-bold text-zinc-400 dark:text-[#CCCCCC]/50 shrink-0 min-w-[12px] text-right">
                                                 {group.notes.length}
                                             </span>
                                         </div>
