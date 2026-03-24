@@ -858,7 +858,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         ro.disconnect();
       };
     }
-  }, [checkScroll]);
+  }, [checkScroll, unifiedTabs]);
 
   // Recalcular scroll cuando cambien las pestañas
   useEffect(() => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Plus, Search, Loader2, Check, X, Calendar, ArrowUp, ArrowDown, Type, Trash2, Download, ArrowUpDown, Folder, FileText, StickyNote, Grid, Maximize2, Minimize2, ChevronsDownUp, Bell, Pin, PanelLeft, ChevronLeft, ChevronRight, Wind, PenLine, Archive, RotateCcw, ChevronDown, MoreVertical } from 'lucide-react';
 
 import { Note, Group, Theme, NoteFont, Reminder, NoteSortMode, BrainDump, TikTokVideo, TikTokQueueItem } from './types';
@@ -165,7 +165,7 @@ function App() {
   const [hasSearchMatchLeft, setHasSearchMatchLeft] = useState(false);
   const [hasSearchMatchRight, setHasSearchMatchRight] = useState(false);
 
-  const checkScroll = () => {
+  const checkScroll = useCallback(() => {
     if (scrollContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
       setCanScrollLeft(scrollLeft > 5);
@@ -197,7 +197,7 @@ function App() {
       setHasSearchMatchLeft(matchLeft);
       setHasSearchMatchRight(matchRight);
     }
-  };
+  }, [currentSearchQuery]);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -215,7 +215,7 @@ function App() {
         ro.disconnect();
       };
     }
-  }, []);
+  }, [checkScroll, isGlobalNoteTrayOpen, activeGroup]);
 
   // 🚀 NEW: Auto-scroll global tray to active/selected note
   useEffect(() => {
