@@ -186,9 +186,11 @@ interface UIStore {
     showOverdueMarquee: boolean;
     setShowOverdueMarquee: (show: boolean) => void;
     isNotesPizarronOpen: boolean;
-    notesSplitRatio: number; // Ratio del split para el pizarron de notas
+    notesSplitRatio: number;
+    forcedPizarronOrientation: 'vertical' | 'horizontal' | null;
     setIsNotesPizarronOpen: (open: boolean) => void;
     setNotesSplitRatio: (ratio: number) => void;
+    setForcedPizarronOrientation: (orientation: 'vertical' | 'horizontal' | null) => void;
     toggleZenMode: (appId: string) => void;
     resetUIState: () => void;
 }
@@ -445,6 +447,8 @@ export const useUIStore = create<UIStore>()(
             setIsNotesPizarronOpen: (open) => set({ isNotesPizarronOpen: open }),
             notesSplitRatio: 0.5,
             setNotesSplitRatio: (ratio) => set({ notesSplitRatio: ratio }),
+            forcedPizarronOrientation: null,
+            setForcedPizarronOrientation: (orientation) => set({ forcedPizarronOrientation: orientation }),
             setIsBraindumpPizarronOpen: (open) => set({ isBraindumpPizarronOpen: open }),
             setSidebarFocusMode: (mode) => set({ sidebarFocusMode: mode }),
 
@@ -678,6 +682,7 @@ export const useUIStore = create<UIStore>()(
                 isArchiveOpenByGroup: state.isArchiveOpenByGroup,
                 isArchiveOpenByApp: state.isArchiveOpenByApp,
                 sidebarFocusMode: state.sidebarFocusMode,
+                forcedPizarronOrientation: state.forcedPizarronOrientation,
             }),
         },
     ),

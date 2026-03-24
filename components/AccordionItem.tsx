@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Archive, ChevronUp, ChevronLeft, ChevronRight, Trash2, Check, Pin, Maximize2, Minimize2, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash, Sparkles, FileText, PenLine, ArrowUpRight, GitBranch, Plus, Wind, ListPlus, History, Calendar } from 'lucide-react';
+import { Archive, ChevronUp, ChevronLeft, ChevronRight, Trash2, Check, Pin, Maximize2, Minimize2, PanelLeft, Loader2, CloudCheck, X, MoreVertical, Clock, ListTodo, CheckSquare, Square, GripVertical, Download, Clipboard, CopyPlus, FolderInput, Hash, Sparkles, FileText, PenLine, ArrowUpRight, GitBranch, Plus, Wind, ListPlus, History, Calendar, Columns, Rows } from 'lucide-react';
 import { Note, NoteFont } from '../types';
 import { SmartNotesEditor, SmartNotesEditorRef } from '../src/components/editor/SmartNotesEditor';
 import { ChecklistEditor, ChecklistEditorRef, parseMarkdownToChecklist, serializeChecklistToMarkdown, serializeChecklistToPlainMarkdown } from '../src/components/editor/ChecklistEditor';
@@ -111,7 +111,9 @@ const SummaryTabContent: React.FC<{
   setShowScratch: (val: boolean | ((v: boolean) => boolean)) => void;
   onDelete: (id: string) => void;
   triggerScrollToActive: () => void;
-}> = ({ summary, noteFont, noteFontSize, noteLineHeight, showLineNumbers, searchQuery, onDelete, onPromote, updateScratchpad, updateContent, showScratch, setShowScratch, triggerScrollToActive }) => {
+  splitRatio: number;
+  onDividerMouseDown: (e: React.MouseEvent) => void;
+}> = ({ summary, noteFont, noteFontSize, noteLineHeight, showLineNumbers, searchQuery, onDelete, onPromote, updateScratchpad, updateContent, showScratch, setShowScratch, triggerScrollToActive, splitRatio, onDividerMouseDown }) => {
   const scratchRef = useRef<SmartNotesEditorRef>(null);
   const [localScratch, setLocalScratch] = useState(summary.scratchpad || '');
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -137,13 +139,19 @@ const SummaryTabContent: React.FC<{
     debounceRef.current = setTimeout(() => updateScratchpad(summary.id, text), 1200);
   };
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const forcedOrientation = useUIStore(s => s.forcedPizarronOrientation);
+  const layoutCol = forcedOrientation 
+    ? forcedOrientation === 'horizontal' 
+    : isMobile;
+
   return (
     <div 
         onFocusCapture={triggerScrollToActive}
         onClickCapture={triggerScrollToActive}
-        className="flex flex-col gap-3 flex-1 min-h-0"
+        className={`flex-1 flex min-h-0 ${layoutCol ? 'flex-col' : 'flex-row'} gap-3`}
     >
-      <div className={`bg-violet-50 dark:bg-[#131314] rounded-2xl border ${searchQuery?.trim() && summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ? 'border-amber-500' : 'border-violet-200 dark:border-violet-500/20'}`}>
+      <div className={`flex-1 flex flex-col min-h-0 bg-violet-50 dark:bg-[#131314] rounded-2xl border ${searchQuery?.trim() && (summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || summary.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase())) ? 'border-amber-500' : 'border-violet-200 dark:border-violet-500/20'} overflow-hidden`}>
         <div className="flex items-center justify-between px-4 py-2.5 bg-violet-100/60 dark:bg-violet-500/5 border-b border-violet-200 dark:border-violet-500/10">
           <div className="flex items-center gap-2 min-w-0">
             <Sparkles size={12} className="text-violet-400 shrink-0" />
@@ -204,7 +212,14 @@ const SummaryTabContent: React.FC<{
             </div>
           </div>
         </div>
-        <div className={`px-4 py-3 min-w-0 ${showScratch ? 'hidden md:block' : 'block'}`}>
+        <div className={`flex-1 flex flex-col min-h-0 bg-violet-50 dark:bg-[#131314] rounded-2xl border ${searchQuery?.trim() && (summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || summary.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase())) ? 'border-amber-500' : 'border-violet-200 dark:border-violet-500/20'} overflow-hidden`}
+          style={showScratch
+            ? (layoutCol
+                ? { height: `${splitRatio * 100}%`, flex: 'none' }
+                : { width: `${splitRatio * 100}%`, flex: 'none' })
+            : { flex: '1' }
+          }
+        >
           <SmartNotesEditor
             noteId={`summary_${summary.id}`}
             initialContent={summary.content || ''}
@@ -218,10 +233,40 @@ const SummaryTabContent: React.FC<{
         </div>
       </div>
 
-      <div className={`flex flex-col flex-1 min-h-0 rounded-xl border border-violet-200/50 dark:border-violet-900/30 bg-violet-50/10 dark:bg-[#1D1D22] animate-fadeIn overflow-hidden ${!showScratch ? 'hidden md:flex' : 'flex'}`}>
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-violet-200/20 shrink-0">
-          <PenLine size={11} className="text-violet-400" />
-          <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest flex-1">Pizarrón</span>
+      {showScratch && (
+        <div
+          onMouseDown={onDividerMouseDown}
+          className={`shrink-0 flex items-center justify-center rounded-full select-none hover:bg-violet-400/20 transition-colors ${
+            layoutCol ? 'h-2 w-full cursor-row-resize' : 'w-2 h-full cursor-col-resize'
+          }`}
+          title="Arrastrar para redimensionar"
+        >
+          <div className={`rounded-full bg-violet-400/30 ${layoutCol ? 'h-1 w-8' : 'w-1 h-8'}`} />
+        </div>
+      )}
+
+      <div 
+        className={`flex flex-col flex-1 min-h-0 rounded-xl border border-violet-200/50 dark:border-violet-900/30 bg-violet-50/10 dark:bg-[#1D1D22] animate-fadeIn overflow-hidden ${!showScratch ? 'hidden md:flex' : 'flex'}`}
+        style={showScratch && !layoutCol ? { width: `${(1 - splitRatio) * 100}%`, flex: 'none' } : { flex: 1 }}
+      >
+        <div className="relative flex items-center justify-center gap-2 px-3 py-2 border-b border-violet-200/20 shrink-0">
+          <div className="flex items-center gap-2">
+            <PenLine size={11} className="text-violet-400" />
+            <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest">Pizarrón</span>
+          </div>
+          <div className="absolute right-2 flex items-center">
+            <button
+              onClick={() => {
+                const cur = useUIStore.getState().forcedPizarronOrientation;
+                const next = cur === 'vertical' ? 'horizontal' : 'vertical';
+                useUIStore.getState().setForcedPizarronOrientation(next);
+              }}
+              title={useUIStore.getState().forcedPizarronOrientation === 'horizontal' ? "Cambiar a disposición Vertical (Columnas)" : "Cambiar a disposición Horizontal (Filas)"}
+              className="p-1 hover:bg-violet-400/10 rounded-lg text-violet-400 transition-colors"
+            >
+              {useUIStore.getState().forcedPizarronOrientation === 'horizontal' ? <Columns size={12} /> : <Rows size={12} />}
+            </button>
+          </div>
         </div>
         <div onClick={(e) => {
           if ((e.target as HTMLElement).closest('.cm-panel, .cm-search, .cm-search-marker-container')) return;
@@ -250,34 +295,30 @@ const SummaryTitle: React.FC<{
   isActive: boolean;
   searchQuery?: string;
   onRename: (id: string, newObjective: string) => void;
-  onEditingChange?: (editing: boolean) => void;
-}> = ({ summary, isActive, searchQuery, onRename, onEditingChange }) => {
-  const [editing, setEditing] = useState(false);
+  isEditing: boolean;
+  setIsEditing: (editing: boolean) => void;
+}> = ({ summary, isActive, searchQuery, onRename, isEditing, setIsEditing }) => {
   const [val, setVal] = useState(summary.target_objective || '');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setVal(summary.target_objective || ''); }, [summary.target_objective]);
 
   const save = () => {
-    setEditing(false);
+    setIsEditing(false);
     const trimmed = val.trim();
     if (trimmed && trimmed !== summary.target_objective) onRename(summary.id, trimmed);
     else setVal(summary.target_objective || '');
   };
 
   useEffect(() => {
-    onEditingChange?.(editing);
-  }, [editing, onEditingChange]);
-
-  useEffect(() => {
-    if (editing && inputRef.current) {
+    if (isEditing && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.setSelectionRange(0, 0);
       inputRef.current.scrollLeft = 0;
     }
-  }, [editing]);
+  }, [isEditing]);
 
-  if (editing) {
+  if (isEditing) {
     return (
       <input
         ref={inputRef}
@@ -287,7 +328,7 @@ const SummaryTitle: React.FC<{
         onBlur={save}
         onKeyDown={e => {
           if (e.key === 'Enter') save();
-          if (e.key === 'Escape') { setEditing(false); setVal(summary.target_objective || ''); }
+          if (e.key === 'Escape') { setIsEditing(false); setVal(summary.target_objective || ''); }
           e.stopPropagation();
         }}
         onClick={e => e.stopPropagation()}
@@ -300,7 +341,7 @@ const SummaryTitle: React.FC<{
   return (
     <span
       className="truncate max-w-[200px] cursor-pointer text-[13px]"
-      onDoubleClick={e => { e.stopPropagation(); if (isActive) setEditing(true); }}
+      onDoubleClick={e => { e.stopPropagation(); if (isActive) setIsEditing(true); }}
       title={isActive ? 'Doble clic para renombrar' : summary.target_objective || ''}
     >
       {searchQuery?.trim() 
@@ -317,32 +358,22 @@ const SubnoteTitle: React.FC<{
   isActive: boolean;
   onRename: (id: string, title: string) => void;
   searchQuery?: string;
-  onEditingChange?: (editing: boolean) => void;
-}> = ({ child, isActive, onRename, searchQuery, onEditingChange }) => {
-  // 🚀 NUEVO: Solo empezar editando si fue creada hace muy poco (nueva creación)
+  isEditing: boolean;
+  setIsEditing: (editing: boolean) => void;
+}> = ({ child, isActive, onRename, searchQuery, isEditing, setIsEditing }) => {
   const isJustCreated = !child.title && (Date.now() - new Date(child.created_at || 0).getTime() < 3000);
-  const [editing, setEditing] = useState(isJustCreated);
   const [val, setVal] = useState(child.title || '');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setVal(child.title || ''); }, [child.title]);
 
   useEffect(() => {
-    onEditingChange?.(editing);
-  }, [editing, onEditingChange]);
-
-  useEffect(() => {
-    if (editing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.setSelectionRange(0, 0);
-      inputRef.current.scrollLeft = 0;
-    }
-  }, [editing]);
+    if (isJustCreated) setIsEditing(true);
+  }, [isJustCreated, setIsEditing]);
 
   const save = () => {
-    setEditing(false);
+    setIsEditing(false);
     const trimmed = val.trim();
-    // Si hay cambio, guardar. Si no, restaurar el valor de la nota (que puede ser vacío)
     if (trimmed !== (child.title || '')) {
       onRename(child.id, trimmed);
     } else {
@@ -350,7 +381,15 @@ const SubnoteTitle: React.FC<{
     }
   };
 
-  if (editing) {
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.setSelectionRange(0, 0);
+      inputRef.current.scrollLeft = 0;
+    }
+  }, [isEditing]);
+
+  if (isEditing) {
     return (
       <input
         ref={inputRef}
@@ -360,7 +399,7 @@ const SubnoteTitle: React.FC<{
         onBlur={save}
         onKeyDown={e => {
           if (e.key === 'Enter') save();
-          if (e.key === 'Escape') { setEditing(false); setVal(child.title || ''); }
+          if (e.key === 'Escape') { setIsEditing(false); setVal(child.title || ''); }
           e.stopPropagation();
         }}
         onClick={e => e.stopPropagation()}
@@ -374,7 +413,7 @@ const SubnoteTitle: React.FC<{
   return (
     <span
       className="truncate max-w-[200px] cursor-pointer text-[13px]"
-      onDoubleClick={e => { e.stopPropagation(); if (isActive) setEditing(true); }}
+      onDoubleClick={e => { e.stopPropagation(); if (isActive) setIsEditing(true); }}
       title={isActive ? 'Doble clic para renombrar' : child.title || ''}
     >
       {searchQuery?.trim() 
@@ -425,22 +464,42 @@ const SubnoteTabContent: React.FC<{
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const borderColor = note.parent_note_id ? 'border-emerald-500/30' : 'border-zinc-200 dark:border-[#2D2D42]';
 
+  const forcedOrientation = useUIStore(s => s.forcedPizarronOrientation);
+  const layoutCol = forcedOrientation
+    ? forcedOrientation === 'horizontal'
+    : isMobile;
+
   return (
     <div
       ref={splitContainerRef}
       onFocusCapture={triggerScrollToActive}
       onClickCapture={triggerScrollToActive}
-      className={`flex-1 flex min-h-0 ${isMobile ? 'flex-col' : 'flex-row'} gap-2 animate-fadeIn`}
+      className={`flex-1 flex min-h-0 ${layoutCol ? 'flex-col' : 'flex-row'} gap-2 pt-2`}
     >
       <div
-        className={`min-h-0 overflow-hidden rounded-xl border ${borderColor} bg-zinc-50 dark:bg-[#131314]`}
+        className={`min-h-0 overflow-hidden flex flex-col rounded-xl border ${borderColor} bg-zinc-50 dark:bg-[#131314]`}
         style={showScratch
-          ? (isMobile
+          ? (layoutCol
               ? { height: `${splitRatio * 100}%`, flex: 'none' }
               : { width: `${splitRatio * 100}%`, flex: 'none' })
           : { flex: '1' }
         }
       >
+        {/* Editor Metadata Header */}
+        <div className="flex items-center justify-center gap-5 px-3 py-2 border-b border-zinc-200 dark:border-zinc-800/50 bg-zinc-100/50 dark:bg-black/20 shrink-0">
+          <div className="flex items-center gap-1.5 opacity-60">
+            <Clock size={11} className="text-zinc-500" />
+            <span className="text-[9px] font-bold uppercase tracking-tighter text-zinc-500">Creación:</span>
+            {formatCleanDate(note.created_at)}
+          </div>
+          <div className="w-px h-3 bg-zinc-300 dark:bg-zinc-800" />
+          <div className="flex items-center gap-1.5 opacity-60">
+            <History size={11} className="text-zinc-500" />
+            <span className="text-[9px] font-bold uppercase tracking-tighter text-zinc-500">Edición:</span>
+            {formatCleanDate(note.updated_at)}
+          </div>
+        </div>
+
         {note.is_checklist ? (
           <div className="p-4 h-full overflow-y-auto note-editor-scroll">
             <ChecklistEditor ref={checklistRef} idPrefix={note.id} initialContent={note.content || ''} onUpdate={onUpdateContent} />
@@ -472,12 +531,12 @@ const SubnoteTabContent: React.FC<{
       {showScratch && (
         <div
           onMouseDown={onDividerMouseDown}
-          className={`shrink-0 flex items-center justify-center rounded-full cursor-col-resize select-none hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors ${
-            isMobile ? 'h-2 w-full cursor-row-resize' : 'w-2 h-full'
+          className={`shrink-0 flex items-center justify-center rounded-full select-none hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors ${
+            layoutCol ? 'h-2 w-full cursor-row-resize' : 'w-2 h-full cursor-col-resize'
           }`}
           title="Arrastrar para redimensionar"
         >
-          <div className={`rounded-full bg-zinc-300 dark:bg-zinc-600 ${isMobile ? 'h-1 w-8' : 'w-1 h-8'}`} />
+          <div className={`rounded-full bg-zinc-300 dark:bg-zinc-600 ${layoutCol ? 'h-1 w-8' : 'w-1 h-8'}`} />
         </div>
       )}
 
@@ -486,9 +545,24 @@ const SubnoteTabContent: React.FC<{
           className="min-h-0 overflow-hidden flex flex-col rounded-xl border border-violet-200/50 dark:border-violet-900/30 bg-violet-50/10 dark:bg-[#1D1D22] animate-fadeIn"
           style={{ flex: 1 }}
         >
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-violet-200/20 shrink-0">
-            <PenLine size={11} className="text-violet-400" />
-            <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest flex-1">Pizarrón</span>
+          <div className="relative flex items-center justify-center gap-2 px-3 py-2 border-b border-violet-200/20 shrink-0">
+            <div className="flex items-center gap-2">
+              <PenLine size={11} className="text-violet-400" />
+              <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest">Pizarrón</span>
+            </div>
+            <div className="absolute right-2 flex items-center">
+              <button
+                onClick={() => {
+                  const curr = useUIStore.getState().forcedPizarronOrientation;
+                  const next = curr === 'vertical' ? 'horizontal' : 'vertical';
+                  useUIStore.getState().setForcedPizarronOrientation(next);
+                }}
+                title={useUIStore.getState().forcedPizarronOrientation === 'horizontal' ? "Cambiar a disposición Vertical (Columnas)" : "Cambiar a disposición Horizontal (Filas)"}
+                className="p-1 hover:bg-violet-400/10 rounded-lg text-violet-400 transition-colors"
+              >
+                {useUIStore.getState().forcedPizarronOrientation === 'horizontal' ? <Columns size={12} /> : <Rows size={12} />}
+              </button>
+            </div>
           </div>
           <div
             onClick={(e) => {
@@ -874,12 +948,15 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       if (!isDraggingRef.current) return;
       const rect = container.getBoundingClientRect();
       const isMobile = window.innerWidth < 768;
-      if (isMobile) {
-        // En móvil: drag vertical
+      const forcedOrientation = useUIStore.getState().forcedPizarronOrientation;
+      const layoutCol = forcedOrientation ? forcedOrientation === 'horizontal' : isMobile;
+
+      if (layoutCol) {
+        // En stacked (horizontal split line): drag vertical
         const ratio = (ev.clientY - rect.top) / rect.height;
         setSplitRatio(Math.min(0.85, Math.max(0.15, ratio)));
       } else {
-        // En desktop: drag horizontal
+        // En side-by-side (vertical split line): drag horizontal
         const ratio = (ev.clientX - rect.left) / rect.width;
         setSplitRatio(Math.min(0.85, Math.max(0.15, ratio)));
       }
@@ -991,6 +1068,11 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               </div>
             </div>
           </div>
+          {isInKanban && (
+            <div className="flex-shrink-0 animate-fadeIn pr-1">
+              <KanbanSemaphore sourceType="note" sourceId={note.id} sourceTitle={note.title || 'Sin título'} onInteract={() => {}} />
+            </div>
+          )}
         </div>
         {/* ROW 2: ACTION BUTTONS */}
         <div className="flex items-center justify-between gap-1.5 flex-wrap pl-1">
@@ -1028,7 +1110,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 title={showAIInput ? 'Ocultar panel AI' : 'Abrir panel AI'}
                 className={`p-2 rounded-xl border transition-all ${
                   showAIInput 
-                    ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
+                    ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500 shadow-sm' 
                     : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
                 }`}
               >
@@ -1042,7 +1124,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               title={showNoteScratch ? 'Ocultar pizarrón' : 'Abrir pizarrón'}
               className={`p-2 rounded-xl border transition-all ${
                 showNoteScratch
-                  ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
+                  ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500 shadow-sm' 
                   : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
               }`}
             >
@@ -1052,7 +1134,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             {showLineNumbers && onToggleLineNumbers && (
               <button
                 onClick={(e) => { e.stopPropagation(); onToggleLineNumbers(); }}
-                className="p-1.5 rounded-lg transition-colors text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shrink-0"
+                className="p-1.5 rounded-lg border border-blue-500/40 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 shrink-0 transition-all shadow-sm"
                 title="Ocultar números de línea"
               >
                 <Hash size={14} />
@@ -1062,7 +1144,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             {note.is_docked && (
               <button
                 onClick={(e) => { e.stopPropagation(); onUpdate(note.id, { is_docked: false }); }}
-                className="p-1.5 rounded-lg transition-colors text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shrink-0"
+                className="p-1.5 rounded-lg border border-indigo-500/40 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 shrink-0 transition-all shadow-sm"
                 title="Quitar del Sidebar"
               >
                 <PanelLeft size={14} />
@@ -1072,18 +1154,13 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             {note.is_pinned && (
               <button
                 onClick={(e) => { e.stopPropagation(); onUpdate(note.id, { is_pinned: false }); }}
-                className="p-1.5 rounded-lg transition-colors text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 shrink-0"
+                className="p-1.5 rounded-lg border border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 shrink-0 transition-all shadow-sm"
                 title="Desfijar Nota"
               >
                 <Pin size={14} className="fill-current" />
               </button>
             )}
 
-            {isInKanban && (
-              <div className="flex items-center gap-2">
-                <KanbanSemaphore sourceType="note" sourceId={note.id} sourceTitle={note.title || 'Sin título'} onInteract={() => {}} />
-              </div>
-            )}
           </div>
 
           {/* GRUPO DERECHO: Zen, Maximize, More */}
@@ -1093,7 +1170,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               onClick={(e) => { e.stopPropagation(); useUIStore.getState().toggleZenMode('notes'); }}
               className={`p-2 rounded-xl border transition-all ${
                 useUIStore.getState().isZenModeByApp['notes']
-                  ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
+                  ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500 shadow-sm' 
                   : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
               }`}
               title={useUIStore.getState().isZenModeByApp['notes'] ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
@@ -1106,7 +1183,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               onClick={(e) => { e.stopPropagation(); setIsMaximized(!isMaximized); }}
               className={`hidden md:flex p-2 rounded-xl border transition-all ${
                 isMaximized
-                  ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
+                  ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500 shadow-sm' 
                   : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
               }`}
               title={isMaximized ? "Minimizar" : "Maximizar"}
@@ -1235,7 +1312,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                     data-active-tab={activeTab === 'original' || undefined}
                     className={`relative flex items-center justify-center px-4 h-[32.5px] rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all ${
                       activeTab === 'original'
-                        ? `bg-[#4940D9] text-white border-[#4940D9] shadow-sm ${isOriginalMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
+                        ? `bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500 shadow-sm ${isOriginalMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
                         : isOriginalMatch
                           ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
                           : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-zinc-400'
@@ -1262,9 +1339,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                           onClick={() => setActiveTab(`sub_${child.id}`)}
                           data-active-tab={isActive || undefined}
                           data-is-match={isMatch}
-                          className={`flex items-center ${editingTabId === child.id ? 'gap-0' : 'gap-1.5'} px-3 h-[32.5px] rounded-lg text-[13px] font-bold whitespace-nowrap border transition-all max-w-[320px] ${
+                          className={`flex items-center ${editingTabId === child.id ? 'gap-0' : 'gap-1.5'} px-3 h-[32.5px] rounded-lg text-[13px] whitespace-nowrap border transition-all max-w-[320px] ${
                             isActive
-                              ? `bg-emerald-600 text-white border-emerald-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
+                              ? `bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
                               : isMatch
                                 ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
                                 : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-emerald-500/50 hover:text-emerald-400'
@@ -1276,7 +1353,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                             isActive={isActive}
                             onRename={handleSaveChildTitle}
                             searchQuery={searchQuery}
-                            onEditingChange={(editing) => setEditingTabId(editing ? child.id : null)}
+                            isEditing={editingTabId === child.id}
+                            setIsEditing={(val) => setEditingTabId(val ? child.id : null)}
                           />
                           {isActive && editingTabId !== child.id && (
                             <span 
@@ -1315,7 +1393,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                       onClick={() => setActiveTab(activeTab === s.id ? 'original' : s.id)}
                       data-active-tab={activeTab === s.id || undefined}
                       data-is-match={isMatch}
-                      className={`flex items-center ${editingTabId === s.id ? 'gap-0' : 'gap-1.5'} px-3 h-[32.5px] rounded-lg text-[13px] font-bold whitespace-nowrap border shrink-0 transition-all max-w-[320px] ${
+                      className={`flex items-center ${editingTabId === s.id ? 'gap-0' : 'gap-1.5'} px-3 h-[32.5px] rounded-lg text-[13px] whitespace-nowrap border shrink-0 transition-all max-w-[320px] ${
                         activeTab === s.id
                           ? `bg-violet-600 text-white border-violet-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
                           : isMatch
@@ -1330,7 +1408,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                         isActive={activeTab === s.id} 
                         searchQuery={searchQuery} 
                         onRename={(id, newObj) => updateSummaryMetadata(id, { target_objective: newObj })} 
-                        onEditingChange={(editing) => setEditingTabId(editing ? s.id : null)}
+                        isEditing={editingTabId === s.id}
+                        setIsEditing={(val) => setEditingTabId(val ? s.id : null)}
                       />
                     </span>
                   </button>
@@ -1419,6 +1498,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                     showScratch={showNoteScratch}
                     setShowScratch={setShowNoteScratch}
                     triggerScrollToActive={triggerScrollToActive}
+                    splitRatio={splitRatio}
+                    onDividerMouseDown={handleDividerMouseDown}
                   />
                 </div>
               );
