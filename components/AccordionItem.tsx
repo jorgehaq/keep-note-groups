@@ -218,7 +218,7 @@ const SummaryTabContent: React.FC<{
         </div>
       </div>
 
-      <div className={`flex flex-col flex-1 min-h-0 rounded-xl border border-violet-200/50 dark:border-violet-900/30 bg-violet-50/10 dark:bg-violet-900/5 animate-fadeIn overflow-hidden ${!showScratch ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`flex flex-col flex-1 min-h-0 rounded-xl border border-violet-200/50 dark:border-violet-900/30 bg-violet-50/10 dark:bg-[#1D1D22] animate-fadeIn overflow-hidden ${!showScratch ? 'hidden md:flex' : 'flex'}`}>
         <div className="flex items-center gap-2 px-3 py-2 border-b border-violet-200/20 shrink-0">
           <PenLine size={11} className="text-violet-400" />
           <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest flex-1">Pizarrón</span>
@@ -250,7 +250,8 @@ const SummaryTitle: React.FC<{
   isActive: boolean;
   searchQuery?: string;
   onRename: (id: string, newObjective: string) => void;
-}> = ({ summary, isActive, searchQuery, onRename }) => {
+  onEditingChange?: (editing: boolean) => void;
+}> = ({ summary, isActive, searchQuery, onRename, onEditingChange }) => {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(summary.target_objective || '');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -263,6 +264,18 @@ const SummaryTitle: React.FC<{
     if (trimmed && trimmed !== summary.target_objective) onRename(summary.id, trimmed);
     else setVal(summary.target_objective || '');
   };
+
+  useEffect(() => {
+    onEditingChange?.(editing);
+  }, [editing, onEditingChange]);
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.setSelectionRange(0, 0);
+      inputRef.current.scrollLeft = 0;
+    }
+  }, [editing]);
 
   if (editing) {
     return (
@@ -278,7 +291,7 @@ const SummaryTitle: React.FC<{
           e.stopPropagation();
         }}
         onClick={e => e.stopPropagation()}
-        className="bg-black text-white border-violet-500 border rounded px-1.5 py-0.5 outline-none text-[11px] max-w-[120px] shadow-inner"
+        className="bg-black text-white border-violet-500 border rounded px-1.5 py-0.5 outline-none text-[14px] max-w-[280px] shadow-inner text-left"
         placeholder="Título..."
       />
     );
@@ -286,11 +299,15 @@ const SummaryTitle: React.FC<{
 
   return (
     <span
-      className="truncate max-w-[120px] cursor-pointer"
+      className="truncate max-w-[200px] cursor-pointer text-[13px]"
       onDoubleClick={e => { e.stopPropagation(); if (isActive) setEditing(true); }}
       title={isActive ? 'Doble clic para renombrar' : summary.target_objective || ''}
     >
-      {searchQuery?.trim() ? highlightText(summary.target_objective || 'Análisis AI', searchQuery) : (summary.target_objective || 'Análisis AI')}
+      {searchQuery?.trim() 
+        ? highlightText(summary.target_objective || 'Análisis AI', searchQuery) 
+        : (summary.target_objective || 'Análisis AI').length > 23 
+          ? (summary.target_objective || 'Análisis AI').slice(0, 23) + '...' 
+          : (summary.target_objective || 'Análisis AI')}
     </span>
   );
 };
@@ -300,7 +317,8 @@ const SubnoteTitle: React.FC<{
   isActive: boolean;
   onRename: (id: string, title: string) => void;
   searchQuery?: string;
-}> = ({ child, isActive, onRename, searchQuery }) => {
+  onEditingChange?: (editing: boolean) => void;
+}> = ({ child, isActive, onRename, searchQuery, onEditingChange }) => {
   // 🚀 NUEVO: Solo empezar editando si fue creada hace muy poco (nueva creación)
   const isJustCreated = !child.title && (Date.now() - new Date(child.created_at || 0).getTime() < 3000);
   const [editing, setEditing] = useState(isJustCreated);
@@ -309,11 +327,15 @@ const SubnoteTitle: React.FC<{
 
   useEffect(() => { setVal(child.title || ''); }, [child.title]);
 
-  // Asegurar foco cuando entra en modo edición
+  useEffect(() => {
+    onEditingChange?.(editing);
+  }, [editing, onEditingChange]);
+
   useEffect(() => {
     if (editing && inputRef.current) {
       inputRef.current.focus();
-      inputRef.current.select(); // Seleccionar todo el texto para fácil reemplazo
+      inputRef.current.setSelectionRange(0, 0);
+      inputRef.current.scrollLeft = 0;
     }
   }, [editing]);
 
@@ -343,7 +365,7 @@ const SubnoteTitle: React.FC<{
         }}
         onClick={e => e.stopPropagation()}
         onMouseDown={e => e.stopPropagation()}
-        className="bg-black text-white border-emerald-500 border rounded px-1.5 py-0.5 outline-none text-[11px] max-w-[120px] shadow-inner"
+        className="bg-black text-white border-emerald-500 border rounded px-1.5 py-0.5 outline-none text-[14px] max-w-[280px] shadow-inner text-left"
         placeholder="Título..."
       />
     );
@@ -351,11 +373,15 @@ const SubnoteTitle: React.FC<{
 
   return (
     <span
-      className="truncate max-w-[100px] cursor-pointer"
+      className="truncate max-w-[200px] cursor-pointer text-[13px]"
       onDoubleClick={e => { e.stopPropagation(); if (isActive) setEditing(true); }}
       title={isActive ? 'Doble clic para renombrar' : child.title || ''}
     >
-      {searchQuery?.trim() ? highlightText(child.title || 'Sin título', searchQuery) : (child.title || 'Sin título')}
+      {searchQuery?.trim() 
+        ? highlightText(child.title || 'Sin título', searchQuery) 
+        : (child.title || 'Sin título').length > 23 
+          ? (child.title || 'Sin título').slice(0, 23) + '...' 
+          : (child.title || 'Sin título')}
     </span>
   );
 };
@@ -457,7 +483,7 @@ const SubnoteTabContent: React.FC<{
 
       {showScratch && (
         <div
-          className="min-h-0 overflow-hidden flex flex-col rounded-xl border border-violet-200/50 dark:border-violet-900/30 bg-violet-50/10 dark:bg-violet-900/5 animate-fadeIn"
+          className="min-h-0 overflow-hidden flex flex-col rounded-xl border border-violet-200/50 dark:border-violet-900/30 bg-violet-50/10 dark:bg-[#1D1D22] animate-fadeIn"
           style={{ flex: 1 }}
         >
           <div className="flex items-center gap-2 px-3 py-2 border-b border-violet-200/20 shrink-0">
@@ -530,6 +556,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(!note.title);
+  const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [tempTitle, setTempTitle] = useState(note.title);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<SmartNotesEditorRef>(null);
@@ -918,295 +945,269 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         : 'border-zinc-200 dark:border-[#2D2D42] hover:border-indigo-500/50 focus-within:ring-2 focus-within:ring-[#4940D9]/50'
     }`}>
 
-      {/* HEADER */}
+      {/* HEADER: TITLE + BUTTONS + ACCESSES */}
       <div
         ref={headerRef}
-        className="flex items-center justify-between px-4 pt-4 pb-2 transition-colors gap-2 min-w-0"
+        className="flex flex-col px-4 pt-4 pb-2 transition-colors gap-3 min-w-0"
       >
-        <div className="flex items-center gap-3 flex-1 overflow-hidden pl-1 min-w-0">
-          <div className="flex flex-col min-w-0 justify-center w-full">
-            <div className="relative flex w-full">
-              <div className="absolute inset-0 w-full pointer-events-none text-lg font-bold px-0.5 min-h-[1.5em] flex items-center overflow-hidden whitespace-nowrap">
-                <span className="truncate">
-                  {searchQuery ? highlightText(tempTitle, searchQuery) : ""}
-                </span>
-              </div>
-              <input
-                ref={titleInputRef}
-                type="text"
-                value={tempTitle}
-                onChange={handleTitleChange}
-                onFocus={() => setIsEditingTitle(true)}
-                onBlur={() => handleSaveTitle(false)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSaveTitle(true);
-                  if (e.key === 'Escape') { e.stopPropagation(); handleCancelTitle(); }
-                  if (e.key === 'Tab') {
-                    e.preventDefault();
-                    const editorContainer = contentRef.current;
-                    if (editorContainer) {
-                      const focusable = editorContainer.querySelector('input, .cm-content') as HTMLElement;
-                      if (focusable) focusable.focus();
+        {/* ROW 1: TITLE */}
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <div className="flex items-center gap-3 flex-1 overflow-hidden pl-1 min-w-0">
+            <div className="flex flex-col min-w-0 justify-center w-full">
+              <div className="relative flex w-full">
+                <div className="absolute inset-0 w-full pointer-events-none text-lg font-bold px-0.5 min-h-[1.5em] flex items-center overflow-hidden whitespace-nowrap">
+                  <span className="truncate">
+                    {searchQuery ? highlightText(tempTitle, searchQuery) : ""}
+                  </span>
+                </div>
+                <input
+                  ref={titleInputRef}
+                  type="text"
+                  value={tempTitle}
+                  onChange={handleTitleChange}
+                  onFocus={() => setIsEditingTitle(true)}
+                  onBlur={() => handleSaveTitle(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveTitle(true);
+                    if (e.key === 'Escape') { e.stopPropagation(); handleCancelTitle(); }
+                    if (e.key === 'Tab') {
+                      e.preventDefault();
+                      const editorContainer = contentRef.current;
+                      if (editorContainer) {
+                        const focusable = editorContainer.querySelector('input, .cm-content') as HTMLElement;
+                        if (focusable) focusable.focus();
+                      }
                     }
-                  }
-                }}
-                onClick={(e) => e.stopPropagation()}
-                placeholder="Título de la nota..."
-                className={`w-full min-w-0 bg-transparent text-lg font-bold outline-none placeholder-zinc-400 transition-colors cursor-text pr-2 ${
-                  searchQuery && tempTitle.toLowerCase().includes(searchQuery.toLowerCase())
-                    ? "text-transparent caret-zinc-800 dark:caret-[#CCCCCC]"
-                    : "text-zinc-800 dark:text-[#CCCCCC]"
-                }`}
-                title="Haz clic para editar"
-              />
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  placeholder="Título de la nota..."
+                  className={`w-full min-w-0 bg-transparent text-lg font-bold outline-none placeholder-zinc-400 transition-colors cursor-text pr-2 ${
+                    searchQuery && tempTitle.toLowerCase().includes(searchQuery.toLowerCase())
+                      ? "text-transparent caret-zinc-800 dark:caret-[#CCCCCC]"
+                      : "text-zinc-800 dark:text-[#CCCCCC]"
+                  }`}
+                  title="Haz clic para editar"
+                />
+              </div>
             </div>
           </div>
         </div>
+        {/* ROW 2: ACTION BUTTONS */}
+        <div className="flex items-center justify-between gap-1.5 flex-wrap pl-1">
+          {/* GRUPO IZQUIERDO: Utilidades principales */}
+          <div className="flex items-center gap-1.5">
+            {/* Permanent Sync Symbol */}
+            {(() => {
+              const currentSyncStatus = allSaveStatuses[displayNoteId] || 'idle';
+              return (
+                <div className="mr-0.5 flex items-center justify-center w-6 h-6" title={currentSyncStatus === 'saving' ? 'Sincronizando...' : 'Sincronizado'}>
+                  {currentSyncStatus === 'saving' ? (
+                    <Loader2 size={13} className="animate-spin text-indigo-500" />
+                  ) : (
+                    <CloudCheck size={13} className={currentSyncStatus === 'saved' ? "text-emerald-500" : "text-zinc-300 dark:text-zinc-600"} />
+                  )}
+                </div>
+              );
+            })()}
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          {/* Permanent Sync Symbol */}
-          {(() => {
-            const currentSyncStatus = allSaveStatuses[displayNoteId] || 'idle';
-            return (
-              <div className="mr-0.5 flex items-center justify-center w-6 h-6" title={currentSyncStatus === 'saving' ? 'Sincronizando...' : 'Sincronizado'}>
-                {currentSyncStatus === 'saving' ? (
-                  <Loader2 size={13} className="animate-spin text-indigo-500" />
-                ) : (
-                  <CloudCheck size={13} className={currentSyncStatus === 'saved' ? "text-emerald-500" : "text-zinc-300 dark:text-zinc-600"} />
-                )}
-              </div>
-            );
-          })()}
+            {/* Botón Nueva subnota */}
+            {session?.user && (
+              <button
+                onClick={(e) => { e.stopPropagation(); handleCreateSubnote(); }}
+                title="Nueva subnota"
+                className="p-2 rounded-xl border text-emerald-400 border-zinc-200 dark:border-zinc-700 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all flex items-center"
+              >
+                <ListPlus size={13} />
+              </button>
+            )}
 
-          {/* Botón Nueva subnota */}
-          {session?.user && (
+            {/* Botón AI */}
+            {session?.user && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowAIInput(v => !v); }}
+                title={showAIInput ? 'Ocultar panel AI' : 'Abrir panel AI'}
+                className={`p-2 rounded-xl border transition-all ${
+                  showAIInput 
+                    ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
+                    : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
+                }`}
+              >
+                <Sparkles size={13} />
+              </button>
+            )}
+
+            {/* Botón pizarrón en header */}
             <button
-              onClick={(e) => { e.stopPropagation(); handleCreateSubnote(); }}
-              title="Nueva subnota"
-              className="p-2 rounded-xl border text-emerald-400 border-zinc-200 dark:border-zinc-700 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all flex items-center"
-            >
-              <ListPlus size={13} />
-            </button>
-          )}
-
-          {/* Botón AI */}
-          {session?.user && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setShowAIInput(v => !v); }}
-              title={showAIInput ? 'Ocultar panel AI' : 'Abrir panel AI'}
+              onClick={(e) => { e.stopPropagation(); setShowNoteScratch(v => !v); }}
+              title={showNoteScratch ? 'Ocultar pizarrón' : 'Abrir pizarrón'}
               className={`p-2 rounded-xl border transition-all ${
-                showAIInput 
+                showNoteScratch
                   ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
                   : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
               }`}
             >
-              <Sparkles size={13} />
+              <PenLine size={13} />
             </button>
-          )}
 
-          {/* Botón pizarrón en header */}
-          <button
-            onClick={(e) => { e.stopPropagation(); setShowNoteScratch(v => !v); }}
-            title={showNoteScratch ? 'Ocultar pizarrón' : 'Abrir pizarrón'}
-            className={`p-2 rounded-xl border transition-all ${
-              showNoteScratch
-                ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
-                : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
-            }`}
-          >
-            <PenLine size={13} />
-          </button>
+            {showLineNumbers && onToggleLineNumbers && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onToggleLineNumbers(); }}
+                className="p-1.5 rounded-lg transition-colors text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shrink-0"
+                title="Ocultar números de línea"
+              >
+                <Hash size={14} />
+              </button>
+            )}
 
-          {/* Botón Zen */}
-          <button
-            onClick={(e) => { e.stopPropagation(); useUIStore.getState().toggleZenMode('notes'); }}
-            className={`p-2 rounded-xl border transition-all ${
-              useUIStore.getState().isZenModeByApp['notes']
-                ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
-                : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
-            }`}
-            title={useUIStore.getState().isZenModeByApp['notes'] ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
-          >
-            <Wind size={13} />
-          </button>
+            {note.is_docked && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onUpdate(note.id, { is_docked: false }); }}
+                className="p-1.5 rounded-lg transition-colors text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shrink-0"
+                title="Quitar del Sidebar"
+              >
+                <PanelLeft size={14} />
+              </button>
+            )}
 
-          {/* Botón Maximizar/Minimizar */}
-          <button
-            onClick={(e) => { e.stopPropagation(); setIsMaximized(!isMaximized); }}
-            className={`hidden md:flex p-2 rounded-xl border transition-all ${
-              isMaximized
-                ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
-                : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
-            }`}
-            title={isMaximized ? "Minimizar" : "Maximizar"}
-          >
-            {isMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-          </button>
+            {note.is_pinned && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onUpdate(note.id, { is_pinned: false }); }}
+                className="p-1.5 rounded-lg transition-colors text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 shrink-0"
+                title="Desfijar Nota"
+              >
+                <Pin size={14} className="fill-current" />
+              </button>
+            )}
 
-          {showLineNumbers && onToggleLineNumbers && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onToggleLineNumbers(); }}
-              className="p-1.5 rounded-lg transition-colors text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shrink-0"
-              title="Ocultar números de línea"
-            >
-              <Hash size={14} />
-            </button>
-          )}
-
-          {note.is_docked && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onUpdate(note.id, { is_docked: false }); }}
-              className="p-1.5 rounded-lg transition-colors text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shrink-0"
-              title="Quitar del Sidebar"
-            >
-              <PanelLeft size={14} />
-            </button>
-          )}
-
-          {note.is_pinned && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onUpdate(note.id, { is_pinned: false }); }}
-              className="p-1.5 rounded-lg transition-colors text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 shrink-0"
-              title="Desfijar Nota"
-            >
-              <Pin size={14} className="fill-current" />
-            </button>
-          )}
-
-          {isInKanban && (
-            <div className="flex items-center gap-2">
-              <KanbanSemaphore sourceType="note" sourceId={note.id} sourceTitle={note.title || 'Sin título'} onInteract={() => {}} />
-            </div>
-          )}
-
-          <div className="relative shrink-0 flex items-center" ref={mobileMenuRef}>
-            <button
-              onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(!isMobileMenuOpen); }}
-              className={`p-2 rounded-xl border transition-all ${
-                isMobileMenuOpen
-                  ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
-                  : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
-              }`}
-              title="Más opciones de la nota"
-            >
-              <MoreVertical size={13} />
-            </button>
-            {isMobileMenuOpen && (
-              <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-[#1A1A24] shadow-xl rounded-lg border border-zinc-200 dark:border-[#2D2D42] p-1 flex flex-col gap-0.5 min-w-[180px] animate-fadeIn">
-                {/* GRUPO 1: Estados de la nota */}
-                {onToggleLineNumbers && (
-                  <button onClick={(e) => { e.stopPropagation(); onToggleLineNumbers(); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${showLineNumbers ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}>
-                    <Hash size={14} /> {showLineNumbers ? 'Ocultar números' : 'Mostrar números'}
-                  </button>
-                )}
-                
-                <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); onUpdate(note.id, { is_docked: !note.is_docked }); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_docked ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}>
-                  <PanelLeft size={14} />{note.is_docked ? 'Quitar del Sidebar' : 'Anclar al Sidebar'}
-                </button>
-                
-                <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); onUpdate(note.id, { is_pinned: !note.is_pinned }); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_pinned ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}>
-                  <Pin size={14} className={note.is_pinned ? "fill-current" : ""} />{note.is_pinned ? 'Desfijar Nota' : 'Fijar Nota'}
-                </button>
-                
-                {!isInKanban && (
-                  <button onClick={async (e) => { 
-                    e.stopPropagation(); 
-                    await supabase.from('tasks').upsert({ id: note.id, title: note.title || 'Sin título', status: 'backlog' });
-                    window.dispatchEvent(new CustomEvent('kanban-updated'));
-                    setIsMobileMenuOpen(false);
-                  }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
-                    <CheckSquare size={14} /> Añadir a Kanban
-                  </button>
-                )}
-                
-                {/* SEPARADOR 1 */}
-                <div className="border-t border-zinc-100 dark:border-zinc-700 my-0.5" />
-                
-                {/* GRUPO 2: Checklist */}
-                <button onClick={(e) => {
-                  e.stopPropagation();
-                  const willBeChecklist = !note.is_checklist;
-                  let newContent = displayContent;
-                  if (willBeChecklist) {
-                    newContent = serializeChecklistToMarkdown(parseMarkdownToChecklist(displayContent));
-                  } else {
-                    // Si ya existe el ref, usar los items actuales para no depender de props desincronizadas
-                    const currentItems = checklistRef.current?.getItems();
-                    if (currentItems) {
-                      newContent = serializeChecklistToPlainMarkdown(currentItems);
-                    } else {
-                      newContent = serializeChecklistToPlainMarkdown(parseMarkdownToChecklist(displayContent));
-                    }
-                  }
-                  onUpdate(displayNoteId, { is_checklist: willBeChecklist, content: newContent });
-                  setIsMobileMenuOpen(false);
-                }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_checklist ? 'text-[#1F3760] dark:text-blue-400 bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}>
-                  <ListTodo size={14} />{note.is_checklist ? 'Quitar Checklist' : 'Hacer Checklist'}
-                </button>
-
-                {/* SEPARADOR 2 */}
-                <div className="border-t border-zinc-100 dark:border-zinc-700 my-0.5" />
-                
-                {/* GRUPO 3: Utilidades */}
-                {onCopyNote && <button onClick={(e) => { e.stopPropagation(); onCopyNote(note); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><Clipboard size={14} />Copiar Nota</button>}
-                {onDuplicate && <button onClick={(e) => { e.stopPropagation(); onDuplicate(note.id); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><CopyPlus size={14} />Duplicar Nota</button>}
-                {onMove && <button onClick={(e) => { e.stopPropagation(); setIsMoveModalOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"><FolderInput size={14} />Mover de Grupo</button>}
-                {onExportNote && <button onClick={(e) => { e.stopPropagation(); onExportNote(note); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors font-bold"><Download size={14} />Exportar (.md)</button>}
-                
-                
-                {/* GRUPO 4: Gestión */}
-                {onArchive && (
-                  <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false); onArchive(note.id); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 font-bold transition-colors">
-                    <Archive size={14} /> Archivar Nota
-                  </button>
-                )}
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false); if (confirm('¿Estás seguro de eliminar esta nota?')) onDelete(note.id); }} 
-                  className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-bold"
-                >
-                  <Trash2 size={14} /> Eliminar Permanentemente
-                </button>
+            {isInKanban && (
+              <div className="flex items-center gap-2">
+                <KanbanSemaphore sourceType="note" sourceId={note.id} sourceTitle={note.title || 'Sin título'} onInteract={() => {}} />
               </div>
             )}
           </div>
-        </div>
-      </div>
 
+          {/* GRUPO DERECHO: Zen, Maximize, More */}
+          <div className="flex items-center gap-1.5">
+            {/* Botón Zen */}
+            <button
+              onClick={(e) => { e.stopPropagation(); useUIStore.getState().toggleZenMode('notes'); }}
+              className={`p-2 rounded-xl border transition-all ${
+                useUIStore.getState().isZenModeByApp['notes']
+                  ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
+                  : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
+              }`}
+              title={useUIStore.getState().isZenModeByApp['notes'] ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
+            >
+              <Wind size={13} />
+            </button>
 
+            {/* Botón Maximizar/Minimizar */}
+            <button
+              onClick={(e) => { e.stopPropagation(); setIsMaximized(!isMaximized); }}
+              className={`hidden md:flex p-2 rounded-xl border transition-all ${
+                isMaximized
+                  ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
+                  : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
+              }`}
+              title={isMaximized ? "Minimizar" : "Maximizar"}
+            >
+              {isMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+            </button>
 
-      {/* CONTENT */}
-      <div
-        ref={contentRef}
-        className="flex-1 flex flex-col min-h-0 bg-transparent relative select-text"
-      >
-        {showStickyTitle && (
-          <div className="sticky top-4 left-0 right-0 z-[40] flex justify-center pointer-events-none animate-fadeIn px-4">
-            <div onClick={(e) => { e.stopPropagation(); headerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }} className="bg-white/95 dark:bg-zinc-100/95 backdrop-blur-md text-zinc-900 dark:text-zinc-900 px-5 py-1.5 rounded-full shadow-lg shadow-black/10 text-[13px] font-bold flex items-center gap-2 pointer-events-auto cursor-pointer active:scale-95 transition-all border border-zinc-200/50 dark:border-zinc-300 w-auto max-w-[90%] sm:max-w-[400px] hover:shadow-xl"><span className="truncate">{note.title || 'Sin título'}</span><ChevronUp size={14} className="opacity-70 shrink-0" /></div>
+            {/* Tres puntos (More) */}
+            <div className="relative shrink-0 flex items-center" ref={mobileMenuRef}>
+              <button
+                onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(!isMobileMenuOpen); }}
+                className={`p-2 rounded-xl border transition-all ${
+                  isMobileMenuOpen
+                    ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
+                    : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
+                }`}
+                title="Más opciones de la nota"
+              >
+                <MoreVertical size={13} />
+              </button>
+              {isMobileMenuOpen && (
+                <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-[#1A1A24] shadow-xl rounded-lg border border-zinc-200 dark:border-[#2D2D42] p-1 flex flex-col gap-0.5 min-w-[180px] animate-fadeIn">
+                  {onToggleLineNumbers && (
+                    <button onClick={(e) => { e.stopPropagation(); onToggleLineNumbers(); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${showLineNumbers ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}>
+                      <Hash size={14} /> {showLineNumbers ? 'Ocultar números' : 'Mostrar números'}
+                    </button>
+                  )}
+                  
+                  <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); onUpdate(note.id, { is_docked: !note.is_docked }); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_docked ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}>
+                    <PanelLeft size={14} />{note.is_docked ? 'Quitar del Sidebar' : 'Anclar al Sidebar'}
+                  </button>
+                  
+                  <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); onUpdate(note.id, { is_pinned: !note.is_pinned }); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_pinned ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}>
+                    <Pin size={14} className={note.is_pinned ? "fill-current" : ""} />{note.is_pinned ? 'Desfijar Nota' : 'Fijar Nota'}
+                  </button>
+                  
+                  {!isInKanban && (
+                    <button onClick={async (e) => { 
+                      e.stopPropagation(); 
+                      await supabase.from('tasks').upsert({ id: note.id, title: note.title || 'Sin título', status: 'backlog' });
+                      window.dispatchEvent(new CustomEvent('kanban-updated'));
+                      setIsMobileMenuOpen(false);
+                    }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
+                      <CheckSquare size={14} /> Añadir a Kanban
+                    </button>
+                  )}
+                  
+                  <div className="border-t border-zinc-100 dark:border-zinc-700 my-0.5" />
+                  
+                  <button onClick={(e) => {
+                    e.stopPropagation();
+                    const willBeChecklist = !note.is_checklist;
+                    let newContent = displayContent;
+                    if (willBeChecklist) {
+                      newContent = serializeChecklistToMarkdown(parseMarkdownToChecklist(displayContent));
+                    } else {
+                      const currentItems = checklistRef.current?.getItems();
+                      if (currentItems) {
+                        newContent = serializeChecklistToPlainMarkdown(currentItems);
+                      } else {
+                        newContent = serializeChecklistToPlainMarkdown(parseMarkdownToChecklist(displayContent));
+                      }
+                    }
+                    onUpdate(displayNoteId, { is_checklist: willBeChecklist, content: newContent });
+                    setIsMobileMenuOpen(false);
+                  }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_checklist ? 'text-[#1F3760] dark:text-blue-400 bg-blue-50 dark:bg-[#1F3760]/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}>
+                    <ListTodo size={14} />{note.is_checklist ? 'Quitar Checklist' : 'Hacer Checklist'}
+                  </button>
+
+                  <div className="border-t border-zinc-100 dark:border-zinc-700 my-0.5" />
+                  
+                  {onCopyNote && <button onClick={(e) => { e.stopPropagation(); onCopyNote(note); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><Clipboard size={14} />Copiar Nota</button>}
+                  {onDuplicate && <button onClick={(e) => { e.stopPropagation(); onDuplicate(note.id); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><CopyPlus size={14} />Duplicar Nota</button>}
+                  {onMove && <button onClick={(e) => { e.stopPropagation(); setIsMoveModalOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"><FolderInput size={14} />Mover de Grupo</button>}
+                  {onExportNote && <button onClick={(e) => { e.stopPropagation(); onExportNote(note); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors font-bold"><Download size={14} />Exportar (.md)</button>}
+                  
+                  {onArchive && (
+                    <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false); onArchive(note.id); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 font-bold transition-colors">
+                      <Archive size={14} /> Archivar Nota
+                    </button>
+                  )}
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false); if (confirm('¿Estás seguro de eliminar esta nota?')) onDelete(note.id); }} 
+                    className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-bold"
+                  >
+                    <Trash2 size={14} /> Eliminar Permanentemente
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        )}
+        </div>
 
-        <div className="px-4 pb-4 pt-2 w-full flex-1 flex flex-col min-h-0 gap-[10px]">
+        {/* ROW 3: ACCESSES (Breadcrumb + Tabs) */}
+        <div className="flex flex-col gap-2 w-full">
           <NoteBreadcrumb
             path={breadcrumbPath}
             activeNoteId={activeNoteId || note.id}
             onNavigate={navigate}
           />
 
-          {/* PANEL AI — generador, colapsable */}
-          {showAIPanel && session?.user && (
-            <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 dark:bg-[#1A1A2E]/60 p-4 animate-fadeIn shrink-0">
-              <NoteAIPanel
-                noteId={displayNoteId}
-                userId={session?.user?.id || ''}
-                noteStatus={note.ai_summary_status ?? 'idle'}
-                getNewOrderIndex={getNewOrderIndex}
-                onPromoteToNote={handlePromoteToNote}
-                onCancel={() => setShowAIPanel(false)}
-              />
-            </div>
-          )}
-
-          {/* ── BARRA DE TABS UNIFICADA — siempre visible si hay hijos o summaries ── */}
           {(manualChildren.length > 0 || aiSummaries.length > 0 || childrenLoaded) && (
             <div className="relative group/tabbar shrink-0">
               {/* Flecha Izquierda */}
@@ -1232,7 +1233,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                   <button
                     onClick={() => setActiveTab('original')}
                     data-active-tab={activeTab === 'original' || undefined}
-                    className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all ${
+                    className={`relative flex items-center justify-center px-4 h-[32.5px] rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all ${
                       activeTab === 'original'
                         ? `bg-[#4940D9] text-white border-[#4940D9] shadow-sm ${isOriginalMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
                         : isOriginalMatch
@@ -1243,7 +1244,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                     {globalTasks?.some(t => t.id === displayNoteId || t.linked_note_id === displayNoteId) && (
                       <div className="absolute -top-1.5 -right-1.5 z-10"><KanbanSemaphore sourceType="note" sourceId={displayNoteId} sourceTitle="Nota Original" /></div>
                     )}
-                    <FileText size={11} /> Original
+                    <FileText size={11} />
                   </button>
                 );
               })()}
@@ -1255,39 +1256,40 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                   const isActive = activeTab === `sub_${child.id}`;
                   const isMatch = searchQuery?.trim() && checkNoteMatch(child, searchQuery.trim(), groupNotes, allSummaries);
 
-                  return (
-                    <div key={child.id} className="relative shrink-0 flex items-center group">
-                      <button
-                        onClick={() => setActiveTab(`sub_${child.id}`)}
-                        data-active-tab={isActive || undefined}
-                        data-is-match={isMatch}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all max-w-[150px] ${
-                          isActive
-                            ? `bg-emerald-600 text-white border-emerald-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
-                            : isMatch
-                              ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
-                              : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-emerald-500/50 hover:text-emerald-400'
-                        }`}
-                      >
-                        <GitBranch size={10} className="shrink-0" />
-                        <SubnoteTitle
-                          child={child}
-                          isActive={isActive}
-                          onRename={handleSaveChildTitle}
-                          searchQuery={searchQuery}
-                        />
-                        {isActive && (
-                          <span 
-                            onClick={(e) => { e.stopPropagation(); if (confirm('¿Borrar esta sub-nota?')) onDelete(child.id); }} 
-                            className="ml-1 p-0.5 hover:bg-black/20 rounded transition-colors text-white/70 hover:text-white" 
-                            title="Borrar sub-nota"
-                          >
-                            <Trash2 size={10} />
-                          </span>
-                        )}
-                      </button>
-                    </div>
-                  );
+                    return (
+                      <div key={child.id} className="relative shrink-0 flex items-center group">
+                        <button
+                          onClick={() => setActiveTab(`sub_${child.id}`)}
+                          data-active-tab={isActive || undefined}
+                          data-is-match={isMatch}
+                          className={`flex items-center ${editingTabId === child.id ? 'gap-0' : 'gap-1.5'} px-3 h-[32.5px] rounded-lg text-[13px] font-bold whitespace-nowrap border transition-all max-w-[320px] ${
+                            isActive
+                              ? `bg-emerald-600 text-white border-emerald-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
+                              : isMatch
+                                ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
+                                : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-emerald-500/50 hover:text-emerald-400'
+                          }`}
+                        >
+                          {editingTabId !== child.id && <GitBranch size={10} className="shrink-0" />}
+                          <SubnoteTitle
+                            child={child}
+                            isActive={isActive}
+                            onRename={handleSaveChildTitle}
+                            searchQuery={searchQuery}
+                            onEditingChange={(editing) => setEditingTabId(editing ? child.id : null)}
+                          />
+                          {isActive && editingTabId !== child.id && (
+                            <span 
+                              onClick={(e) => { e.stopPropagation(); if (confirm('¿Borrar esta sub-nota?')) onDelete(child.id); }} 
+                              className="ml-1 p-0.5 hover:bg-black/20 rounded transition-colors text-white/70 hover:text-white" 
+                              title="Borrar sub-nota"
+                            >
+                              <Trash2 size={10} />
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                    );
                 } else {
                   const s = tab.data as any;
                   const isProcessing = s.status === 'pending' || s.status === 'processing';
@@ -1313,7 +1315,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                       onClick={() => setActiveTab(activeTab === s.id ? 'original' : s.id)}
                       data-active-tab={activeTab === s.id || undefined}
                       data-is-match={isMatch}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 transition-all max-w-[150px] ${
+                      className={`flex items-center ${editingTabId === s.id ? 'gap-0' : 'gap-1.5'} px-3 h-[32.5px] rounded-lg text-[13px] font-bold whitespace-nowrap border shrink-0 transition-all max-w-[320px] ${
                         activeTab === s.id
                           ? `bg-violet-600 text-white border-violet-500 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
                           : isMatch
@@ -1321,13 +1323,14 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                             : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/40 hover:text-violet-400'
                       }`}
                     >
-                    <Sparkles size={10} className="shrink-0" />
+                    {editingTabId !== s.id && <Sparkles size={10} className="shrink-0" />}
                     <span className="truncate">
                       <SummaryTitle 
                         summary={s} 
                         isActive={activeTab === s.id} 
                         searchQuery={searchQuery} 
                         onRename={(id, newObj) => updateSummaryMetadata(id, { target_objective: newObj })} 
+                        onEditingChange={(editing) => setEditingTabId(editing ? s.id : null)}
                       />
                     </span>
                   </button>
@@ -1347,6 +1350,23 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+
+
+      {/* CONTENT */}
+      <div
+        ref={contentRef}
+        className="flex-1 flex flex-col min-h-0 bg-transparent relative select-text"
+      >
+        {showStickyTitle && (
+          <div className="sticky top-4 left-0 right-0 z-[40] flex justify-center pointer-events-none animate-fadeIn px-4">
+            <div onClick={(e) => { e.stopPropagation(); headerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }} className="bg-white/95 dark:bg-zinc-100/95 backdrop-blur-md text-zinc-900 dark:text-zinc-900 px-5 py-1.5 rounded-full shadow-lg shadow-black/10 text-[13px] font-bold flex items-center gap-2 pointer-events-auto cursor-pointer active:scale-95 transition-all border border-zinc-200/50 dark:border-zinc-300 w-auto max-w-[90%] sm:max-w-[400px] hover:shadow-xl"><span className="truncate">{note.title || 'Sin título'}</span><ChevronUp size={14} className="opacity-70 shrink-0" /></div>
+          </div>
+        )}
+
+        <div className="px-4 pb-4 pt-2 w-full flex-1 flex flex-col min-h-0 gap-[10px]">
 
 
           {/* ── AI INPUT PANEL — sobre el contenido activo (como TikTok/Pizarrón) ─── */}
