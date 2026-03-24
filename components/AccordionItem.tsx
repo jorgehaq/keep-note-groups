@@ -1110,7 +1110,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               <button
                 onClick={(e) => { e.stopPropagation(); handleCreateSubnote(); }}
                 title="Nueva subnota"
-                className="flex items-center justify-center px-3 h-[32.5px] rounded-lg text-[13px] font-medium border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 transition-all"
+                className="flex items-center justify-center px-3 h-[32.5px] rounded-lg text-[13px] font-medium border border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-all active:scale-95"
               >
                 <ListPlus size={13} className="mr-1.5" />
                 <span>+</span>
@@ -1125,10 +1125,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 className={`flex items-center px-3 h-[32.5px] rounded-lg text-[13px] font-medium border transition-all ${
                   showAIInput 
                     ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/40 shadow-sm' 
-                    : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/50 hover:text-violet-500'
+                    : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/50 hover:bg-violet-50 dark:hover:bg-violet-500/10 hover:text-violet-700 dark:hover:text-violet-400'
                 }`}
               >
-                <Sparkles size={13} className={showAIInput ? '' : 'text-violet-400'} />
+                <Sparkles size={13} className="" />
               </button>
             )}
 
@@ -1139,10 +1139,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               className={`flex items-center px-3 h-[32.5px] rounded-lg text-[13px] font-medium border transition-all ${
                 showNoteScratch
                   ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/40 shadow-sm' 
-                  : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/50 hover:text-violet-500'
+                  : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/50 hover:bg-violet-50 dark:hover:bg-violet-500/10 hover:text-violet-700 dark:hover:text-violet-400'
               }`}
             >
-              <PenLine size={13} className={showNoteScratch ? '' : 'text-violet-400'} />
+              <PenLine size={13} className="" />
             </button>
 
             {showLineNumbers && onToggleLineNumbers && (
@@ -1185,7 +1185,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               className={`p-2 rounded-xl border transition-all ${
                 useUIStore.getState().isZenModeByApp['notes']
                   ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500 shadow-sm' 
-                  : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
+                  : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/40 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400'
               }`}
               title={useUIStore.getState().isZenModeByApp['notes'] ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
             >
@@ -1198,7 +1198,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               className={`hidden md:flex p-2 rounded-xl border transition-all ${
                 isMaximized
                   ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500 shadow-sm' 
-                  : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
+                  : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/40 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400'
               }`}
               title={isMaximized ? "Minimizar" : "Maximizar"}
             >
@@ -1212,7 +1212,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 className={`p-2 rounded-xl border transition-all ${
                   isMobileMenuOpen
                     ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
-                    : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#4940D9]/30'
+                    : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-zinc-400/60 dark:hover:border-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700/60 hover:text-zinc-700 dark:hover:text-zinc-300'
                 }`}
                 title="Más opciones de la nota"
               >
@@ -1329,13 +1329,13 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                         ? `bg-indigo-50/80 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-500/40 shadow-sm ${isOriginalMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
                         : isOriginalMatch
                           ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
-                          : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/50'
+                          : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-700 dark:hover:text-indigo-300 transition-all'
                     }`}
                   >
                     {globalTasks?.some(t => t.id === displayNoteId || t.linked_note_id === displayNoteId) && (
                       <div className="absolute -top-1.5 -right-1.5 z-10"><KanbanSemaphore sourceType="note" sourceId={displayNoteId} sourceTitle="Nota Original" /></div>
                     )}
-                    <FileText size={12} className={activeTab === 'original' ? 'text-indigo-500 dark:text-indigo-300' : 'text-zinc-400'} />
+                    <FileText size={12} className={activeTab === 'original' ? 'text-indigo-500 dark:text-indigo-300 shrink-0' : 'shrink-0'} />
                   </button>
                 );
               })()}
@@ -1358,7 +1358,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                               ? `bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/40 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
                               : isMatch
                                 ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
-                                : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-emerald-500/50 hover:text-emerald-400'
+                                : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-emerald-500/50 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-400 transition-all'
                           }`}
                         >
                           {editingTabId !== child.id && <GitBranch size={10} className="shrink-0" />}
@@ -1412,7 +1412,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                           ? `bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/40 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
                           : isMatch
                             ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
-                            : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/50'
+                            : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/50 hover:bg-violet-50 dark:hover:bg-violet-500/10 hover:text-violet-700 dark:hover:text-violet-400 transition-all'
                       }`}
                     >
                     {editingTabId !== s.id && <Sparkles size={10} className="shrink-0" />}

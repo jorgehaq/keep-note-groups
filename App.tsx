@@ -1974,12 +1974,12 @@ function App() {
                                   ? `bg-indigo-50/80 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-500/40 shadow-sm ${isSearchActive ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-[#FAFAFA] dark:ring-offset-[#13131A] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
                                   : isSearchActive
                                     ? 'bg-amber-100/80 dark:bg-amber-900/30 border-amber-500 text-amber-700 dark:text-amber-300 shadow-[0_0_10px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
-                                    : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 dark:text-zinc-500 border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/40 hover:bg-zinc-200 dark:hover:bg-zinc-800/80 hover:text-indigo-600'
+                                    : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 dark:text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/40 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-300'
                               }`}
                             >
                               <div className="flex items-center gap-2.5">
 
-                                <FileText size={14} className={isSelected ? 'text-indigo-500 dark:text-indigo-300 shrink-0' : 'text-zinc-400 shrink-0'} />
+                                <FileText size={14} className={isSelected ? 'text-indigo-500 dark:text-indigo-300 shrink-0' : 'shrink-0'} />
                                 <span className="max-w-[150px] truncate">
                                   {highlightTitle(note.title || 'Sin Título')}
                                   {(() => {
@@ -2113,7 +2113,7 @@ function App() {
                                   className={`group bg-white dark:bg-[#1A1A24] border rounded-2xl p-5 hover:shadow-xl transition-all cursor-pointer flex flex-col gap-3 relative animate-fadeIn group/card ${
                                     isMatch 
                                       ? 'border-amber-500 shadow-[0_0_20px_rgba(251,192,45,0.2)]' 
-                                      : 'border-zinc-200 dark:border-[#2D2D42] hover:border-[#4940D9]/40'
+                                      : 'border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:shadow-xl active:scale-[0.98]'
                                   }`}
                                 >
                                   <div className="flex items-center justify-between gap-2">
@@ -2127,12 +2127,12 @@ function App() {
                                   <div className="text-xs text-zinc-500 line-clamp-3 leading-relaxed min-h-[4.5em] overflow-hidden">
                                      {note.content || <span className="italic opacity-40">Nota vacía...</span>}
                                   </div>
-                                  <div className="flex items-center justify-between pt-2 border-t border-zinc-50 dark:border-zinc-800/50 mt-auto">
+                                  <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800/60 mt-auto">
                                       <span className="text-[10px] font-bold text-zinc-400">{new Date(note.created_at || '').toLocaleDateString()}</span>
                                           <div className="flex items-center gap-2">
                                               <button 
                                                 onClick={(e) => { e.stopPropagation(); updateNote(note.id, { is_pinned: !note.is_pinned }); }} 
-                                                className={`p-1.5 rounded-xl border transition-all active:scale-95 ${note.is_pinned ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500/40 text-amber-600 dark:text-amber-400' : 'bg-transparent border-transparent hover:bg-amber-50 dark:hover:bg-amber-900/20 text-zinc-400 hover:text-amber-600 hover:border-amber-500/30'}`} 
+                                                className={`p-1.5 rounded-xl border transition-all active:scale-95 ${note.is_pinned ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500/40 text-amber-600 dark:text-amber-400' : 'bg-transparent border-transparent hover:bg-amber-50 dark:hover:bg-amber-900/20 text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 hover:border-amber-500/30'}`} 
                                                 title={note.is_pinned ? 'Quitar fijado' : 'Fijar nota'}
                                               >
                                                 <Pin size={14} className={note.is_pinned ? 'fill-current' : ''} />
@@ -2141,7 +2141,7 @@ function App() {
 
                                               <button 
                                                 onClick={(e) => { e.stopPropagation(); archiveNote(note.id); }} 
-                                                className="p-1.5 text-zinc-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-xl border border-transparent hover:border-amber-500/30 transition-all active:scale-95" 
+                                                className="p-1.5 text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-xl border border-transparent hover:border-amber-500/30 transition-all active:scale-95" 
                                                 title="Archivar"
                                               >
                                                 <Archive size={14}/>
@@ -2155,7 +2155,7 @@ function App() {
 
                           {/* SECCIÓN DE ARCHIVO (ESTILO PIZARRÓN) */}
                           {activeGroup.notes.filter(n => n.status === 'history').length > 0 && (
-                            <div className={`mt-5 space-y-4 pt-5 border-t border-zinc-100 dark:border-zinc-800/50 mb-20 animate-fadeIn ${isArchiveOpenByGroup[activeGroupId!] ? 'min-h-[300px]' : ''}`}>
+                            <div className={`mt-5 space-y-4 mb-20 animate-fadeIn ${isArchiveOpenByGroup[activeGroupId!] ? 'min-h-[300px]' : ''}`}>
 
                               <button 
                                 onClick={() => setArchiveOpenByGroup(activeGroupId!, !isArchiveOpenByGroup[activeGroupId!])}
@@ -2171,7 +2171,7 @@ function App() {
                                 <div className={`grid ${isMaximized ? 'grid-cols-[repeat(auto-fit,340px)] w-full max-w-[2160px]' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl'} gap-4 justify-center mx-auto pb-20`}>
 
                                   {activeGroup.notes.filter(n => n.status === 'history').map(note => (
-                                    <div key={note.id} className="p-4 bg-white dark:bg-[#1A1A24]/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex items-center justify-between group hover:border-[#4940D9]/30 hover:shadow-xl transition-all">
+                                    <div key={note.id} className="p-4 bg-white dark:bg-[#1A1A24]/40 border border-zinc-200 dark:border-zinc-700 rounded-2xl flex items-center justify-between group hover:border-indigo-500/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/10 hover:shadow-xl transition-all active:scale-[0.98]">
                                        <div className="flex items-center gap-3 truncate">
                                          <div className="w-8 h-8 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center text-zinc-400">
                                            <Archive size={16} />
@@ -2184,14 +2184,14 @@ function App() {
                                         <div className="flex items-center gap-1.5 shrink-0">
                                           <button 
                                              onClick={() => restoreNote(note.id)} 
-                                             className="p-2 rounded-xl border border-transparent hover:border-indigo-500/30 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all active:scale-95" 
+                                             className="p-2 rounded-xl border border-transparent hover:border-indigo-500/30 text-zinc-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all active:scale-95" 
                                              title="Restaurar Nota"
                                           >
                                              <RotateCcw size={16}/>
                                           </button>
                                           <button 
                                              onClick={() => deleteNote(note.id)} 
-                                             className="p-2 rounded-xl border border-transparent hover:border-red-500/30 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-95" 
+                                             className="p-2 rounded-xl border border-transparent hover:border-red-500/30 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-95" 
                                              title="Eliminar Permanente"
                                           >
                                              <Trash2 size={16}/>

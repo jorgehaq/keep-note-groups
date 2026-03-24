@@ -184,88 +184,88 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
                 )}
 
                 {/* List */}
-                <div className="max-h-[60vh] overflow-y-auto hidden-scrollbar p-2 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-700">
+                <div className="max-h-[60vh] overflow-y-auto hidden-scrollbar p-3">
                     {filteredGroups.length === 0 ? (
                         <div className="text-center py-10 text-zinc-400">
                             <p>No se encontraron grupos.</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 gap-1">
+                        <div className="grid grid-cols-2 gap-2">
                             {filteredGroups.map(group => {
+                                const isDocked = dockedGroupIds.includes(group.id);
+                                const borderClass = group.is_favorite
+                                    ? 'border-yellow-400/50 dark:border-yellow-500/30'
+                                    : group.is_pinned
+                                        ? 'border-amber-400/50 dark:border-amber-500/30'
+                                        : isDocked
+                                            ? 'border-indigo-500/40'
+                                            : 'border-zinc-200 dark:border-zinc-700';
+
                                 return (
                                     <div
                                         key={group.id}
-                                        className="group flex items-center justify-between w-full px-3 h-[25px] rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                                        className={`group relative flex flex-col gap-2 p-3 rounded-xl border bg-white dark:bg-[#1A1A24] transition-all cursor-pointer active:scale-[0.98] hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:shadow-lg ${borderClass}`}
+                                        onClick={() => {
+                                            openGroup(group.id);
+                                            setGlobalView('notes');
+                                            onClose();
+                                        }}
                                     >
-                                        {/* ZONA 1: ABRIR GRUPO (Click Principal) */}
-                                        <div
-                                            className="flex-1 min-w-0 flex flex-row items-center gap-1.5"
-                                            onClick={() => {
-                                                openGroup(group.id);
-                                                setGlobalView('notes');
-                                                onClose();
-                                            }}
-                                        >
-                                            <span className={`text-sm font-medium leading-none truncate uppercase ${
-                                                group.is_favorite 
-                                                    ? 'text-yellow-600 dark:text-yellow-400' 
-                                                    : dockedGroupIds.includes(group.id)
-                                                        ? 'text-[#4940D9]'
-                                                        : 'text-zinc-800 dark:text-[#CCCCCC]'
+                                        {/* TOP ROW: icon + actions */}
+                                        <div className="flex items-center justify-between">
+                                            <div className="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-800/60 flex items-center justify-center shrink-0">
+                                                {isDocked
+                                                    ? <FolderOpen size={14} className="text-indigo-500 fill-indigo-500/20" />
+                                                    : <FolderOpen size={14} className="text-zinc-400" />
+                                                }
+                                            </div>
+                                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); onToggleFavorite(group.id, !!group.is_favorite); }}
+                                                    className={`p-1 rounded-lg border transition-all ${
+                                                        group.is_favorite
+                                                            ? 'text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-400/40 opacity-100'
+                                                            : 'text-zinc-400 hover:text-yellow-500 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 border-transparent hover:border-yellow-400/30'
+                                                    }`}
+                                                    title={group.is_favorite ? "Quitar de favoritos" : "Marcar favorito"}
+                                                >
+                                                    <Star size={12} className={group.is_favorite ? 'fill-current' : ''} />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); onTogglePin(group.id, !!group.is_pinned); }}
+                                                    className={`p-1 rounded-lg border transition-all ${
+                                                        group.is_pinned
+                                                            ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20 border-amber-400/40 opacity-100'
+                                                            : 'text-zinc-400 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 border-transparent hover:border-amber-400/30'
+                                                    }`}
+                                                    title={group.is_pinned ? "Desanclar" : "Anclar"}
+                                                >
+                                                    <Pin size={12} className={group.is_pinned ? 'fill-current' : ''} />
+                                                </button>
+                                            </div>
+                                            {/* Badges visibles sin hover cuando tienen estado */}
+                                            {(group.is_favorite || group.is_pinned) && (
+                                                <div className="flex items-center gap-0.5 group-hover:hidden">
+                                                    {group.is_favorite && <Star size={11} className="text-yellow-500 fill-current" />}
+                                                    {group.is_pinned && <Pin size={11} className="text-amber-500 fill-current" />}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* BOTTOM: title + count */}
+                                        <div className="flex items-end justify-between gap-1 min-w-0">
+                                            <span className={`text-[13px] font-bold leading-tight truncate ${
+                                                group.is_favorite
+                                                    ? 'text-yellow-700 dark:text-yellow-400'
+                                                    : isDocked
+                                                        ? 'text-indigo-600 dark:text-indigo-400'
+                                                        : 'text-zinc-800 dark:text-zinc-200'
                                             }`}>
                                                 {highlightMatch(group.title)}
                                             </span>
-                                            <span className="text-sm font-medium leading-none text-zinc-800 dark:text-[#CCCCCC] opacity-40 group-hover:opacity-100 transition-opacity shrink-0">
-                                                ({group.notes.length})
+                                            <span className="text-[10px] font-bold text-zinc-400 shrink-0">
+                                                {group.notes.length}
                                             </span>
-                                        </div>
-
-                                        {/* ZONA 2: ACCIONES (Carpeta, Pin, Conteo) */}
-                                        <div className="flex items-center gap-1 ml-2 shrink-0">
-                                            {/* Status: Open (Folder) */}
-                                            <div className="w-6 h-6 flex items-center justify-center p-1">
-                                                {dockedGroupIds.includes(group.id) && (
-                                                    <FolderOpen size={14} className="text-[#4940D9] opacity-0 group-hover:opacity-100 transition-all shrink-0 fill-[#4940D9]" />
-                                                )}
-                                            </div>
-
-                                            {/* Action: Favorite (Star) */}
-                                            <div className="w-6 h-6 flex items-center justify-center">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        onToggleFavorite(group.id, !!group.is_favorite);
-                                                    }}
-                                                    className={`
-                                                        p-1 rounded-md transition-all
-                                                        ${group.is_favorite
-                                                            ? 'text-yellow-500 bg-yellow-50 dark:bg-yellow-900/10 opacity-100'
-                                                            : 'text-zinc-400 hover:text-yellow-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 opacity-0 group-hover:opacity-100 focus:opacity-100'}
-                                                    `}
-                                                    title={group.is_favorite ? "Quitar de favoritos" : "Marcar como favorito"}
-                                                >
-                                                    <Star size={14} className={group.is_favorite ? 'fill-current' : ''} />
-                                                </button>
-                                            </div>
-
-                                            {/* Action: Pin */}
-                                            <div className="w-6 h-6 flex items-center justify-center">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        onTogglePin(group.id, !!group.is_pinned);
-                                                    }}
-                                                    className={`
-                                                        p-1 rounded-md transition-all
-                                                        ${group.is_pinned
-                                                            ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/10 opacity-100'
-                                                            : 'text-zinc-400 hover:text-amber-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 opacity-0 group-hover:opacity-100 focus:opacity-100'}
-                                                    `}
-                                                    title={group.is_pinned ? "Desanclar grupo" : "Anclar grupo"}
-                                                >
-                                                    <Pin size={14} className={group.is_pinned ? 'fill-current' : ''} />
-                                                </button>
-                                            </div>
                                         </div>
                                     </div>
                                 );

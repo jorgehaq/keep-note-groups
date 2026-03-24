@@ -67,8 +67,12 @@ type GlobalAppView = 'notes' | 'kanban' | 'timers' | 'reminders' | 'braindump' |
   - **TikTok**: TikTok Red/Pink `#EE1D52`.
   - **Translator**: Violet `#8B5CF6`.
   - **Braindump**: Gold/Amber `#FFD700`.
-- **Acciones en Tarjeta (Dashboard)**: Los botones internos (Pin, Archivar) deben ser `rounded-xl`, discretos (`border-transparent`) pero perceptibles al hover/active, manteniendo siempre el ícono original.
-- **Vertical Rhythm**: La separación general entre grandes bloques (ej: Header a Cards, Cards a Archive) es de **20px** (`mt-5`).
+- **Vertical Rhythm**: La separación general entre grandes bloques (ej: Header a Cards, Cards a Archive) es de **20px** (`mt-5`). Quipar líneas (`border-t`) sobrantes para airear la UI en el eje vertical.
+- **Patrón de Hover Unificado (Cards & Tabs)**:
+  - **Inactive**: `bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700`
+  - **Hover**: `hover:bg-[Color]/10 dark:hover:bg-[Color]/10 hover:text-[Color]-700 dark:hover:text-[Color]-400 hover:border-[Color]/50`
+  - **Active**: `bg-[Color]/10 dark:bg-[Color]/10 text-[Color]-700 dark:text-[Color]-400 border-[Color]/40 shadow-sm transition-all active:scale-[0.98]`
+- **Iconos Heroicos**: Los iconos dentro de botones (como FileText en Notas) deben heredar el color del padre (`className="shrink-0"` sin `text-zinc-400` hardcodeado) para que reaccionen al estado hover/active del contenedor.
 
 ## Reglas
 - El Sidebar siempre está visible (NO se desmonta con globalView).

@@ -36,8 +36,8 @@ App.tsx
 - **Global Search Parity**: Buscador ámbar con `highlightText` y tray persistent.
 - **Responsive Trays**: En móviles, los paneles laterales (Notes, TikTok) se comportan como overlays `fixed inset-0` con botón de cierre explícito.
 - **Kanban Glow Standard**: Los estados `todo`, `in_progress` y `done` deben usar colores de la familia Tailwind-400 con un `box-shadow` de 6px (opacidad 0.5) para legibilidad en Dark Mode.
-- **Botones Premium (rounded-xl)**: Los botones de acción principal (headers, tabs, card actions) deben usar `rounded-xl` (12px), `border` definido y respuesta táctil `active:scale-95`.
-- **Vertical Rhythm**: El espaciado estándar entre componentes principales (Header -> Cards, Cards -> Archive) es de **20px** (`mt-5` o padding-top/bottom equivamente).
+- **Vertical Rhythm**: El espaciado estándar entre componentes principales (Header -> Cards, Cards -> Archive) es de **20px** (`mt-5` o padding-top/bottom equivamente). NUNCA usar líneas divisorias explícitas redundantes (borrar `border-t` entre grid y archivo).
+- **Interaction States (Tinted Hover)**: Los elementos interactivos (tarjetas, pestañas, botones de bandeja) deben usar un **fondo tintado sutil** (10-20% opacidad del color semántico) y un **borde coloreado** (40-50% opacidad) en estado `hover`, evitando fondos grises genéricos para apps con identidad propia (Indigo para Notas, Emerald para Subnotas).
 
 ## Alias de Paths
 - '@/' apunta a la raíz del proyecto (vite.config.ts resolve.alias)
