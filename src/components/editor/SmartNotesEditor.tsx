@@ -727,7 +727,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             fontSize: fontSize,
             fontFamily: fontFamily,
             backgroundColor: "transparent !important", // Deja que el contenedor padre maneje el fondo standardized
-            color: "inherit !important",               
+            color: "#a1a1aa !important", // zinc-400 (base color)               
             outline: "none !important", // Eliminar borde punteado de foco
             border: "none !important",
             boxShadow: "none !important",
@@ -735,6 +735,9 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             WebkitTouchCallout: "none !important", // Ocultar menú nativo de "copy/paste" al tocar sostenido
             WebkitUserSelect: "text !important",
             userSelect: "text !important",
+        },
+        ".dark &": {
+            color: "#a1a1aa !important", // zinc-400 (ensure consistency)
         },
         "&.cm-focused, &:focus, &:focus-within": {
             outline: "none !important",
@@ -744,10 +747,12 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-scroller": {
             backgroundColor: "transparent !important",
             outline: "none !important",
+            color: "#a1a1aa !important",
         },
         ".cm-content": {
             fontFamily: fontFamily,
             fontSize: fontSize,
+            color: "#a1a1aa !important",
             WebkitUserSelect: "text !important",
             userSelect: "text !important",
             whiteSpace: "pre-wrap !important",
@@ -756,6 +761,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             textAlign: "justify !important",
             paddingBottom: "20px !important", // 🚀 ESPACIO DE RESPIRACIÓN: Ajustado a 20px según preferencia
         },
+
         "&.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important", borderLeftWidth: "2px !important" },
         ".dark &.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important" },
         "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": { 
@@ -780,6 +786,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-activeLineGutter": { backgroundColor: "transparent !important" },
         ".cm-lineNumbers .cm-gutterElement": { paddingRight: "10px !important", paddingLeft: "4px !important" },
         ".cm-line": { 
+            color: "#a1a1aa !important",
             lineHeight: lHeight, 
             paddingLeft: "12px !important", 
             borderLeft: "3px solid transparent",
@@ -912,7 +919,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-remove-btn": { position: "absolute", display: "inline-flex", alignItems: "center", justifyContent: "center", backgroundColor: "#ef4444", border: "2px solid #ffffff", color: "white !important", width: "18px", height: "18px", left: "-6px", top: "-14px", borderRadius: "50%", fontSize: "14px", fontWeight: "bold", lineHeight: "1", cursor: "pointer !important", zIndex: "100", opacity: "0", transition: "opacity 0.15s", pointerEvents: "none" },
         ".cm-remove-btn-visible": { opacity: "1 !important", pointerEvents: "auto !important" },
         ".cm-remove-btn:hover": { opacity: "1 !important", pointerEvents: "auto !important", transform: "scale(1.1)" },
-        ".dark & .cm-line": { color: "#CCCCCC !important" },
+        ".dark & .cm-line": { color: "#a1a1aa !important" },
         ".cm-search-marker-container": {
             position: "absolute",
             right: "2px",
