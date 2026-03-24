@@ -1538,25 +1538,41 @@ function App() {
           {/* 1. BANNER DE RECORDATORIOS VENCIDOS (BARRA PLANA BORDERLESS) */}
           {!isZenMode && realShowOverdueMarquee && overdueRemindersList.length > 0 && (
             <div className="w-full bg-[#FAFAFA] dark:bg-[#13131A] overflow-hidden shrink-0 border-b border-zinc-200 dark:border-zinc-800">
-              <div className="py-2.5 flex items-center">
+              <div className="py-[5px] flex items-center">
                 <div className="flex-1 overflow-hidden relative h-6 flex items-center">
-                  <div className="marquee-content text-[11px] font-bold tracking-[0.1em] text-zinc-800 dark:text-[#D5D6D8] uppercase">
+                  <div className="marquee-content uppercase flex items-center">
                                            {/* Set A */}
                     <div className="flex shrink-0 items-center pr-[100vw]">
                       {overdueRemindersList.map((r, idx) => (
-                        <span key={`a-${r.targetId}`} className="shrink-0">
-                          {r.title} <span className="text-[#D5D6D8]">({r.dueAt ? new Date(r.dueAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''})</span>
-                          {idx < overdueRemindersList.length - 1 ? <span className="mx-2">|</span> : ''}
-                        </span>
+                        <div key={`a-${r.targetId}`} className="shrink-0 flex items-center gap-1.5 opacity-60">
+                          <Bell size={11} className="text-zinc-500" />
+                          <span className="text-[9px] font-bold uppercase tracking-tighter text-zinc-500">
+                            {r.title}:
+                          </span>
+                          <span className="text-[10px] font-medium text-zinc-800 dark:text-zinc-200">
+                            {r.dueAt ? new Date(r.dueAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                          </span>
+                          {idx < overdueRemindersList.length - 1 && (
+                            <div className="w-px h-3 bg-zinc-300 dark:bg-zinc-800 mx-6" />
+                          )}
+                        </div>
                       ))}
                     </div>
                     {/* Set B (duplicate for seamless loop) */}
                     <div className="flex shrink-0 items-center pr-[100vw]">
                       {overdueRemindersList.map((r, idx) => (
-                        <span key={`b-${r.targetId}`} className="shrink-0">
-                          {r.title} <span className="text-[#D5D6D8]">({r.dueAt ? new Date(r.dueAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''})</span>
-                          {idx < overdueRemindersList.length - 1 ? <span className="mx-2">|</span> : ''}
-                        </span>
+                        <div key={`b-${r.targetId}`} className="shrink-0 flex items-center gap-1.5 opacity-60">
+                          <Bell size={11} className="text-zinc-500" />
+                          <span className="text-[9px] font-bold uppercase tracking-tighter text-zinc-500">
+                            {r.title}:
+                          </span>
+                          <span className="text-[10px] font-medium text-zinc-800 dark:text-zinc-200">
+                            {r.dueAt ? new Date(r.dueAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                          </span>
+                          {idx < overdueRemindersList.length - 1 && (
+                            <div className="w-px h-3 bg-zinc-300 dark:bg-zinc-800 mx-6" />
+                          )}
+                        </div>
                       ))}
                     </div>
                   </div>

@@ -16,6 +16,7 @@ type LauncherTab = "alpha" | "recent" | "pinned";
 
 interface UIStore {
     activeGroupId: string | null;
+    lastActiveGroupId: string | null;
     // Map group ID to open note IDs (array)
     openNotesByGroup: Record<string, string[]>;
 
@@ -199,6 +200,7 @@ export const useUIStore = create<UIStore>()(
     persist(
         (set, get) => ({
             activeGroupId: null,
+            lastActiveGroupId: null,
             openNotesByGroup: {},
             dockedGroupIds: [],
             lastLauncherTab: "recent", // Default to recent
@@ -248,7 +250,10 @@ export const useUIStore = create<UIStore>()(
             isArchiveOpenByGroup: {},
             isArchiveOpenByApp: {},
 
-            setActiveGroup: (id) => set({ activeGroupId: id }),
+            setActiveGroup: (id) => set((state) => ({ 
+                activeGroupId: id,
+                lastActiveGroupId: state.activeGroupId && state.activeGroupId !== id ? state.activeGroupId : state.lastActiveGroupId
+            })),
 
             toggleNote: (groupId, noteId) =>
                 set((state) => {
@@ -276,6 +281,7 @@ export const useUIStore = create<UIStore>()(
                             ? state.dockedGroupIds
                             : [...state.dockedGroupIds, id],
                         activeGroupId: id,
+                        lastActiveGroupId: state.activeGroupId && state.activeGroupId !== id ? state.activeGroupId : state.lastActiveGroupId
                     };
                 }),
 
@@ -284,16 +290,21 @@ export const useUIStore = create<UIStore>()(
                     const newDocked = state.dockedGroupIds.filter((gId) =>
                         gId !== id
                     );
-                    // If closing active group, switch to another or null
                     let newActive = state.activeGroupId;
+                    let newLastActive = state.lastActiveGroupId;
                     if (state.activeGroupId === id) {
                         newActive = newDocked.length > 0
                             ? newDocked[newDocked.length - 1]
                             : null;
+                        newLastActive = null;
+                    }
+                    if (newLastActive === id) {
+                        newLastActive = null;
                     }
                     return {
                         dockedGroupIds: newDocked,
                         activeGroupId: newActive,
+                        lastActiveGroupId: newLastActive
                     };
                 }),
 
@@ -654,6 +665,7 @@ export const useUIStore = create<UIStore>()(
                 dockedGroupIds: state.dockedGroupIds,
                 openNotesByGroup: state.openNotesByGroup,
                 activeGroupId: state.activeGroupId,
+                lastActiveGroupId: state.lastActiveGroupId,
                 lastLauncherTab: state.lastLauncherTab,
                 noteSortMode: state.noteSortMode,
                 globalTasks: state.globalTasks,

@@ -1459,7 +1459,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           </div>
         )}
 
-        <div className="px-4 pb-4 pt-2 w-full flex-1 flex flex-col min-h-0 gap-[10px]">
+        <div className="px-[5px] pb-[5px] pt-2 w-full flex-1 flex flex-col min-h-0 gap-[10px]">
 
 
           {/* ── AI INPUT PANEL — sobre el contenido activo (como TikTok/Pizarrón) ─── */}

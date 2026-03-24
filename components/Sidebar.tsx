@@ -6,7 +6,7 @@ import { useUIStore } from '../src/lib/store';
 import { useTranslation } from 'react-i18next';
 
 interface SidebarProps {
-  groups: Group[]; // All groups (needed for Launcher)
+  groups: Group[]; 
   activeGroupId: string | null;
   onSelectGroup: (id: string) => void;
   onAddGroup: () => void;
@@ -30,44 +30,39 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectDockedNote,
   focusedNoteId,
 }) => {
-  const { dockedGroupIds, closeGroup, globalView, setGlobalView, activeTimersCount, overdueRemindersCount, overdueRemindersList, imminentRemindersCount, lastAppView, kanbanTodoCount, kanbanInProgressCount, kanbanDoneCount, lastUsedApp, globalTasks, lastActiveNoteByGroup, sidebarFocusMode, setSidebarFocusMode } = useUIStore();
+  const { dockedGroupIds, closeGroup, globalView, setGlobalView, activeTimersCount, overdueRemindersCount, overdueRemindersList, imminentRemindersCount, lastAppView, kanbanTodoCount, kanbanInProgressCount, kanbanDoneCount, lastUsedApp, globalTasks, lastActiveNoteByGroup, sidebarFocusMode, setSidebarFocusMode, lastActiveGroupId } = useUIStore();
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
   const { t } = useTranslation();
 
-  // Filter groups to only show docked ones
   const dockedGroups = groups.filter(g => dockedGroupIds.includes(g.id));
-
-  // Maintain order based on dockedGroupIds to prevent jumping when valid
-  // (Optional: Re-sort dockedGroups based on index in dockedGroupIds if strict order is needed)
   const sortedDockedGroups = dockedGroupIds
     .map(id => groups.find(g => g.id === id))
     .filter((g): g is Group => !!g);
 
   const getAppStyle = (appId: string) => {
-    // Identity mapping for each app
-    const APP_IDENTITY: Record<string, { bg: string, hover: string, shadow: string, text: string }> = {
-      notes: { bg: 'bg-[#4940D9]', hover: 'hover:bg-[#3D35C0]', shadow: 'shadow-[#4940D9]/30', text: 'text-white' },
-      reminders: { bg: 'bg-[#1F3760]', hover: 'hover:bg-[#152643]', shadow: 'shadow-[#1F3760]/30', text: 'text-white' },
-      timers: { bg: 'bg-[#2563EB]', hover: 'hover:bg-[#1D4ED8]', shadow: 'shadow-[#2563EB]/30', text: 'text-white' },
-      kanban: { bg: 'bg-[#10B981]', hover: 'hover:bg-[#059669]', shadow: 'shadow-[#10B981]/30', text: 'text-emerald-950' },
-      tiktok: { bg: 'bg-[#EE1D52]', hover: 'hover:bg-[#D61A4A]', shadow: 'shadow-[#EE1D52]/30', text: 'text-white' },
-      translator: { bg: 'bg-[#8B5CF6]', hover: 'hover:bg-[#7C3AED]', shadow: 'shadow-[#8B5CF6]/30', text: 'text-white' },
-      braindump: { bg: 'bg-[#FFD700]', hover: 'hover:bg-[#E5C100]', shadow: 'shadow-[#FFD700]/30', text: 'text-amber-950' },
+    const TINTED_IDENTITY: Record<string, string> = {
+      notes: 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/40 shadow-sm',
+      reminders: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/40 shadow-sm',
+      timers: 'bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/40 shadow-sm',
+      kanban: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/40 shadow-sm',
+      tiktok: 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/40 shadow-sm',
+      translator: 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/40 shadow-sm',
+      braindump: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/40 shadow-sm',
     };
 
-    // ESTADO 1: ACTIVO (Color de Identidad) - Es la app que estás mirando en este momento exacto
+    // ESTADO 1: ACTIVO
     if (globalView === appId) {
-      const identity = APP_IDENTITY[appId] || APP_IDENTITY.notes;
-      return `${identity.bg} ${identity.hover} ${identity.text} shadow-md hover:shadow-lg hover:${identity.shadow} scale-105 active:scale-95 transition-all`;
+      const activeStyle = TINTED_IDENTITY[appId] || TINTED_IDENTITY.notes;
+      return `${activeStyle} border scale-105 active:scale-95 transition-all`;
     }
 
-    // ESTADO 2: RECIÉN PERDIÓ EL FOCO (Gris Medio) - Fue la última app en la que estuviste
+    // ESTADO 2: RECIÉN PERDIÓ EL FOCO (Gris estructurado con ring)
     if (lastUsedApp === appId) {
-      return 'bg-zinc-300 dark:bg-zinc-700 border border-zinc-400/30 dark:border-transparent text-zinc-700 dark:text-zinc-200 shadow-inner hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:scale-105 active:scale-95';
+      return 'bg-white dark:bg-[#1A1A24] border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200 shadow-sm hover:border-indigo-400/60 dark:hover:border-[#3D3E89]/60 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 hover:scale-105 active:scale-95 transition-all';
     }
 
-    // ESTADO 3: MUERTO / INACTIVO (Gris Oscuro)
-    return 'bg-zinc-200/80 dark:bg-zinc-800/80 border border-zinc-300 dark:border-zinc-700/50 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-700 hover:shadow-sm hover:scale-105 active:scale-95';
+    // ESTADO 3: INACTIVO (Basado en el contrato de AccordionItem)
+    return 'bg-zinc-100 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-indigo-400/60 dark:hover:border-[#3D3E89]/60 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-sm hover:scale-105 active:scale-95 transition-all';
   };
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -78,7 +73,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (scrollContainerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
       setCanScrollUp(scrollTop > 0);
-      setCanScrollDown(Math.ceil(scrollTop + clientHeight) < scrollHeight - 1); // tolerance
+      setCanScrollDown(Math.ceil(scrollTop + clientHeight) < scrollHeight - 1);
     }
   };
 
@@ -96,7 +91,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      <div className="w-12 md:w-16 bg-zinc-200 dark:bg-[#13131A] border-r border-zinc-300 dark:border-[#2D2D42] flex flex-col items-center py-3 gap-4 h-full shrink-0 z-50 overflow-visible">
+      <div className="w-[49px] md:w-[59px] bg-zinc-50 dark:bg-[#13131A] border-r border-zinc-200 dark:border-[#2D2D42] flex flex-col items-center py-3 gap-4 h-full shrink-0 z-50 overflow-visible transition-colors duration-300">
 
         {/* Reminders Button */}
         <button
@@ -106,15 +101,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <Bell size={20} />
           {overdueRemindersList.length > 0 && (
-            <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 bg-[#DC2626] text-white brightness-110 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)] text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-red-600/50 animate-pulse z-30"
-              style={{ animationDuration: '1s' }}
-            >
+            <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 bg-red-500 text-white brightness-110 drop-shadow-sm text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-red-600/50 animate-pulse z-30" style={{ animationDuration: '1s' }}>
               {overdueRemindersList.length}
             </div>
           )}
         </button>
 
-        {/* Timer Button with Badge */}
+        {/* Timer Button */}
         <button
           onClick={() => setGlobalView('timers')}
           className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all shrink-0 ${getAppStyle('timers')}`}
@@ -122,10 +115,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <Clock size={20} />
           {activeTimersCount > 0 && (
-            <div
-              className="absolute -top-1 -right-1 md:-top-2 md:-right-2 bg-[#DC2626] text-white brightness-110 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)] text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-red-600/50 animate-pulse z-30"
-              style={{ animationDuration: '1s' }}
-            >
+            <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 bg-red-500 text-white brightness-110 drop-shadow-sm text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-red-600/50 animate-pulse z-30" style={{ animationDuration: '1s' }}>
               {activeTimersCount}
             </div>
           )}
@@ -141,29 +131,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {(kanbanTodoCount > 0 || kanbanInProgressCount > 0 || kanbanDoneCount > 0) && (
             <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 flex items-center gap-px">
               {kanbanTodoCount > 0 && (
-                <div 
-                  className="bg-[#FFD60A] text-amber-950 text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#FFD60A]/50 z-30" 
-                  style={{ boxShadow: '0 0 6px #FFD60A88' }}
-                  title={t('sidebar.pending')}
-                >
+                <div className="bg-[#FFD60A] text-amber-950 text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#FFD60A]/50 z-30" style={{ boxShadow: '0 0 6px #FFD60A88' }} title={t('sidebar.pending')}>
                   {kanbanTodoCount}
                 </div>
               )}
               {kanbanInProgressCount > 0 && (
-                <div 
-                  className="bg-[#38BDF8] text-sky-950 text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#38BDF8]/50 z-20" 
-                  style={{ boxShadow: '0 0 6px #38BDF888' }}
-                  title={t('sidebar.in_progress')}
-                >
+                <div className="bg-[#38BDF8] text-sky-950 text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#38BDF8]/50 z-20" style={{ boxShadow: '0 0 6px #38BDF888' }} title={t('sidebar.in_progress')}>
                   {kanbanInProgressCount}
                 </div>
               )}
               {kanbanDoneCount > 0 && (
-                <div 
-                  className="bg-[#4ADE80] text-green-950 text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#4ADE80]/50 z-10" 
-                  style={{ boxShadow: '0 0 6px #4ADE8088' }}
-                  title={t('sidebar.done')}
-                >
+                <div className="bg-[#4ADE80] text-green-950 text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#4ADE80]/50 z-10" style={{ boxShadow: '0 0 6px #4ADE8088' }} title={t('sidebar.done')}>
                   {kanbanDoneCount}
                 </div>
               )}
@@ -189,7 +167,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Play size={20} />
         </button>
 
-        {/* Botón Pizarrón */}
+        {/* BrainDump Button */}
         <button
           onClick={() => setGlobalView('braindump')}
           className={`relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl transition-all shrink-0 ${getAppStyle('braindump')}`}
@@ -198,12 +176,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <PenTool size={20} />
         </button>
 
-        <div className="w-8 h-0.5 bg-zinc-300 dark:bg-[#2D2D42] rounded-full shrink-0"></div>
+        <div className="w-6 h-px bg-zinc-200 dark:bg-zinc-800/80 rounded-full shrink-0"></div>
 
-        {/* New Group Button (Quick Add) */}
+        {/* New Group Button */}
         <button
           onClick={onAddGroup}
-          className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-[#4940D9] hover:bg-[#3D35C0] text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 transition-all duration-300 shrink-0 hover:scale-105 active:scale-95"
+          className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/40 shadow-sm hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all duration-300 shrink-0 hover:scale-105 active:scale-95"
           title={t('sidebar.new_group')}
         >
           <Plus size={18} />
@@ -212,34 +190,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Launcher Button */}
         <button
           onClick={() => setIsLauncherOpen(true)}
-          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 hover:bg-[#4940D9] dark:hover:bg-[#4940D9] hover:text-white dark:hover:text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 transition-all duration-300 hover:scale-105 active:scale-95 shrink-0"
+          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-indigo-400/60 dark:hover:border-[#3D3E89]/60 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 shadow-sm transition-all duration-300 hover:scale-105 active:scale-95 shrink-0"
           title={t('sidebar.launcher')}
         >
           <Grid size={20} />
         </button>
 
-        <div className="w-8 h-0.5 bg-zinc-300 dark:bg-[#2D2D42] rounded-full shrink-0"></div>
+        <div className="w-6 h-px bg-zinc-200 dark:bg-zinc-800/80 rounded-full shrink-0"></div>
 
-        {/* CONTENEDOR DE GRUPOS CON FLECHAS */}
+        {/* CONTENEDOR DE GRUPOS DOCKED */}
         <div className="relative flex-1 w-full flex flex-col group/sidebar min-h-0 min-w-0">
           
-          {/* Flecha Arriba */}
           {canScrollUp && (
-            <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-zinc-200 dark:from-[#13131A] to-transparent z-10 flex items-start justify-center pt-1">
-              <button onClick={() => scrollGroups('up')} className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-colors">
-                <ChevronUp size={16} />
+            <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-zinc-50 dark:from-[#13131A] to-transparent z-10 flex items-start justify-center pt-1 pointer-events-none">
+              <button onClick={() => scrollGroups('up')} className="p-1 rounded-full bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] shadow-sm text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400 pointer-events-auto transition-colors active:scale-95">
+                <ChevronUp size={14} />
               </button>
             </div>
           )}
 
-          {/* Docked Groups List */}
           <div 
             ref={scrollContainerRef}
             onScroll={checkScroll}
-            className="flex flex-col gap-4 w-full items-center flex-1 overflow-y-auto hidden-scrollbar pb-2 scroll-smooth"
+            className="flex flex-col gap-4 w-full items-center flex-1 overflow-y-auto hidden-scrollbar pt-2 pb-2 scroll-smooth"
           >
           {sortedDockedGroups.map((group) => {
             const isGroupActive = activeGroupId === group.id;
+            const isGroupLastUsed = lastActiveGroupId === group.id;
             const isNotesView = globalView === 'notes';
             const focusedNoteIsDocked = focusedNoteId ? group.notes?.some(n => n.id === focusedNoteId && n.is_docked) : false;
 
@@ -252,7 +229,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     e.stopPropagation();
                     closeGroup(group.id);
                   }}
-                  className="absolute top-0 right-0 z-20 w-4 h-4 bg-zinc-500 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md text-[10px]"
+                  className="absolute top-0 right-0 z-20 w-4 h-4 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 hover:border-red-500/30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-sm text-[10px] hover:scale-110 active:scale-95"
                   title={t('sidebar.close_dock')}
                 >
                   <X size={12} />
@@ -264,46 +241,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     setGlobalView('notes');
                     setSidebarFocusMode('group');
                   }}
-                  className={`
-                    relative flex items-center justify-center w-full transition-all duration-300 overflow-hidden rounded-xl group/dockedbtn
+                  className={`relative flex items-center justify-center w-full transition-all duration-300 overflow-hidden rounded-xl border group/dockedbtn active:scale-95
                     ${isGroupActive && isNotesView && sidebarFocusMode === 'group'
-                      ? 'h-32 bg-[#4940D9] hover:bg-[#3D35C0] text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 scale-[1.02] active:scale-95'
+                      ? 'h-32 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/40 shadow-sm scale-[1.02]'
                       : isGroupActive && (!isNotesView || sidebarFocusMode === 'note')
-                        ? 'h-32 bg-zinc-300 dark:bg-[#2D2D42] text-zinc-700 dark:text-zinc-200 shadow-inner ring-1 ring-zinc-400/30 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:ring-0 hover:scale-[1.04] active:scale-95'
-                        : 'h-24 bg-zinc-200/50 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700/50 text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:scale-[1.04] active:scale-95'}
-                    `}
+                        ? 'h-32 bg-white dark:bg-[#1A1A24] border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200 shadow-sm hover:border-indigo-400/60 dark:hover:border-[#3D3E89]/60 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 hover:scale-[1.04]'
+                        : isGroupLastUsed
+                          ? 'h-24 bg-white dark:bg-[#1A1A24] border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200 shadow-sm hover:border-indigo-400/60 dark:hover:border-[#3D3E89]/60 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 hover:scale-[1.04]'
+                          : 'h-24 bg-zinc-100 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-indigo-400/60 dark:hover:border-[#3D3E89]/60 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-sm hover:scale-[1.04]'}
+                  `}
                   title={group.title}
                 >
-                  <div className="absolute top-1.5 w-6 h-0.5 rounded-full bg-current opacity-30"></div>
-                  <span className="writing-vertical-rl rotate-180 text-xs font-normal tracking-wide uppercase truncate max-h-[85%] py-1">
+                  <div className="absolute top-1.5 w-4 h-[3px] rounded-full bg-current opacity-30"></div>
+                  <span className="writing-vertical-rl rotate-180 text-xs font-normal tracking-widest uppercase truncate max-h-[85%] py-1">
                     {group.title}
                   </span>
                 </button>
               </div>
 
-              {/* Docked Notes for this Group */}
               {(() => {
                 const dockedNotes = group.notes?.filter(n => n.is_docked) || [];
                 if (dockedNotes.length === 0) return null;
 
                 return (
-                  <div className="flex flex-col items-center gap-1.5 mt-1.5 mb-1">
+                  <div className="flex flex-col items-center gap-2 mt-2 mb-1">
                     {dockedNotes.map(note => {
-
-                      // LOGICA DE COLOR Y RASTRO
                       const isFocused = note.id === focusedNoteId;
                       const isActiveFocus = isFocused && isNotesView && sidebarFocusMode === 'note';
                       
                       const bubbleClass = isActiveFocus
-                        ? 'bg-[#4940D9] hover:bg-[#3D35C0] text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 scale-[1.15] active:scale-95' // Activa enfocada
+                        ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/40 shadow-sm scale-[1.15]'
                         : isGroupActive || (isFocused && isNotesView && sidebarFocusMode === 'group')
-                          ? 'bg-zinc-300 dark:bg-[#2D2D42] border border-zinc-400/30 dark:border-transparent text-zinc-700 dark:text-zinc-200 shadow-inner hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:scale-110 active:scale-95' // Parte de grupo activo o rastro (Gris Medio)
-                          : 'bg-zinc-200/80 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700/50 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-white dark:hover:bg-zinc-600 hover:shadow-sm hover:scale-110 active:scale-95'; // Muerta / Inactiva
+                          ? 'bg-white dark:bg-[#1A1A24] border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200 shadow-sm hover:border-indigo-400/60 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:border-[#3D3E89]/60 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400 hover:scale-110'
+                          : 'bg-zinc-100 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-indigo-400/60 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:border-[#3D3E89]/60 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400 hover:shadow-sm hover:scale-110';
 
-                      // NUEVO: LÓGICA DEL SEMÁFORO KANBAN
                       const linkedTask = globalTasks?.find(t => t.id === note.id);
                       let dotColorClass = null;
-                      
                       if (linkedTask) {
                           switch (linkedTask.status) {
                               case 'backlog': dotColorClass = { bg: 'bg-[#9E9E9E]', hex: '#9E9E9E' }; break;
@@ -320,19 +293,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               onSelectDockedNote(group.id, note.id);
                               setSidebarFocusMode('note');
                             }}
-                            className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] font-normal uppercase transition-all duration-200 ${bubbleClass}`}
+                            className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] font-bold uppercase transition-all duration-200 active:scale-95 ${bubbleClass}`}
                             title={note.title || 'Sin título'}
                           >
                             {note.title ? note.title.substring(0, 2) : <StickyNote size={12} />}
                           </button>
                           
-                          {/* El punto flotante del Kanban */}
                           {dotColorClass && (
-                              <div 
-                                className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border border-[#9F9FA8]/50 z-10 shadow-sm transition-transform hover:scale-110 ${(dotColorClass as any).bg}`} 
-                                style={{ boxShadow: `0 0 6px ${(dotColorClass as any).hex}88` }}
-                                title={`Estado Kanban`}
-                              />
+                              <div className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border border-white dark:border-[#13131A] z-10 shadow-sm transition-transform hover:scale-110 ${(dotColorClass as any).bg}`} style={{ boxShadow: `0 0 6px ${(dotColorClass as any).hex}88` }} title={`Estado Kanban`} />
                           )}
                         </div>
                       );
@@ -345,29 +313,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
           </div>
 
-          {/* Flecha Abajo */}
           {canScrollDown && (
-            <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-zinc-200 dark:from-[#13131A] to-transparent z-10 flex items-end justify-center pb-1">
-              <button onClick={() => scrollGroups('down')} className="p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-500 hover:text-indigo-600 transition-colors">
-                <ChevronDown size={16} />
+            <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-zinc-50 dark:from-[#13131A] to-transparent z-10 flex items-end justify-center pb-1 pointer-events-none">
+              <button onClick={() => scrollGroups('down')} className="p-1 rounded-full bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] shadow-sm text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400 pointer-events-auto transition-colors active:scale-95">
+                <ChevronDown size={14} />
               </button>
             </div>
           )}
         </div>
 
-        {/* Bottom Area: Settings */}
-        <div className="mt-auto pt-3 shrink-0 flex flex-col items-center gap-4">
-          <div className="w-8 h-0.5 bg-zinc-300 dark:bg-[#2D2D42] rounded-full"></div>
+        {/* Bottom Area: Settings & Logout */}
+        <div className="mt-auto pt-3 shrink-0 flex flex-col items-center gap-3">
+          <div className="w-6 h-px bg-zinc-200 dark:bg-zinc-800/80 rounded-full"></div>
           <button
             onClick={onOpenSettings}
-            className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white dark:hover:bg-zinc-700 hover:shadow-sm transition-all duration-300 hover:scale-105 active:scale-95"
+            className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-indigo-400/60 dark:hover:border-[#3D3E89]/60 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 shadow-sm transition-all duration-300 hover:scale-105 active:scale-95"
             title="Configuración"
           >
             <Settings size={18} />
           </button>
           <button
             onClick={onLogout}
-            className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 hover:shadow-sm transition-all duration-300 hover:scale-105 active:scale-95"
+            className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-red-500/40 dark:hover:border-red-900/40 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 shadow-sm transition-all duration-300 hover:scale-105 active:scale-95"
             title="Cerrar Sesión"
           >
             <LogOut size={18} />
@@ -376,7 +343,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       </div>
 
-      {/* Launcher Modal */}
       <GroupLauncher
         groups={groups}
         isOpen={isLauncherOpen}
