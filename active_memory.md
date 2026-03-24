@@ -15,6 +15,7 @@
 - i18n solo tiene 'es' y 'en'. No agregar más idiomas sin pedirlo.
 
 ### Bugs Conocidos / Fixes Recientes
+- 2026-03-24: Rediseño Premium de Interfaz de Notas: Implementado sistema de pestañas (Tray) con auto-scroll a la nota activa; estandarizada toolbar de utilidades con diseño de fondo suave y fuente medium; duplicado el padding interno de editores para mayor legibilidad; unificada la orientación del Pizarrón (Vertical/Horizontal) persistida en UIStore.
 - 2026-03-19: Rediseñada la vista inicial de TikTokApp: eliminada la selección automática del primer video, implementado un grid de tarjetas (paridad con Pizarrones) y movida la sección de archivo al contenido principal.
 - 2026-03-19: Implementada Respuesta Ágil (Optimistic UI) para eliminaciones y archivos en TikTokApp. Ahora la interfaz reacciona instantáneamente sin esperar a la DB, emulando la fluidez del módulo de notas.
 - 2026-03-19: Implementada sincronización en Tiempo Real para `tiktok_videos` y `tiktok_queue` en `App.tsx`. Ahora las eliminaciones, adiciones y cambios de estado se reflejan instantáneamente sin necesidad de F5.
