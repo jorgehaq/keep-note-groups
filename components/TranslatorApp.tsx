@@ -180,10 +180,11 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
   return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
             
-            <div className="sticky top-0 z-30 bg-zinc-50/90 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-200 dark:border-zinc-800/50">
-                <div className="max-w-6xl mx-auto flex flex-row items-center justify-center md:justify-between px-6 py-4 gap-4">
-                    <h1 className="hidden md:flex text-xl font-bold text-zinc-900 dark:text-zinc-100 items-center gap-3">
-                        <div className="h-9 p-2 bg-[#8B5CF6] rounded-lg text-white shadow-lg shadow-violet-500/20 shrink-0">
+            <div className="sticky top-0 z-30 bg-white/80 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-200 dark:border-zinc-800 shadow-sm transition-all">
+                <div className="py-[10px] flex flex-col items-center justify-center">
+                    <div className="max-w-6xl mx-auto w-full flex flex-row items-center justify-center md:justify-between px-6 gap-4">
+                    <h1 className="hidden md:flex text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] items-center gap-3">
+                        <div className="hidden md:flex h-9 w-9 items-center justify-center bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/40 rounded-xl shadow-sm shrink-0">
                             <Languages size={20} />
                         </div>
                         <span className="truncate">Traductor</span>
@@ -194,43 +195,49 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                         <button
                           onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
                           disabled={overdueRemindersCount === 0}
-                          className={`hidden md:flex h-9 px-3 rounded-xl transition-all border items-center gap-2 ${
+                          className={`hidden md:flex h-9 px-3 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
                             showOverdueMarquee 
-                              ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
+                              ? 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/40 shadow-sm shadow-red-600/10' 
                               : overdueRemindersCount > 0
-                                ? 'bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20'
-                                : 'bg-zinc-200 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 text-zinc-400 dark:text-zinc-500 opacity-60 cursor-not-allowed'
+                                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
+                                : 'bg-zinc-100 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-700 text-zinc-400 opacity-60 cursor-not-allowed'
                           }`}
+                          title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                         >
-                          <Bell size={18} className={overdueRemindersCount > 0 ? 'animate-pulse' : ''} />
-                          {overdueRemindersCount > 0 && <span className="text-xs font-bold">{overdueRemindersCount}</span>}
+                          <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-red-700 dark:text-red-400' : 'text-red-500'}` : ''} />
+                          {overdueRemindersCount > 0 && (
+                            <span className="text-xs font-bold whitespace-nowrap">
+                              {overdueRemindersCount}
+                            </span>
+                          )}
                         </button>
 
                         {/* 2. Clear (Borrar) */}
                         <button 
                             onClick={() => { setOriginalText(''); setTranslatedText(''); }} 
                             disabled={!originalText.trim()}
-                            className="h-9 p-2 bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl text-zinc-500 dark:text-zinc-400 hover:text-red-500 transition-all disabled:opacity-30"
+                            className="h-9 px-3 rounded-lg bg-zinc-100 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all flex items-center justify-center active:scale-95 disabled:opacity-30"
                             title="Limpiar traductor"
                         >
-                            <Eraser size={18} />
+                            <Eraser size={16} />
                         </button>
 
                         {/* 3. Maximize */}
-                        <button onClick={() => setIsTranslatorMaximized(!isTranslatorMaximized)} className="hidden md:flex h-9 p-2 bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all">
-                            {isTranslatorMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                        <button onClick={() => setIsTranslatorMaximized(!isTranslatorMaximized)} className="hidden md:flex h-9 w-9 rounded-lg bg-zinc-100 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all items-center justify-center active:scale-95">
+                            {isTranslatorMaximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                         </button>
 
                         {/* 4. Action Button (Save) */}
                         <button 
                             onClick={saveTranslation} 
                             disabled={!originalText.trim() || !translatedText.trim() || isTranslating || isSaving}
-                            className="h-9 w-9 bg-[#8B5CF6] hover:bg-violet-600 text-white rounded-full shadow-lg shadow-violet-500/10 border border-violet-400/30 flex items-center justify-center active:scale-95 transition-all font-bold"
+                            className="h-9 w-9 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/40 rounded-lg shadow-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all flex items-center justify-center active:scale-95 shrink-0 disabled:opacity-50"
                             title="Guardar traducción en el archivo"
                         >
                             {isSaving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
                         </button>
                     </div>
+                </div>
                 </div>
             </div>
 

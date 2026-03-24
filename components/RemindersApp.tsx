@@ -344,10 +344,11 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
 
     return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
-            <div className="sticky top-0 z-30 bg-zinc-50/90 dark:bg-[#13131A]/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800/50 shrink-0">
-                <div className="max-w-6xl mx-auto flex flex-row items-center justify-center md:justify-between px-6 py-4 gap-4">
-                    <h1 className="hidden md:flex text-xl font-bold text-zinc-900 dark:text-white items-center gap-3">
-                        <div className="h-9 p-2 bg-[#1F3760] rounded-lg text-white shadow-lg shadow-[#1F3760]/20 shrink-0">
+            <div className="sticky top-0 z-30 bg-white/80 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-200 dark:border-zinc-800 shadow-sm transition-all">
+                <div className="py-[10px] flex flex-col items-center justify-center">
+                    <div className="max-w-6xl mx-auto w-full flex flex-row items-center justify-center md:justify-between px-6 gap-4">
+                    <h1 className="hidden md:flex text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] items-center gap-3">
+                        <div className="hidden md:flex h-9 w-9 items-center justify-center bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/40 rounded-xl shadow-sm shrink-0">
                             <Bell size={20} />
                         </div>
                         <span className="truncate">Recordatorios</span>
@@ -358,27 +359,28 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                         <button
                           onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
                           disabled={overdueRemindersCount === 0}
-                          className={`hidden md:flex h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 items-center gap-2 border ${
+                          className={`hidden md:flex h-9 px-3 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
                             showOverdueMarquee 
-                              ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
+                              ? 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/40 shadow-sm shadow-red-600/10' 
                               : overdueRemindersCount > 0
-                                ? 'bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20'
-                                : 'bg-zinc-200 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 text-zinc-400 dark:text-zinc-500 opacity-60 cursor-not-allowed'
+                                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
+                                : 'bg-zinc-100 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-700 text-zinc-400 opacity-60 cursor-not-allowed'
                           }`}
                           title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                         >
-                          <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-white' : 'text-red-500'}` : ''} />
+                          <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-red-700 dark:text-red-400' : 'text-red-500'}` : ''} />
                           {overdueRemindersCount > 0 && (
-                            <span className={`text-xs font-bold whitespace-nowrap ${showOverdueMarquee ? 'text-white' : ''}`}>
+                            <span className="text-xs font-bold whitespace-nowrap">
                               {overdueRemindersCount}
                             </span>
                           )}
                         </button>
 
-                        <button onClick={createNewDraft} className="h-9 w-9 bg-[#1F3760] hover:bg-[#152643] text-white rounded-full shadow-lg shadow-[#1F3760]/20 transition-all flex items-center justify-center active:scale-95 shrink-0 border border-[#1F3760]/30 font-bold" title="Nuevo recordatorio">
-                            <Plus size={20} />
+                        <button onClick={createNewDraft} className="h-9 w-9 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/40 rounded-lg shadow-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all flex items-center justify-center active:scale-95 shrink-0" title="Nuevo recordatorio">
+                            <Plus size={18} />
                         </button>
                     </div>
+                </div>
                 </div>
             </div>
 

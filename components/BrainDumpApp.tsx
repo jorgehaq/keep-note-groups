@@ -792,10 +792,11 @@ export const BrainDumpApp: React.FC<{
     return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
             {!isZenMode && (
-                <div className="sticky top-0 z-30 bg-zinc-50/90 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-200 dark:border-zinc-800/50">
-                    <div className="max-w-6xl mx-auto flex flex-row items-center justify-center md:justify-between px-6 py-4 gap-4">
-                        <h1 className="hidden md:flex text-xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-3">
-                            <div className="h-9 p-2 bg-[#FFD700] rounded-lg text-amber-950 shadow-lg shadow-amber-500/20 shrink-0">
+                <div className="sticky top-0 z-30 bg-white/80 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-200 dark:border-zinc-800 shadow-sm transition-all">
+                    <div className="py-[10px] flex flex-col items-center justify-center">
+                        <div className="max-w-6xl mx-auto w-full flex flex-row items-center justify-center md:justify-between px-6 gap-4">
+                        <h1 className="hidden md:flex text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] flex items-center gap-3">
+                            <div className="hidden md:flex h-9 w-9 items-center justify-center bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/40 rounded-xl shadow-sm shrink-0">
                                 <PenTool size={20} />
                             </div>
                             <span className="truncate">Pizarrón</span>
@@ -823,20 +824,21 @@ export const BrainDumpApp: React.FC<{
                             <button
                               onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
                               disabled={overdueRemindersCount === 0}
-                              className={`hidden md:flex h-9 px-3 rounded-xl transition-all border items-center gap-2 ${
+                              className={`hidden md:flex h-9 px-3 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
                                 showOverdueMarquee 
-                                  ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
+                                  ? 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/40 shadow-sm shadow-red-600/10' 
                                   : overdueRemindersCount > 0
-                                    ? 'bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20'
-                                    : 'bg-zinc-200 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 text-zinc-400 dark:text-zinc-500 opacity-60 cursor-not-allowed'
+                                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
+                                    : 'bg-zinc-100 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-700 text-zinc-400 opacity-60 cursor-not-allowed'
                               }`}
+                              title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                             >
-                              <Bell size={18} className={overdueRemindersCount > 0 ? 'animate-pulse' : ''} />
+                              <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-red-700 dark:text-red-400' : 'text-red-500'}` : ''} />
                               {overdueRemindersCount > 0 && <span className="text-xs font-bold">{overdueRemindersCount}</span>}
                             </button>
 
                             {/* 2. Tray Toggle */}
-                            <button onClick={() => setIsDumpTrayOpen(!isDumpTrayOpen)} className={`h-9 px-3 rounded-xl transition-all border flex items-center gap-2 ${isDumpTrayOpen ? 'bg-[#FFD700] border-amber-300 text-amber-950 font-bold shadow-lg shadow-amber-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/30 hover:bg-amber-500/20'}`} title={isDumpTrayOpen ? "Ocultar bandeja" : "Mostrar bandeja"}>
+                            <button onClick={() => setIsDumpTrayOpen(!isDumpTrayOpen)} className={`h-9 px-3 rounded-xl transition-all border flex items-center gap-2 active:scale-95 shrink-0 ${isDumpTrayOpen ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-500/40 text-indigo-700 dark:text-indigo-400 font-bold shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/50 hover:text-indigo-500'}`} title={isDumpTrayOpen ? "Ocultar bandeja" : "Mostrar bandeja"}>
                                 <ChevronsDownUp size={18} className={`transition-transform duration-300 ${isDumpTrayOpen ? 'rotate-180' : ''}`}/>
                                 <span className="text-sm font-bold">{rootPizarrones.length}</span>
                             </button>
@@ -846,8 +848,8 @@ export const BrainDumpApp: React.FC<{
 
                             {/* 4. Sort */}
                             <div className="relative" ref={sortMenuRef}>
-                                <button onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} className="h-9 p-2 bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all">
-                                    <ArrowUpDown size={18} />
+                                <button onClick={() => setIsSortMenuOpen(!isSortMenuOpen)} className="h-9 px-3 rounded-lg bg-zinc-100 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all flex items-center justify-center active:scale-95" title="Ordenar">
+                                    <ArrowUpDown size={16} />
                                 </button>
                                 {isSortMenuOpen && (
                                     <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] rounded-xl shadow-2xl z-50 py-1 overflow-hidden animate-fadeIn">
@@ -862,7 +864,7 @@ export const BrainDumpApp: React.FC<{
                                             <button 
                                               key={opt.id} 
                                               onClick={() => { setSortMode(opt.id as any); localStorage.setItem('pizarronSortMode', opt.id); setIsSortMenuOpen(false); }} 
-                                              className={`w-full px-4 py-2 text-left text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors ${sortMode === opt.id ? 'text-amber-500 font-bold bg-amber-500/5' : 'text-zinc-400 font-medium'}`}
+                                              className={`w-full px-4 py-2 text-left text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors ${sortMode === opt.id ? 'text-[#FFD700] font-bold bg-[#FFD700]/5' : 'text-zinc-400 font-medium'}`}
                                             >
                                                 {opt.icon} {opt.label}
                                                 {sortMode === opt.id && <Check size={14} className="ml-auto" />}
@@ -874,12 +876,13 @@ export const BrainDumpApp: React.FC<{
 
                             <button 
                                 onClick={createNewDraft} 
-                                className="h-9 w-9 bg-[#FFD700] hover:bg-[#E5C100] text-amber-950 rounded-full shadow-lg shadow-amber-500/10 border border-amber-400/30 flex items-center justify-center active:scale-95 transition-all"
+                                className="h-9 w-9 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/40 rounded-lg shadow-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all flex items-center justify-center active:scale-95 shrink-0"
                                 title="Nuevo Pizarrón"
                             >
                                 <Plus size={18} />
                             </button>
                         </div>
+                    </div>
                     </div>
                 </div>
             )}

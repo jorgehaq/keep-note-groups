@@ -123,7 +123,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], on
                                     <div
                                         ref={provided.innerRef}
                                         {...provided.droppableProps}
-                                        className={`flex-1 flex flex-col gap-4 p-5 min-h-[200px] transition-colors ${snapshot.isDraggingOver
+                                        className={`flex-1 overflow-y-auto hidden-scrollbar flex flex-col gap-4 p-5 min-h-[200px] transition-colors ${snapshot.isDraggingOver
                                             ? 'bg-zinc-200/70 dark:bg-zinc-700/40 ring-2 ring-zinc-300 dark:ring-zinc-600 ring-dashed'
                                             : ''
                                             }`}

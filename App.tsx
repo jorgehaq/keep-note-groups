@@ -1665,8 +1665,7 @@ function App() {
             {!isZenMode && (
               <div className="flex flex-col shrink-0">
                 <div className={`sticky top-0 z-30 bg-white/80 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-200 dark:border-zinc-800 shadow-sm transition-all`}>
-                  <div className={`min-h-[72px] h-auto flex flex-col items-center justify-center`}>
-
+                  <div className={`py-[10px] flex flex-col items-center justify-center`}>
                     <div className="max-w-6xl mx-auto w-full flex flex-row items-center justify-center md:justify-between px-6 gap-4">
 
 
@@ -1861,7 +1860,7 @@ function App() {
                  ) : (
                     <>
                       <h1 className="hidden md:flex text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] items-center gap-3">
-                        <div className="h-9 p-2 bg-[#4940D9] hover:bg-[#3D35C0] rounded-lg text-white shadow-md hover:shadow-lg hover:shadow-[#4940D9]/30 transition-all cursor-default">
+                        <div className="hidden md:flex h-9 w-9 items-center justify-center bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/40 rounded-xl shadow-sm shrink-0">
                           <StickyNote size={20} />
                         </div>
                         Grupos de notas

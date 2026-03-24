@@ -151,10 +151,11 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
 
     return (
         <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-[#13131A] overflow-hidden">
-            <div className="sticky top-0 z-30 bg-zinc-50/90 dark:bg-[#13131A]/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800/50 shrink-0">
-                <div className="max-w-6xl mx-auto flex flex-row items-center justify-center md:justify-between px-6 py-4 gap-4">
-                    <h1 className="hidden md:flex text-xl font-bold text-zinc-900 dark:text-white items-center gap-3">
-                        <div className="h-9 p-2 bg-[#10B981] rounded-lg text-emerald-950 shadow-lg shadow-[#10B981]/20 shrink-0">
+            <div className="sticky top-0 z-30 bg-white/80 dark:bg-[#13131A]/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0 transition-all">
+                <div className="py-[10px] flex flex-col items-center justify-center">
+                    <div className="max-w-6xl mx-auto w-full flex flex-row items-center justify-center md:justify-between px-6 gap-4">
+                    <h1 className="hidden md:flex text-xl font-bold text-zinc-800 dark:text-[#CCCCCC] items-center gap-3">
+                        <div className="hidden md:flex h-9 w-9 items-center justify-center bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 rounded-xl shadow-sm shrink-0">
                             <KanbanSquare size={20} />
                         </div>
                         <span className="truncate">Kanban</span>
@@ -162,21 +163,21 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
 
                     <div className="flex items-center justify-center gap-2 sm:gap-3 shrink-0">
                         {/* TABS EN EL HEADER (Mobile & Desktop) */}
-                        <div className="h-9 flex bg-zinc-200 dark:bg-zinc-900/50 p-1 rounded-xl border border-zinc-300 dark:border-zinc-800 shadow-sm shrink-0 items-center mr-0 sm:mr-2">
+                        <div className="h-9 flex bg-zinc-100 dark:bg-zinc-800/40 p-1 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-sm shrink-0 items-center mr-0 sm:mr-2">
                             {TABS.map((tab) => (
                                 <button
                                     key={tab.key}
                                     onClick={() => setActiveTab(tab.key)}
-                                    className={`flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ${
+                                    className={`flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all border ${
                                         activeTab === tab.key
-                                            ? 'bg-[#10B981] text-emerald-950 shadow-sm'
-                                            : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-300 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800'
+                                            ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/40 shadow-sm'
+                                            : 'border-transparent text-zinc-500 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'
                                     }`}
                                 >
                                     <span className="shrink-0 scale-90 sm:scale-100">{tab.icon}</span>
                                     <span className="hidden sm:inline">{t(tab.labelKey)}</span>
                                     <span className={`px-1 py-0.5 rounded-md text-[8px] font-bold transition-colors ${
-                                        activeTab === tab.key ? 'bg-emerald-400/20 text-emerald-900' : 'bg-zinc-300 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-500'
+                                        activeTab === tab.key ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-500'
                                     }`}>
                                         {tab.key === 'board' ? todoCount + inProgressCount : tab.key === 'backlog' ? backlogCount : archivedCount}
                                     </span>
@@ -188,35 +189,39 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                         <button
                           onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
                           disabled={overdueRemindersCount === 0}
-                          className={`hidden md:flex h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 items-center gap-2 border ${
+                          className={`hidden md:flex h-9 px-3 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
                             showOverdueMarquee 
-                              ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
+                              ? 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/40 shadow-sm shadow-red-600/10' 
                               : overdueRemindersCount > 0
-                                ? 'bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20'
-                                : 'bg-zinc-200 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 text-zinc-400 dark:text-zinc-500 opacity-60 cursor-not-allowed'
+                                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
+                                : 'bg-zinc-100 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-700 text-zinc-400 opacity-60 cursor-not-allowed'
                           }`}
                           title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                         >
-                          <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-white' : 'text-red-500'}` : ''} />
+                          <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-red-700 dark:text-red-400' : 'text-red-500'}` : ''} />
                           {overdueRemindersCount > 0 && (
-                            <span className={`text-xs font-bold whitespace-nowrap ${showOverdueMarquee ? 'text-white' : ''}`}>
+                            <span className="text-xs font-bold whitespace-nowrap">
                               {overdueRemindersCount}
                             </span>
                           )}
                         </button>
                         
-                        <button onClick={handleAdd} className="h-9 w-9 bg-[#10B981] hover:bg-emerald-600 text-emerald-950 rounded-full shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center active:scale-95 shrink-0 border border-emerald-400/30 font-bold" title="Nueva tarea">
-                            <Plus size={20} />
+                        <button onClick={handleAdd} className="h-9 w-9 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/40 rounded-lg shadow-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all flex items-center justify-center active:scale-95 shrink-0" title="Nueva tarea">
+                            <Plus size={18} />
                         </button>
                     </div>
                 </div>
+                </div>
 
-                {/* Removed redundant Mobile Tabs block - now integrated in header */}
+            </div>
 
-                {/* Status Switch for Mobile (Column Navigation) */}
+            {/* CONTENIDO PRINCIPAL */}
+            <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#13131A] hidden-scrollbar flex flex-col">
+                
+                {/* Status Switch for Mobile (Column Navigation) - MOVED OUT OF HEADER */}
                 {activeTab === 'board' && (
-                    <div className="flex lg:hidden px-6 pt-1 pb-3 justify-center">
-                        <div className="flex bg-zinc-200 dark:bg-zinc-900/50 p-1 rounded-xl w-full max-w-[280px] border border-zinc-300 dark:border-zinc-800 shadow-sm gap-1">
+                    <div className="flex lg:hidden px-6 pt-4 pb-2 justify-center shrink-0">
+                        <div className="flex bg-zinc-100 dark:bg-zinc-800/40 p-1 rounded-xl w-full max-w-[280px] border border-zinc-200 dark:border-zinc-700 shadow-sm gap-1">
                             {[
                                 { status: 'todo', color: 'bg-[#FFD60A]', count: todoCount },
                                 { status: 'in_progress', color: 'bg-[#38BDF8]', count: inProgressCount },
@@ -225,14 +230,14 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                                 <button
                                     key={col.status}
                                     onClick={() => setActiveStatus(col.status as TaskStatus)}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg transition-all ${
+                                    className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg transition-all border ${
                                         activeStatus === col.status
-                                            ? 'bg-white dark:bg-zinc-800 shadow-sm border border-zinc-200 dark:border-zinc-700'
-                                            : 'hover:bg-zinc-300 dark:hover:bg-zinc-800/50'
+                                            ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/40 shadow-sm'
+                                            : 'border-transparent hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-400'
                                     }`}
                                 >
                                     <div className={`w-2.5 h-2.5 rounded-full ${col.color}`} />
-                                    <span className={`text-[10px] font-bold ${activeStatus === col.status ? 'text-zinc-900 dark:text-white' : 'text-zinc-500'}`}>
+                                    <span className={`text-[10px] font-bold ${activeStatus === col.status ? 'text-emerald-700 dark:text-emerald-400' : 'text-zinc-500'}`}>
                                         {col.count}
                                     </span>
                                 </button>
@@ -240,10 +245,6 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                         </div>
                     </div>
                 )}
-            </div>
-
-            {/* CONTENIDO PRINCIPAL */}
-            <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#13131A] hidden-scrollbar flex flex-col">
                 <div className="w-full flex-1 flex flex-col h-full max-w-[1400px] mx-auto">
                     {/* VISTAS FUNCIONALES INTACTAS */}
                     <div className="flex-1 flex flex-col min-h-0 animate-fadeIn">
