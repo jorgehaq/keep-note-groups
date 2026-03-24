@@ -385,7 +385,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
             </div>
 
             <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 pt-5 hidden-scrollbar">
-                <div className="max-w-6xl mx-auto flex flex-col [&>*:not(:first-child)]:mt-12 [&>*:not(:first-child)]:pt-8 [&>*:not(:first-child)]:border-t [&>*:not(:first-child)]:border-zinc-100 dark:[&>*:not(:first-child)]:border-[#2D2D42]/40 pb-20">
+                <div className="max-w-6xl mx-auto flex flex-col space-y-5 pb-20">
                     
                     {/* 1. CREACIÓN */}
                     {drafts.length > 0 && (
@@ -410,7 +410,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                             <button 
                                                 onClick={() => changeStatus(draft.id, 'active')} 
                                                 disabled={draft.targets.length === 0} 
-                                                className="p-2 flex items-center justify-center bg-[#1F3760] hover:bg-[#152643] text-white rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all disabled:opacity-50 active:scale-95"
+                                                className="h-9 w-9 flex items-center justify-center bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 rounded-xl shadow-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all disabled:opacity-50 active:scale-95"
                                                 title="Activar todos"
                                             >
                                                 <Play size={13} fill="currentColor" />
@@ -423,7 +423,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                         e.stopPropagation();
                                                         setActiveMenuId(activeMenuId === draft.id ? null : draft.id);
                                                     }}
-                                                    className={`p-2 rounded-xl border transition-all ${activeMenuId === draft.id ? 'bg-[#1F3760] border-[#1F3760]/80 text-white font-bold shadow-lg shadow-[#1F3760]/20' : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#1F3760]/30'}`}
+                                                    className={`h-9 w-9 rounded-xl border transition-all flex items-center justify-center ${activeMenuId === draft.id ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-500 text-indigo-700 dark:text-indigo-400 font-bold shadow-sm' : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/30 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10'}`}
                                                 >
                                                     <MoreVertical size={13} />
                                                 </button>
@@ -462,11 +462,11 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                     <div className="bg-zinc-50 dark:bg-[#13131A] rounded-xl mx-4 mb-4 p-4 border border-zinc-200 dark:border-[#2D2D42]">
                                         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                                             <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Tiempos:</span>
-                                            <div className="flex gap-2">
+                                            <div className="flex gap-1.5">
                                                 {[1, 10, 30, 60].map(m => (
-                                                    <button key={m} onClick={() => addTarget(draft.id, m)} className="text-[10px] font-normal bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded-md hover:bg-indigo-200 transition-colors">+{m}m</button>
+                                                    <button key={m} onClick={() => addTarget(draft.id, m)} className="text-[10px] font-bold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-2.5 py-1 rounded-lg border border-indigo-500/20 hover:bg-indigo-100/50 dark:hover:bg-indigo-900/30 transition-all">+{m}m</button>
                                                 ))}
-                                                <button onClick={() => addTarget(draft.id, 0)} className="text-[10px] font-normal bg-zinc-200 dark:bg-zinc-800 px-2 py-1 rounded-md hover:bg-zinc-300 transition-colors"><Plus size={12}/></button>
+                                                <button onClick={() => addTarget(draft.id, 0)} className="h-6 w-6 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-zinc-500 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 transition-all"><Plus size={12}/></button>
                                             </div>
                                         </div>
                                         <div className="space-y-3 mt-4">
@@ -526,7 +526,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                 <div className="flex justify-between items-start mb-2">
                                                     <div className="flex items-center gap-3 flex-1">
                                                         {!isEditing && (
-                                                            <button onClick={() => toggleExpandActive(r.id)} className="p-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md text-zinc-600 dark:text-zinc-400 transition-colors" title="Desplegar nota">
+                                                            <button onClick={() => toggleExpandActive(r.id)} className="h-9 w-9 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl transition-all active:scale-95 shrink-0" title="Desplegar nota">
                                                                 {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                                             </button>
                                                         )}
@@ -548,7 +548,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                         {isEditing && (
                                                             <button 
                                                                 onClick={() => toggleEditActive(r.id)} 
-                                                                className="w-9 h-9 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
+                                                                className="h-9 w-9 flex items-center justify-center bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 rounded-xl shadow-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all active:scale-95"
                                                                 title="Guardar cambios"
                                                             >
                                                                 <Check size={18} strokeWidth={3} />
@@ -557,7 +557,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                         
                                                         <button 
                                                             onClick={() => toggleEditActive(r.id)} 
-                                                            className={`p-2 flex items-center justify-center transition-all rounded-xl ${isEditing ? 'bg-[#1F3760] text-white shadow-lg shadow-[#1F3760]/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`} 
+                                                            className={`h-9 w-9 flex items-center justify-center transition-all rounded-xl border ${isEditing ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-500 text-indigo-700 dark:text-indigo-400 shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/30'}`} 
                                                             title={isEditing ? 'Cerrar Edición' : 'Ajustar recordatorio'}
                                                         >
                                                             <Wrench size={13}/>
@@ -570,7 +570,7 @@ export const RemindersApp: React.FC<{ session: Session, dateFormat?: string, tim
                                                                     e.stopPropagation();
                                                                     setActiveMenuId(activeMenuId === r.id ? null : r.id);
                                                                 }}
-                                                                className={`p-2 rounded-xl border transition-all ${activeMenuId === r.id ? 'bg-[#1F3760] border-[#1F3760]/80 text-white font-bold shadow-lg shadow-[#1F3760]/20' : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#1F3760]/30'}`}
+                                                                className={`h-9 w-9 rounded-xl border transition-all flex items-center justify-center ${activeMenuId === r.id ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-500 text-indigo-700 dark:text-indigo-400 font-bold shadow-sm' : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/30 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10'}`}
                                                                 title="Más opciones"
                                                             >
                                                                 <MoreVertical size={13} />

@@ -289,7 +289,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
             </div>
 
             <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-[#13131A] px-4 pb-4 pt-5 hidden-scrollbar">
-                <div className="max-w-6xl mx-auto flex flex-col [&>*:not(:first-child)]:mt-12 [&>*:not(:first-child)]:pt-8 [&>*:not(:first-child)]:border-t [&>*:not(:first-child)]:border-zinc-100 dark:[&>*:not(:first-child)]:border-[#2D2D42]/40 pb-20">
+                <div className="max-w-6xl mx-auto flex flex-col space-y-5 pb-20">
                     
                     {/* 1. BORRADORES (EN CONSTRUCCIÓN) */}
                     {drafts.length > 0 && (
@@ -308,7 +308,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                         <div className="flex items-center gap-2 shrink-0">
                                             <button 
                                                 onClick={() => changeStatus(draft.id, 'active')} 
-                                                className="p-2 flex items-center justify-center bg-[#1F3760] hover:bg-[#152643] text-white rounded-xl shadow-lg shadow-[#1F3760]/20 transition-all active:scale-95"
+                                                className="h-9 w-9 flex items-center justify-center bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 rounded-xl shadow-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all active:scale-95"
                                                 title="Establecer e Iniciar"
                                             >
                                                 <Play size={13} fill="currentColor" />
@@ -320,7 +320,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                                         e.stopPropagation();
                                                         setActiveMenuId(activeMenuId === draft.id ? null : draft.id);
                                                     }}
-                                                    className={`p-2 rounded-xl border transition-all ${activeMenuId === draft.id ? 'bg-[#1F3760] border-[#1F3760]/80 text-white font-bold shadow-lg shadow-[#1F3760]/20' : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#1F3760]/30'}`}
+                                                    className={`h-9 w-9 rounded-xl border transition-all flex items-center justify-center ${activeMenuId === draft.id ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-500 text-indigo-700 dark:text-indigo-400 font-bold shadow-sm' : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/30 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10'}`}
                                                     title="Más opciones"
                                                 >
                                                     <MoreVertical size={13} />
@@ -409,7 +409,7 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                                                     e.stopPropagation();
                                                                     setActiveMenuId(activeMenuId === timer.id ? null : timer.id);
                                                                 }}
-                                                                className={`p-2 rounded-xl border transition-all ${activeMenuId === timer.id ? 'bg-[#1F3760] border-[#1F3760]/80 text-white font-bold shadow-lg shadow-[#1F3760]/20' : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#1F3760]/30'}`}
+                                                                className={`h-9 w-9 rounded-xl border transition-all flex items-center justify-center ${activeMenuId === timer.id ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-500 text-indigo-700 dark:text-indigo-400 font-bold shadow-sm' : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/30 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10'}`}
                                                                 title="Más opciones"
                                                             >
                                                                 <MoreVertical size={13} />
@@ -457,20 +457,20 @@ export const TimeTrackerApp: React.FC<{ session: Session; noteFont?: string; not
                                                         {/* BOTONES DE CONTROL DE TIEMPO */}
                                                         <div className="flex items-center justify-center gap-4 mt-8">
                                                             {!isRunning ? (
-                                                                <button onClick={() => handlePlay(timer.id)} className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-normal rounded-xl shadow-lg transition-transform active:scale-95">
-                                                                    <Play size={18} /> Iniciar / Reanudar
+                                                                <button onClick={() => handlePlay(timer.id)} className="h-11 px-6 flex items-center justify-center gap-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 rounded-xl shadow-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all font-bold active:scale-95">
+                                                                    <Play size={18} fill="currentColor" /> Iniciar / Reanudar
                                                                 </button>
                                                             ) : timer.type === 'cycle' ? (
-                                                                <button onClick={() => handlePauseCycle(timer.id)} className="flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-normal rounded-xl shadow-lg transition-transform active:scale-95">
-                                                                    <Pause size={18} /> Pausar y Marcar Lap
+                                                                <button onClick={() => handlePauseCycle(timer.id)} className="h-11 px-6 flex items-center justify-center gap-2 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/40 rounded-xl shadow-sm hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-all font-bold active:scale-95">
+                                                                    <Pause size={18} fill="currentColor" /> Pausar y Marcar Lap
                                                                 </button>
                                                             ) : (
                                                                 <>
-                                                                    <button onClick={() => handleLapRacing(timer.id)} className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-normal rounded-xl shadow-lg transition-transform active:scale-95">
-                                                                        <Flag size={18} /> Marcar Hito
+                                                                    <button onClick={() => handleLapRacing(timer.id)} className="h-11 px-6 flex items-center justify-center gap-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/40 rounded-xl shadow-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all font-bold active:scale-95">
+                                                                        <Flag size={18} fill="currentColor" /> Marcar Hito
                                                                     </button>
-                                                                    <button onClick={() => handleStopRacing(timer.id)} className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-normal rounded-xl shadow-lg transition-transform active:scale-95">
-                                                                        <Square size={18} /> Pausar
+                                                                    <button onClick={() => handleStopRacing(timer.id)} className="h-11 px-6 flex items-center justify-center gap-2 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/40 rounded-xl shadow-sm hover:bg-red-100 dark:hover:bg-red-900/40 transition-all font-bold active:scale-95">
+                                                                        <Square size={18} fill="currentColor" /> Pausar
                                                                     </button>
                                                                 </>
                                                             )}

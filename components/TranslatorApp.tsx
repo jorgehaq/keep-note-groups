@@ -242,7 +242,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
             </div>
 
         <div className="flex-1 overflow-y-auto p-4 hidden-scrollbar">
-            <div className={`${isTranslatorMaximized ? 'max-w-full' : 'max-w-full md:max-w-4xl'} mx-auto flex flex-col [&>*:not(:first-child)]:mt-12 [&>*:not(:first-child)]:pt-8 [&>*:not(:first-child)]:border-t [&>*:not(:first-child)]:border-zinc-100 dark:[&>*:not(:first-child)]:border-[#2D2D42]/40 pb-20`}>
+            <div className={`${isTranslatorMaximized ? 'max-w-full' : 'max-w-full md:max-w-4xl'} mx-auto flex flex-col space-y-5 pb-20`}>
                 
                 {/* 1. MÓDULO DE CREACIÓN */}
                 <div className="space-y-4 animate-fadeIn">
@@ -379,21 +379,33 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                                 
                                 {/* Vista Expandida */}
                                 {isExpanded && (
-                                    <div className="mt-2 bg-zinc-100/50 dark:bg-[#13131A]/30 border border-zinc-200 dark:border-[#2D2D42] animate-fadeIn">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="relative group text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                                                <div className="mb-1 text-[10px] font-bold text-violet-500/70 uppercase tracking-wider">{getLangName(t.source_lang)}</div>
-                                                {t.source_text}
-                                                <button onClick={() => playAudio(t.source_text, t.source_lang)} className="absolute top-0 right-0 p-1.5 opacity-0 group-hover:opacity-100 bg-white dark:bg-zinc-800 text-zinc-400 hover:text-violet-500 rounded-md transition-all shadow-sm">
-                                                    <Volume2 size={14} />
-                                                </button>
+                                    <div className="mt-4 bg-zinc-100/30 dark:bg-[#13131A]/40 border border-zinc-200/60 dark:border-[#2D2D42]/60 rounded-xl p-4 animate-fadeIn">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+                                            {/* Divisor vertical decorativo para desktop */}
+                                            <div className="hidden md:block absolute left-1/2 top-2 bottom-2 w-px bg-zinc-200 dark:bg-zinc-800/50 -translate-x-1/2" />
+                                            
+                                            <div className="relative group flex flex-col gap-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-bold text-violet-500 dark:text-violet-400/70 uppercase tracking-widest">{getLangName(t.source_lang)}</span>
+                                                    <button onClick={() => playAudio(t.source_text, t.source_lang)} className="p-1 text-zinc-400 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-md transition-all">
+                                                        <Volume2 size={14} />
+                                                    </button>
+                                                </div>
+                                                <div className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed pr-2 italic">
+                                                    "{t.source_text}"
+                                                </div>
                                             </div>
-                                            <div className="relative group text-sm text-zinc-800 dark:text-[#CCCCCC] leading-relaxed font-medium">
-                                                <div className="mb-1 text-[10px] font-bold text-violet-500/70 uppercase tracking-wider">{getLangName(t.target_lang)}</div>
-                                                {t.translated_text}
-                                                <button onClick={() => playAudio(t.translated_text, t.target_lang)} className="absolute top-0 right-0 p-1.5 opacity-0 group-hover:opacity-100 bg-white dark:bg-zinc-800 text-zinc-400 hover:text-emerald-500 rounded-md transition-all shadow-sm">
-                                                    <Volume2 size={14} />
-                                                </button>
+
+                                            <div className="relative group flex flex-col gap-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-bold text-emerald-500 dark:text-emerald-400/70 uppercase tracking-widest">{getLangName(t.target_lang)}</span>
+                                                    <button onClick={() => playAudio(t.translated_text, t.target_lang)} className="p-1 text-zinc-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-md transition-all">
+                                                        <Volume2 size={14} />
+                                                    </button>
+                                                </div>
+                                                <div className="text-sm text-zinc-800 dark:text-[#CCCCCC] leading-relaxed font-bold">
+                                                    {t.translated_text}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

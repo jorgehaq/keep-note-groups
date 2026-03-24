@@ -1422,7 +1422,7 @@ export const BrainDumpApp: React.FC<{
                     })()}
 
                     {!focusedDumpId && (
-                        <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-full md:max-w-6xl'} mx-auto w-full px-4 md:px-10 animate-fadeIn pb-10`}>
+                        <div className={`${isBraindumpMaximized ? 'max-w-full' : 'max-w-full md:max-w-6xl'} mx-auto w-full px-4 md:px-10 animate-fadeIn space-y-5 pb-10`}>
                             {/* LISTA PRINCIPAL DE PIZARRONES */}
                             <div className={`grid ${isBraindumpMaximized ? 'grid-cols-[repeat(auto-fit,340px)] w-full max-w-[2160px]' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl'} gap-6 justify-center mx-auto`}>
 
@@ -1481,7 +1481,7 @@ export const BrainDumpApp: React.FC<{
 
                             {/* ARCHIVO */}
                             {archivo.length > 0 && (
-                                <div className={`mt-12 space-y-4 pt-8 border-t border-zinc-100 dark:border-[#2D2D42]/40 animate-fadeIn ${isArchiveOpenByApp['braindump'] ? 'pb-20' : 'pb-10'}`}>
+                                <div className={`mt-5 space-y-4 animate-fadeIn ${isArchiveOpenByApp['braindump'] ? 'pb-20' : 'pb-10'}`}>
                                     <button 
                                         onClick={() => setArchiveOpenByApp('braindump', !isArchiveOpenByApp['braindump'])}
                                         className="flex items-center gap-3 text-zinc-400 font-bold uppercase tracking-widest text-xs

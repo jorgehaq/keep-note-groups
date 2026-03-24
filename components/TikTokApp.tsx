@@ -1562,7 +1562,7 @@ export const TikTokApp: React.FC<{
         <div className={`flex-1 overflow-y-auto hidden-scrollbar scroll-smooth animate-fadeIn ${!isZenMode && isVideoTrayOpen ? 'pt-[2px]' : 'pt-5'}`}>
 
 
-              <div className={`${isTikTokMaximized ? 'max-w-full' : 'max-w-full md:max-w-6xl'} mx-auto space-y-12 pb-20 px-4 md:px-10`}>
+              <div className={`${isTikTokMaximized ? 'max-w-full' : 'max-w-full md:max-w-6xl'} mx-auto space-y-5 pb-20 px-4 md:px-10`}>
                 {rootVideos.length > 0 ? (
                   /* GRID DE VIDEOS ACTIVOS */
                   <div className={`grid ${isTikTokMaximized ? 'grid-cols-[repeat(auto-fit,340px)] w-full max-w-[2160px]' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl'} gap-6 justify-center mx-auto`}>
@@ -1659,7 +1659,7 @@ export const TikTokApp: React.FC<{
 
                 {/* SECCIÓN DE ARCHIVO (Visible even if root is empty) */}
                 {archivedVideos.length > 0 && (
-                  <div className={`space-y-4 pt-8 border-t border-zinc-100 dark:border-zinc-800/50 ${isArchiveOpenByApp['tiktok'] ? 'pb-20' : 'pb-10'}`}>
+                  <div className={`mt-5 space-y-4 animate-fadeIn ${isArchiveOpenByApp['tiktok'] ? 'pb-20' : 'pb-10'}`}>
                     <button 
                       onClick={() => setArchiveOpenByApp('tiktok', !isArchiveOpenByApp['tiktok'])}
                       className="flex items-center gap-3 text-zinc-400 font-bold uppercase tracking-widest text-xs px-2 hover:text-[#EE1D52] transition-colors group/archheader"
