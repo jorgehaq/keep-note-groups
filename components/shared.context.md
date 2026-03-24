@@ -46,16 +46,29 @@ type GlobalAppView = 'notes' | 'kanban' | 'timers' | 'reminders' | 'braindump' |
 
 ## Estándar de Headers (Navegación y Controles por App)
 - **Secuencia Estricta de Botones**: Para mantener la paridad entre `App.tsx` y `BrainDumpApp.tsx`, el orden debe ser:
-  1. **Campana de Recordatorios**: Red (activo con marquee) / White (default/disabled).
+  1. **Campana de Recordatorios**: Red (activo con marquee) / Tinted (disabled/idle).
   2. **Bandeja de Accesos**: Toggle para tray lateral o lista de items del grupo.
   3. **Maximizar/Minimizar**: Botón de vista de enfoque.
   4. **Ordenar (Sort)**: Botón **independiente** (fuente de verdad: `isSortMenuOpen`).
   5. **Búsqueda (Search)**: Input field (dentro de cápsula en Notas / independiente en Pizarrón).
-- **Reglas de UI del Botón Bell**:
-  - Si hay recordatorios vencidos (`overdueRemindersCount > 0`) y el marquee está activo: **Fondo Rojo + Icono/Texto Blanco**.
-  - Si el marquee está apagado: **Fondo light-red + Icono Rojo**.
-  - Esto garantiza legibilidad y contraste en ambos estados de alerta.
+- **Reglas de UI del Botón Bell & Toogle**: 
+  - **Estado Inactivo**: Fondo `zinc-100` (dark: `zinc-800`), borde `zinc-200`, texto `zinc-500`.
+  - **Estado Activo (Tinted)**: Fondo sutil del color de la app (20% opacidad), borde del color de la app (40% opacidad), texto/icono del color de la app (700-800). **NUNCA usar fondo sólido con texto blanco para estos toggles**. Esto garantiza legibilidad del ícono original y una estética premium.
 - **Botón Sort Independiente**: En `App.tsx` (Notas), el botón de ordenar NO debe estar dentro de la cápsula gris de acciones secundarias; debe ser un botón `rounded-xl` independiente al lado de Maximizar.
+
+## Filosofía de Diseño: Botones y Colores de App
+- **Botones "Clickable"**: Deben usar `rounded-xl`, `border` y `active:scale-95`. Si son icon-only, usar `p-2` o `p-1.5`.
+- **Tarjetas de Notas (Dashboard)**: Deben usar `rounded-2xl` y `p-5`. El espaciado entre tarjetas (gap) es estricto de **16px** (`gap-4`).
+- **Identidad Cromática por App**:
+  - **Notes (General)**: Indigo `#4940D9`.
+  - **Reminders**: Red `#DC2626`.
+  - **Timers**: Blue `#2563EB`.
+  - **Kanban**: Emerald `#10B981`.
+  - **TikTok**: TikTok Red/Pink `#EE1D52`.
+  - **Translator**: Violet `#8B5CF6`.
+  - **Braindump**: Gold/Amber `#FFD700`.
+- **Acciones en Tarjeta (Dashboard)**: Los botones internos (Pin, Archivar) deben ser `rounded-xl`, discretos (`border-transparent`) pero perceptibles al hover/active, manteniendo siempre el ícono original.
+- **Vertical Rhythm**: La separación general entre grandes bloques (ej: Header a Cards, Cards a Archive) es de **20px** (`mt-5`).
 
 ## Reglas
 - El Sidebar siempre está visible (NO se desmonta con globalView).

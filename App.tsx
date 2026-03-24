@@ -1661,7 +1661,7 @@ function App() {
                       <div className="hidden md:flex flex-wrap items-center gap-3 flex-1 min-w-0">
                           <button
                             onClick={() => setIsLauncherOpen(true)}
-                            className="hidden md:flex h-9 w-9 items-center justify-center bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/40 rounded-lg shadow-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/40 shrink-0 transition-all active:scale-95"
+                            className="hidden md:flex h-9 w-9 items-center justify-center bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/40 rounded-xl shadow-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/40 shrink-0 transition-all active:scale-95"
                             title="Menú de Grupos"
                           >
                               <Grid size={20} />
@@ -1726,35 +1726,35 @@ function App() {
                           <button
                             onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
                             disabled={overdueRemindersCount === 0}
-                            className={`flex h-9 px-3 rounded-lg transition-all active:scale-[0.98] shrink-0 items-center justify-center border ${
+                            className={`flex h-9 px-3 rounded-xl transition-all active:scale-95 shrink-0 items-center justify-center border ${
                               showOverdueMarquee 
-                                ? 'bg-red-500 text-white border-red-400 shadow-sm shadow-red-600/20' 
+                                ? 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/40 shadow-sm shadow-red-600/10' 
                                 : overdueRemindersCount > 0
                                   ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
                                   : 'bg-zinc-100 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-700 text-zinc-400 opacity-60 cursor-not-allowed'
                             }`}
                             title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                           >
-                            <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-white' : 'text-red-500'}` : ''} />
+                            <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-red-700 dark:text-red-400' : 'text-red-500'}` : ''} />
                             {overdueRemindersCount > 0 && (
-                              <span className={`ml-2 text-xs font-medium leading-none ${showOverdueMarquee ? 'text-white' : ''}`}>
+                              <span className="ml-2 text-xs font-medium leading-none">
                                 {overdueRemindersCount}
                               </span>
                             )}
                           </button>
 
-                             <button 
-                                onClick={() => setIsGlobalNoteTrayOpen(!isGlobalNoteTrayOpen)}
-                                className={`flex items-center px-3 h-[36px] rounded-lg text-[13px] font-medium border transition-all active:scale-[0.98] shrink-0 ${
-                                  isGlobalNoteTrayOpen 
-                                    ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/40 shadow-sm' 
-                                    : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/50 hover:text-indigo-500'
-                                }`}
-                                title={isGlobalNoteTrayOpen ? "Ocultar bandeja de notas" : "Mostrar bandeja de notas"}
-                              >
-                                 <ChevronsDownUp size={18} className={`transition-transform duration-300 ${isGlobalNoteTrayOpen ? 'rotate-180' : ''}`} />
-                                 <span className="ml-2 text-xs font-medium">{activeGroup.notes.filter(n => !n.parent_note_id).length}</span>
-                              </button>
+                              <button 
+                                 onClick={() => setIsGlobalNoteTrayOpen(!isGlobalNoteTrayOpen)}
+                                 className={`flex items-center px-3 h-[36px] rounded-xl text-[13px] font-medium border transition-all active:scale-95 shrink-0 ${
+                                   isGlobalNoteTrayOpen 
+                                     ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/40 shadow-sm' 
+                                     : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/50 hover:text-indigo-500'
+                                 }`}
+                                 title={isGlobalNoteTrayOpen ? "Ocultar bandeja de notas" : "Mostrar bandeja de notas"}
+                               >
+                                  <ChevronsDownUp size={18} className={`transition-transform duration-300 ${isGlobalNoteTrayOpen ? 'rotate-180' : ''}`} />
+                                  <span className="ml-2 text-xs font-medium">{activeGroup.notes.filter(n => !n.parent_note_id).length}</span>
+                               </button>
 
 
                               <div className="relative" ref={sortMenuRef}>
@@ -1852,21 +1852,21 @@ function App() {
                       </h1>
                       <div className="flex items-center gap-2 shrink-0">
                         {/* Botón Toggle Reminder */}
-                          <button
-                            onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
-                            disabled={overdueRemindersCount === 0}
-                            className={`h-9 px-3 rounded-xl transition-all active:scale-[0.98] shrink-0 flex items-center gap-2 border ${
-                              showOverdueMarquee 
-                                ? 'bg-[#DC2626] border-red-400 text-white shadow-sm shadow-red-600/20' 
-                                : overdueRemindersCount > 0
-                                  ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
-                                  : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
-                            }`}
+                            <button
+                              onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
+                              disabled={overdueRemindersCount === 0}
+                              className={`h-9 px-3 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${
+                                showOverdueMarquee 
+                                  ? 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/40 shadow-sm shadow-red-600/10' 
+                                  : overdueRemindersCount > 0
+                                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
+                                    : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
+                              }`}
                             title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                           >
-                            <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-white' : 'text-red-500'}` : ''} />
+                            <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-red-700 dark:text-red-400' : 'text-red-500'}` : ''} />
                             {overdueRemindersCount > 0 && (
-                              <span className={`text-xs font-bold whitespace-nowrap ${showOverdueMarquee ? 'text-white' : ''}`}>
+                              <span className="text-xs font-bold whitespace-nowrap">
                                 {overdueRemindersCount}
                               </span>
                             )}
