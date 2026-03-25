@@ -41,20 +41,20 @@ interface AccordionItemProps {
 }
 
 const formatCleanDate = (isoString?: string) => {
-    if (!isoString) return '';
-    const d = new Date(isoString);
-    const day = d.getDate().toString().padStart(2, '0');
-    const month = (d.getMonth() + 1).toString().padStart(2, '0');
-    const year = d.getFullYear();
-    let hours = d.getHours();
-    const minutes = d.getMinutes().toString().padStart(2, '0');
-    const ampm = hours >= 12 ? ' PM' : ' AM';
-    hours = hours % 12 || 12;
-    return (
-        <span className="text-[9px] sm:text-[10px] text-center sm:text-left block sm:inline font-medium whitespace-nowrap">
-            {day}/{month}/{year}, {hours.toString().padStart(2, '0')}:{minutes} {ampm}
-        </span>
-    );
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear();
+  let hours = d.getHours();
+  const minutes = d.getMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? ' PM' : ' AM';
+  hours = hours % 12 || 12;
+  return (
+    <span className="text-[9px] sm:text-[10px] text-center sm:text-left block sm:inline font-medium whitespace-nowrap">
+      {day}/{month}/{year}, {hours.toString().padStart(2, '0')}:{minutes} {ampm}
+    </span>
+  );
 };
 
 const highlightText = (text: string, highlight?: string): React.ReactNode => {
@@ -79,11 +79,10 @@ const AIBadge: React.FC<{ count: number; hasPending: boolean; active: boolean; o
     <button
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       title={active ? 'Ocultar panel AI' : 'Abrir panel AI'}
-      className={`relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
-        active
+      className={`relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${active
           ? 'bg-violet-600 text-white border-violet-500 shadow-sm shadow-violet-500/20'
           : 'text-violet-400 border-violet-500/30 bg-violet-500/5 hover:bg-violet-500/10'
-      }`}
+        }`}
     >
       {hasPending
         ? <Loader2 size={13} className="animate-spin" />
@@ -141,15 +140,15 @@ const SummaryTabContent: React.FC<{
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const forcedOrientation = useUIStore(s => s.forcedPizarronOrientation);
-  const layoutCol = forcedOrientation 
-    ? forcedOrientation === 'horizontal' 
+  const layoutCol = forcedOrientation
+    ? forcedOrientation === 'horizontal'
     : isMobile;
 
   return (
-    <div 
-        onFocusCapture={triggerScrollToActive}
-        onClickCapture={triggerScrollToActive}
-        className={`flex-1 flex min-h-0 ${layoutCol ? 'flex-col' : 'flex-row'} gap-3`}
+    <div
+      onFocusCapture={triggerScrollToActive}
+      onClickCapture={triggerScrollToActive}
+      className={`flex-1 flex min-h-0 ${layoutCol ? 'flex-col' : 'flex-row'} gap-3`}
     >
       <div className={`flex-1 flex flex-col min-h-0 bg-violet-50 dark:bg-[#131314] rounded-2xl border focus-within:border-violet-400 dark:focus-within:border-violet-500/60 transition-colors ${searchQuery?.trim() && (summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || summary.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase())) ? 'border-amber-500' : 'border-violet-300 dark:border-violet-500/30'} overflow-hidden`}>
         <div className="flex items-center justify-between px-4 py-2.5 bg-violet-100/60 dark:bg-violet-500/5 border-b border-violet-200 dark:border-violet-500/10">
@@ -172,55 +171,54 @@ const SummaryTabContent: React.FC<{
               {showScratch ? <Sparkles size={14} /> : <PenLine size={14} />}
             </button>
             <div className="relative" ref={menuRef}>
-               <button 
-                 onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
-                 className={`p-1.5 rounded-lg transition-colors ${
-                     isMenuOpen ? 'bg-violet-500/20 text-violet-300' : 'text-zinc-500 hover:text-violet-300 hover:bg-violet-500/10'
-                 }`}
-                 title="Opciones del Análisis"
-               >
-                 <MoreVertical size={14} />
-               </button>
-                 
-               {isMenuOpen && (
-                 <div className="absolute right-0 top-full mt-1 min-w-[180px] bg-white dark:bg-[#1A1A24] rounded-lg shadow-xl border border-zinc-200 dark:border-[#2D2D42] p-1 z-50 overflow-hidden animate-fadeIn">
-                   {onPromote && (
-                     <button
-                       onClick={(e) => {
-                         e.stopPropagation();
-                         onPromote(summary.content || '', summary.target_objective ? `✨ ${summary.target_objective.slice(0,50)}` : '✨ Nota AI');
-                         setIsMenuOpen(false);
-                       }}
-                       className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left text-zinc-700 dark:text-zinc-300 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors font-bold"
-                     >
-                       <ArrowUpRight size={14} /> Convertir a Nota
-                     </button>
-                   )}
-                   {onPromote && <div className="h-px bg-zinc-200 dark:bg-[#2D2D42] my-1" />}
-                   <button
-                     onClick={(e) => {
-                       e.stopPropagation();
-                       onDelete(summary.id);
-                       setIsMenuOpen(false);
-                     }}
-                     className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-                   >
-                     <Trash2 size={14} /> Eliminar Análisis
-                   </button>
-                 </div>
-               )}
+              <button
+                onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
+                className={`p-1.5 rounded-lg transition-colors ${isMenuOpen ? 'bg-violet-500/20 text-violet-300' : 'text-zinc-500 hover:text-violet-300 hover:bg-violet-500/10'
+                  }`}
+                title="Opciones del Análisis"
+              >
+                <MoreVertical size={14} />
+              </button>
+
+              {isMenuOpen && (
+                <div className="absolute right-0 top-full mt-1 min-w-[180px] bg-white dark:bg-[#1A1A24] rounded-lg shadow-xl border border-zinc-200 dark:border-[#2D2D42] p-1 z-50 overflow-hidden animate-fadeIn">
+                  {onPromote && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onPromote(summary.content || '', summary.target_objective ? `✨ ${summary.target_objective.slice(0, 50)}` : '✨ Nota AI');
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left text-zinc-700 dark:text-zinc-300 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors font-bold"
+                    >
+                      <ArrowUpRight size={14} /> Convertir a Nota
+                    </button>
+                  )}
+                  {onPromote && <div className="h-px bg-zinc-200 dark:bg-[#2D2D42] my-1" />}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(summary.id);
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                  >
+                    <Trash2 size={14} /> Eliminar Análisis
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
         <div className={`flex-1 flex flex-col min-h-0 bg-violet-50 dark:bg-[#131314] rounded-2xl border focus-within:border-violet-400 dark:focus-within:border-violet-500/60 transition-colors ${searchQuery?.trim() && (summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || summary.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase())) ? 'border-amber-500' : 'border-violet-200 dark:border-violet-500/20'} overflow-hidden`}
           style={showScratch
             ? (layoutCol
-                ? { height: `${splitRatio * 100}%`, flex: 'none' }
-                : { width: `${splitRatio * 100}%`, flex: 'none' })
+              ? { height: `${splitRatio * 100}%`, flex: 'none' }
+              : { width: `${splitRatio * 100}%`, flex: 'none' })
             : { flex: '1' }
           }
         >
-          <div 
+          <div
             onClick={(e) => {
               if ((e.target as HTMLElement).closest('.cm-panel, .cm-search, .cm-search-marker-container')) return;
               // No ref for summary editor in this component, but it has focusable areas
@@ -244,16 +242,15 @@ const SummaryTabContent: React.FC<{
       {showScratch && (
         <div
           onMouseDown={onDividerMouseDown}
-          className={`shrink-0 flex items-center justify-center rounded-full select-none hover:bg-violet-400/20 transition-colors ${
-            layoutCol ? 'h-2 w-full cursor-row-resize' : 'w-2 h-full cursor-col-resize'
-          }`}
+          className={`shrink-0 flex items-center justify-center rounded-full select-none hover:bg-violet-400/20 transition-colors ${layoutCol ? 'h-2 w-full cursor-row-resize' : 'w-2 h-full cursor-col-resize'
+            }`}
           title="Arrastrar para redimensionar"
         >
           <div className={`rounded-full bg-violet-400/30 ${layoutCol ? 'h-1 w-8' : 'w-1 h-8'}`} />
         </div>
       )}
 
-      <div 
+      <div
         className={`flex flex-col flex-1 min-h-0 rounded-xl border border-violet-200 dark:border-[#291B46] focus-within:border-violet-400 dark:focus-within:border-[#4E3884] bg-white dark:bg-[#1A1A24] animate-fadeIn overflow-hidden transition-colors ${!showScratch ? 'hidden md:flex' : 'flex'}`}
         style={showScratch && !layoutCol ? { width: `${(1 - splitRatio) * 100}%`, flex: 'none' } : { flex: 1 }}
       >
@@ -280,7 +277,7 @@ const SummaryTabContent: React.FC<{
           if ((e.target as HTMLElement).closest('.cm-panel, .cm-search, .cm-search-marker-container')) return;
           scratchRef.current?.focus();
         }}
-          className={`note-editor-scroll flex-1 ${showLineNumbers ? 'pt-8 pr-6 pb-[5px] pl-0' : 'px-8 py-6'} overflow-y-scroll min-h-[120px]`}>
+          className={`note-editor-scroll flex-1 ${showLineNumbers ? 'pt-8 pr-6 pb-[5px] pl-[7px]' : 'px-8 py-6'} overflow-y-scroll min-h-[120px]`}>
           <SmartNotesEditor
             ref={scratchRef}
             noteId={`scratch_${summary.id}`}
@@ -352,10 +349,10 @@ const SummaryTitle: React.FC<{
       onDoubleClick={e => { e.stopPropagation(); if (isActive) setIsEditing(true); }}
       title={isActive ? 'Doble clic para renombrar' : summary.target_objective || ''}
     >
-      {searchQuery?.trim() 
-        ? highlightText(summary.target_objective || 'Análisis AI', searchQuery) 
-        : (summary.target_objective || 'Análisis AI').length > 23 
-          ? (summary.target_objective || 'Análisis AI').slice(0, 23) + '...' 
+      {searchQuery?.trim()
+        ? highlightText(summary.target_objective || 'Análisis AI', searchQuery)
+        : (summary.target_objective || 'Análisis AI').length > 23
+          ? (summary.target_objective || 'Análisis AI').slice(0, 23) + '...'
           : (summary.target_objective || 'Análisis AI')}
     </span>
   );
@@ -424,10 +421,10 @@ const SubnoteTitle: React.FC<{
       onDoubleClick={e => { e.stopPropagation(); if (isActive) setIsEditing(true); }}
       title={isActive ? 'Doble clic para renombrar' : child.title || ''}
     >
-      {searchQuery?.trim() 
-        ? highlightText(child.title || 'Sin título', searchQuery) 
-        : (child.title || 'Sin título').length > 23 
-          ? (child.title || 'Sin título').slice(0, 23) + '...' 
+      {searchQuery?.trim()
+        ? highlightText(child.title || 'Sin título', searchQuery)
+        : (child.title || 'Sin título').length > 23
+          ? (child.title || 'Sin título').slice(0, 23) + '...'
           : (child.title || 'Sin título')}
     </span>
   );
@@ -473,137 +470,136 @@ const SubnoteTabContent: React.FC<{
   syncStatus,
   activeTab
 }) => {
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const borderColor = note.parent_note_id 
-    ? 'border-emerald-200 dark:border-[#291B46] focus-within:border-emerald-400 dark:focus-within:border-[#17634F]' 
-    : 'border-indigo-200 dark:border-[#291B46] focus-within:border-indigo-400 dark:focus-within:border-[#40418E]';
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const borderColor = note.parent_note_id
+      ? 'border-emerald-200 dark:border-[#291B46] focus-within:border-emerald-400 dark:focus-within:border-[#17634F]'
+      : 'border-indigo-200 dark:border-[#291B46] focus-within:border-indigo-400 dark:focus-within:border-[#40418E]';
 
-  const forcedOrientation = useUIStore(s => s.forcedPizarronOrientation);
-  const layoutCol = forcedOrientation
-    ? forcedOrientation === 'horizontal'
-    : isMobile;
+    const forcedOrientation = useUIStore(s => s.forcedPizarronOrientation);
+    const layoutCol = forcedOrientation
+      ? forcedOrientation === 'horizontal'
+      : isMobile;
 
-  return (
-    <div
-      ref={splitContainerRef}
-      onFocusCapture={triggerScrollToActive}
-      onClickCapture={triggerScrollToActive}
-      className={`flex-1 flex min-h-0 ${layoutCol ? 'flex-col' : 'flex-row'} gap-2 pt-0`}
-    >
+    return (
       <div
-        className={`min-h-0 overflow-hidden flex flex-col rounded-xl border ${borderColor} bg-zinc-50 dark:bg-[#131314]`}
-        style={showScratch
-          ? (layoutCol
+        ref={splitContainerRef}
+        onFocusCapture={triggerScrollToActive}
+        onClickCapture={triggerScrollToActive}
+        className={`flex-1 flex min-h-0 ${layoutCol ? 'flex-col' : 'flex-row'} gap-2 pt-0`}
+      >
+        <div
+          className={`min-h-0 overflow-hidden flex flex-col rounded-xl border ${borderColor} bg-zinc-50 dark:bg-[#131314]`}
+          style={showScratch
+            ? (layoutCol
               ? { height: `${splitRatio * 100}%`, flex: 'none' }
               : { width: `${splitRatio * 100}%`, flex: 'none' })
-          : { flex: '1' }
-        }
-      >
-        {/* Editor Metadata Header */}
-        <div className="flex items-center justify-center gap-6 px-4 py-2 border-b border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-[#1A1A24] shrink-0">
-          <div className="flex items-center gap-1.5 opacity-60">
-            <Clock size={11} className="text-zinc-500" />
-            <span className="text-[9px] font-bold uppercase tracking-tighter text-zinc-500">Creación:</span>
-            {formatCleanDate(note.created_at)}
+            : { flex: '1' }
+          }
+        >
+          {/* Editor Metadata Header */}
+          <div className="flex items-center justify-center gap-6 px-4 py-2 border-b border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-[#1A1A24] shrink-0">
+            <div className="flex items-center gap-1.5 opacity-60">
+              <Clock size={11} className="text-zinc-500" />
+              <span className="text-[9px] font-bold uppercase tracking-tighter text-zinc-500">Creación:</span>
+              {formatCleanDate(note.created_at)}
+            </div>
+            <div className="w-px h-3 bg-zinc-300 dark:bg-zinc-800" />
+            <div className="flex items-center gap-1.5 opacity-60">
+              <History size={11} className="text-zinc-500" />
+              <span className="text-[9px] font-bold uppercase tracking-tighter text-zinc-500">Edición:</span>
+              {formatCleanDate(note.updated_at)}
+            </div>
           </div>
-          <div className="w-px h-3 bg-zinc-300 dark:bg-zinc-800" />
-          <div className="flex items-center gap-1.5 opacity-60">
-            <History size={11} className="text-zinc-500" />
-            <span className="text-[9px] font-bold uppercase tracking-tighter text-zinc-500">Edición:</span>
-            {formatCleanDate(note.updated_at)}
-          </div>
+
+          {note.is_checklist ? (
+            <div className={`${showLineNumbers ? 'pt-8 pr-6 pb-[5px] pl-[7px]' : 'px-8 py-6'} h-full overflow-y-auto note-editor-scroll`}>
+              <ChecklistEditor ref={checklistRef} idPrefix={note.id} initialContent={note.content || ''} onUpdate={onUpdateContent} />
+            </div>
+          ) : (
+            <div
+              onClick={(e) => {
+                if ((e.target as HTMLElement).closest('.cm-panel, .cm-search')) return;
+                editorRef.current?.focus();
+              }}
+              className={`${showLineNumbers ? 'pt-8 pr-6 pb-[5px] pl-[7px]' : 'px-8 py-6'} h-full overflow-y-auto cursor-text note-editor-scroll`}
+            >
+              <SmartNotesEditor
+                key={note.id}
+                ref={editorRef}
+                noteId={note.id}
+                initialContent={note.content || ''}
+                searchQuery={searchQuery}
+                onChange={onUpdateContent}
+                noteFont={noteFont}
+                noteFontSize={noteFontSize}
+                noteLineHeight={noteLineHeight}
+                showLineNumbers={showLineNumbers}
+              />
+            </div>
+          )}
         </div>
 
-        {note.is_checklist ? (
-          <div className={`${showLineNumbers ? 'pt-8 pr-6 pb-[5px] pl-0' : 'px-8 py-6'} h-full overflow-y-auto note-editor-scroll`}>
-            <ChecklistEditor ref={checklistRef} idPrefix={note.id} initialContent={note.content || ''} onUpdate={onUpdateContent} />
-          </div>
-        ) : (
+        {showScratch && (
           <div
-            onClick={(e) => {
-              if ((e.target as HTMLElement).closest('.cm-panel, .cm-search')) return;
-              editorRef.current?.focus();
-            }}
-            className={`${showLineNumbers ? 'pt-8 pr-6 pb-[5px] pl-0' : 'px-8 py-6'} h-full overflow-y-auto cursor-text note-editor-scroll`}
+            onMouseDown={onDividerMouseDown}
+            className={`shrink-0 flex items-center justify-center rounded-full select-none hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors ${layoutCol ? 'h-2 w-full cursor-row-resize' : 'w-2 h-full cursor-col-resize'
+              }`}
+            title="Arrastrar para redimensionar"
           >
-            <SmartNotesEditor
-              key={note.id}
-              ref={editorRef}
-              noteId={note.id}
-              initialContent={note.content || ''}
-              searchQuery={searchQuery}
-              onChange={onUpdateContent}
-              noteFont={noteFont}
-              noteFontSize={noteFontSize}
-              noteLineHeight={noteLineHeight}
-              showLineNumbers={showLineNumbers}
-            />
+            <div className={`rounded-full bg-zinc-300 dark:bg-zinc-600 ${layoutCol ? 'h-1 w-8' : 'w-1 h-8'}`} />
+          </div>
+        )}
+
+        {showScratch && (
+          <div
+            onFocusCapture={triggerScrollToActive}
+            className="min-h-0 overflow-hidden flex flex-col rounded-xl border border-violet-200 dark:border-[#291B46] focus-within:border-violet-400 dark:focus-within:border-[#4E3884] bg-white dark:bg-[#1A1A24] animate-fadeIn transition-colors"
+            style={{ flex: 1 }}
+          >
+            <div className="relative flex items-center justify-center gap-2 px-4 py-2 border-b border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-[#1A1A24] shrink-0">
+              <div className="flex items-center gap-2">
+                <PenLine size={11} className="text-violet-400" />
+                <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest">Pizarrón</span>
+              </div>
+              <div className="absolute right-2 flex items-center">
+                <button
+                  onClick={() => {
+                    const curr = useUIStore.getState().forcedPizarronOrientation;
+                    const next = curr === 'vertical' ? 'horizontal' : 'vertical';
+                    useUIStore.getState().setForcedPizarronOrientation(next);
+                  }}
+                  title={useUIStore.getState().forcedPizarronOrientation === 'horizontal' ? "Cambiar a disposición Vertical (Columnas)" : "Cambiar a disposición Horizontal (Filas)"}
+                  className="p-1 hover:bg-violet-400/10 rounded-lg text-violet-400 transition-colors"
+                >
+                  {useUIStore.getState().forcedPizarronOrientation === 'horizontal' ? <Columns size={12} /> : <Rows size={12} />}
+                </button>
+              </div>
+            </div>
+            <div
+              onClick={(e) => {
+                if ((e.target as HTMLElement).closest('.cm-panel, .cm-search')) return;
+                scratchRef.current?.focus();
+              }}
+              className={`flex-1 ${showLineNumbers ? 'pt-8 pr-6 pb-[5px] pl-[7px]' : 'px-8 py-6'} overflow-y-auto cursor-text note-editor-scroll`}
+            >
+              <SmartNotesEditor
+                key={`scratch_${note.id}`}
+                ref={scratchRef}
+                noteId={`scratch_note_${note.id}`}
+                initialContent={note.scratchpad || ''}
+                onChange={onUpdateScratch}
+                noteFont={noteFont}
+                noteFontSize={noteFontSize}
+                noteLineHeight={noteLineHeight}
+                showLineNumbers={showLineNumbers}
+                searchQuery={searchQuery}
+              />
+            </div>
           </div>
         )}
       </div>
-
-      {showScratch && (
-        <div
-          onMouseDown={onDividerMouseDown}
-          className={`shrink-0 flex items-center justify-center rounded-full select-none hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors ${
-            layoutCol ? 'h-2 w-full cursor-row-resize' : 'w-2 h-full cursor-col-resize'
-          }`}
-          title="Arrastrar para redimensionar"
-        >
-          <div className={`rounded-full bg-zinc-300 dark:bg-zinc-600 ${layoutCol ? 'h-1 w-8' : 'w-1 h-8'}`} />
-        </div>
-      )}
-
-      {showScratch && (
-        <div
-          onFocusCapture={triggerScrollToActive}
-          className="min-h-0 overflow-hidden flex flex-col rounded-xl border border-violet-200 dark:border-[#291B46] focus-within:border-violet-400 dark:focus-within:border-[#4E3884] bg-white dark:bg-[#1A1A24] animate-fadeIn transition-colors"
-          style={{ flex: 1 }}
-        >
-          <div className="relative flex items-center justify-center gap-2 px-4 py-2 border-b border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-[#1A1A24] shrink-0">
-            <div className="flex items-center gap-2">
-              <PenLine size={11} className="text-violet-400" />
-              <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest">Pizarrón</span>
-            </div>
-            <div className="absolute right-2 flex items-center">
-              <button
-                onClick={() => {
-                  const curr = useUIStore.getState().forcedPizarronOrientation;
-                  const next = curr === 'vertical' ? 'horizontal' : 'vertical';
-                  useUIStore.getState().setForcedPizarronOrientation(next);
-                }}
-                title={useUIStore.getState().forcedPizarronOrientation === 'horizontal' ? "Cambiar a disposición Vertical (Columnas)" : "Cambiar a disposición Horizontal (Filas)"}
-                className="p-1 hover:bg-violet-400/10 rounded-lg text-violet-400 transition-colors"
-              >
-                {useUIStore.getState().forcedPizarronOrientation === 'horizontal' ? <Columns size={12} /> : <Rows size={12} />}
-              </button>
-            </div>
-          </div>
-          <div
-            onClick={(e) => {
-              if ((e.target as HTMLElement).closest('.cm-panel, .cm-search')) return;
-              scratchRef.current?.focus();
-            }}
-            className={`flex-1 ${showLineNumbers ? 'pt-8 pr-6 pb-[5px] pl-0' : 'px-8 py-6'} overflow-y-auto cursor-text note-editor-scroll`}
-          >
-            <SmartNotesEditor
-              key={`scratch_${note.id}`}
-              ref={scratchRef}
-              noteId={`scratch_note_${note.id}`}
-              initialContent={note.scratchpad || ''}
-              onChange={onUpdateScratch}
-              noteFont={noteFont}
-              noteFontSize={noteFontSize}
-              noteLineHeight={noteLineHeight}
-              showLineNumbers={showLineNumbers}
-              searchQuery={searchQuery}
-            />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+    );
+  };
 
 export const AccordionItem: React.FC<AccordionItemProps> = ({
   note,
@@ -635,10 +631,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
     if (!q) return false;
     const lowerQ = q.toLowerCase();
     if (n.title?.toLowerCase().includes(lowerQ) || n.content?.toLowerCase().includes(lowerQ) || n.scratchpad?.toLowerCase().includes(lowerQ)) return true;
-    
+
     const nSums = sums.filter(s => s.note_id === n.id);
     if (nSums.some(s => s.content?.toLowerCase().includes(lowerQ) || s.target_objective?.toLowerCase().includes(lowerQ) || s.scratchpad?.toLowerCase().includes(lowerQ))) return true;
-    
+
     const kids = all.filter(c => c.parent_note_id === n.id);
     return kids.some(k => checkNoteMatch(k, q, all, sums));
   };
@@ -652,113 +648,113 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   const checklistRef = useRef<ChecklistEditorRef>(null);
   const fontClass = noteFont === 'serif' ? 'font-serif' : noteFont === 'mono' ? 'font-mono text-xs' : 'font-sans';
 
- 
-   const { 
-      aiPanelOpenByNote, setAiPanelOpen, activeTabByNote, setActiveTab: setStoreActiveTab,
-      isNotesPizarronOpen, setIsNotesPizarronOpen,
-      notesSplitRatio, setNotesSplitRatio,
-      isArchiveOpenByApp, setArchiveOpenByApp,
-      isMaximized, setIsMaximized,
-      globalTasks
-    } = useUIStore();
 
-    const { activeNoteId, activeNote, breadcrumbPath, navigate } = useNoteTree(note.id);
-   const isRootLevel = !activeNoteId || activeNoteId === note.id;
-   const displayContent = isRootLevel ? note.content : (activeNote?.content ?? '');
-   const displayNoteId = isRootLevel ? note.id : activeNoteId;
- 
-   const showAIPanel = aiPanelOpenByNote[displayNoteId] || false;
-   const setShowAIPanel = (val: boolean | ((v: boolean) => boolean)) => {
-     const next = typeof val === 'function' ? val(showAIPanel) : val;
-     setAiPanelOpen(displayNoteId, next);
-   };
- 
-   const activeTab = activeTabByNote[displayNoteId] || 'original';
-   const setActiveTab = (tabId: string) => setStoreActiveTab(displayNoteId, tabId);
-    const { summaries: aiSummaries, deleteSummary, updateScratchpad, updateSummaryContent, updateSummaryMetadata, loading: summariesLoading, hasFetched } = useSummaries(displayNoteId);
-    const completedSummaries = aiSummaries.filter(s => s.status === 'completed');
-  
-    const manualChildren = groupNotes.filter(n => n.parent_note_id === displayNoteId && !n.ai_generated);
+  const {
+    aiPanelOpenByNote, setAiPanelOpen, activeTabByNote, setActiveTab: setStoreActiveTab,
+    isNotesPizarronOpen, setIsNotesPizarronOpen,
+    notesSplitRatio, setNotesSplitRatio,
+    isArchiveOpenByApp, setArchiveOpenByApp,
+    isMaximized, setIsMaximized,
+    globalTasks
+  } = useUIStore();
 
-    const unifiedTabs = useMemo(() => {
-      const items = [
-        ...manualChildren.map(c => ({ id: `sub_${c.id}`, type: 'sub' as const, order_index: c.order_index || 0, data: c })),
-        ...aiSummaries.map(s => ({ id: s.id, type: 'summary' as const, order_index: s.order_index || 0, data: s }))
-      ];
-      return items.sort((a, b) => a.order_index - b.order_index);
-    }, [manualChildren, aiSummaries]);
+  const { activeNoteId, activeNote, breadcrumbPath, navigate } = useNoteTree(note.id);
+  const isRootLevel = !activeNoteId || activeNoteId === note.id;
+  const displayContent = isRootLevel ? note.content : (activeNote?.content ?? '');
+  const displayNoteId = isRootLevel ? note.id : activeNoteId;
 
-    // DETERMINAR ORDEN RELATIVO (Interpolación REAL estilo Notion/Linear)
-    const getNewOrderIndex = () => {
-      if (activeTab === 'original') {
-        const first = unifiedTabs[0];
-        if (!first) return 1;
-        return first.order_index / 2;
+  const showAIPanel = aiPanelOpenByNote[displayNoteId] || false;
+  const setShowAIPanel = (val: boolean | ((v: boolean) => boolean)) => {
+    const next = typeof val === 'function' ? val(showAIPanel) : val;
+    setAiPanelOpen(displayNoteId, next);
+  };
+
+  const activeTab = activeTabByNote[displayNoteId] || 'original';
+  const setActiveTab = (tabId: string) => setStoreActiveTab(displayNoteId, tabId);
+  const { summaries: aiSummaries, deleteSummary, updateScratchpad, updateSummaryContent, updateSummaryMetadata, loading: summariesLoading, hasFetched } = useSummaries(displayNoteId);
+  const completedSummaries = aiSummaries.filter(s => s.status === 'completed');
+
+  const manualChildren = groupNotes.filter(n => n.parent_note_id === displayNoteId && !n.ai_generated);
+
+  const unifiedTabs = useMemo(() => {
+    const items = [
+      ...manualChildren.map(c => ({ id: `sub_${c.id}`, type: 'sub' as const, order_index: c.order_index || 0, data: c })),
+      ...aiSummaries.map(s => ({ id: s.id, type: 'summary' as const, order_index: s.order_index || 0, data: s }))
+    ];
+    return items.sort((a, b) => a.order_index - b.order_index);
+  }, [manualChildren, aiSummaries]);
+
+  // DETERMINAR ORDEN RELATIVO (Interpolación REAL estilo Notion/Linear)
+  const getNewOrderIndex = () => {
+    if (activeTab === 'original') {
+      const first = unifiedTabs[0];
+      if (!first) return 1;
+      return first.order_index / 2;
+    }
+
+    const activeIndex = unifiedTabs.findIndex(t => t.id === activeTab);
+    if (activeIndex === -1) {
+      const last = unifiedTabs[unifiedTabs.length - 1];
+      return last ? last.order_index + 1 : 1;
+    }
+
+    const current = unifiedTabs[activeIndex];
+    const next = unifiedTabs[activeIndex + 1];
+
+    if (!next) {
+      return current.order_index + 1;
+    }
+
+    return (current.order_index + next.order_index) / 2;
+  };
+
+  const childrenLoaded = true; // Since we rely on global state
+
+  // Fallback to 'original' if the active tab summary/subnote is missing
+  useEffect(() => {
+    if (summariesLoading || !hasFetched) return;
+    if (activeTab === 'original') return;
+
+    const isSubnote = activeTab.startsWith('sub_');
+    if (isSubnote) {
+      const subId = activeTab.replace('sub_', '');
+      if (!manualChildren.find(c => c.id === subId)) {
+        console.log(`Fallback to original: subnote ${subId} not found`);
+        setActiveTab('original');
       }
-
-      const activeIndex = unifiedTabs.findIndex(t => t.id === activeTab);
-      if (activeIndex === -1) {
-        const last = unifiedTabs[unifiedTabs.length - 1];
-        return last ? last.order_index + 1 : 1;
+    } else {
+      // It's a summary
+      if (!completedSummaries.find(s => s.id === activeTab)) {
+        console.log(`Fallback to original: summary ${activeTab} not found`);
+        setActiveTab('original');
       }
+    }
+  }, [completedSummaries.length, manualChildren.length, summariesLoading, hasFetched, activeTab, displayNoteId]);
 
-      const current = unifiedTabs[activeIndex];
-      const next = unifiedTabs[activeIndex + 1];
+  // Auto-switch to newest summary ONLY when a NEW one arrives in the CURRENT session
+  const prevCountRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (summariesLoading) {
+      prevCountRef.current = null; // Reset on note change/load
+      return;
+    }
 
-      if (!next) {
-        return current.order_index + 1;
+    // First time loading completes for this note instance
+    if (prevCountRef.current === null) {
+      prevCountRef.current = completedSummaries.length;
+      return;
+    }
+
+    // Only auto-switch if count increased (new arrival) and panel is visible
+    if (completedSummaries.length > prevCountRef.current && showAIPanel) {
+      if (completedSummaries.length > 0) {
+        setActiveTab(completedSummaries[0].id);
       }
+    }
+    prevCountRef.current = completedSummaries.length;
+  }, [completedSummaries.length, showAIPanel, summariesLoading, displayNoteId]);
 
-      return (current.order_index + next.order_index) / 2;
-    };
-
-    const childrenLoaded = true; // Since we rely on global state
- 
-   // Fallback to 'original' if the active tab summary/subnote is missing
-   useEffect(() => {
-     if (summariesLoading || !hasFetched) return;
-     if (activeTab === 'original') return;
- 
-     const isSubnote = activeTab.startsWith('sub_');
-     if (isSubnote) {
-       const subId = activeTab.replace('sub_', '');
-       if (!manualChildren.find(c => c.id === subId)) {
-         console.log(`Fallback to original: subnote ${subId} not found`);
-         setActiveTab('original');
-       }
-     } else {
-       // It's a summary
-       if (!completedSummaries.find(s => s.id === activeTab)) {
-         console.log(`Fallback to original: summary ${activeTab} not found`);
-         setActiveTab('original');
-       }
-     }
-   }, [completedSummaries.length, manualChildren.length, summariesLoading, hasFetched, activeTab, displayNoteId]);
- 
-   // Auto-switch to newest summary ONLY when a NEW one arrives in the CURRENT session
-   const prevCountRef = useRef<number | null>(null);
-   useEffect(() => {
-     if (summariesLoading) {
-       prevCountRef.current = null; // Reset on note change/load
-       return;
-     }
-     
-     // First time loading completes for this note instance
-     if (prevCountRef.current === null) {
-       prevCountRef.current = completedSummaries.length;
-       return;
-     }
- 
-     // Only auto-switch if count increased (new arrival) and panel is visible
-     if (completedSummaries.length > prevCountRef.current && showAIPanel) {
-       if (completedSummaries.length > 0) {
-         setActiveTab(completedSummaries[0].id);
-       }
-     }
-     prevCountRef.current = completedSummaries.length;
-   }, [completedSummaries.length, showAIPanel, summariesLoading, displayNoteId]);
- 
-   const isInKanban = globalTasks?.some(t => t.id === note.id || t.linked_note_id === note.id) || false;
+  const isInKanban = globalTasks?.some(t => t.id === note.id || t.linked_note_id === note.id) || false;
 
   // ── PIZARRON DE LA NOTA ORIGINAL (PERSISTENTE) ──────────────────────────────
   // ── PIZARRON DE LA NOTA ORIGINAL (PERSISTENTE GLOBAL - COMO TIKTOK) ────────
@@ -783,17 +779,17 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   useEffect(() => {
     if (!tabBarRef.current || !activeTab) return;
     const timer = setTimeout(() => {
-        const activeBtn = tabBarRef.current?.querySelector('[data-active-tab="true"]');
-        if (activeBtn) {
-            activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-        }
+      const activeBtn = tabBarRef.current?.querySelector('[data-active-tab="true"]');
+      if (activeBtn) {
+        activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
     }, 100);
     return () => clearTimeout(timer);
   }, [activeTab, scrollToActiveCount]);
 
   // ── AI INPUT COLAPSABLE ────────────────────────────────────────────────────
   const [showAIInput, setShowAIInput] = useState(false);
-  
+
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [hasSearchMatchLeft, setHasSearchMatchLeft] = useState(false);
@@ -816,12 +812,12 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       let matchLeft = false;
       let matchRight = false;
       const tabs = tabBarRef.current.querySelectorAll('button[data-is-match="true"]');
-      
+
       tabs.forEach(tab => {
         const t = tab as HTMLElement;
         const tabStart = t.offsetLeft;
         const tabEnd = tabStart + t.offsetWidth;
-        
+
         // Ajuste de sensibilidad para detectar tabs ocultos tras el gradiente/flecha
         if (tabStart < scrollLeft + 35) matchLeft = true;
         if (tabEnd > scrollLeft + clientWidth - 35) matchRight = true;
@@ -848,7 +844,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
       container.addEventListener('scroll', checkScroll);
       window.addEventListener('resize', checkScroll);
-      
+
       const ro = new ResizeObserver(checkScroll);
       ro.observe(container);
 
@@ -866,11 +862,11 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
     checkScroll();
   }, [unifiedTabs, checkScroll]);
 
-    // ── SPLIT RATIO (pizarron) ─────────────────────────────────────────────────
-    // Usamos el ratio global del store para sincronizar todas las notas
-    const splitRatio = notesSplitRatio;
-    const setSplitRatio = (val: number) => setNotesSplitRatio(val);
-    const isDraggingRef = useRef(false);
+  // ── SPLIT RATIO (pizarron) ─────────────────────────────────────────────────
+  // Usamos el ratio global del store para sincronizar todas las notas
+  const splitRatio = notesSplitRatio;
+  const setSplitRatio = (val: number) => setNotesSplitRatio(val);
+  const isDraggingRef = useRef(false);
   const splitContainerRef = useRef<HTMLDivElement>(null);
 
   // Sync scratchpad local con nota cuando cambia note.id
@@ -1031,13 +1027,12 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   };
 
   return (
-    <div 
+    <div
       onFocusCapture={triggerScrollToActive}
-      className={`m-1 transition-all duration-300 flex-1 flex flex-col min-h-0 bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border select-text ${
-      isHighlightedBySearch
-        ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50/30 dark:bg-amber-900/10 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
-        : 'border-zinc-200 dark:border-[#2D2D42] hover:border-indigo-400/60 dark:hover:border-[#3D3E89]/60 focus-within:border-indigo-500 dark:focus-within:border-[#3D3E89] shadow-sm focus-within:shadow-indigo-500/10 dark:focus-within:shadow-[#3D3E89]/10 focus-within:shadow-md'
-    }`}>
+      className={`m-1 transition-all duration-300 flex-1 flex flex-col min-h-0 bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border select-text ${isHighlightedBySearch
+          ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50/30 dark:bg-amber-900/10 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
+          : 'border-zinc-200 dark:border-[#2D2D42] hover:border-indigo-400/60 dark:hover:border-[#3D3E89]/60 focus-within:border-indigo-500 dark:focus-within:border-[#3D3E89] shadow-sm focus-within:shadow-indigo-500/10 dark:focus-within:shadow-[#3D3E89]/10 focus-within:shadow-md'
+        }`}>
 
       {/* HEADER: TITLE + BUTTONS + ACCESSES */}
       <div
@@ -1075,11 +1070,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                   }}
                   onClick={(e) => e.stopPropagation()}
                   placeholder="Título de la nota..."
-                  className={`w-full min-w-0 bg-transparent text-lg font-bold outline-none placeholder-zinc-400 transition-colors cursor-text pr-2 ${
-                    searchQuery && tempTitle.toLowerCase().includes(searchQuery.toLowerCase())
+                  className={`w-full min-w-0 bg-transparent text-lg font-bold outline-none placeholder-zinc-400 transition-colors cursor-text pr-2 ${searchQuery && tempTitle.toLowerCase().includes(searchQuery.toLowerCase())
                       ? "text-transparent caret-zinc-800 dark:caret-[#CCCCCC]"
                       : "text-zinc-800 dark:text-[#CCCCCC]"
-                  }`}
+                    }`}
                   title="Haz clic para editar"
                 />
               </div>
@@ -1102,7 +1096,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
             {isInKanban && (
               <div className="flex-shrink-0 animate-fadeIn">
-                <KanbanSemaphore sourceType="note" sourceId={note.id} sourceTitle={note.title || 'Sin título'} onInteract={() => {}} />
+                <KanbanSemaphore sourceType="note" sourceId={note.id} sourceTitle={note.title || 'Sin título'} onInteract={() => { }} />
               </div>
             )}
           </div>
@@ -1128,11 +1122,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               <button
                 onClick={(e) => { e.stopPropagation(); setShowAIInput(v => !v); }}
                 title={showAIInput ? 'Ocultar panel AI' : 'Abrir panel AI'}
-                className={`flex items-center px-3 h-[32.5px] rounded-lg text-[13px] font-medium border transition-all ${
-                  showAIInput 
-                    ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/40 shadow-sm' 
+                className={`flex items-center px-3 h-[32.5px] rounded-lg text-[13px] font-medium border transition-all ${showAIInput
+                    ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/40 shadow-sm'
                     : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/50 hover:bg-violet-50 dark:hover:bg-violet-500/10 hover:text-violet-700 dark:hover:text-violet-400'
-                }`}
+                  }`}
               >
                 <Sparkles size={13} className="" />
               </button>
@@ -1142,11 +1135,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             <button
               onClick={(e) => { e.stopPropagation(); setShowNoteScratch(v => !v); }}
               title={showNoteScratch ? 'Ocultar pizarrón' : 'Abrir pizarrón'}
-              className={`flex items-center px-3 h-[32.5px] rounded-lg text-[13px] font-medium border transition-all ${
-                showNoteScratch
-                  ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/40 shadow-sm' 
+              className={`flex items-center px-3 h-[32.5px] rounded-lg text-[13px] font-medium border transition-all ${showNoteScratch
+                  ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/40 shadow-sm'
                   : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/50 hover:bg-violet-50 dark:hover:bg-violet-500/10 hover:text-violet-700 dark:hover:text-violet-400'
-              }`}
+                }`}
             >
               <PenLine size={13} className="" />
             </button>
@@ -1188,11 +1180,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             {/* Botón Zen */}
             <button
               onClick={(e) => { e.stopPropagation(); useUIStore.getState().toggleZenMode('notes'); }}
-              className={`p-2 rounded-xl border transition-all ${
-                useUIStore.getState().isZenModeByApp['notes']
-                  ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500 shadow-sm' 
+              className={`p-2 rounded-xl border transition-all ${useUIStore.getState().isZenModeByApp['notes']
+                  ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500 shadow-sm'
                   : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/40 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400'
-              }`}
+                }`}
               title={useUIStore.getState().isZenModeByApp['notes'] ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
             >
               <Wind size={13} />
@@ -1201,11 +1192,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             {/* Botón Maximizar/Minimizar */}
             <button
               onClick={(e) => { e.stopPropagation(); setIsMaximized(!isMaximized); }}
-              className={`hidden md:flex p-2 rounded-xl border transition-all ${
-                isMaximized
-                  ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500 shadow-sm' 
+              className={`hidden md:flex p-2 rounded-xl border transition-all ${isMaximized
+                  ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500 shadow-sm'
                   : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/40 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400'
-              }`}
+                }`}
               title={isMaximized ? "Minimizar" : "Maximizar"}
             >
               {isMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
@@ -1215,11 +1205,10 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             <div className="relative shrink-0 flex items-center" ref={mobileMenuRef}>
               <button
                 onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(!isMobileMenuOpen); }}
-                className={`p-2 rounded-xl border transition-all ${
-                  isMobileMenuOpen
-                    ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20' 
+                className={`p-2 rounded-xl border transition-all ${isMobileMenuOpen
+                    ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20'
                     : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-zinc-400/60 dark:hover:border-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700/60 hover:text-zinc-700 dark:hover:text-zinc-300'
-                }`}
+                  }`}
                 title="Más opciones de la nota"
               >
                 <MoreVertical size={13} />
@@ -1231,18 +1220,18 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                       <Hash size={14} /> {showLineNumbers ? 'Ocultar números' : 'Mostrar números'}
                     </button>
                   )}
-                  
+
                   <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); onUpdate(note.id, { is_docked: !note.is_docked }); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_docked ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}>
                     <PanelLeft size={14} />{note.is_docked ? 'Quitar del Sidebar' : 'Anclar al Sidebar'}
                   </button>
-                  
+
                   <button onClick={(e) => { e.stopPropagation(); e.currentTarget.blur(); onUpdate(note.id, { is_pinned: !note.is_pinned }); setIsMobileMenuOpen(false); }} className={`flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md transition-colors ${note.is_pinned ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}>
                     <Pin size={14} className={note.is_pinned ? "fill-current" : ""} />{note.is_pinned ? 'Desfijar Nota' : 'Fijar Nota'}
                   </button>
-                  
+
                   {!isInKanban && (
-                    <button onClick={async (e) => { 
-                      e.stopPropagation(); 
+                    <button onClick={async (e) => {
+                      e.stopPropagation();
                       await supabase.from('tasks').upsert({ id: note.id, title: note.title || 'Sin título', status: 'backlog' });
                       window.dispatchEvent(new CustomEvent('kanban-updated'));
                       setIsMobileMenuOpen(false);
@@ -1250,9 +1239,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                       <CheckSquare size={14} /> Añadir a Kanban
                     </button>
                   )}
-                  
+
                   <div className="border-t border-zinc-100 dark:border-zinc-700 my-0.5" />
-                  
+
                   <button onClick={(e) => {
                     e.stopPropagation();
                     const willBeChecklist = !note.is_checklist;
@@ -1274,19 +1263,19 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                   </button>
 
                   <div className="border-t border-zinc-100 dark:border-zinc-700 my-0.5" />
-                  
+
                   {onCopyNote && <button onClick={(e) => { e.stopPropagation(); onCopyNote(note); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><Clipboard size={14} />Copiar Nota</button>}
                   {onDuplicate && <button onClick={(e) => { e.stopPropagation(); onDuplicate(note.id); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><CopyPlus size={14} />Duplicar Nota</button>}
                   {onMove && <button onClick={(e) => { e.stopPropagation(); setIsMoveModalOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-colors"><FolderInput size={14} />Mover de Grupo</button>}
                   {onExportNote && <button onClick={(e) => { e.stopPropagation(); onExportNote(note); setIsMobileMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors font-bold"><Download size={14} />Exportar (.md)</button>}
-                  
+
                   {onArchive && (
                     <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false); onArchive(note.id); }} className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 font-bold transition-colors">
                       <Archive size={14} /> Archivar Nota
                     </button>
                   )}
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false); if (confirm('¿Estás seguro de eliminar esta nota?')) onDelete(note.id); }} 
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false); if (confirm('¿Estás seguro de eliminar esta nota?')) onDelete(note.id); }}
                     className="flex items-center gap-2.5 px-3 py-2 text-sm w-full text-left rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-bold"
                   >
                     <Trash2 size={14} /> Eliminar Permanentemente
@@ -1310,8 +1299,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             <div className="relative group/tabbar shrink-0">
               {/* Flecha Izquierda */}
               <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white dark:from-[#1A1A24] to-transparent z-10 flex items-center justify-start pointer-events-none transition-opacity duration-150 ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`}>
-                <button 
-                  onClick={() => scrollTabs('left')} 
+                <button
+                  onClick={() => scrollTabs('left')}
                   className={`p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-400 hover:text-emerald-500 transition-all active:scale-95 border ${hasSearchMatchLeft ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-200 dark:border-zinc-700'} ml-1 ${canScrollLeft ? 'pointer-events-auto' : 'pointer-events-none'}`}
                 >
                   <ChevronLeft size={14} />
@@ -1320,39 +1309,38 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
               <div ref={tabBarRef} className={`flex items-center gap-1.5 overflow-x-auto pt-2 pb-1 shrink-0 min-w-0 hidden-scrollbar px-10 transition-all ${(!canScrollLeft && !canScrollRight) ? 'justify-center' : 'justify-start'}`}>
 
-              {/* Tab Original */}
-              {(() => {
-                const isOriginalMatch = Boolean(searchQuery?.trim() && (
-                  note.title?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
-                  note.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
-                  note.scratchpad?.toLowerCase().includes(searchQuery.trim().toLowerCase())
-                ));
-                return (
-                  <button
-                    onClick={() => setActiveTab('original')}
-                    data-active-tab={activeTab === 'original' || undefined}
-                    className={`relative flex items-center justify-center gap-1.5 px-4 h-[32.5px] rounded-xl text-[13px] font-medium whitespace-nowrap border shrink-0 transition-all active:scale-95 ${
-                      activeTab === 'original'
-                        ? `bg-indigo-50/80 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-500/40 shadow-sm ${isOriginalMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
-                        : isOriginalMatch
-                          ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
-                          : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-700 dark:hover:text-indigo-300 transition-all'
-                    }`}
-                  >
-                    {globalTasks?.some(t => t.id === displayNoteId || t.linked_note_id === displayNoteId) && (
-                      <div className="absolute -top-1.5 -right-1.5 z-10"><KanbanSemaphore sourceType="note" sourceId={displayNoteId} sourceTitle="Nota Original" /></div>
-                    )}
-                    <FileText size={12} className={activeTab === 'original' ? 'text-indigo-500 dark:text-indigo-300 shrink-0' : 'shrink-0'} />
-                  </button>
-                );
-              })()}
+                {/* Tab Original */}
+                {(() => {
+                  const isOriginalMatch = Boolean(searchQuery?.trim() && (
+                    note.title?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+                    note.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+                    note.scratchpad?.toLowerCase().includes(searchQuery.trim().toLowerCase())
+                  ));
+                  return (
+                    <button
+                      onClick={() => setActiveTab('original')}
+                      data-active-tab={activeTab === 'original' || undefined}
+                      className={`relative flex items-center justify-center gap-1.5 px-4 h-[32.5px] rounded-xl text-[13px] font-medium whitespace-nowrap border shrink-0 transition-all active:scale-95 ${activeTab === 'original'
+                          ? `bg-indigo-50/80 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-500/40 shadow-sm ${isOriginalMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
+                          : isOriginalMatch
+                            ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
+                            : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-700 dark:hover:text-indigo-300 transition-all'
+                        }`}
+                    >
+                      {globalTasks?.some(t => t.id === displayNoteId || t.linked_note_id === displayNoteId) && (
+                        <div className="absolute -top-1.5 -right-1.5 z-10"><KanbanSemaphore sourceType="note" sourceId={displayNoteId} sourceTitle="Nota Original" /></div>
+                      )}
+                      <FileText size={12} className={activeTab === 'original' ? 'text-indigo-500 dark:text-indigo-300 shrink-0' : 'shrink-0'} />
+                    </button>
+                  );
+                })()}
 
-               {/* Tabs UNIFICADAS (Subnotes + Summaries mezclados por fecha) */}
-              {unifiedTabs.map((tab) => {
-                if (tab.type === 'sub') {
-                  const child = tab.data as Note;
-                  const isActive = activeTab === `sub_${child.id}`;
-                  const isMatch = searchQuery?.trim() && checkNoteMatch(child, searchQuery.trim(), groupNotes, allSummaries);
+                {/* Tabs UNIFICADAS (Subnotes + Summaries mezclados por fecha) */}
+                {unifiedTabs.map((tab) => {
+                  if (tab.type === 'sub') {
+                    const child = tab.data as Note;
+                    const isActive = activeTab === `sub_${child.id}`;
+                    const isMatch = searchQuery?.trim() && checkNoteMatch(child, searchQuery.trim(), groupNotes, allSummaries);
 
                     return (
                       <div key={child.id} className="relative shrink-0 flex items-center group">
@@ -1360,13 +1348,12 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                           onClick={() => setActiveTab(`sub_${child.id}`)}
                           data-active-tab={isActive || undefined}
                           data-is-match={isMatch}
-                          className={`flex items-center ${editingTabId === child.id ? 'gap-0' : 'gap-1.5'} px-3 h-[32.5px] rounded-xl text-[13px] font-medium whitespace-nowrap border transition-all active:scale-95 max-w-[320px] ${
-                            isActive
+                          className={`flex items-center ${editingTabId === child.id ? 'gap-0' : 'gap-1.5'} px-3 h-[32.5px] rounded-xl text-[13px] font-medium whitespace-nowrap border transition-all active:scale-95 max-w-[320px] ${isActive
                               ? `bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/40 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
                               : isMatch
                                 ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
                                 : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-emerald-500/50 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-400 transition-all'
-                          }`}
+                            }`}
                         >
                           {editingTabId !== child.id && <GitBranch size={10} className="shrink-0" />}
                           <SubnoteTitle
@@ -1378,9 +1365,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                             setIsEditing={(val) => setEditingTabId(val ? child.id : null)}
                           />
                           {isActive && editingTabId !== child.id && (
-                            <span 
-                              onClick={(e) => { e.stopPropagation(); if (confirm('¿Borrar esta sub-nota?')) onDelete(child.id); }} 
-                              className="ml-1 p-1 rounded-lg border border-transparent hover:border-white/20 hover:bg-black/20 transition-all text-white/70 hover:text-white active:scale-90" 
+                            <span
+                              onClick={(e) => { e.stopPropagation(); if (confirm('¿Borrar esta sub-nota?')) onDelete(child.id); }}
+                              className="ml-1 p-1 rounded-lg border border-transparent hover:border-white/20 hover:bg-black/20 transition-all text-white/70 hover:text-white active:scale-90"
                               title="Borrar sub-nota"
                             >
                               <Trash2 size={10} />
@@ -1389,60 +1376,59 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                         </button>
                       </div>
                     );
-                } else {
-                  const s = tab.data as any;
-                  const isProcessing = s.status === 'pending' || s.status === 'processing';
-                  const isMatch = !isProcessing && searchQuery?.trim() && (
-                    s.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
-                    s.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
-                    s.scratchpad?.toLowerCase().includes(searchQuery.trim().toLowerCase())
-                  );
+                  } else {
+                    const s = tab.data as any;
+                    const isProcessing = s.status === 'pending' || s.status === 'processing';
+                    const isMatch = !isProcessing && searchQuery?.trim() && (
+                      s.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+                      s.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+                      s.scratchpad?.toLowerCase().includes(searchQuery.trim().toLowerCase())
+                    );
 
-                  if (isProcessing) {
+                    if (isProcessing) {
+                      return (
+                        <div key={s.id}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 max-w-[150px] bg-zinc-100 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-700 text-zinc-400 animate-pulse"
+                        >
+                          <Loader2 size={10} className="animate-spin shrink-0" />
+                          <span className="truncate">{s.target_objective || 'Analizando...'}</span>
+                        </div>
+                      );
+                    }
+
                     return (
-                      <div key={s.id}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border shrink-0 max-w-[150px] bg-zinc-100 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-700 text-zinc-400 animate-pulse"
+                      <button key={s.id}
+                        onClick={() => setActiveTab(activeTab === s.id ? 'original' : s.id)}
+                        data-active-tab={activeTab === s.id || undefined}
+                        data-is-match={isMatch}
+                        className={`flex items-center ${editingTabId === s.id ? 'gap-0' : 'gap-1.5'} px-3 h-[32.5px] rounded-xl text-[13px] font-medium whitespace-nowrap border shrink-0 transition-all active:scale-95 max-w-[320px] ${activeTab === s.id
+                            ? `bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/40 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
+                            : isMatch
+                              ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
+                              : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/50 hover:bg-violet-50 dark:hover:bg-violet-500/10 hover:text-violet-700 dark:hover:text-violet-400 transition-all'
+                          }`}
                       >
-                        <Loader2 size={10} className="animate-spin shrink-0" />
-                        <span className="truncate">{s.target_objective || 'Analizando...'}</span>
-                      </div>
+                        {editingTabId !== s.id && <Sparkles size={10} className="shrink-0" />}
+                        <span className="truncate">
+                          <SummaryTitle
+                            summary={s}
+                            isActive={activeTab === s.id}
+                            searchQuery={searchQuery}
+                            onRename={(id, newObj) => updateSummaryMetadata(id, { target_objective: newObj })}
+                            isEditing={editingTabId === s.id}
+                            setIsEditing={(val) => setEditingTabId(val ? s.id : null)}
+                          />
+                        </span>
+                      </button>
                     );
                   }
-
-                  return (
-                    <button key={s.id}
-                      onClick={() => setActiveTab(activeTab === s.id ? 'original' : s.id)}
-                      data-active-tab={activeTab === s.id || undefined}
-                      data-is-match={isMatch}
-                      className={`flex items-center ${editingTabId === s.id ? 'gap-0' : 'gap-1.5'} px-3 h-[32.5px] rounded-xl text-[13px] font-medium whitespace-nowrap border shrink-0 transition-all active:scale-95 max-w-[320px] ${
-                        activeTab === s.id
-                          ? `bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/40 shadow-sm ${isMatch ? 'ring-[3px] ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#1A1A24] shadow-[0_0_15px_rgba(251,192,45,0.4)]' : ''}`
-                          : isMatch
-                            ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-500 text-amber-900 dark:text-amber-100 shadow-[0_0_8px_rgba(251,192,45,0.4)] ring-1 ring-amber-500/50'
-                            : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/50 hover:bg-violet-50 dark:hover:bg-violet-500/10 hover:text-violet-700 dark:hover:text-violet-400 transition-all'
-                      }`}
-                    >
-                    {editingTabId !== s.id && <Sparkles size={10} className="shrink-0" />}
-                    <span className="truncate">
-                      <SummaryTitle 
-                        summary={s} 
-                        isActive={activeTab === s.id} 
-                        searchQuery={searchQuery} 
-                        onRename={(id, newObj) => updateSummaryMetadata(id, { target_objective: newObj })} 
-                        isEditing={editingTabId === s.id}
-                        setIsEditing={(val) => setEditingTabId(val ? s.id : null)}
-                      />
-                    </span>
-                  </button>
-                  );
-                }
-              })}
+                })}
               </div>
 
               {/* Flecha Derecha */}
               <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white dark:from-[#1A1A24] to-transparent z-10 flex items-center justify-end pointer-events-none transition-opacity duration-150 ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}>
-                <button 
-                  onClick={() => scrollTabs('right')} 
+                <button
+                  onClick={() => scrollTabs('right')}
                   className={`p-1 rounded-full bg-white dark:bg-zinc-800 shadow-md text-zinc-400 hover:text-emerald-500 transition-all active:scale-95 border ${hasSearchMatchRight ? 'border-amber-500 ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,192,45,0.4)] scale-110' : 'border-zinc-200 dark:border-zinc-700'} mr-1 ${canScrollRight ? 'pointer-events-auto' : 'pointer-events-none'}`}
                 >
                   <ChevronRight size={14} />
@@ -1526,7 +1512,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 </div>
               );
             }
-            
+
             const currentNote: Note = activeSubnote ? activeSubnote : {
               ...note,
               id: displayNoteId,

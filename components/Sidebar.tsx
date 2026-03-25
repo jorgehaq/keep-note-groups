@@ -153,7 +153,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           title={t('sidebar.kanban')}
         >
           <KanbanSquare size={20} />
-          {(kanbanTodoCount > 0 || kanbanInProgressCount > 0 || kanbanDoneCount > 0) && (
+          {(kanbanTodoCount > 0 || kanbanInProgressCount > 0) && (
             <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 flex items-center gap-px">
               {kanbanTodoCount > 0 && (
                 <div className="bg-[#FFD60A] text-amber-950 text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#FFD60A]/50 z-30" style={{ boxShadow: '0 0 6px #FFD60A88' }} title={t('sidebar.pending')}>
@@ -163,11 +163,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {kanbanInProgressCount > 0 && (
                 <div className="bg-[#38BDF8] text-sky-950 text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#38BDF8]/50 z-20" style={{ boxShadow: '0 0 6px #38BDF888' }} title={t('sidebar.in_progress')}>
                   {kanbanInProgressCount}
-                </div>
-              )}
-              {kanbanDoneCount > 0 && (
-                <div className="bg-[#4ADE80] text-green-950 text-[10px] md:text-[12px] font-bold min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 flex items-center justify-center rounded-md shadow-md ring-1 ring-[#4ADE80]/50 z-10" style={{ boxShadow: '0 0 6px #4ADE8088' }} title={t('sidebar.done')}>
-                  {kanbanDoneCount}
                 </div>
               )}
             </div>
