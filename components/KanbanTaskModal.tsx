@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Check, Save, Type, ListTodo, LayoutDashboard, Pencil } from 'lucide-react';
+import { X, Check, Save, Type, ListTodo, LayoutDashboard, Pencil, Loader2 } from 'lucide-react';
 import { Task, TaskStatus } from '../types';
 import { SmartNotesEditor } from '../src/components/editor/SmartNotesEditor';
 import { useTranslation } from 'react-i18next';
@@ -60,8 +60,8 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({ task, onClose,
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 dark:border-[#2D2D42] bg-zinc-50/50 dark:bg-[#1A1A24]/50">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shadow-inner">
-                            <ListTodo size={22} />
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 flex items-center justify-center shadow-sm shrink-0">
+                            <ListTodo size={20} />
                         </div>
                         <div>
                             <h2 className="text-lg font-bold text-zinc-800 dark:text-[#CCCCCC]">
@@ -72,7 +72,7 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({ task, onClose,
                     </div>
                     <button 
                         onClick={handleCloseWithConfirmation}
-                        className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-[#CCCCCC] hover:bg-zinc-100 dark:hover:bg-[#2D2D42] rounded-xl transition-all"
+                        className="p-2 text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-xl transition-all active:scale-95 border border-transparent hover:border-emerald-500/30"
                     >
                         <X size={20} />
                     </button>
@@ -147,20 +147,20 @@ export const KanbanTaskModal: React.FC<KanbanTaskModalProps> = ({ task, onClose,
                 </div>
 
                 {/* Footer Buttons */}
-                <div className="px-6 py-4 border-t border-zinc-100 dark:border-[#2D2D42] flex items-center justify-end gap-3 bg-zinc-50/50 dark:bg-[#1A1A24]/50">
+                <div className="px-6 py-4 border-t border-zinc-100 dark:border-[#2D2D42] flex items-center justify-end gap-3 bg-white dark:bg-[#1A1A24]">
                     <button 
                         onClick={onClose}
-                        className="px-5 py-2.5 rounded-xl text-sm font-bold text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-[#CCCCCC] hover:bg-zinc-100 dark:hover:bg-[#2D2D42] transition-all"
+                        className="px-5 py-2.5 rounded-xl text-sm font-bold text-zinc-500 hover:text-emerald-600 dark:text-zinc-400 dark:hover:text-emerald-400 bg-transparent border border-transparent hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-all active:scale-95"
                     >
                         Cancelar
                     </button>
                     <button 
                         onClick={handleSave}
                         disabled={isSaving || !title.trim()}
-                        className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95"
+                        className="px-6 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/40 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95 shadow-sm font-bold text-sm"
                     >
                         {isSaving ? (
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            <Loader2 size={18} className="animate-spin" />
                         ) : (
                             <Save size={18} />
                         )}

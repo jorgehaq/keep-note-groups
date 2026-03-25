@@ -163,7 +163,7 @@ export const KanbanLinkerModal: React.FC<KanbanLinkerModalProps> = ({ task, grou
                             <button 
                                 onClick={handleCreateFlow}
                                 disabled={!groupInput.trim() || loading}
-                                className="mt-auto w-full flex items-center justify-center gap-2 bg-[#10B981] hover:bg-emerald-600 text-white font-normal py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-emerald-500/20"
+                                className="mt-auto w-full flex items-center justify-center gap-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/40 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-sm font-bold py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm active:scale-[0.98]"
                             >
                                 {loading ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
                                 Generar y Abrir Nota

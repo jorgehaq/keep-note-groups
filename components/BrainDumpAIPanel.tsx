@@ -25,10 +25,7 @@ export const BrainDumpAIPanel: React.FC<BrainDumpAIPanelProps> = ({ dumpId, note
   };
 
   return (
-    <div className="flex flex-col gap-3 p-4 bg-zinc-50 dark:bg-[#1A1A24] rounded-2xl border border-zinc-200 dark:border-[#2D2D42] shadow-sm">
-      <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] px-1">
-        <Sparkles size={12} className="text-violet-500" /> Consultar con IA (Pizarrón)
-      </div>
+    <div className="flex flex-col gap-2">
       <div className="flex gap-2">
         <input
           type="text"
@@ -36,14 +33,15 @@ export const BrainDumpAIPanel: React.FC<BrainDumpAIPanelProps> = ({ dumpId, note
           onChange={e => setObjectiveInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') handleGenerate(); }}
           placeholder="¿Qué quieres analizar de este pizarrón?"
-          className="flex-1 min-w-0 bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 outline-none focus:border-violet-500/50 transition-all font-medium"
+          className="flex-1 min-w-0 bg-white dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/50 rounded-lg px-4 h-10 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/10 transition-all"
         />
         <button
           onClick={handleGenerate}
-          disabled={isCreating || !objectiveInput.trim()}
-          className="flex items-center justify-center p-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white rounded-xl transition-all active:scale-95 shadow-md shadow-violet-600/10"
+          disabled={isCreating}
+          className="flex items-center justify-center gap-2 px-4 h-10 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border border-violet-500/40 rounded-lg text-sm font-medium transition-all active:scale-95 whitespace-nowrap disabled:opacity-50"
         >
-          {isCreating ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+          {isCreating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+          Generar
         </button>
       </div>
     </div>

@@ -99,7 +99,7 @@ const TaskListItem: React.FC<{
                 <div className="flex items-center gap-1">
                     <button
                         onClick={() => onEdit(task)}
-                        className="p-1.5 text-zinc-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                        className="p-1 px-[7px] text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl border border-transparent hover:border-blue-500/30 transition-all active:scale-95"
                         title="Editar Tarea"
                     >
                         <Pencil size={15} />
@@ -107,7 +107,7 @@ const TaskListItem: React.FC<{
                     {view === 'backlog' && (
                         <button
                             onClick={() => onUpdate(task.id, { status: 'archived' })}
-                            className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
+                            className="p-1 px-[7px] text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl border border-transparent hover:border-indigo-500/30 transition-all active:scale-95"
                             title="Mover a Archivo"
                         >
                             <Archive size={15} />
@@ -115,7 +115,7 @@ const TaskListItem: React.FC<{
                     )}
                     <button
                         onClick={() => onUpdate(task.id, { status: promoteStatus })}
-                        className="p-1.5 text-zinc-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                        className="p-1 px-[7px] text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl border border-transparent hover:border-emerald-500/30 transition-all active:scale-95"
                         title={promoteLabel}
                     >
                         <ArrowRight size={15} />
@@ -124,7 +124,7 @@ const TaskListItem: React.FC<{
                         onClick={() => {
                             if (confirm('¿Eliminar permanentemente?')) onDelete(task.id);
                         }}
-                        className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        className="p-1 px-[7px] text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl border border-transparent hover:border-red-500/30 transition-all active:scale-95"
                         title="Eliminar"
                     >
                         <Trash2 size={15} />

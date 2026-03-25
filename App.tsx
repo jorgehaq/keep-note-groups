@@ -1888,14 +1888,14 @@ function App() {
                           </button>
                         <button
                           onClick={addGroup}
-                          className="h-9 w-9 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/40 rounded-lg shadow-sm hover:bg-indigo-100 transition-all flex items-center justify-center shrink-0 active:scale-95"
+                          className="h-9 w-9 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/40 rounded-xl shadow-sm hover:bg-indigo-100 transition-all flex items-center justify-center shrink-0 active:scale-95"
                           title="Crear Nuevo Grupo"
                         >
                           <Plus size={20} />
                         </button>
                         <button
                           onClick={() => setIsLauncherOpen(true)}
-                          className="h-9 w-9 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/40 rounded-lg shadow-sm hover:bg-indigo-100 transition-all flex items-center justify-center shrink-0 active:scale-105"
+                          className="h-9 w-9 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/40 rounded-xl shadow-sm hover:bg-indigo-100 transition-all flex items-center justify-center shrink-0 active:scale-105"
                           title="Abrir Launcher de Grupos"
                         >
                           <Grid size={20} />

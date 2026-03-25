@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Task, TaskStatus, Group } from '../types';
 import { useTranslation } from 'react-i18next';
-import { Archive, Inbox, Trash2, GripVertical, Link as LinkIcon, Pencil, MoreVertical, ArrowRight, Maximize2, Minimize2, History, Eye, PenTool, Film } from 'lucide-react';
+import { Archive, Inbox, Trash2, GripVertical, Link as LinkIcon, Pencil, MoreVertical, ArrowRight, Maximize2, Minimize2, History, Eye, PenTool, Film, Plus } from 'lucide-react';
 import { KanbanLinkerModal } from './KanbanLinkerModal';
 import { KanbanTaskViewerModal } from './KanbanTaskViewerModal';
 import { KanbanSemaphore } from './KanbanSemaphore';
@@ -14,6 +14,7 @@ interface KanbanBoardProps {
     onUpdate: (id: string, updates: Partial<Task>) => void;
     onDelete: (id: string) => void;
     onEdit?: (task: Task) => void;
+    onAddTask?: (status: TaskStatus) => void;
     dateFormat?: string;
     timeFormat?: string;
     activeStatus?: TaskStatus;
@@ -45,7 +46,7 @@ const formatCustomDate = (isoString: string, dateFormat: string, timeFormat: str
     }
 };
 
-export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], onOpenNote, onUpdate, onDelete, onEdit, dateFormat = 'dd/mm/yyyy', timeFormat = '12h', activeStatus }) => {
+export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], onOpenNote, onUpdate, onDelete, onEdit, onAddTask, dateFormat = 'dd/mm/yyyy', timeFormat = '12h', activeStatus }) => {
     const { t } = useTranslation();
     const [viewingTask, setViewingTask] = useState<Task | null>(null);
 
@@ -149,8 +150,18 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks, groups = [], on
                                             </Draggable>
                                         ))}
                                         {provided.placeholder}
+                                        
+                                        {/* + Añadir tarjeta Button (New) */}
+                                        <button 
+                                            onClick={() => onAddTask?.(col.status)}
+                                            className="mt-2 w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50/50 dark:hover:bg-emerald-500/5 hover:border-emerald-500/30 transition-all active:scale-[0.98] group/add"
+                                        >
+                                            <Plus size={14} className="group-hover/add:scale-110 transition-transform" />
+                                            <span className="text-xs font-bold uppercase tracking-widest">{colTasks.length === 0 ? 'Crear primera tarjeta' : 'Añadir tarjeta'}</span>
+                                        </button>
+
                                         {colTasks.length === 0 && !snapshot.isDraggingOver && (
-                                            <div className="text-center py-8 text-zinc-400 text-xs select-none">
+                                            <div className="hidden text-center py-8 text-zinc-400 text-xs select-none">
                                                 Arrastra tareas aquí
                                             </div>
                                         )}
@@ -266,14 +277,14 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
 
                     <button
                         onClick={() => onView(task)}
-                        className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
+                        className="p-1 px-[7px] text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl border border-transparent hover:border-indigo-500/30 transition-all active:scale-95"
                         title="Ver Detalles"
                     >
                         <Maximize2 size={15} />
                     </button>
                     <button
                         onClick={() => onEdit?.(task)}
-                        className="p-1.5 text-zinc-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                        className="p-1 px-[7px] text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl border border-transparent hover:border-blue-500/30 transition-all active:scale-95"
                         title="Editar Tarea"
                     >
                         <Pencil size={15} />
@@ -281,7 +292,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
                     {linkedNote ? (
                         <button
                             onClick={() => onOpenNote?.(linkedNote.groupId, linkedNote.id)}
-                            className="p-1.5 text-zinc-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
+                            className="p-1 px-[7px] text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl border border-transparent hover:border-emerald-500/30 transition-all active:scale-95"
                             title="Abrir Nota Asociada"
                         >
                             <LinkIcon size={15} />
@@ -289,7 +300,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
                     ) : (
                         <button
                             onClick={() => setIsLinkModalOpen(true)}
-                            className="p-1.5 text-zinc-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
+                            className="p-1 px-[7px] text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl border border-transparent hover:border-emerald-500/30 transition-all active:scale-95"
                             title="Asociar a Nota"
                         >
                             <LinkIcon size={15} />
@@ -297,14 +308,14 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
                     )}
                     <button
                         onClick={() => onUpdate(task.id, { status: 'backlog' })}
-                        className="p-1.5 text-zinc-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
+                        className="p-1 px-[7px] text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-xl border border-transparent hover:border-amber-500/30 transition-all active:scale-95"
                         title="Mover a Backlog"
                     >
                         <Inbox size={15} />
                     </button>
                     <button
                         onClick={() => onUpdate(task.id, { status: 'archived' })}
-                        className="p-1.5 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
+                        className="p-1 px-[7px] text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl border border-transparent hover:border-indigo-500/30 transition-all active:scale-95"
                         title="Mover a Archivo"
                     >
                         <Archive size={15} />
@@ -313,7 +324,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, provided, isDragging, columnS
                         onClick={() => {
                             if (confirm('¿Eliminar esta tarea?')) onDelete(task.id);
                         }}
-                        className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        className="p-1 px-[7px] text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl border border-transparent hover:border-red-500/30 transition-all active:scale-95"
                         title="Eliminar"
                     >
                         <Trash2 size={15} />

@@ -71,10 +71,14 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
     // --- HANDLERS (FUNCIONALIDAD INTACTA) ---
     const handleAdd = async () => {
         const targetStatus = activeTab === 'backlog' ? 'backlog' : 'todo';
+        handleAddTask(targetStatus);
+    };
+
+    const handleAddTask = (status: TaskStatus) => {
         setEditingTask({
             title: '',
             content: '',
-            status: targetStatus,
+            status: status,
         });
         setIsModalOpen(true);
     };
@@ -168,9 +172,9 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                                 <button
                                     key={tab.key}
                                     onClick={() => setActiveTab(tab.key)}
-                                    className={`flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all border ${
+                                    className={`flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 h-[26px] text-[10px] font-bold rounded-lg transition-all border ${
                                         activeTab === tab.key
-                                            ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/40 shadow-sm'
+                                            ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 shadow-sm'
                                             : 'border-transparent text-zinc-500 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'
                                     }`}
                                 >
@@ -206,7 +210,11 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                           )}
                         </button>
                         
-                        <button onClick={handleAdd} className="h-9 w-9 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/40 rounded-lg shadow-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all flex items-center justify-center active:scale-95 shrink-0" title="Nueva tarea">
+                        <button 
+                            onClick={handleAdd} 
+                            className="h-9 w-9 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/40 rounded-xl shadow-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all flex items-center justify-center active:scale-95 shrink-0" 
+                            title="Nueva tarea"
+                        >
                             <Plus size={18} />
                         </button>
                     </div>
@@ -249,7 +257,7 @@ export const KanbanApp: React.FC<KanbanAppProps> = ({ groups = [], onOpenNote, d
                     {/* VISTAS FUNCIONALES INTACTAS */}
                     <div className="flex-1 flex flex-col min-h-0 animate-fadeIn">
                         {activeTab === 'board' && (
-                            <KanbanBoard tasks={tasks} groups={groups} onOpenNote={onOpenNote} onUpdate={updateTask} onDelete={deleteTask} onEdit={(task) => { setEditingTask(task); setIsModalOpen(true); }} dateFormat={dateFormat} timeFormat={timeFormat} activeStatus={activeStatus} />
+                            <KanbanBoard tasks={tasks} groups={groups} onOpenNote={onOpenNote} onUpdate={updateTask} onDelete={deleteTask} onEdit={(task) => { setEditingTask(task); setIsModalOpen(true); }} onAddTask={handleAddTask} dateFormat={dateFormat} timeFormat={timeFormat} activeStatus={activeStatus} />
                         )}
                         {activeTab === 'backlog' && (
                             <KanbanList view="backlog" tasks={tasks} groups={groups} onOpenNote={onOpenNote} onUpdate={updateTask} onDelete={deleteTask} onEdit={(task) => { setEditingTask(task); setIsModalOpen(true); }} />

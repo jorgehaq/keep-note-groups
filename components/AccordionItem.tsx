@@ -337,7 +337,7 @@ const SummaryTitle: React.FC<{
           e.stopPropagation();
         }}
         onClick={e => e.stopPropagation()}
-        className="bg-black text-white border-violet-500 border rounded px-1.5 py-0.5 outline-none text-[14px] max-w-[280px] shadow-inner text-left"
+        className="bg-zinc-800 text-white border-violet-500 border rounded px-1.5 py-0.5 outline-none text-[14px] max-w-[280px] shadow-inner text-left"
         placeholder="Título..."
       />
     );
@@ -409,7 +409,7 @@ const SubnoteTitle: React.FC<{
         }}
         onClick={e => e.stopPropagation()}
         onMouseDown={e => e.stopPropagation()}
-        className="bg-black text-white border-emerald-500 border rounded px-1.5 py-0.5 outline-none text-[14px] max-w-[280px] shadow-inner text-left"
+        className="bg-zinc-800 text-white border-emerald-500 border rounded px-1.5 py-0.5 outline-none text-[14px] max-w-[280px] shadow-inner text-left"
         placeholder="Título..."
       />
     );

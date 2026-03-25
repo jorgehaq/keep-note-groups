@@ -746,7 +746,7 @@ export const TikTokApp: React.FC<{
               {/* Accesos Tray Toggle */}
               <button 
                 onClick={() => setIsVideoTrayOpen(!isVideoTrayOpen)} 
-                className={`h-9 px-3 rounded-xl transition-all border flex items-center gap-2 active:scale-95 shrink-0 ${isVideoTrayOpen ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-500/40 text-indigo-700 dark:text-indigo-400 font-bold shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/50 hover:text-indigo-500'}`}
+                className={`h-9 px-3 rounded-xl transition-all border flex items-center gap-2 active:scale-95 shrink-0 ${isVideoTrayOpen ? 'bg-red-50 dark:bg-[#EE1D52]/10 border-[#EE1D52]/40 text-[#EE1D52] font-bold shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-[#EE1D52]/50 hover:text-[#EE1D52]'}`}
                 title={isVideoTrayOpen ? "Ocultar bandeja de videos" : "Mostrar bandeja de videos"}
               >
                 <ChevronsDownUp size={18} className={`transition-transform duration-300 ${isVideoTrayOpen ? 'rotate-180' : ''}`}/>

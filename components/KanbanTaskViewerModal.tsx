@@ -18,8 +18,8 @@ export const KanbanTaskViewerModal: React.FC<KanbanTaskViewerModalProps> = ({ ta
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 dark:border-[#2D2D42] bg-zinc-50/50 dark:bg-[#1A1A24]/50">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center shadow-inner">
-                            <ListTodo size={22} />
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 flex items-center justify-center shadow-sm shrink-0">
+                            <ListTodo size={20} />
                         </div>
                         <div>
                             <h2 className="text-lg font-bold text-zinc-800 dark:text-[#CCCCCC]">
@@ -31,14 +31,14 @@ export const KanbanTaskViewerModal: React.FC<KanbanTaskViewerModalProps> = ({ ta
                     <div className="flex items-center gap-2">
                         <button 
                             onClick={() => onEdit(task)}
-                            className="p-2 text-zinc-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all flex items-center gap-2"
+                            className="p-2 text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-xl transition-all flex items-center gap-2 border border-transparent hover:border-emerald-500/30 active:scale-95"
                             title="Editar esta tarea"
                         >
                             <Pencil size={20} />
                         </button>
                         <button 
                             onClick={onClose}
-                            className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-[#CCCCCC] hover:bg-zinc-100 dark:hover:bg-[#2D2D42] rounded-xl transition-all"
+                            className="p-2 text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-xl transition-all active:scale-95 border border-transparent hover:border-emerald-500/30"
                         >
                             <X size={20} />
                         </button>
@@ -76,10 +76,10 @@ export const KanbanTaskViewerModal: React.FC<KanbanTaskViewerModalProps> = ({ ta
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-zinc-100 dark:border-[#2D2D42] flex items-center justify-end gap-3 bg-zinc-50/50 dark:bg-[#1A1A24]/50">
+                <div className="px-6 py-4 border-t border-zinc-100 dark:border-[#2D2D42] flex items-center justify-end gap-3 bg-white dark:bg-[#1A1A24]">
                     <button 
                         onClick={onClose}
-                        className="px-6 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-bold shadow-lg transition-all active:scale-95"
+                        className="px-6 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 text-zinc-700 dark:text-[#CCCCCC] hover:text-emerald-600 dark:hover:text-emerald-400 border border-transparent hover:border-emerald-500/30 text-sm font-bold shadow-sm transition-all active:scale-95"
                     >
                         Cerrar
                     </button>
