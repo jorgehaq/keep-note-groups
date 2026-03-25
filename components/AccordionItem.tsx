@@ -280,7 +280,7 @@ const SummaryTabContent: React.FC<{
           if ((e.target as HTMLElement).closest('.cm-panel, .cm-search, .cm-search-marker-container')) return;
           scratchRef.current?.focus();
         }}
-          className="note-editor-scroll flex-1 px-8 py-6 overflow-y-scroll min-h-[120px]">
+          className={`note-editor-scroll flex-1 ${showLineNumbers ? 'pt-8 pr-6 pb-[5px] pl-0' : 'px-8 py-6'} overflow-y-scroll min-h-[120px]`}>
           <SmartNotesEditor
             ref={scratchRef}
             noteId={`scratch_${summary.id}`}
@@ -488,7 +488,7 @@ const SubnoteTabContent: React.FC<{
       ref={splitContainerRef}
       onFocusCapture={triggerScrollToActive}
       onClickCapture={triggerScrollToActive}
-      className={`flex-1 flex min-h-0 ${layoutCol ? 'flex-col' : 'flex-row'} gap-2 pt-2`}
+      className={`flex-1 flex min-h-0 ${layoutCol ? 'flex-col' : 'flex-row'} gap-2 pt-0`}
     >
       <div
         className={`min-h-0 overflow-hidden flex flex-col rounded-xl border ${borderColor} bg-zinc-50 dark:bg-[#131314]`}
@@ -515,7 +515,7 @@ const SubnoteTabContent: React.FC<{
         </div>
 
         {note.is_checklist ? (
-          <div className="px-8 py-6 h-full overflow-y-auto note-editor-scroll">
+          <div className={`${showLineNumbers ? 'pt-8 pr-6 pb-[5px] pl-0' : 'px-8 py-6'} h-full overflow-y-auto note-editor-scroll`}>
             <ChecklistEditor ref={checklistRef} idPrefix={note.id} initialContent={note.content || ''} onUpdate={onUpdateContent} />
           </div>
         ) : (
@@ -524,7 +524,7 @@ const SubnoteTabContent: React.FC<{
               if ((e.target as HTMLElement).closest('.cm-panel, .cm-search')) return;
               editorRef.current?.focus();
             }}
-            className="px-8 py-6 h-full overflow-y-auto cursor-text note-editor-scroll"
+            className={`${showLineNumbers ? 'pt-8 pr-6 pb-[5px] pl-0' : 'px-8 py-6'} h-full overflow-y-auto cursor-text note-editor-scroll`}
           >
             <SmartNotesEditor
               key={note.id}
@@ -584,7 +584,7 @@ const SubnoteTabContent: React.FC<{
               if ((e.target as HTMLElement).closest('.cm-panel, .cm-search')) return;
               scratchRef.current?.focus();
             }}
-            className="flex-1 px-8 py-6 overflow-y-auto cursor-text note-editor-scroll"
+            className={`flex-1 ${showLineNumbers ? 'pt-8 pr-6 pb-[5px] pl-0' : 'px-8 py-6'} overflow-y-auto cursor-text note-editor-scroll`}
           >
             <SmartNotesEditor
               key={`scratch_${note.id}`}
@@ -1042,7 +1042,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
       {/* HEADER: TITLE + BUTTONS + ACCESSES */}
       <div
         ref={headerRef}
-        className="flex flex-col px-4 pt-4 pb-2 transition-colors gap-3 min-w-0"
+        className="flex flex-col px-4 pt-4 pb-0 transition-colors min-w-0"
       >
         {/* ROW 1: TITLE */}
         <div className="flex items-center justify-between gap-2 min-w-0">
@@ -1085,17 +1085,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               </div>
             </div>
           </div>
-          {isInKanban && (
-            <div className="flex-shrink-0 animate-fadeIn pr-1">
-              <KanbanSemaphore sourceType="note" sourceId={note.id} sourceTitle={note.title || 'Sin título'} onInteract={() => {}} />
-            </div>
-          )}
-        </div>
-        {/* ROW 2: ACTION BUTTONS */}
-        <div className="flex items-center justify-between gap-1.5 flex-wrap pl-1">
-          {/* GRUPO IZQUIERDO: Utilidades principales */}
-          <div className="flex items-center gap-1.5">
-            {/* Permanent Sync Symbol */}
+          <div className="flex items-center gap-2 shrink-0 pr-1">
+            {/* Sync Symbol moved to Title Row */}
             {(() => {
               const currentSyncStatus = allSaveStatuses[displayNoteId] || 'idle';
               return (
@@ -1109,6 +1100,18 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               );
             })()}
 
+            {isInKanban && (
+              <div className="flex-shrink-0 animate-fadeIn">
+                <KanbanSemaphore sourceType="note" sourceId={note.id} sourceTitle={note.title || 'Sin título'} onInteract={() => {}} />
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="h-3 shrink-0" /> {/* Espacio entre Título e Iconos */}
+        {/* ROW 2: ACTION BUTTONS */}
+        <div className="flex items-center justify-between gap-1.5 flex-wrap pl-1">
+          {/* GRUPO IZQUIERDO: Utilidades principales */}
+          <div className="flex items-center gap-1.5">
             {session?.user && (
               <button
                 onClick={(e) => { e.stopPropagation(); handleCreateSubnote(); }}
@@ -1293,6 +1296,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             </div>
           </div>
         </div>
+        <div className="h-[5px]" /> {/* Espacio solicitado de 5px entre Iconos y Accesos */}
 
         {/* ROW 3: ACCESSES (Breadcrumb + Tabs) */}
         <div className="flex flex-col gap-2 w-full">
@@ -1448,6 +1452,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           )}
         </div>
       </div>
+      <div className="h-5 shrink-0" /> {/* Espacio solicitado de 20px entre Accesos y Editores */}
 
 
 
@@ -1462,7 +1467,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           </div>
         )}
 
-        <div className="px-[5px] pb-[5px] pt-2 w-full flex-1 flex flex-col min-h-0 gap-[10px]">
+        <div className="px-[5px] pb-[5px] pt-0 w-full flex-1 flex flex-col min-h-0 gap-[10px]">
 
 
           {/* ── AI INPUT PANEL — sobre el contenido activo (como TikTok/Pizarrón) ─── */}
