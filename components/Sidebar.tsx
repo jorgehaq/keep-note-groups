@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Plus, Settings, Grid, X, LogOut, StickyNote, KanbanSquare, Clock, Bell, PenTool, Languages, ChevronUp, ChevronDown, Play } from 'lucide-react';
 import { Group } from '../types';
 import { GroupLauncher } from './GroupLauncher';
@@ -30,7 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectDockedNote,
   focusedNoteId,
 }) => {
-  const { dockedGroupIds, closeGroup, globalView, setGlobalView, activeTimersCount, overdueRemindersCount, overdueRemindersList, imminentRemindersCount, lastAppView, kanbanTodoCount, kanbanInProgressCount, kanbanDoneCount, lastUsedApp, globalTasks, lastActiveNoteByGroup, sidebarFocusMode, setSidebarFocusMode, lastActiveGroupId } = useUIStore();
+  const { dockedGroupIds, closeGroup, globalView, setGlobalView, activeTimersCount, overdueRemindersCount, overdueRemindersList, imminentRemindersCount, lastAppView, kanbanTodoCount, kanbanInProgressCount, kanbanDoneCount, lastUsedApp, globalTasks, lastActiveNoteByGroup, sidebarFocusMode, setSidebarFocusMode, lastActiveGroupId, globalScrollToActiveCount } = useUIStore();
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
   const { t } = useTranslation();
 
@@ -69,19 +69,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [canScrollUp, setCanScrollUp] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
 
-  const checkScroll = () => {
+  const checkScroll = useCallback(() => {
     if (scrollContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-      setCanScrollUp(scrollTop > 0);
-      setCanScrollDown(Math.ceil(scrollTop + clientHeight) < scrollHeight - 1);
+        const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+        setCanScrollUp(scrollTop > 2);
+        setCanScrollDown(scrollTop + clientHeight < scrollHeight - 2);
     }
-  };
+  }, []);
 
   useEffect(() => {
     checkScroll();
     window.addEventListener('resize', checkScroll);
     return () => window.removeEventListener('resize', checkScroll);
   }, [sortedDockedGroups.length, globalView, activeGroupId, focusedNoteId]);
+
+  // --- 🚀 AUTO-SCROLL TO ACTIVE ELEMENT ---
+  useEffect(() => {
+    if (!scrollContainerRef.current) return;
+    
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const timer = setTimeout(() => {
+        // Buscamos el elemento que tiene el foco activo (burbuja de nota o botón de grupo)
+        const activeElement = container.querySelector('[data-sidebar-active="true"]');
+        
+        if (activeElement) {
+            activeElement.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center', // Usamos center para paridad con inline:center de AccordionItem
+            });
+        }
+        
+        // Tras el scroll, recalculamos si se pueden mostrar u ocultar flechas
+        checkScroll();
+    }, 150);
+    
+    return () => clearTimeout(timer);
+  }, [activeGroupId, focusedNoteId, sidebarFocusMode, globalView, sortedDockedGroups.length, globalScrollToActiveCount]);
 
   const scrollGroups = (direction: 'up' | 'down') => {
     if (scrollContainerRef.current) {
@@ -201,13 +226,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* CONTENEDOR DE GRUPOS DOCKED */}
         <div className="relative flex-1 w-full flex flex-col group/sidebar min-h-0 min-w-0">
           
-          {canScrollUp && (
-            <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-zinc-50 dark:from-[#13131A] to-transparent z-10 flex items-start justify-center pt-1 pointer-events-none">
-              <button onClick={() => scrollGroups('up')} className="p-1 rounded-full bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] shadow-sm text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400 pointer-events-auto transition-colors active:scale-95">
-                <ChevronUp size={14} />
-              </button>
-            </div>
-          )}
+          <div className={`absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-zinc-50 dark:from-[#13131A] to-transparent z-10 flex items-start justify-center pt-1 pointer-events-none transition-opacity duration-200 ${canScrollUp ? 'opacity-100' : 'opacity-0'}`}>
+            <button 
+              onClick={() => scrollGroups('up')} 
+              className={`p-1 rounded-full bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] shadow-md text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all active:scale-95 ${canScrollUp ? 'pointer-events-auto' : 'pointer-events-none'}`}
+            >
+              <ChevronUp size={14} />
+            </button>
+          </div>
 
           <div 
             ref={scrollContainerRef}
@@ -221,7 +247,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             const focusedNoteIsDocked = focusedNoteId ? group.notes?.some(n => n.id === focusedNoteId && n.is_docked) : false;
 
             return (
-            <div key={group.id} className="flex flex-col items-center shrink-0">
+            <div key={group.id} data-sidebar-group-id={group.id} className="flex flex-col items-center shrink-0">
               <div className="relative group w-10 md:w-12">
                 {/* Close Button (Hover) */}
                 <button
@@ -241,6 +267,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     setGlobalView('notes');
                     setSidebarFocusMode('group');
                   }}
+                  data-sidebar-active={isGroupActive && (globalView === 'notes' || globalView === 'kanban') && sidebarFocusMode === 'group' ? 'true' : undefined}
                   className={`relative flex items-center justify-center w-full transition-all duration-300 overflow-hidden rounded-xl border group/dockedbtn active:scale-95
                     ${isGroupActive && isNotesView && sidebarFocusMode === 'group'
                       ? 'h-32 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/40 shadow-sm scale-[1.02]'
@@ -293,6 +320,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               onSelectDockedNote(group.id, note.id);
                               setSidebarFocusMode('note');
                             }}
+                            data-sidebar-active={isActiveFocus ? 'true' : undefined}
                             className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] font-bold uppercase transition-all duration-200 active:scale-95 ${bubbleClass}`}
                             title={note.title || 'Sin título'}
                           >
@@ -313,13 +341,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
           </div>
 
-          {canScrollDown && (
-            <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-zinc-50 dark:from-[#13131A] to-transparent z-10 flex items-end justify-center pb-1 pointer-events-none">
-              <button onClick={() => scrollGroups('down')} className="p-1 rounded-full bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] shadow-sm text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400 pointer-events-auto transition-colors active:scale-95">
-                <ChevronDown size={14} />
-              </button>
-            </div>
-          )}
+          <div className={`absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-zinc-50 dark:from-[#13131A] to-transparent z-10 flex items-end justify-center pb-1 pointer-events-none transition-opacity duration-200 ${canScrollDown ? 'opacity-100' : 'opacity-0'}`}>
+            <button 
+              onClick={() => scrollGroups('down')} 
+              className={`p-1 rounded-full bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] shadow-md text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all active:scale-95 ${canScrollDown ? 'pointer-events-auto' : 'pointer-events-none'}`}
+            >
+              <ChevronDown size={14} />
+            </button>
+          </div>
         </div>
 
         {/* Bottom Area: Settings & Logout */}

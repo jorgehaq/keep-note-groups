@@ -102,8 +102,8 @@ function App() {
   const focusedNoteId = activeGroupId ? (focusedNoteByGroup[activeGroupId] ?? null) : null;
   const activeNoteId = activeGroupId ? (lastActiveNoteByGroup[activeGroupId] ?? null) : null;
 
-  const [scrollToActiveCount, setScrollToActiveCount] = useState(0);
-  const triggerGlobalScrollToActive = () => setScrollToActiveCount(prev => prev + 1);
+  const globalScrollCount = useUIStore(s => s.globalScrollToActiveCount);
+  const triggerGlobalScrollToActive = useUIStore(s => s.triggerGlobalScrollToActive);
 
   // Preservar estado de las notas una vez montadas
   useEffect(() => {
@@ -228,7 +228,7 @@ function App() {
         }
     }, 150);
     return () => clearTimeout(timer);
-  }, [activeNoteId, focusedNoteId, isGlobalNoteTrayOpen, scrollToActiveCount]);
+  }, [activeNoteId, focusedNoteId, isGlobalNoteTrayOpen, globalScrollCount]);
 
   const getNewOrderIndex = () => {
     if (!activeGroupId) return 1;

@@ -67,6 +67,7 @@ interface UIStore {
     focusedVideoId: string | null;
     isVideoTrayOpen: boolean;
     sidebarFocusMode: 'group' | 'note'; // Visual focus in sidebar
+    globalScrollToActiveCount: number; // Global trigger for scroll in sidebar
 
 
     // Search & Archive states
@@ -144,6 +145,7 @@ interface UIStore {
     setIsVideoTrayOpen: (open: boolean) => void;
     setIsBraindumpPizarronOpen: (open: boolean) => void;
     setSidebarFocusMode: (mode: 'group' | 'note') => void;
+    triggerGlobalScrollToActive: () => void;
 
 
     // Search & Archive Actions
@@ -244,6 +246,7 @@ export const useUIStore = create<UIStore>()(
             tikTokVideos: [],
             tikTokQueueItems: [],
             sidebarFocusMode: 'note',
+            globalScrollToActiveCount: 0,
 
 
             searchQueries: {},
@@ -462,6 +465,7 @@ export const useUIStore = create<UIStore>()(
             setForcedPizarronOrientation: (orientation) => set({ forcedPizarronOrientation: orientation }),
             setIsBraindumpPizarronOpen: (open) => set({ isBraindumpPizarronOpen: open }),
             setSidebarFocusMode: (mode) => set({ sidebarFocusMode: mode }),
+            triggerGlobalScrollToActive: () => set((state) => ({ globalScrollToActiveCount: state.globalScrollToActiveCount + 1 })),
 
             setActiveNoteId: (groupId, noteId) => set((state) => ({
                 lastActiveNoteByGroup: { ...state.lastActiveNoteByGroup, [groupId]: noteId }
