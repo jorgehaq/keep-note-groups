@@ -558,10 +558,10 @@ const SubnoteTabContent: React.FC<{
             key={note.id}
             type={activeTab === 'original' ? 'original' : 'sub'}
             id={note.id}
-            subtitle={note.subtitle}
+            subtitle={activeTab === 'original' ? note.subtitle : (note.subtitle || note.title)}
             created_at={note.created_at}
             updated_at={note.updated_at}
-            onUpdate={(updates) => onUpdate(note.id, updates)}
+            onUpdate={(updates) => onUpdate(note.id, activeTab === 'original' ? updates : { ...updates, title: updates.subtitle })}
           />
 
           {note.is_checklist ? (
@@ -1135,7 +1135,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 {isCreatorMenuOpen && (
                   <div
                    ref={creatorMenuRef}
-                   className="absolute left-0 top-full mt-2 z-[100] w-[280px] bg-white dark:bg-[#1A1A24] rounded-2xl shadow-2xl border border-zinc-200 dark:border-[#2D2D42] p-3 flex flex-col gap-1.5 animate-fadeIn overflow-hidden"
+                   className="absolute left-0 top-full mt-2 z-[100] w-[420px] max-w-[calc(100vw-80px)] bg-white dark:bg-[#1A1A24] rounded-2xl shadow-2xl border border-zinc-200 dark:border-[#2D2D42] p-3 flex flex-col gap-1.5 animate-fadeIn overflow-hidden"
                   >
                     <div className="flex items-center gap-2 px-1 mb-1">
                       <ListPlus size={14} className="text-emerald-500" />
@@ -1165,7 +1165,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                           const isSub = t.type === 'sub';
                           const isProcessing = !isSub && ((t.data as any).status === 'pending' || (t.data as any).status === 'processing');
                           const colorClass = isSub ? 'bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-violet-50/50 dark:bg-violet-500/5 border-violet-500/20 text-violet-700 dark:text-violet-400';
-                          const label = isSub ? (t.data as Note).subtitle || (t.data as Note).title || "Sin título..." : (t.data as any).target_objective || "Sin título...";
+                          const label = isSub 
+                            ? (t.data as Note).subtitle || (t.data as Note).title || "Sin título..." 
+                            : (t.data as any).target_objective || "Sin título...";
                           const icon = isSub ? (
                             <GitBranch size={12} className="shrink-0" />
                           ) : (
