@@ -85,8 +85,99 @@ const revealedLineField = StateField.define<number | null>({
 
 // 🚀 STABILITY FIX: Move layout-affecting decorations (tables, code blocks) to a StateField.
 // This prevents 'No tile at position' errors because decorations are stable during layout measurement.
+const buildBlockDecorations = (doc: any, revealedLine: number | null) => {
+    const builder = new RangeSetBuilder<Decoration>();
+    const totalLines = doc.lines;
+    const cbHeaderClass = 'cm-cb-header';
+    const cbLineClass = 'cm-cb-line';
+    const cbFooterClass = 'cm-cb-footer';
+
+    let lineNum = 1;
+    while (lineNum <= totalLines) {
+        const line = doc.line(lineNum);
+        const text = line.text;
+        
+        // 1. Code Blocks
+        const trimmedText = text.trim();
+        if (trimmedText.startsWith('```')) {
+            const openLine = lineNum;
+            let closeLine = -1;
+            for (let s = openLine + 1; s <= totalLines; s++) {
+                if (doc.line(s).text.trim() === '```') { closeLine = s; break; }
+            }
+            if (closeLine > 0) {
+                const openObj = doc.line(openLine);
+                const closeObj = doc.line(closeLine);
+                const isRevealed = revealedLine === openLine || revealedLine === closeLine;
+
+                // Pre-scan code lines for the copy widget
+                const codeLines: string[] = [];
+                for (let cl = openLine + 1; cl < closeLine; cl++) {
+                    codeLines.push(doc.line(cl).text);
+                }
+                const codeContent = codeLines.join('\n').trimEnd();
+
+                builder.add(openObj.from, openObj.from, Decoration.line({ class: cbHeaderClass }));
+                if (!isRevealed) {
+                    builder.add(openObj.from, openObj.from + 3, Decoration.replace({}));
+                }
+                
+                builder.add(openObj.to, openObj.to, Decoration.widget({ 
+                    widget: new CodeBlockCopyWidget(codeContent), 
+                    side: 1,
+                    block: false
+                }));
+                
+                for (let cl = openLine + 1; cl < closeLine; cl++) {
+                    const clObj = doc.line(cl);
+                    builder.add(clObj.from, clObj.from, Decoration.line({ class: cbLineClass }));
+                }
+
+                builder.add(closeObj.from, closeObj.from, Decoration.line({ class: cbFooterClass }));
+                if (!isRevealed) builder.add(closeObj.from, closeObj.from + 3, Decoration.replace({}));
+
+                lineNum = closeLine + 1;
+                continue;
+            }
+        }
+
+        // 2. Tables
+        const trimmed = text.trim();
+        if (trimmed.startsWith('|') && lineNum < totalLines) {
+            const nextLine = doc.line(lineNum + 1).text.trim();
+            if (nextLine.startsWith('|') && /^[|\s-:]+$/.test(nextLine) && nextLine.includes('-')) {
+                const startLine = lineNum;
+                let endLine = lineNum + 1;
+                for (let s = lineNum + 2; s <= totalLines; s++) {
+                    if (doc.line(s).text.trim().startsWith('|')) endLine = s; else break;
+                }
+                const startObj = doc.line(startLine);
+                const endObj = doc.line(endLine);
+                
+                let revealed = false;
+                for (let r = startLine; r <= endLine; r++) if (revealedLine === r) { revealed = true; break; }
+
+                if (!revealed) {
+                    const tableText = doc.sliceString(startObj.from, endObj.to);
+                    builder.add(startObj.from, endObj.to, Decoration.replace({ 
+                        widget: new TableHtmlWidget(tableText, startObj.from, endObj.to), 
+                        block: true 
+                    }));
+                }
+                lineNum = endLine + 1;
+                continue;
+            }
+        }
+
+        lineNum++;
+    }
+    return builder.finish();
+};
+
 const blockMarkupField = StateField.define<RangeSet<Decoration>>({
-    create() { return RangeSet.empty; },
+    create(state) { 
+        return buildBlockDecorations(state.doc, state.field(revealedLineField, false)); 
+    },
     update(decos, tr) {
         // Map existing decorations - essential for persistence during typing
         decos = decos.map(tr.changes);
@@ -98,105 +189,13 @@ const blockMarkupField = StateField.define<RangeSet<Decoration>>({
 
         if (!tr.docChanged && revealedLine === oldRevealedLine && !forceRedraw) return decos;
 
-        const builder = new RangeSetBuilder<Decoration>();
-        const doc = tr.newDoc;
-        const totalLines = doc.lines;
-
-        // Shared scanners from buildDecorations (optimized for StateField)
-        const cbHeaderClass = 'cm-cb-header';
-        const cbLineClass = 'cm-cb-line';
-        const cbFooterClass = 'cm-cb-footer';
-
-        let lineNum = 1;
-        while (lineNum <= totalLines) {
-            const line = doc.line(lineNum);
-            const text = line.text;
-            
-            // 1. Code Blocks
-            const trimmedText = text.trim();
-            if (trimmedText.startsWith('```')) {
-                const openLine = lineNum;
-                let closeLine = -1;
-                for (let s = openLine + 1; s <= totalLines; s++) {
-                    if (doc.line(s).text.trim() === '```') { closeLine = s; break; }
-                }
-                if (closeLine > 0) {
-                    const openObj = doc.line(openLine);
-                    const closeObj = doc.line(closeLine);
-                    const isRevealed = revealedLine === openLine || revealedLine === closeLine;
-
-                    // Pre-scan code lines for the copy widget
-                    const codeLines: string[] = [];
-                    for (let cl = openLine + 1; cl < closeLine; cl++) {
-                        codeLines.push(doc.line(cl).text);
-                    }
-                    const codeContent = codeLines.join('\n').trimEnd();
-
-                    // 1. Header
-                    builder.add(openObj.from, openObj.from, Decoration.line({ class: cbHeaderClass }));
-                    if (!isRevealed) {
-                        // Ocultar solo los tres backticks iniciales ```
-                        builder.add(openObj.from, openObj.from + 3, Decoration.replace({}));
-                    }
-                    
-                    // 2. Copy button widget
-                    builder.add(openObj.to, openObj.to, Decoration.widget({ 
-                        widget: new CodeBlockCopyWidget(codeContent), 
-                        side: 1,
-                        block: false
-                    }));
-                    
-                    // 3. Body
-                    for (let cl = openLine + 1; cl < closeLine; cl++) {
-                        const clObj = doc.line(cl);
-                        builder.add(clObj.from, clObj.from, Decoration.line({ class: cbLineClass }));
-                    }
-
-                    // 4. Footer
-                    builder.add(closeObj.from, closeObj.from, Decoration.line({ class: cbFooterClass }));
-                    // Ocultar solo los tres backticks finales ```
-                    if (!isRevealed) builder.add(closeObj.from, closeObj.from + 3, Decoration.replace({}));
-
-                    lineNum = closeLine + 1;
-                    continue;
-                }
-            }
-
-            // 2. Tables
-            const trimmed = text.trim();
-            if (trimmed.startsWith('|') && lineNum < totalLines) {
-                const nextLine = doc.line(lineNum + 1).text.trim();
-                if (nextLine.startsWith('|') && /^[|\s-:]+$/.test(nextLine) && nextLine.includes('-')) {
-                    const startLine = lineNum;
-                    let endLine = lineNum + 1;
-                    for (let s = lineNum + 2; s <= totalLines; s++) {
-                        if (doc.line(s).text.trim().startsWith('|')) endLine = s; else break;
-                    }
-                    const startObj = doc.line(startLine);
-                    const endObj = doc.line(endLine);
-                    
-                    let revealed = false;
-                    for (let r = startLine; r <= endLine; r++) if (revealedLine === r) { revealed = true; break; }
-
-                    if (!revealed) {
-                        const tableText = doc.sliceString(startObj.from, endObj.to);
-                        // block: true es vital para la estabilidad de redimensionado
-                        builder.add(startObj.from, endObj.to, Decoration.replace({ 
-                            widget: new TableHtmlWidget(tableText, startObj.from, endObj.to), 
-                            block: true 
-                        }));
-                    }
-                    lineNum = endLine + 1;
-                    continue;
-                }
-            }
-
-            lineNum++;
-        }
-        return builder.finish();
+        return buildBlockDecorations(tr.newDoc, revealedLine);
     },
     provide: f => EditorView.decorations.from(f)
 });
+
+
+
 
 // Tracks which line the user is actively typing on (docChanged only).
 // Cleared when cursor moves to a different line without typing.
@@ -731,7 +730,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             fontSize: fontSize,
             fontFamily: fontFamily,
             backgroundColor: "transparent !important", // Deja que el contenedor padre maneje el fondo standardized
-            color: "#a1a1aa !important", // zinc-400 (base color)               
+            color: "#E6E6E6 !important", // standardized editor text color               
             outline: "none !important", // Eliminar borde punteado de foco
             border: "none !important",
             boxShadow: "none !important",
@@ -741,7 +740,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             userSelect: "text !important",
         },
         ".dark &": {
-            color: "#a1a1aa !important", // zinc-400 (ensure consistency)
+            color: "#E6E6E6 !important", // ensure consistency
         },
         "&.cm-focused, &:focus, &:focus-within": {
             outline: "none !important",
@@ -751,12 +750,12 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-scroller": {
             backgroundColor: "transparent !important",
             outline: "none !important",
-            color: "#a1a1aa !important",
+            color: "#E6E6E6 !important",
         },
         ".cm-content": {
             fontFamily: fontFamily,
             fontSize: fontSize,
-            color: "#a1a1aa !important",
+            color: "#E6E6E6 !important",
             WebkitUserSelect: "text !important",
             userSelect: "text !important",
             whiteSpace: "pre-wrap !important",
@@ -803,7 +802,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
 
         ".cm-lineNumbers .cm-gutterElement": { paddingRight: "10px !important", paddingLeft: "4px !important" },
         ".cm-line": { 
-            color: "#a1a1aa !important",
+            color: "#E6E6E6 !important",
             lineHeight: lHeight, 
             paddingLeft: "12px !important", 
             borderLeft: "3px solid transparent",
@@ -916,13 +915,13 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".dark & .cm-rendered-table tr:nth-child(even)": { backgroundColor: "rgba(255,255,255,0.01)" },
 
         // --- CODEBLOCKS ---
-        ".cm-cb-header": { backgroundColor: "#F1F1F4", border: "1px solid #D4D4D8", borderBottom: "1px solid #F1F1F4", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#52525b", position: "relative", padding: "0 20px" },
-        ".dark & .cm-cb-header": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderBottom: "1px solid #0D0D0F", color: "#a1a1aa" },
-        ".cm-cb-line": { backgroundColor: "#F1F1F4", borderLeft: "1px solid #D4D4D8", borderRight: "1px solid #D4D4D8", fontFamily: fontFamily, color: "#312E81 !important", padding: "0 20px" },
-        ".dark & .cm-cb-line": { backgroundColor: "#0D0D0F", borderLeft: "1px solid #3F3F46", borderRight: "1px solid #3F3F46", color: "#A78BFA !important" },
+        ".cm-cb-header": { backgroundColor: "#F1F1F4 !important", border: "1px solid #D4D4D8", borderBottom: "1px solid #F1F1F4", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#52525b", position: "relative", padding: "0 20px" },
+        ".dark & .cm-cb-header": { backgroundColor: "#0D0D0F !important", border: "1px solid #3F3F46", borderBottom: "1px solid #0D0D0F", color: "#E6E6E6" },
+        ".cm-cb-line": { backgroundColor: "#F1F1F4 !important", borderLeft: "1px solid #D4D4D8", borderRight: "1px solid #D4D4D8", fontFamily: fontFamily, color: "#312E81 !important", padding: "0 20px" },
+        ".dark & .cm-cb-line": { backgroundColor: "#0D0D0F !important", borderLeft: "1px solid #3F3F46", borderRight: "1px solid #3F3F46", color: "#A78BFA !important" },
         
-        ".cm-cb-footer": { backgroundColor: "#F1F1F4", border: "1px solid #D4D4D8", borderTop: "1px solid #F1F1F4", borderRadius: "0 0 8px 8px", padding: "0 20px", userSelect: "none !important" },
-        ".dark & .cm-cb-footer": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderTop: "1px solid #0D0D0F", color: "#a1a1aa" },
+        ".cm-cb-footer": { backgroundColor: "#F1F1F4 !important", border: "1px solid #D4D4D8", borderTop: "1px solid #F1F1F4", borderRadius: "0 0 8px 8px", padding: "0 20px", userSelect: "none !important" },
+        ".dark & .cm-cb-footer": { backgroundColor: "#0D0D0F !important", border: "1px solid #3F3F46", borderTop: "1px solid #0D0D0F", color: "#E6E6E6" },
 
 
         ".cm-cb-line ::selection, .cm-cb-line ::-moz-selection": {
@@ -944,7 +943,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-remove-btn": { position: "absolute", display: "inline-flex", alignItems: "center", justifyContent: "center", backgroundColor: "#ef4444", border: "2px solid #ffffff", color: "white !important", width: "18px", height: "18px", left: "-6px", top: "-14px", borderRadius: "50%", fontSize: "14px", fontWeight: "bold", lineHeight: "1", cursor: "pointer !important", zIndex: "100", opacity: "0", transition: "opacity 0.15s", pointerEvents: "none" },
         ".cm-remove-btn-visible": { opacity: "1 !important", pointerEvents: "auto !important" },
         ".cm-remove-btn:hover": { opacity: "1 !important", pointerEvents: "auto !important", transform: "scale(1.1)" },
-        ".dark & .cm-line": { color: "#a1a1aa !important" },
+        ".dark & .cm-line": { color: "#E6E6E6 !important" },
         ".cm-search-marker-container": {
             position: "absolute",
             right: "2px",
@@ -2518,7 +2517,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                 theme="none" 
                 readOnly={readOnly} 
                 height={autoHeight ? "auto" : "100%"}
-                className={`w-full text-zinc-900 dark:text-[#CCCCCC] ${autoHeight ? '' : 'flex-1'}`} 
+                className={`w-full text-zinc-900 dark:text-[#E6E6E6] ${autoHeight ? '' : 'flex-1'}`} 
                 extensions={extensions}
                 basicSetup={basicSetup}
             />

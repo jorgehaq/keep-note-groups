@@ -204,7 +204,7 @@ export const TranslatorApp: React.FC<{ session: Session }> = ({ session }) => {
                           }`}
                           title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                         >
-                          <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-red-700 dark:text-red-400' : 'text-red-500'}` : ''} />
+                          <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-white' : 'text-red-500'}` : ''} />
                           {overdueRemindersCount > 0 && (
                             <span className="text-xs font-bold whitespace-nowrap">
                               {overdueRemindersCount}

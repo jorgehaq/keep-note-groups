@@ -79,11 +79,25 @@ const NoteHeaderBar: React.FC<{
   onUpdate: (updates: any) => void;
   children?: React.ReactNode;
 }> = ({ type, id, subtitle, created_at, updated_at, onUpdate, children }) => {
-  const [localSub, setLocalSub] = useState(subtitle || (type === 'original' ? 'INICIO' : 'Sin título...'));
+  const defaultTitle = type === 'original' ? 'INICIO' : 'Subnota: Sin título';
+  const [localSub, setLocalSub] = useState(subtitle || defaultTitle);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setLocalSub(subtitle || (type === 'original' ? 'INICIO' : 'Sin título...'));
-  }, [subtitle, type, id]);
+    setLocalSub(subtitle || defaultTitle);
+  }, [subtitle, type, id, defaultTitle]);
+
+  // Auto-focus si es una nota nueva (creada hace menos de 5 segundos) y no tiene título
+  useEffect(() => {
+    if (type !== 'original' && !subtitle && created_at) {
+      const createdTime = new Date(created_at).getTime();
+      const now = Date.now();
+      if (now - createdTime < 5000 && inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.select();
+      }
+    }
+  }, [id, created_at, subtitle, type]);
 
   const handleBlur = () => {
     onUpdate({ subtitle: localSub });
@@ -92,19 +106,20 @@ const NoteHeaderBar: React.FC<{
   const datesInfo = `Creación: ${formatDateString(created_at)}\nEdición: ${formatDateString(updated_at)}`;
 
   return (
-    <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-[#1A1A24] shrink-0">
-      <div className="flex items-center gap-1.5 cursor-help opacity-40 hover:opacity-100 transition-opacity" title={datesInfo}>
-        <History size={11} className="text-zinc-500" />
+    <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-[#22262B] shrink-0">
+      <div className="flex items-center gap-1.5 cursor-help opacity-70 hover:opacity-100 transition-opacity" title={datesInfo}>
+        <History size={11} className="text-zinc-500 dark:text-zinc-400" />
       </div>
       <div className="flex-1 flex justify-center px-4">
         <input 
+          ref={inputRef}
           type="text"
           value={localSub}
           onChange={e => setLocalSub(e.target.value)}
           onBlur={handleBlur}
           onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
           placeholder="Subtítulo..."
-          className="bg-transparent text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400 text-center outline-none focus:text-indigo-500 dark:focus:text-indigo-400 transition-colors w-full"
+          className="bg-transparent text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 dark:text-[#E6E6E6] text-center outline-none focus:text-indigo-500 dark:focus:text-indigo-400 transition-colors w-full"
         />
       </div>
       <div className="flex items-center gap-2 shrink-0">
@@ -208,7 +223,7 @@ const SummaryTabContent: React.FC<{
       onClickCapture={triggerScrollToActive}
       className={`flex-1 flex min-h-0 ${layoutCol ? 'flex-col' : 'flex-row'} gap-3`}
     >
-      <div className={`flex-1 flex flex-col min-h-0 bg-violet-50 dark:bg-[#131314] rounded-2xl border focus-within:border-violet-400 dark:focus-within:border-violet-500/60 transition-colors ${searchQuery?.trim() && (summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || summary.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase())) ? 'border-amber-500' : 'border-violet-300 dark:border-violet-500/30'} overflow-hidden`}
+      <div className={`flex-1 flex flex-col min-h-0 bg-violet-50 dark:bg-[#22262B] rounded-2xl border focus-within:border-violet-400 dark:focus-within:border-violet-500/60 transition-colors ${searchQuery?.trim() && (summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || summary.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase())) ? 'border-amber-500' : 'border-violet-300 dark:border-[#2F2F60]'} overflow-hidden`}
         style={showScratch
           ? (layoutCol
             ? { height: `${splitRatio * 100}%`, flex: 'none' }
@@ -312,7 +327,7 @@ const SummaryTabContent: React.FC<{
         <div className="relative flex items-center justify-center gap-2 px-3 py-2 border-b border-violet-200/20 shrink-0">
           <div className="flex items-center gap-2">
             <PenLine size={11} className="text-violet-400" />
-            <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest">Pizarrón</span>
+            <span className="text-[10px] font-bold text-[#E6E6E6] uppercase tracking-widest">Pizarrón</span>
           </div>
           <div className="absolute right-2 flex items-center">
             <button
@@ -400,7 +415,7 @@ const SummaryTitle: React.FC<{
 
   return (
     <span
-      className="truncate max-w-[200px] cursor-pointer text-[13px]"
+      className="truncate max-w-[200px] cursor-pointer text-[13px] uppercase"
       onDoubleClick={e => { e.stopPropagation(); if (isActive) setIsEditing(true); }}
       title={isActive ? 'Doble clic para renombrar' : summary.target_objective || ''}
     >
@@ -473,7 +488,7 @@ const SubnoteTitle: React.FC<{
 
   return (
     <span
-      className="truncate max-w-[200px] cursor-pointer text-[13px]"
+      className="truncate max-w-[200px] cursor-pointer text-[13px] uppercase"
       onDoubleClick={e => { e.stopPropagation(); if (isActive) setIsEditing(true); }}
       title={isActive ? 'Doble clic para renombrar' : displayTitle}
     >
@@ -529,8 +544,8 @@ const SubnoteTabContent: React.FC<{
 }) => {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const borderColor = note.parent_note_id
-      ? 'border-emerald-200 dark:border-[#291B46] focus-within:border-emerald-400 dark:focus-within:border-[#17634F]'
-      : 'border-indigo-200 dark:border-[#291B46] focus-within:border-indigo-400 dark:focus-within:border-[#40418E]';
+      ? 'border-emerald-200 dark:border-[#2F2F60] focus-within:border-emerald-400 dark:focus-within:border-[#17634F]'
+      : 'border-indigo-200 dark:border-[#2F2F60] focus-within:border-indigo-400 dark:focus-within:border-[#40418E]';
 
     const forcedOrientation = useUIStore(s => s.forcedPizarronOrientation);
     const layoutCol = forcedOrientation
@@ -545,7 +560,7 @@ const SubnoteTabContent: React.FC<{
         className={`flex-1 flex min-h-0 ${layoutCol ? 'flex-col' : 'flex-row'} gap-2 pt-0`}
       >
         <div
-          className={`min-h-0 overflow-hidden flex flex-col rounded-xl border ${borderColor} bg-zinc-50 dark:bg-[#131314]`}
+          className={`min-h-0 overflow-hidden flex flex-col rounded-xl border ${borderColor} bg-zinc-50 dark:bg-[#22262B]`}
           style={showScratch
             ? (layoutCol
               ? { height: `${splitRatio * 100}%`, flex: 'none' }
@@ -606,13 +621,13 @@ const SubnoteTabContent: React.FC<{
         {showScratch && (
           <div
             onFocusCapture={triggerScrollToActive}
-            className="min-h-0 overflow-hidden flex flex-col rounded-xl border border-violet-200 dark:border-[#291B46] focus-within:border-violet-400 dark:focus-within:border-[#4E3884] bg-white dark:bg-[#1A1A24] animate-fadeIn transition-colors"
+            className="min-h-0 overflow-hidden flex flex-col rounded-xl border border-violet-200 dark:border-[#2F2F60] focus-within:border-violet-400 dark:focus-within:border-[#4E3884] bg-white dark:bg-[#22262B] animate-fadeIn transition-colors"
             style={{ flex: 1 }}
           >
-            <div className="relative flex items-center justify-center gap-2 px-4 py-2 border-b border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-[#1A1A24] shrink-0">
+            <div className="relative flex items-center justify-center gap-2 px-4 py-2 border-b border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-[#22262B] shrink-0">
               <div className="flex items-center gap-2">
                 <PenLine size={11} className="text-violet-400" />
-                <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest">Pizarrón</span>
+                <span className="text-[10px] font-bold text-[#E6E6E6] uppercase tracking-widest">Pizarrón</span>
               </div>
               <div className="absolute right-2 flex items-center">
                 <button
@@ -875,20 +890,12 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   // Debounce ref para guardado del título durante la escritura
   const titleSaveDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Sincronizar tempTitle cuando la nota cambia (solo cuando el input no está enfocado)
+  // Sincronizar tempTitle cuando la nota cambia
   useEffect(() => {
-    if (document.activeElement !== titleInputRef.current) {
-      setTempTitle(note.title ?? '');
+    if (document.activeElement !== titleInputRef.current && !isEditingTitle) {
+      setTempTitle(note.title || 'inicio');
     }
-  }, [note.id]);
-
-  // Sync from external title updates (e.g. Kanban), only when not editing
-  useEffect(() => {
-    const isActuallyFocused = document.activeElement === titleInputRef.current;
-    if (!isActuallyFocused && !isEditingTitle && note.title !== undefined && note.title !== tempTitle) {
-      setTempTitle(note.title ?? '');
-    }
-  }, [note.title]);
+  }, [note.title, note.id]);
 
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -1012,19 +1019,19 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   };
 
   const handleSaveTitle = (shouldFocusEditor = false) => {
-    // Cancel any pending debounced save, we're saving now
     if (titleSaveDebounceRef.current) clearTimeout(titleSaveDebounceRef.current);
+    const finalTitle = tempTitle.trim() || 'inicio';
     setIsEditingTitle(false);
-    onUpdate(note.id, { title: tempTitle.trim() });
+    setTempTitle(finalTitle);
+    onUpdate(note.id, { title: finalTitle });
   };
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setTempTitle(val);
-    // Debounced pre-save while typing (800ms) — keeps DB in sync without blocking input
     if (titleSaveDebounceRef.current) clearTimeout(titleSaveDebounceRef.current);
     titleSaveDebounceRef.current = setTimeout(() => {
-      onUpdate(note.id, { title: val.trim() });
+      onUpdate(note.id, { title: val.trim() || 'inicio' });
     }, 800);
   };
 
@@ -1078,7 +1085,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                     }
                   }}
                   onClick={(e) => e.stopPropagation()}
-                  placeholder="Título de la nota..."
+                  placeholder="inicio"
                   className={`w-full min-w-0 bg-transparent text-lg font-bold outline-none placeholder-zinc-400 transition-colors cursor-text pr-2 ${searchQuery && tempTitle.toLowerCase().includes(searchQuery.toLowerCase())
                       ? "text-transparent caret-zinc-800 dark:caret-[#CCCCCC]"
                       : "text-zinc-800 dark:text-[#CCCCCC]"
@@ -1097,7 +1104,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                   {currentSyncStatus === 'saving' ? (
                     <Loader2 size={13} className="animate-spin text-indigo-500" />
                   ) : (
-                    <CloudCheck size={13} className={currentSyncStatus === 'saved' ? "text-emerald-500" : "text-zinc-300 dark:text-zinc-600"} />
+                    <CloudCheck size={13} className={currentSyncStatus === 'saved' ? "text-emerald-500" : "text-zinc-400 dark:text-[#A1A1AA]"} />
                   )}
                 </div>
               );
@@ -1118,11 +1125,11 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             {session?.user && (
               <div className="relative">
                 <button
-                  onClick={(e) => { e.stopPropagation(); setIsCreatorMenuOpen(!isCreatorMenuOpen); }}
+                  onMouseDown={(e) => { e.stopPropagation(); setIsCreatorMenuOpen(!isCreatorMenuOpen); }}
                   title="Nueva subnota o análisis"
                   className={`flex items-center justify-center px-3 h-[32.5px] rounded-lg text-[13px] font-medium border transition-all active:scale-95 ${isCreatorMenuOpen
                       ? 'bg-emerald-600 text-white border-emerald-500 shadow-md'
-                      : 'border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20'
+                      : 'border-emerald-500/60 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-600 hover:text-white hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/20 dark:border-emerald-500/80'
                     }`}
                 >
                   <ListPlus size={13} className={(1 + manualChildren.length + aiSummaries.length) > 1 ? "mr-1" : "mr-1.5"} />
@@ -1153,7 +1160,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                         >
                           <div className="flex items-center gap-2 min-w-0">
                              <FileText size={12} className="text-indigo-500 shrink-0" />
-                             <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 truncate">{note.subtitle || "INICIO"}</span>
+                             <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 truncate uppercase">{note.subtitle || "INICIO"}</span>
                           </div>
                           <div className="flex items-center gap-1">
                                               {(() => {
@@ -1169,9 +1176,21 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                                                 const color = statusColors[status] || '#9E9E9E';
                                                 return <div className="w-2.5 h-2.5 rounded-full mr-1.5 shadow-sm shrink-0" style={{ backgroundColor: color, boxShadow: `0 0 5px ${color}88` }} title={`Estado: ${status}`} />;
                                               })()}
-                             <div className="flex items-center gap-1 opacity-10 group-hover:opacity-100 transition-opacity">
-                                <button onClick={(e) => { e.stopPropagation(); handleCreateAtPosition('sub', 'root'); }} title="Nueva subnota después de inicio" className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"><Plus size={12} /></button>
-                                <button onClick={(e) => { e.stopPropagation(); handleCreateAtPosition('summary', 'root'); }} title="Nueva AI después de inicio" className="p-1.5 rounded-lg bg-violet-500/10 text-violet-500 hover:bg-violet-500/20"><Sparkles size={12} /></button>
+                             <div className="flex items-center gap-1">
+                                 <button 
+                                   onClick={(e) => { e.stopPropagation(); handleCreateAtPosition('sub', 'root'); }} 
+                                   title="Nueva subnota después de inicio" 
+                                   className="p-1.5 rounded-lg text-zinc-500 font-bold border border-zinc-200 dark:border-indigo-500/80 bg-zinc-100 dark:bg-zinc-800/40 hover:bg-emerald-600 hover:text-white hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/20 transition-all active:scale-95"
+                                 >
+                                   <Plus size={12} strokeWidth={2.5} />
+                                 </button>
+                                 <button 
+                                   onClick={(e) => { e.stopPropagation(); handleCreateAtPosition('summary', 'root'); }} 
+                                   title="Nueva AI después de inicio" 
+                                   className="p-1.5 rounded-lg text-zinc-500 font-bold border border-zinc-200 dark:border-indigo-500/80 bg-zinc-100 dark:bg-zinc-800/40 hover:bg-violet-600 hover:text-white hover:border-violet-500 hover:shadow-lg hover:shadow-violet-500/20 transition-all active:scale-95"
+                                 >
+                                   <Sparkles size={12} strokeWidth={2.5} />
+                                 </button>
                              </div>
                           </div>
                        </div>
@@ -1197,7 +1216,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                             >
                                <div className="flex items-center gap-2 min-w-0">
                                   {icon}
-                                  <span className="text-xs font-bold truncate">{label}</span>
+                                  <span className="text-xs font-bold truncate uppercase">{label}</span>
                                </div>
                                <div className="flex items-center gap-1">
                                   {(() => {
@@ -1215,10 +1234,22 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                                     const color = statusColors[status] || '#9E9E9E';
                                     return <div className="w-2.5 h-2.5 rounded-full mr-1.5 shadow-sm shrink-0" style={{ backgroundColor: color, boxShadow: `0 0 5px ${color}88` }} title={`Estado: ${status}`} />;
                                   })()}
-                                  <div className="flex items-center gap-1 opacity-10 group-hover:opacity-100 transition-opacity">
-                                     <button onClick={(e) => { e.stopPropagation(); handleCreateAtPosition('sub', t.id); }} title="Nueva subnota después" className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"><Plus size={12} /></button>
-                                     <button onClick={(e) => { e.stopPropagation(); handleCreateAtPosition('summary', t.id); }} title="Nueva AI después" className="p-1.5 rounded-lg bg-violet-500/10 text-violet-500 hover:bg-violet-500/20"><Sparkles size={12} /></button>
-                                  </div>
+                                  <div className="flex items-center gap-1">
+                                      <button 
+                                        onClick={(e) => { e.stopPropagation(); handleCreateAtPosition('sub', t.id); }} 
+                                        title="Nueva subnota después" 
+                                        className="p-1.5 rounded-lg text-zinc-500 font-bold border border-zinc-200 dark:border-indigo-500/80 bg-zinc-100 dark:bg-zinc-800/40 hover:bg-emerald-600 hover:text-white hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/20 transition-all active:scale-95"
+                                      >
+                                        <Plus size={12} strokeWidth={2.5} />
+                                      </button>
+                                      <button 
+                                        onClick={(e) => { e.stopPropagation(); handleCreateAtPosition('summary', t.id); }} 
+                                        title="Nueva AI después" 
+                                        className="p-1.5 rounded-lg text-zinc-500 font-bold border border-zinc-200 dark:border-indigo-500/80 bg-zinc-100 dark:bg-zinc-800/40 hover:bg-violet-600 hover:text-white hover:border-violet-500 hover:shadow-lg hover:shadow-violet-500/20 transition-all active:scale-95"
+                                      >
+                                        <Sparkles size={12} strokeWidth={2.5} />
+                                      </button>
+                                   </div>
                                </div>
                             </div>
                           );
@@ -1234,9 +1265,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
               <button
                 onClick={(e) => { e.stopPropagation(); setShowAIInput(v => !v); }}
                 title={showAIInput ? 'Ocultar panel AI' : 'Abrir panel AI'}
-                className={`flex items-center px-3 h-[32.5px] rounded-lg text-[13px] font-medium border transition-all ${showAIInput
-                    ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/40 shadow-sm'
-                    : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/50 hover:bg-violet-50 dark:hover:bg-violet-500/10 hover:text-violet-700 dark:hover:text-violet-400'
+                className={`flex items-center px-3 h-[32.5px] rounded-lg text-[13px] font-bold border transition-all ${showAIInput
+                    ? 'bg-violet-600 text-white border-violet-500 shadow-lg shadow-violet-500/20 active:scale-95'
+                    : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-indigo-500/80 hover:bg-violet-600 hover:text-white hover:border-violet-500 hover:shadow-lg hover:shadow-violet-500/20 hover:text-violet-700 dark:hover:text-white'
                   }`}
               >
                 <Sparkles size={13} className="" />
@@ -1247,9 +1278,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             <button
               onClick={(e) => { e.stopPropagation(); setShowNoteScratch(v => !v); }}
               title={showNoteScratch ? 'Ocultar pizarrón' : 'Abrir pizarrón'}
-              className={`flex items-center px-3 h-[32.5px] rounded-lg text-[13px] font-medium border transition-all ${showNoteScratch
-                  ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/40 shadow-sm'
-                  : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-violet-500/50 hover:bg-violet-50 dark:hover:bg-violet-500/10 hover:text-violet-700 dark:hover:text-violet-400'
+              className={`flex items-center px-3 h-[32.5px] rounded-lg text-[13px] font-bold border transition-all ${showNoteScratch
+                  ? 'bg-violet-600 text-white border-violet-500 shadow-lg shadow-violet-500/20 active:scale-95'
+                  : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-indigo-500/80 hover:bg-violet-600 hover:text-white hover:border-violet-500 hover:shadow-lg hover:shadow-violet-500/20 hover:text-violet-700 dark:hover:text-white'
                 }`}
             >
               <PenLine size={13} className="" />
@@ -1293,24 +1324,24 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             <button
               onClick={(e) => { e.stopPropagation(); useUIStore.getState().toggleZenMode('notes'); }}
               className={`p-2 rounded-xl border transition-all ${useUIStore.getState().isZenModeByApp['notes']
-                  ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500 shadow-sm'
-                  : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/40 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400'
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/20 active:scale-95 scale-105'
+                  : 'text-zinc-600 dark:text-indigo-300 font-bold border-zinc-200 dark:border-indigo-500/80 bg-zinc-50 dark:bg-indigo-500/10 hover:bg-indigo-600 hover:text-white hover:border-indigo-500 hover:shadow-lg hover:shadow-indigo-500/20 hover:text-indigo-700 dark:hover:text-white'
                 }`}
               title={useUIStore.getState().isZenModeByApp['notes'] ? "Salir de Modo Zen" : "Entrar a Modo Zen"}
             >
-              <Wind size={13} />
+              <Wind size={13} strokeWidth={2.5} />
             </button>
 
             {/* Botón Maximizar/Minimizar */}
             <button
               onClick={(e) => { e.stopPropagation(); setIsMaximized(!isMaximized); }}
               className={`hidden md:flex p-2 rounded-xl border transition-all ${isMaximized
-                  ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500 shadow-sm'
-                  : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-indigo-500/40 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400'
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/20 active:scale-95 scale-105'
+                  : 'text-zinc-600 dark:text-indigo-300 font-bold border-zinc-200 dark:border-indigo-500/80 bg-zinc-50 dark:bg-indigo-500/10 hover:bg-indigo-600 hover:text-white hover:border-indigo-500 hover:shadow-lg hover:shadow-indigo-500/20 hover:text-indigo-700 dark:hover:text-white'
                 }`}
               title={isMaximized ? "Minimizar" : "Maximizar"}
             >
-              {isMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+              {isMaximized ? <Minimize2 size={13} strokeWidth={2.5} /> : <Maximize2 size={13} strokeWidth={2.5} />}
             </button>
 
             {/* Tres puntos (More) */}
@@ -1319,11 +1350,11 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(!isMobileMenuOpen); }}
                 className={`p-2 rounded-xl border transition-all ${isMobileMenuOpen
                     ? 'bg-[#4940D9] border-[#4940D9]/80 text-white font-bold shadow-lg shadow-[#4940D9]/20'
-                    : 'text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-zinc-400/60 dark:hover:border-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700/60 hover:text-zinc-700 dark:hover:text-zinc-300'
+                    : 'text-zinc-600 dark:text-indigo-300 font-bold border-zinc-200 dark:border-indigo-500/80 bg-zinc-50 dark:bg-indigo-500/10 hover:bg-indigo-600 hover:text-white hover:border-indigo-500 hover:shadow-lg hover:shadow-indigo-500/20 hover:text-indigo-700 dark:hover:text-white'
                   }`}
                 title="Más opciones de la nota"
               >
-                <MoreVertical size={13} />
+                <MoreVertical size={13} strokeWidth={2.5} />
               </button>
               {isMobileMenuOpen && (
                 <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-[#1A1A24] shadow-xl rounded-lg border border-zinc-200 dark:border-[#2D2D42] p-1 flex flex-col gap-0.5 min-w-[180px] animate-fadeIn">

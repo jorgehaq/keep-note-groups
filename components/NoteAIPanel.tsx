@@ -49,7 +49,7 @@ export const NoteAIPanel: React.FC<NoteAIPanelProps> = ({ noteId, customOrderInd
         <button
           onClick={handleGenerate}
           disabled={isCreating}
-          className="flex items-center justify-center gap-2 px-4 h-10 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border border-violet-500/40 rounded-lg text-sm font-medium transition-all active:scale-95 whitespace-nowrap disabled:opacity-50"
+          className="flex items-center justify-center gap-2 px-4 h-10 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border border-violet-500/40 rounded-lg text-sm font-bold transition-all active:scale-95 whitespace-nowrap disabled:opacity-50 hover:bg-violet-600 hover:text-white hover:border-violet-500 hover:shadow-lg hover:shadow-violet-500/20"
         >
           {isCreating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
           Generar

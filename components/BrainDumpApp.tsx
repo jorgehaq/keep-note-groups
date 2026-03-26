@@ -931,7 +931,7 @@ export const BrainDumpApp: React.FC<{
                                     disabled={overdueRemindersCount === 0}
                                     className={`hidden md:flex h-9 px-3 rounded-xl transition-all active:scale-95 shrink-0 flex items-center gap-2 border ${showOverdueMarquee ? 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/40 shadow-sm shadow-red-600/10' : overdueRemindersCount > 0 ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40' : 'bg-zinc-100 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-700 text-zinc-400 opacity-60 cursor-not-allowed'}`}
                                 >
-                                    <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-red-700 dark:text-red-400' : 'text-red-500'}` : ''} />
+                                    <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-white' : 'text-red-500'}` : ''} />
                                     {overdueRemindersCount > 0 && <span className="text-xs font-bold">{overdueRemindersCount}</span>}
                                 </button>
 

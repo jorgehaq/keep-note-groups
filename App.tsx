@@ -1562,11 +1562,11 @@ function App() {
                     <div className="flex shrink-0 items-center pr-[100vw]">
                       {overdueRemindersList.map((r, idx) => (
                         <div key={`a-${r.targetId}`} className="shrink-0 flex items-center gap-1.5 opacity-60">
-                          <Bell size={11} className="text-zinc-500" />
-                          <span className="text-[9px] font-bold uppercase tracking-tighter text-zinc-500">
+                          <Bell size={11} className="text-[#E6E6E6]" />
+                          <span className="text-[9px] font-bold uppercase tracking-tighter text-[#E6E6E6]">
                             {r.title}:
                           </span>
-                          <span className="text-[10px] font-medium text-zinc-800 dark:text-zinc-200">
+                          <span className="text-[10px] font-medium text-[#E6E6E6]">
                             {r.dueAt ? new Date(r.dueAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                           </span>
                           {idx < overdueRemindersList.length - 1 && (
@@ -1579,11 +1579,11 @@ function App() {
                     <div className="flex shrink-0 items-center pr-[100vw]">
                       {overdueRemindersList.map((r, idx) => (
                         <div key={`b-${r.targetId}`} className="shrink-0 flex items-center gap-1.5 opacity-60">
-                          <Bell size={11} className="text-zinc-500" />
-                          <span className="text-[9px] font-bold uppercase tracking-tighter text-zinc-500">
+                          <Bell size={11} className="text-[#E6E6E6]" />
+                          <span className="text-[9px] font-bold uppercase tracking-tighter text-[#E6E6E6]">
                             {r.title}:
                           </span>
-                          <span className="text-[10px] font-medium text-zinc-800 dark:text-zinc-200">
+                          <span className="text-[10px] font-medium text-[#E6E6E6]">
                             {r.dueAt ? new Date(r.dueAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                           </span>
                           {idx < overdueRemindersList.length - 1 && (
@@ -1693,7 +1693,7 @@ function App() {
                       <div className="hidden md:flex flex-wrap items-center gap-3 flex-1 min-w-0">
                           <button
                             onClick={() => setIsLauncherOpen(true)}
-                            className="hidden md:flex h-9 w-9 items-center justify-center bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/40 rounded-xl shadow-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/40 shrink-0 transition-all active:scale-95"
+                            className="hidden md:flex h-9 w-9 items-center justify-center bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border border-indigo-500/80 rounded-xl shadow-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/40 shrink-0 transition-all active:scale-95"
                             title="Menú de Grupos"
                           >
                               <Grid size={20} />
@@ -1743,7 +1743,7 @@ function App() {
                                 if (activeGroupId) setSearchQuery(activeGroupId, e.target.value);
                                 setSearchExemptNoteIds(new Set());
                               }}
-                              className={`h-9 pl-9 pr-8 rounded-xl border transition-all outline-none text-xs w-32 md:w-32 lg:w-40 ${currentSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50' : 'bg-white dark:bg-[#1A2E4E]/50 border-zinc-200 dark:border-indigo-500/30 text-zinc-900 dark:text-indigo-50 placeholder-zinc-400 dark:placeholder-indigo-300/40 focus:border-indigo-500/50 dark:focus:border-indigo-400/50'}`}
+                                                            className={`h-9 pl-9 pr-8 rounded-xl border transition-all outline-none text-xs w-32 md:w-32 lg:w-40 ${currentSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50' : 'bg-white dark:bg-[#1A2E4E]/50 border-zinc-200 dark:border-indigo-500/80 text-zinc-900 dark:text-indigo-50 placeholder-zinc-400 dark:placeholder-indigo-300/40 focus:border-indigo-500/80 dark:focus:border-indigo-400'}`}
                             />
                             {currentSearchQuery.trim() && (
                               <button onClick={() => { if (activeGroupId) setSearchQuery(activeGroupId, ''); setSearchExemptNoteIds(new Set()); }} className="absolute right-2 p-1 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-full transition-colors" title="Limpiar búsqueda">
@@ -1762,12 +1762,12 @@ function App() {
                               showOverdueMarquee 
                                 ? 'bg-red-600 text-white border-red-500 shadow-md' 
                                 : overdueRemindersCount > 0
-                                  ? 'bg-zinc-100 dark:bg-[#1A2E4E]/40 text-zinc-500 dark:text-red-400 border-zinc-200 dark:border-red-500/30 hover:border-red-500/50 hover:text-red-500'
+                                                                                                                                        ? 'bg-zinc-100 dark:bg-[#1A2E4E]/40 text-zinc-500 dark:text-red-400 border-zinc-200 dark:border-red-500/80 hover:bg-red-600 hover:text-white hover:border-red-500 hover:shadow-lg hover:shadow-red-500/20'
                                   : 'bg-zinc-100 dark:bg-[#1A2E4E]/30 border-zinc-200 dark:border-indigo-500/10 text-zinc-400 dark:text-indigo-300/40 opacity-40 cursor-not-allowed'
                             }`}
                             title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                           >
-                            <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-red-700 dark:text-red-400' : 'text-red-500'}` : ''} />
+                                                        <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-white' : 'text-red-500'}` : ''} />
                             {overdueRemindersCount > 0 && (
                               <span className="ml-2 text-xs font-medium leading-none">
                                 {overdueRemindersCount}
@@ -1782,7 +1782,7 @@ function App() {
                                       className={`flex items-center px-3 h-[36px] rounded-xl text-[13px] font-medium border transition-all active:scale-95 shrink-0 ${
                                         isArchiveMenuOpen 
                                           ? 'bg-amber-600 text-white border-amber-500 shadow-md' 
-                                          : 'bg-zinc-100 dark:bg-[#1A2E4E]/40 text-zinc-500 dark:text-indigo-300 border-zinc-200 dark:border-indigo-500/30 hover:border-amber-500/50 hover:text-amber-500 dark:hover:text-amber-400'
+                                                                                                                                                                        : 'bg-zinc-100 dark:bg-[#1A2E4E]/40 text-zinc-500 dark:text-indigo-300 border-zinc-200 dark:border-indigo-500/80 hover:bg-amber-600 hover:text-white hover:border-amber-500 hover:shadow-lg hover:shadow-amber-500/20'
                                       }`}
                                       title="Notas Archivadas"
                                     >
@@ -1847,7 +1847,7 @@ function App() {
                                  className={`flex items-center justify-center px-3 h-[36px] rounded-xl text-[13px] font-medium border transition-all active:scale-95 shrink-0 ${
                                    isGroupCreatorMenuOpen 
                                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-md' 
-                                     : 'bg-indigo-50 dark:bg-[#1A2E4E]/50 text-indigo-700 dark:text-indigo-300 border border-indigo-500/40 dark:border-indigo-400/30 hover:bg-indigo-100 dark:hover:bg-indigo-500/20'
+                                                                                                                                                    : 'bg-indigo-50 dark:bg-[#1A2E4E]/50 text-indigo-700 dark:text-indigo-300 border border-indigo-500/40 dark:border-indigo-500/80 hover:bg-indigo-600 hover:text-white hover:border-indigo-500 hover:shadow-lg hover:shadow-indigo-500/20'
                                  }`}
                                  title="Crear o Navegar por Notas del Grupo"
                              >
@@ -1880,35 +1880,35 @@ function App() {
                                    <div className="flex items-center gap-1 bg-zinc-50 dark:bg-zinc-800/50 p-0.5 rounded-lg border border-zinc-100 dark:border-zinc-700/50 shadow-sm">
                                       <button 
                                         onClick={() => applyManualSort(null)} 
-                                        className={`p-1.5 rounded-md hover:bg-white dark:hover:bg-zinc-700 transition-all active:scale-90 ${!noteSortMode ? 'text-indigo-600 bg-white dark:bg-zinc-700 shadow-sm' : 'text-zinc-400'}`} 
+                                        className={`p-1.5 rounded-md transition-all active:scale-95 border ${!noteSortMode ? 'text-white bg-indigo-600 border-indigo-500 shadow-md' : 'text-zinc-400 border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800'}`} 
                                         title="Orden Original"
                                       >
                                         <RotateCcw size={12} />
                                       </button>
                                       <button 
                                         onClick={() => applyManualSort('date-desc')} 
-                                        className={`p-1.5 rounded-md hover:bg-white dark:hover:bg-zinc-700 transition-all active:scale-90 ${noteSortMode === 'date-desc' ? 'text-indigo-600 bg-white dark:bg-zinc-700 shadow-sm' : 'text-zinc-400'}`} 
+                                        className={`p-1.5 rounded-md transition-all active:scale-95 border ${noteSortMode === 'date-desc' ? 'text-white bg-indigo-600 border-indigo-500 shadow-md' : 'text-zinc-400 border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800'}`} 
                                         title="Recientes"
                                       >
                                         <Calendar size={12} />
                                       </button>
                                       <button 
                                         onClick={() => applyManualSort('created-desc')} 
-                                        className={`p-1.5 rounded-md hover:bg-white dark:hover:bg-zinc-700 transition-all active:scale-90 ${noteSortMode === 'created-desc' ? 'text-indigo-600 bg-white dark:bg-zinc-700 shadow-sm' : 'text-zinc-400'}`} 
+                                        className={`p-1.5 rounded-md transition-all active:scale-95 border ${noteSortMode === 'created-desc' ? 'text-white bg-indigo-600 border-indigo-500 shadow-md' : 'text-zinc-400 border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800'}`} 
                                         title="Fecha Creación"
                                       >
                                         <Plus size={12} />
                                       </button>
                                       <button 
                                         onClick={() => applyManualSort('alpha-asc')} 
-                                        className={`p-1.5 rounded-md hover:bg-white dark:hover:bg-zinc-700 transition-all active:scale-90 ${noteSortMode === 'alpha-asc' ? 'text-indigo-600 bg-white dark:bg-zinc-700 shadow-sm' : 'text-zinc-400'}`} 
+                                        className={`p-1.5 rounded-md transition-all active:scale-95 border ${noteSortMode === 'alpha-asc' ? 'text-white bg-indigo-600 border-indigo-500 shadow-md' : 'text-zinc-400 border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800'}`} 
                                         title="Alfabético A-Z"
                                       >
                                         <Type size={12} />
                                       </button>
                                       <button 
                                         onClick={() => applyManualSort('alpha-desc')} 
-                                        className={`p-1.5 rounded-md hover:bg-white dark:hover:bg-zinc-700 transition-all active:scale-90 ${noteSortMode === 'alpha-desc' ? 'text-indigo-600 bg-white dark:bg-zinc-700 shadow-sm' : 'text-zinc-400'}`} 
+                                        className={`p-1.5 rounded-md transition-all active:scale-95 border ${noteSortMode === 'alpha-desc' ? 'text-white bg-indigo-600 border-indigo-500 shadow-md' : 'text-zinc-400 border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800'}`} 
                                         title="Alfabético Z-A"
                                       >
                                         <ArrowDown size={12} />
@@ -1946,7 +1946,7 @@ function App() {
                                         >
                                            <div className="flex items-center gap-2 min-w-0">
                                               <FileText size={12} className="text-indigo-500 shrink-0" />
-                                              <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 truncate">{note.subtitle || note.title || "Sin título..."}</span>
+                                              <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 truncate uppercase">{note.subtitle || note.title || "Sin título..."}</span>
                                            </div>
                                            <div className="flex items-center gap-1">
                                               {(() => {
@@ -1962,13 +1962,13 @@ function App() {
                                                 const color = statusColors[status] || '#9E9E9E';
                                                 return <div className="w-2.5 h-2.5 rounded-full mr-1.5 shadow-sm shrink-0" style={{ backgroundColor: color, boxShadow: `0 0 5px ${color}88` }} title={`Estado: ${status}`} />;
                                               })()}
-                                              <div className="flex items-center gap-1 opacity-10 group-hover:opacity-100 transition-opacity">
+                                              <div className="flex items-center gap-1">
                                                 <button 
                                                   onClick={(e) => { e.stopPropagation(); addNote(note.id); setIsGroupCreatorMenuOpen(false); }} 
                                                   title="Nueva nota después" 
-                                                  className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
+                                                  className="p-1.5 rounded-lg text-zinc-500 font-bold border border-zinc-200 dark:border-indigo-500/80 bg-zinc-100 dark:bg-zinc-800/40 hover:bg-emerald-600 hover:text-white hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/20 transition-all active:scale-95"
                                                 >
-                                                  <Plus size={12} />
+                                                  <Plus size={12} strokeWidth={2.5} />
                                                 </button>
                                               </div>
                                            </div>
@@ -2030,7 +2030,7 @@ function App() {
                               }`}
                             title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                           >
-                            <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-red-700 dark:text-red-400' : 'text-red-500'}` : ''} />
+                                                        <Bell size={18} className={overdueRemindersCount > 0 ? `animate-pulse ${showOverdueMarquee ? 'text-white' : 'text-red-500'}` : ''} />
                             {overdueRemindersCount > 0 && (
                               <span className="text-xs font-bold whitespace-nowrap">
                                 {overdueRemindersCount}

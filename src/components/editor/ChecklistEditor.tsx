@@ -148,7 +148,7 @@ const ChecklistItemRow = React.memo(({
                             onBlur={() => setIsFocused(false)}
                             placeholder="Nuevo elemento..."
                             rows={1}
-                            className={`w-full bg-transparent outline-none resize-none text-[#a1a1aa] placeholder-zinc-400 dark:placeholder-zinc-600 transition-colors select-text ${
+                            className={`w-full bg-transparent outline-none resize-none text-[#E6E6E6] placeholder-zinc-400 dark:placeholder-zinc-600 transition-colors select-text ${
                                 item.isChecked ? 'line-through opacity-50' : ''
                             } ${
                                 noteFont === 'serif' ? 'font-serif' : noteFont === 'mono' ? 'font-mono' : 'font-sans'
