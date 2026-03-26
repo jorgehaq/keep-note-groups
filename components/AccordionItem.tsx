@@ -113,7 +113,7 @@ const NoteHeaderBar: React.FC<{
       : 'text-violet-700 dark:text-violet-400';
 
   return (
-    <div className={`flex items-center justify-between px-4 py-2 border-b border-zinc-200 dark:border-[#2F2F60] bg-white dark:bg-[#1A1A24] shrink-0 transition-colors duration-300 group-focus-within/header:border-b-${activeColor}`}>
+    <div className={`flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-[#2F2F60] bg-white dark:bg-[#1A1A24] shrink-0 transition-all duration-300 group-focus-within/header:border-b-${activeColor}`}>
       <div className="flex items-center gap-1.5 cursor-help opacity-70 hover:opacity-100 transition-opacity" title={datesInfo}>
         <History size={11} className="text-zinc-500 dark:text-zinc-400" />
       </div>
@@ -126,7 +126,7 @@ const NoteHeaderBar: React.FC<{
           onBlur={handleBlur}
           onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
           placeholder="Subtítulo..."
-          className={`bg-transparent text-[10px] font-bold uppercase tracking-[0.2em] ${textColor} text-center outline-none transition-colors w-full`}
+          className={`bg-transparent text-xs font-bold uppercase tracking-[0.2em] ${textColor} text-center outline-none transition-colors w-full`}
         />
       </div>
       <div className="flex items-center gap-2 shrink-0">
@@ -332,10 +332,10 @@ const SummaryTabContent: React.FC<{
         className={`flex flex-col flex-1 min-h-0 rounded-xl border border-violet-200 dark:border-[#291B46] focus-within:border-violet-400 dark:focus-within:border-[#4E3884] bg-white dark:bg-[#22262B] animate-fadeIn overflow-hidden transition-colors group/header ${!showScratch ? 'hidden md:flex' : 'flex'}`}
         style={showScratch && !layoutCol ? { width: `${(1 - splitRatio) * 100}%`, flex: 'none' } : { flex: 1 }}
       >
-        <div className="relative flex items-center justify-center gap-2 px-3 py-2 border-b border-violet-200/20 dark:border-[#2F2F60] bg-white dark:bg-[#1A1A24] shrink-0 transition-colors duration-300 group-focus-within/header:border-b-[#4E3884]">
+        <div className="relative flex items-center justify-center gap-2 px-3 py-3 border-b border-violet-200/20 dark:border-[#2F2F60] bg-white dark:bg-[#1A1A24] shrink-0 transition-all duration-300 group-focus-within/header:border-b-[#4E3884]">
           <div className="flex items-center gap-2">
             <PenLine size={11} className="text-violet-400" />
-            <span className="text-[10px] font-bold text-violet-500 dark:text-[#A78BFA] uppercase tracking-widest">Pizarrón</span>
+            <span className="text-xs font-bold text-violet-500 dark:text-[#A78BFA] uppercase tracking-widest">Pizarrón</span>
           </div>
           <div className="absolute right-2 flex items-center">
             <button
@@ -633,10 +633,10 @@ const SubnoteTabContent: React.FC<{
             className="min-h-0 overflow-hidden flex flex-col rounded-xl border border-violet-200 dark:border-[#2F2F60] focus-within:border-violet-400 dark:focus-within:border-[#4E3884] bg-white dark:bg-[#22262B] animate-fadeIn transition-colors group/header"
             style={{ flex: 1 }}
           >
-            <div className="relative flex items-center justify-center gap-2 px-4 py-2 border-b border-zinc-200 dark:border-[#2F2F60] bg-white dark:bg-[#1A1A24] shrink-0 transition-colors duration-300 group-focus-within/header:border-b-[#4E3884]">
+            <div className="relative flex items-center justify-center gap-2 px-4 py-3 border-b border-zinc-200 dark:border-[#2F2F60] bg-white dark:bg-[#1A1A24] shrink-0 transition-all duration-300 group-focus-within/header:border-b-[#4E3884]">
               <div className="flex items-center gap-2">
                 <PenLine size={11} className="text-violet-400" />
-                <span className="text-[10px] font-bold text-violet-500 dark:text-[#A78BFA] uppercase tracking-widest">Pizarrón</span>
+                <span className="text-xs font-bold text-violet-500 dark:text-[#A78BFA] uppercase tracking-widest">Pizarrón</span>
               </div>
               <div className="absolute right-2 flex items-center">
                 <button
@@ -1445,7 +1445,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           onNavigate={navigate}
         />
       </div>
-      <div className="h-5 shrink-0" /> {/* Espacio solicitado de 20px entre Accesos y Editores */}
+      <div className="h-3 shrink-0" /> {/* Espacio solicitado de 12px entre Accesos y Editores */}
 
 
 
