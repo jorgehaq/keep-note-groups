@@ -1115,119 +1115,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
         <div className="flex items-center justify-between gap-1.5 flex-wrap pl-1">
           {/* GRUPO IZQUIERDO: Utilidades principales */}
           <div className="flex items-center gap-1.5">
-            {session?.user && (
-              <div className="relative">
-                <button
-                  onClick={(e) => { e.stopPropagation(); setIsCreatorMenuOpen(!isCreatorMenuOpen); }}
-                  title="Nueva subnota o análisis"
-                  className={`flex items-center justify-center px-3 h-[32.5px] rounded-lg text-[13px] font-medium border transition-all active:scale-95 ${isCreatorMenuOpen
-                      ? 'bg-emerald-600 text-white border-emerald-500 shadow-md'
-                      : 'border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20'
-                    }`}
-                >
-                  <ListPlus size={13} className={(1 + manualChildren.length + aiSummaries.length) > 1 ? "mr-1" : "mr-1.5"} />
-                  {(1 + manualChildren.length + aiSummaries.length) > 1 && (
-                    <span className="mr-1.5 text-[11px] font-bold">{(1 + manualChildren.length + aiSummaries.length)}</span>
-                  )}
-                  <span className="text-[14px] font-medium">+</span>
-                </button>
 
-                {isCreatorMenuOpen && (
-                  <div
-                   ref={creatorMenuRef}
-                   className="absolute left-0 top-full mt-2 z-[100] w-[420px] max-w-[calc(100vw-80px)] bg-white dark:bg-[#1A1A24] rounded-2xl shadow-2xl border border-zinc-200 dark:border-[#2D2D42] p-3 flex flex-col gap-1.5 animate-fadeIn overflow-hidden"
-                  >
-                    <div className="flex items-center gap-2 px-1 mb-1">
-                      <ListPlus size={14} className="text-emerald-500" />
-                      <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">Orden de Accesos</span>
-                    </div>
-
-                    <div 
-                      className="flex flex-col gap-1 overflow-y-auto pr-1 custom-scrollbar"
-                      style={{ maxHeight: menuMaxHeight }}
-                    >
-                       {/* root note row */}
-                       <div 
-                         onClick={() => { setActiveTab('original'); setIsCreatorMenuOpen(false); }}
-                         className="flex items-center justify-between group p-2 rounded-xl bg-indigo-50/50 dark:bg-indigo-500/5 border border-indigo-500/20 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-500/10 transition-colors"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                             <FileText size={12} className="text-indigo-500 shrink-0" />
-                             <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 truncate">{note.subtitle || "INICIO"}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                                              {(() => {
-                                                const task = globalTasks?.find(gt => gt.id === note.id || gt.linked_note_id === note.id);
-                                                if (!task) return null;
-                                                const status = task.status as string;
-                                                const statusColors: Record<string, string> = {
-                                                  backlog: '#9E9E9E',
-                                                  todo: '#FFD60A',
-                                                  in_progress: '#38BDF8',
-                                                  done: '#4ADE80'
-                                                };
-                                                const color = statusColors[status] || '#9E9E9E';
-                                                return <div className="w-2.5 h-2.5 rounded-full mr-1.5 shadow-sm shrink-0" style={{ backgroundColor: color, boxShadow: `0 0 5px ${color}88` }} title={`Estado: ${status}`} />;
-                                              })()}
-                             <div className="flex items-center gap-1 opacity-10 group-hover:opacity-100 transition-opacity">
-                                <button onClick={(e) => { e.stopPropagation(); handleCreateAtPosition('sub', 'root'); }} title="Nueva subnota después de inicio" className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"><Plus size={12} /></button>
-                                <button onClick={(e) => { e.stopPropagation(); handleCreateAtPosition('summary', 'root'); }} title="Nueva AI después de inicio" className="p-1.5 rounded-lg bg-violet-500/10 text-violet-500 hover:bg-violet-500/20"><Sparkles size={12} /></button>
-                             </div>
-                          </div>
-                       </div>
-
-                       {unifiedTabs.map((t, idx) => {
-                          const isSub = t.type === 'sub';
-                          const isProcessing = !isSub && ((t.data as any).status === 'pending' || (t.data as any).status === 'processing');
-                          const colorClass = isSub ? 'bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-violet-50/50 dark:bg-violet-500/5 border-violet-500/20 text-violet-700 dark:text-violet-400';
-                          const label = isSub 
-                            ? (t.data as Note).subtitle || (t.data as Note).title || "Sin título..." 
-                            : (t.data as any).target_objective || "Sin título...";
-                          const icon = isSub ? (
-                            <GitBranch size={12} className="shrink-0" />
-                          ) : (
-                            isProcessing ? <Loader2 size={12} className="animate-spin shrink-0" /> : <Sparkles size={12} className="shrink-0" />
-                          );
-
-                          return (
-                            <div 
-                              key={t.id} 
-                              onClick={() => { setActiveTab(t.id); setIsCreatorMenuOpen(false); }}
-                              className={`flex items-center justify-between group p-2 rounded-xl border ${colorClass} cursor-pointer hover:bg-opacity-80 transition-all`}
-                            >
-                               <div className="flex items-center gap-2 min-w-0">
-                                  {icon}
-                                  <span className="text-xs font-bold truncate">{label}</span>
-                               </div>
-                               <div className="flex items-center gap-1">
-                                  {(() => {
-                                    if (t.type !== 'sub') return null;
-                                    const noteData = t.data as Note;
-                                    const task = globalTasks?.find(gt => gt.id === noteData.id || gt.linked_note_id === noteData.id);
-                                    if (!task) return null;
-                                    const status = task.status as string;
-                                    const statusColors: Record<string, string> = {
-                                      backlog: '#9E9E9E',
-                                      todo: '#FFD60A',
-                                      in_progress: '#38BDF8',
-                                      done: '#4ADE80'
-                                    };
-                                    const color = statusColors[status] || '#9E9E9E';
-                                    return <div className="w-2.5 h-2.5 rounded-full mr-1.5 shadow-sm shrink-0" style={{ backgroundColor: color, boxShadow: `0 0 5px ${color}88` }} title={`Estado: ${status}`} />;
-                                  })()}
-                                  <div className="flex items-center gap-1 opacity-10 group-hover:opacity-100 transition-opacity">
-                                     <button onClick={(e) => { e.stopPropagation(); handleCreateAtPosition('sub', t.id); }} title="Nueva subnota después" className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"><Plus size={12} /></button>
-                                     <button onClick={(e) => { e.stopPropagation(); handleCreateAtPosition('summary', t.id); }} title="Nueva AI después" className="p-1.5 rounded-lg bg-violet-500/10 text-violet-500 hover:bg-violet-500/20"><Sparkles size={12} /></button>
-                                  </div>
-                               </div>
-                            </div>
-                          );
-                       })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Botón AI */}
             {session?.user && (
@@ -1397,14 +1285,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
             </div>
           </div>
         </div>
-        <div className="h-[5px]" /> {/* Espacio solicitado de 5px entre Iconos y Accesos */}
-
-        <NoteBreadcrumb
-          path={breadcrumbPath}
-          activeNoteId={activeNoteId || note.id}
-          onNavigate={navigate}
-        />
       </div>
+
       <div className="h-5 shrink-0" /> {/* Espacio solicitado de 20px entre Accesos y Editores */}
 
 
@@ -1449,38 +1331,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
           {/* ── CONTENIDO ACTIVO ─────────────────────────────────────────────────── */}
           {(() => {
-            const activeSubnoteId = activeTab.startsWith('sub_') ? activeTab.replace('sub_', '') : null;
-            const activeSubnote = activeSubnoteId ? manualChildren.find(c => c.id === activeSubnoteId) : null;
-            const activeSummary = !activeSubnoteId && activeTab !== 'original'
-              ? completedSummaries.find(s => s.id === activeTab)
-              : null;
-
-            if (activeSummary) {
-              return (
-                <div className="flex-1 flex flex-col min-h-0 animate-fadeIn">
-                  <SummaryTabContent
-                    key={activeTab}
-                    summary={activeSummary}
-                    noteFont={noteFont}
-                    noteFontSize={noteFontSize}
-                    noteLineHeight={noteLineHeight}
-                    showLineNumbers={showLineNumbers}
-                    onDelete={handleDeleteSummary}
-                    onPromote={onCreateNote ? handlePromoteToNote : undefined}
-                    updateScratchpad={updateScratchpad}
-                    updateContent={updateSummaryContent}
-                    searchQuery={searchQuery}
-                    showScratch={showNoteScratch}
-                    setShowScratch={setShowNoteScratch}
-                    triggerScrollToActive={triggerScrollToActive}
-                    splitRatio={splitRatio}
-                    onDividerMouseDown={handleDividerMouseDown}
-                  />
-                </div>
-              );
-            }
-
-            const currentNote: Note = activeSubnote ? activeSubnote : {
+            const currentNote: Note = {
               ...note,
               id: displayNoteId,
               content: displayContent,
@@ -1489,9 +1340,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
             return (
               <SubnoteTabContent
-                key={activeTab === 'original' ? displayNoteId : activeTab}
+                key={displayNoteId}
                 note={currentNote}
-                activeTab={activeTab}
+                activeTab="original"
                 showScratch={showNoteScratch}
                 onUpdate={onUpdate}
                 splitRatio={splitRatio}
@@ -1502,20 +1353,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                 noteLineHeight={noteLineHeight}
                 showLineNumbers={showLineNumbers}
                 searchQuery={searchQuery}
-                onUpdateContent={(text) => {
-                  if (activeSubnote) {
-                    onUpdate(activeSubnote.id, { content: text });
-                  } else {
-                    handleUpdateContent(text);
-                  }
-                }}
-                onUpdateScratch={(text) => {
-                  if (activeSubnote) {
-                    onUpdate(activeSubnote.id, { scratchpad: text });
-                  } else {
-                    handleNoteScratchChange(text);
-                  }
-                }}
+                onUpdateContent={handleUpdateContent}
+                onUpdateScratch={handleNoteScratchChange}
                 editorRef={editorRef}
                 scratchRef={noteScratchRef}
                 checklistRef={checklistRef}

@@ -258,9 +258,11 @@ export const GroupLauncher: React.FC<GroupLauncherProps> = ({ groups, isOpen, on
                                                     {group.is_pinned && <Pin size={11} className="text-amber-500 fill-current" />}
                                                 </div>
                                             )}
-                                            <span className="text-[10px] font-bold text-zinc-400 dark:text-[#CCCCCC]/50 shrink-0 min-w-[12px] text-right">
-                                                {group.notes.length}
-                                            </span>
+                                            {group.notes.filter(n => n.status !== 'history').length > 0 && (
+                                              <span className="text-[10px] font-bold text-zinc-400 dark:text-[#CCCCCC]/50 shrink-0 min-w-[12px] text-right">
+                                                  {group.notes.filter(n => n.status !== 'history').length}
+                                              </span>
+                                            )}
                                         </div>
                                     </div>
                                 );
