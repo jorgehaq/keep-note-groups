@@ -134,13 +134,16 @@ const blockMarkupField = StateField.define<RangeSet<Decoration>>({
 
                     // 1. Header
                     builder.add(openObj.from, openObj.from, Decoration.line({ class: cbHeaderClass }));
-                    if (!isRevealed) builder.add(openObj.from, openObj.to, Decoration.replace({}));
+                    if (!isRevealed) {
+                        // Ocultar solo los tres backticks iniciales ```
+                        builder.add(openObj.from, openObj.from + 3, Decoration.replace({}));
+                    }
                     
-                    // 2. Copy button widget (Must be after header 'from' but before body lines)
+                    // 2. Copy button widget
                     builder.add(openObj.to, openObj.to, Decoration.widget({ 
                         widget: new CodeBlockCopyWidget(codeContent), 
                         side: 1,
-                        block: false // Ensure it doesn't break line flow
+                        block: false
                     }));
                     
                     // 3. Body
@@ -151,7 +154,8 @@ const blockMarkupField = StateField.define<RangeSet<Decoration>>({
 
                     // 4. Footer
                     builder.add(closeObj.from, closeObj.from, Decoration.line({ class: cbFooterClass }));
-                    if (!isRevealed) builder.add(closeObj.from, closeObj.to, Decoration.replace({}));
+                    // Ocultar solo los tres backticks finales ```
+                    if (!isRevealed) builder.add(closeObj.from, closeObj.from + 3, Decoration.replace({}));
 
                     lineNum = closeLine + 1;
                     continue;
@@ -835,7 +839,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-custom-hr-big": { display: "inline-block", verticalAlign: "middle", width: "calc(100% - 30px)", height: "3px", background: "linear-gradient(90deg, transparent, #8B5CF6, #6366f1, #8B5CF6, transparent)", margin: "12px 0", borderRadius: "4px" },
         ".cm-search-match": { backgroundColor: "rgba(245, 158, 11, 0.4) !important", borderBottom: "2px solid #f59e0b", color: "#000 !important" },
         ".cm-selectionMatch": { backgroundColor: "#518141 !important", color: "#000 !important" },
-        ".cm-cb-header": { backgroundColor: "#F1F1F4", border: "1px solid #D4D4D8", borderBottom: "none", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#52525b", position: "relative", padding: "0 8px", minHeight: "1.25rem" },
+
         // --- MARKERS HOVER ---
         "[class*='cm-custom-mk-']": { position: "relative" },
         "[class*='cm-custom-mk-']::before": { 
@@ -892,13 +896,14 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".dark & .cm-rendered-table tr:nth-child(even)": { backgroundColor: "rgba(255,255,255,0.01)" },
 
         // --- CODEBLOCKS ---
-        ".dark & .cm-cb-header": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", color: "#a1a1aa" },
-        
-        ".cm-cb-line": { backgroundColor: "#F1F1F4", borderLeft: "1px solid #D4D4D8", borderRight: "1px solid #D4D4D8", fontFamily: fontFamily, color: "#312E81 !important", padding: "0 8px" },
+        ".cm-cb-header": { backgroundColor: "#F1F1F4", border: "1px solid #D4D4D8", borderBottom: "1px solid #F1F1F4", borderRadius: "8px 8px 0 0", fontFamily: fontFamily, fontSize: "0.85em", color: "#52525b", position: "relative", padding: "0 20px" },
+        ".dark & .cm-cb-header": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderBottom: "1px solid #0D0D0F", color: "#a1a1aa" },
+        ".cm-cb-line": { backgroundColor: "#F1F1F4", borderLeft: "1px solid #D4D4D8", borderRight: "1px solid #D4D4D8", fontFamily: fontFamily, color: "#312E81 !important", padding: "0 20px" },
         ".dark & .cm-cb-line": { backgroundColor: "#0D0D0F", borderLeft: "1px solid #3F3F46", borderRight: "1px solid #3F3F46", color: "#A78BFA !important" },
         
-        ".cm-cb-footer": { backgroundColor: "#F1F1F4", border: "1px solid #D4D4D8", borderTop: "none", borderRadius: "0 0 8px 8px", fontFamily: fontFamily, fontSize: "0.85em", color: "#52525b", padding: "0 8px", minHeight: "1.25rem", userSelect: "none !important" },
-        ".dark & .cm-cb-footer": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", color: "#a1a1aa" },
+        ".cm-cb-footer": { backgroundColor: "#F1F1F4", border: "1px solid #D4D4D8", borderTop: "1px solid #F1F1F4", borderRadius: "0 0 8px 8px", padding: "0 20px", userSelect: "none !important" },
+        ".dark & .cm-cb-footer": { backgroundColor: "#0D0D0F", border: "1px solid #3F3F46", borderTop: "1px solid #0D0D0F", color: "#a1a1aa" },
+
 
         ".cm-cb-line ::selection, .cm-cb-line ::-moz-selection": {
             backgroundColor: "#4338CA !important",
@@ -909,7 +914,7 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             color: "#ffffff !important"
         },
 
-        ".cm-codeblock-copy": { position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "4px", borderRadius: "4px", backgroundColor: "transparent", color: "#a1a1aa", cursor: "pointer", border: "none", transition: "all 0.15s", opacity: "0" },
+        ".cm-codeblock-copy": { position: "absolute", right: "20px", top: "50%", transform: "translateY(-50%)", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "4px", borderRadius: "4px", backgroundColor: "transparent", color: "#a1a1aa", cursor: "pointer", border: "none", transition: "all 0.15s", opacity: "0" },
         ".cm-cb-header:hover .cm-codeblock-copy": { opacity: "1" },
         ".cm-codeblock-copy:hover": { backgroundColor: "#E4E4E7", color: "#52525b" },
         ".dark & .cm-codeblock-copy:hover": { backgroundColor: "#3F3F46", color: "#a1a1aa" },
