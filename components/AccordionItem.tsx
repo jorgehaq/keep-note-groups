@@ -79,10 +79,10 @@ const NoteHeaderBar: React.FC<{
   onUpdate: (updates: any) => void;
   children?: React.ReactNode;
 }> = ({ type, id, subtitle, created_at, updated_at, onUpdate, children }) => {
-  const [localSub, setLocalSub] = useState(subtitle || (type === 'original' ? 'INICIO' : ''));
+  const [localSub, setLocalSub] = useState(subtitle || (type === 'original' ? 'INICIO' : 'Sin título...'));
 
   useEffect(() => {
-    setLocalSub(subtitle || (type === 'original' ? 'INICIO' : ''));
+    setLocalSub(subtitle || (type === 'original' ? 'INICIO' : 'Sin título...'));
   }, [subtitle, type]);
 
   const handleBlur = () => {
@@ -404,10 +404,10 @@ const SummaryTitle: React.FC<{
       title={isActive ? 'Doble clic para renombrar' : summary.target_objective || ''}
     >
       {searchQuery?.trim()
-        ? highlightText(summary.target_objective || 'Análisis AI', searchQuery)
-        : (summary.target_objective || 'Análisis AI').length > 23
-          ? (summary.target_objective || 'Análisis AI').slice(0, 23) + '...'
-          : (summary.target_objective || 'Análisis AI')}
+        ? highlightText(summary.target_objective || 'Sin título...', searchQuery)
+        : (summary.target_objective || 'Sin título...').length > 23
+          ? (summary.target_objective || 'Sin título...').slice(0, 23) + '...'
+          : (summary.target_objective || 'Sin título...')}
     </span>
   );
 };
@@ -421,7 +421,7 @@ const SubnoteTitle: React.FC<{
   setIsEditing: (editing: boolean) => void;
 }> = ({ child, isActive, onRename, searchQuery, isEditing, setIsEditing }) => {
   const isJustCreated = !child.title && !child.subtitle && (Date.now() - new Date(child.created_at || 0).getTime() < 3000);
-  const displayTitle = child.subtitle || child.title || '';
+  const displayTitle = child.subtitle || child.title || 'Sin título...';
   const [val, setVal] = useState(displayTitle);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -477,10 +477,10 @@ const SubnoteTitle: React.FC<{
       title={isActive ? 'Doble clic para renombrar' : displayTitle}
     >
       {searchQuery?.trim()
-        ? highlightText(displayTitle || 'Sin título', searchQuery)
-        : (displayTitle || 'Sin título').length > 23
-          ? (displayTitle || 'Sin título').slice(0, 23) + '...'
-          : (displayTitle || 'Sin título')}
+        ? highlightText(displayTitle || 'Sin título...', searchQuery)
+        : (displayTitle || 'Sin título...').length > 23
+          ? (displayTitle || 'Sin título...').slice(0, 23) + '...'
+          : (displayTitle || 'Sin título...')}
     </span>
   );
 };
@@ -690,6 +690,32 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
     return kids.some(k => checkNoteMatch(k, q, all, sums));
   };
 
+  const [isCreatorMenuOpen, setIsCreatorMenuOpen] = useState(false);
+  const creatorMenuRef = useRef<HTMLDivElement>(null);
+  const accordionRef = useRef<HTMLDivElement>(null);
+  const [menuMaxHeight, setMenuMaxHeight] = useState('auto');
+
+  useEffect(() => {
+    if (isCreatorMenuOpen && creatorMenuRef.current && accordionRef.current) {
+      const buttonRect = creatorMenuRef.current.parentElement?.getBoundingClientRect();
+      const accordionRect = accordionRef.current.getBoundingClientRect();
+      if (buttonRect && accordionRect) {
+        const availableHeight = accordionRect.bottom - buttonRect.bottom - 20; // 20px offset
+        setMenuMaxHeight(`${Math.max(150, availableHeight)}px`);
+      }
+    }
+  }, [isCreatorMenuOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (creatorMenuRef.current && !creatorMenuRef.current.contains(event.target as Node)) {
+        setIsCreatorMenuOpen(false);
+      }
+    };
+    if (isCreatorMenuOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isCreatorMenuOpen]);
+
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(!note.title);
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
@@ -722,7 +748,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
   const activeTab = activeTabByNote[displayNoteId] || 'original';
   const setActiveTab = (tabId: string) => setStoreActiveTab(displayNoteId, tabId);
-  const { summaries: aiSummaries, deleteSummary, updateScratchpad, updateSummaryContent, updateSummaryMetadata, loading: summariesLoading, hasFetched } = useSummaries(displayNoteId);
+  const { summaries: aiSummaries, deleteSummary, generateSummary, updateScratchpad, updateSummaryContent, updateSummaryMetadata, loading: summariesLoading, hasFetched } = useSummaries(displayNoteId);
   const completedSummaries = aiSummaries.filter(s => s.status === 'completed');
 
   const manualChildren = groupNotes.filter(n => n.parent_note_id === displayNoteId && !n.ai_generated);
@@ -1032,13 +1058,28 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
     document.addEventListener('mouseup', onUp);
   };
 
-  const handleCreateSubnote = async () => {
-    if (!onCreateNote) return;
-    const orderIndex = getNewOrderIndex();
-    console.log('🔢 orderIndex calculado:', orderIndex, '| activeTab:', activeTab);
-    console.log('📊 unifiedTabs actual:', unifiedTabs.map(t => ({ id: t.id, oi: t.order_index })));
-    const newId = await onCreateNote('', '', displayNoteId, orderIndex);
-    if (newId) setActiveTab(`sub_${newId}`);
+  const handleCreateAtPosition = async (type: 'sub' | 'summary', afterId: string | 'root') => {
+    let targetIndex = 1;
+    if (afterId === 'root') {
+      if (unifiedTabs.length > 0) targetIndex = unifiedTabs[0].order_index / 2;
+    } else {
+      const idx = unifiedTabs.findIndex(t => t.id === afterId);
+      if (idx !== -1) {
+        const current = unifiedTabs[idx].order_index;
+        const next = unifiedTabs[idx + 1]?.order_index;
+        targetIndex = (next === undefined) ? current + 1 : (current + next) / 2;
+      }
+    }
+
+    if (type === 'sub') {
+      if (!onCreateNote) return;
+      const newId = await onCreateNote('', '', displayNoteId, targetIndex);
+      if (newId) setActiveTab(`sub_${newId}`);
+    } else {
+      const summaryId = await generateSummary('Nuevo Análisis', targetIndex);
+      if (summaryId) setActiveTab(summaryId.id);
+    }
+    setIsCreatorMenuOpen(false);
   };
 
   const handleSaveChildSubtitle = async (childId: string, subtitle: string) => {
@@ -1079,6 +1120,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
 
   return (
     <div
+      ref={accordionRef}
       onFocusCapture={triggerScrollToActive}
       className={`m-1 transition-all duration-300 flex-1 flex flex-col min-h-0 bg-white dark:bg-[#1A1A24] rounded-2xl shadow-lg border select-text ${isHighlightedBySearch
           ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50/30 dark:bg-amber-900/10 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
@@ -1158,14 +1200,83 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
           {/* GRUPO IZQUIERDO: Utilidades principales */}
           <div className="flex items-center gap-1.5">
             {session?.user && (
-              <button
-                onClick={(e) => { e.stopPropagation(); handleCreateSubnote(); }}
-                title="Nueva subnota"
-                className="flex items-center justify-center px-3 h-[32.5px] rounded-lg text-[13px] font-medium border border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-all active:scale-95"
-              >
-                <ListPlus size={13} className="mr-1.5" />
-                <span>+</span>
-              </button>
+              <div className="relative">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setIsCreatorMenuOpen(!isCreatorMenuOpen); }}
+                  title="Nueva subnota o análisis"
+                  className={`flex items-center justify-center px-3 h-[32.5px] rounded-lg text-[13px] font-medium border transition-all active:scale-95 ${isCreatorMenuOpen
+                      ? 'bg-emerald-600 text-white border-emerald-500 shadow-md'
+                      : 'border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20'
+                    }`}
+                >
+                  <ListPlus size={13} className={(1 + manualChildren.length + aiSummaries.length) > 1 ? "mr-1" : "mr-1.5"} />
+                  {(1 + manualChildren.length + aiSummaries.length) > 1 && (
+                    <span className="mr-1.5 text-[11px] font-bold">{(1 + manualChildren.length + aiSummaries.length)}</span>
+                  )}
+                  <span className="text-[14px] font-medium">+</span>
+                </button>
+
+                {isCreatorMenuOpen && (
+                  <div
+                   ref={creatorMenuRef}
+                   className="absolute left-0 top-full mt-2 z-[100] w-[280px] bg-white dark:bg-[#1A1A24] rounded-2xl shadow-2xl border border-zinc-200 dark:border-[#2D2D42] p-3 flex flex-col gap-1.5 animate-fadeIn overflow-hidden"
+                  >
+                    <div className="flex items-center gap-2 px-1 mb-1">
+                      <ListPlus size={14} className="text-emerald-500" />
+                      <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">Orden de Accesos</span>
+                    </div>
+
+                    <div 
+                      className="flex flex-col gap-1 overflow-y-auto pr-1 custom-scrollbar"
+                      style={{ maxHeight: menuMaxHeight }}
+                    >
+                       {/* root note row */}
+                       <div 
+                         onClick={() => { setActiveTab('original'); setIsCreatorMenuOpen(false); }}
+                         className="flex items-center justify-between group p-2 rounded-xl bg-indigo-50/50 dark:bg-indigo-500/5 border border-indigo-500/20 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-500/10 transition-colors"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                             <FileText size={12} className="text-indigo-500 shrink-0" />
+                             <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 truncate">{note.subtitle || "INICIO"}</span>
+                          </div>
+                          <div className="flex items-center gap-1 opacity-10 group-hover:opacity-100 transition-opacity">
+                             <button onClick={(e) => { e.stopPropagation(); handleCreateAtPosition('sub', 'root'); }} title="Nueva subnota después de inicio" className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"><Plus size={12} /></button>
+                             <button onClick={(e) => { e.stopPropagation(); handleCreateAtPosition('summary', 'root'); }} title="Nueva AI después de inicio" className="p-1.5 rounded-lg bg-violet-500/10 text-violet-500 hover:bg-violet-500/20"><Sparkles size={12} /></button>
+                          </div>
+                       </div>
+
+                       {unifiedTabs.map((t, idx) => {
+                          const isSub = t.type === 'sub';
+                          const isProcessing = !isSub && ((t.data as any).status === 'pending' || (t.data as any).status === 'processing');
+                          const colorClass = isSub ? 'bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-violet-50/50 dark:bg-violet-500/5 border-violet-500/20 text-violet-700 dark:text-violet-400';
+                          const label = isSub ? (t.data as Note).subtitle || (t.data as Note).title || "Sin título..." : (t.data as any).target_objective || "Sin título...";
+                          const icon = isSub ? (
+                            <GitBranch size={12} className="shrink-0" />
+                          ) : (
+                            isProcessing ? <Loader2 size={12} className="animate-spin shrink-0" /> : <Sparkles size={12} className="shrink-0" />
+                          );
+
+                          return (
+                            <div 
+                              key={t.id} 
+                              onClick={() => { setActiveTab(t.id); setIsCreatorMenuOpen(false); }}
+                              className={`flex items-center justify-between group p-2 rounded-xl border ${colorClass} cursor-pointer hover:bg-opacity-80 transition-all`}
+                            >
+                               <div className="flex items-center gap-2 min-w-0">
+                                  {icon}
+                                  <span className="text-xs font-bold truncate">{label}</span>
+                               </div>
+                               <div className="flex items-center gap-1 opacity-10 group-hover:opacity-100 transition-opacity">
+                                  <button onClick={(e) => { e.stopPropagation(); handleCreateAtPosition('sub', t.id); }} title="Nueva subnota después" className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"><Plus size={12} /></button>
+                                  <button onClick={(e) => { e.stopPropagation(); handleCreateAtPosition('summary', t.id); }} title="Nueva AI después" className="p-1.5 rounded-lg bg-violet-500/10 text-violet-500 hover:bg-violet-500/20"><Sparkles size={12} /></button>
+                               </div>
+                            </div>
+                          );
+                       })}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Botón AI */}
