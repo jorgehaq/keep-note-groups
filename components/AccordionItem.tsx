@@ -106,6 +106,12 @@ const NoteHeaderBar: React.FC<{
 
   const datesInfo = `Creación: ${formatDateString(created_at)}\nEdición: ${formatDateString(updated_at)}`;
 
+  const textColor = type === 'original'
+    ? 'text-indigo-700 dark:text-indigo-400'
+    : type === 'sub'
+      ? 'text-emerald-700 dark:text-emerald-400'
+      : 'text-violet-700 dark:text-violet-400';
+
   return (
     <div className={`flex items-center justify-between px-4 py-2 border-b border-zinc-200 dark:border-[#2F2F60] bg-white dark:bg-[#1A1A24] shrink-0 transition-colors duration-300 group-focus-within/header:border-b-${activeColor}`}>
       <div className="flex items-center gap-1.5 cursor-help opacity-70 hover:opacity-100 transition-opacity" title={datesInfo}>
@@ -120,7 +126,7 @@ const NoteHeaderBar: React.FC<{
           onBlur={handleBlur}
           onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
           placeholder="Subtítulo..."
-          className="bg-transparent text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 dark:text-[#E6E6E6] text-center outline-none focus:text-indigo-500 dark:focus:text-indigo-400 transition-colors w-full"
+          className={`bg-transparent text-[10px] font-bold uppercase tracking-[0.2em] ${textColor} text-center outline-none transition-colors w-full`}
         />
       </div>
       <div className="flex items-center gap-2 shrink-0">
@@ -329,7 +335,7 @@ const SummaryTabContent: React.FC<{
         <div className="relative flex items-center justify-center gap-2 px-3 py-2 border-b border-violet-200/20 dark:border-[#2F2F60] bg-white dark:bg-[#1A1A24] shrink-0 transition-colors duration-300 group-focus-within/header:border-b-[#4E3884]">
           <div className="flex items-center gap-2">
             <PenLine size={11} className="text-violet-400" />
-            <span className="text-[10px] font-bold text-[#E6E6E6] uppercase tracking-widest">Pizarrón</span>
+            <span className="text-[10px] font-bold text-violet-500 dark:text-[#A78BFA] uppercase tracking-widest">Pizarrón</span>
           </div>
           <div className="absolute right-2 flex items-center">
             <button
@@ -630,7 +636,7 @@ const SubnoteTabContent: React.FC<{
             <div className="relative flex items-center justify-center gap-2 px-4 py-2 border-b border-zinc-200 dark:border-[#2F2F60] bg-white dark:bg-[#1A1A24] shrink-0 transition-colors duration-300 group-focus-within/header:border-b-[#4E3884]">
               <div className="flex items-center gap-2">
                 <PenLine size={11} className="text-violet-400" />
-                <span className="text-[10px] font-bold text-[#E6E6E6] uppercase tracking-widest">Pizarrón</span>
+                <span className="text-[10px] font-bold text-violet-500 dark:text-[#A78BFA] uppercase tracking-widest">Pizarrón</span>
               </div>
               <div className="absolute right-2 flex items-center">
                 <button
