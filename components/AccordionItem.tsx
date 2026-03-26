@@ -77,8 +77,9 @@ const NoteHeaderBar: React.FC<{
   created_at?: string;
   updated_at?: string;
   onUpdate: (updates: any) => void;
+  activeColor?: string;
   children?: React.ReactNode;
-}> = ({ type, id, subtitle, created_at, updated_at, onUpdate, children }) => {
+}> = ({ type, id, subtitle, created_at, updated_at, onUpdate, activeColor = 'indigo-500', children }) => {
   const defaultTitle = type === 'original' ? 'INICIO' : 'Subnota: Sin título';
   const [localSub, setLocalSub] = useState(subtitle || defaultTitle);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -106,7 +107,7 @@ const NoteHeaderBar: React.FC<{
   const datesInfo = `Creación: ${formatDateString(created_at)}\nEdición: ${formatDateString(updated_at)}`;
 
   return (
-    <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-[#22262B] shrink-0">
+    <div className={`flex items-center justify-between px-4 py-2 border-b border-zinc-200 dark:border-[#2F2F60] bg-white dark:bg-[#1A1A24] shrink-0 transition-colors duration-300 group-focus-within/header:border-b-${activeColor}`}>
       <div className="flex items-center gap-1.5 cursor-help opacity-70 hover:opacity-100 transition-opacity" title={datesInfo}>
         <History size={11} className="text-zinc-500 dark:text-zinc-400" />
       </div>
@@ -223,7 +224,7 @@ const SummaryTabContent: React.FC<{
       onClickCapture={triggerScrollToActive}
       className={`flex-1 flex min-h-0 ${layoutCol ? 'flex-col' : 'flex-row'} gap-3`}
     >
-      <div className={`flex-1 flex flex-col min-h-0 bg-violet-50 dark:bg-[#22262B] rounded-2xl border focus-within:border-violet-400 dark:focus-within:border-violet-500/60 transition-colors ${searchQuery?.trim() && (summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || summary.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase())) ? 'border-amber-500' : 'border-violet-300 dark:border-[#2F2F60]'} overflow-hidden`}
+      <div className={`flex-1 flex flex-col min-h-0 bg-violet-50 dark:bg-[#22262B] rounded-2xl border focus-within:border-violet-400 dark:focus-within:border-violet-500/60 transition-colors group/header ${searchQuery?.trim() && (summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || summary.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase())) ? 'border-amber-500' : 'border-violet-300 dark:border-[#2F2F60]'} overflow-hidden`}
         style={showScratch
           ? (layoutCol
             ? { height: `${splitRatio * 100}%`, flex: 'none' }
@@ -238,6 +239,7 @@ const SummaryTabContent: React.FC<{
           subtitle={summary.target_objective}
           created_at={summary.created_at}
           updated_at={summary.created_at}
+          activeColor="violet-500/60"
           onUpdate={(updates) => updateSummaryMetadata(summary.id, { target_objective: updates.subtitle })}
         >
           <div className="flex items-center gap-2 shrink-0">
@@ -321,10 +323,10 @@ const SummaryTabContent: React.FC<{
       )}
 
       <div
-        className={`flex flex-col flex-1 min-h-0 rounded-xl border border-violet-200 dark:border-[#291B46] focus-within:border-violet-400 dark:focus-within:border-[#4E3884] bg-white dark:bg-[#1A1A24] animate-fadeIn overflow-hidden transition-colors ${!showScratch ? 'hidden md:flex' : 'flex'}`}
+        className={`flex flex-col flex-1 min-h-0 rounded-xl border border-violet-200 dark:border-[#291B46] focus-within:border-violet-400 dark:focus-within:border-[#4E3884] bg-white dark:bg-[#22262B] animate-fadeIn overflow-hidden transition-colors group/header ${!showScratch ? 'hidden md:flex' : 'flex'}`}
         style={showScratch && !layoutCol ? { width: `${(1 - splitRatio) * 100}%`, flex: 'none' } : { flex: 1 }}
       >
-        <div className="relative flex items-center justify-center gap-2 px-3 py-2 border-b border-violet-200/20 shrink-0">
+        <div className="relative flex items-center justify-center gap-2 px-3 py-2 border-b border-violet-200/20 dark:border-[#2F2F60] bg-white dark:bg-[#1A1A24] shrink-0 transition-colors duration-300 group-focus-within/header:border-b-[#4E3884]">
           <div className="flex items-center gap-2">
             <PenLine size={11} className="text-violet-400" />
             <span className="text-[10px] font-bold text-[#E6E6E6] uppercase tracking-widest">Pizarrón</span>
@@ -560,7 +562,7 @@ const SubnoteTabContent: React.FC<{
         className={`flex-1 flex min-h-0 ${layoutCol ? 'flex-col' : 'flex-row'} gap-2 pt-0`}
       >
         <div
-          className={`min-h-0 overflow-hidden flex flex-col rounded-xl border ${borderColor} bg-zinc-50 dark:bg-[#22262B]`}
+          className={`min-h-0 overflow-hidden flex flex-col rounded-xl border ${borderColor} bg-zinc-50 dark:bg-[#22262B] group/header`}
           style={showScratch
             ? (layoutCol
               ? { height: `${splitRatio * 100}%`, flex: 'none' }
@@ -576,6 +578,7 @@ const SubnoteTabContent: React.FC<{
             subtitle={activeTab === 'original' ? note.subtitle : (note.subtitle || note.title)}
             created_at={note.created_at}
             updated_at={note.updated_at}
+            activeColor="[#17634F]"
             onUpdate={(updates) => onUpdate(note.id, activeTab === 'original' ? updates : { ...updates, title: updates.subtitle })}
           />
 
@@ -621,10 +624,10 @@ const SubnoteTabContent: React.FC<{
         {showScratch && (
           <div
             onFocusCapture={triggerScrollToActive}
-            className="min-h-0 overflow-hidden flex flex-col rounded-xl border border-violet-200 dark:border-[#2F2F60] focus-within:border-violet-400 dark:focus-within:border-[#4E3884] bg-white dark:bg-[#22262B] animate-fadeIn transition-colors"
+            className="min-h-0 overflow-hidden flex flex-col rounded-xl border border-violet-200 dark:border-[#2F2F60] focus-within:border-violet-400 dark:focus-within:border-[#4E3884] bg-white dark:bg-[#22262B] animate-fadeIn transition-colors group/header"
             style={{ flex: 1 }}
           >
-            <div className="relative flex items-center justify-center gap-2 px-4 py-2 border-b border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-[#22262B] shrink-0">
+            <div className="relative flex items-center justify-center gap-2 px-4 py-2 border-b border-zinc-200 dark:border-[#2F2F60] bg-white dark:bg-[#1A1A24] shrink-0 transition-colors duration-300 group-focus-within/header:border-b-[#4E3884]">
               <div className="flex items-center gap-2">
                 <PenLine size={11} className="text-violet-400" />
                 <span className="text-[10px] font-bold text-[#E6E6E6] uppercase tracking-widest">Pizarrón</span>
