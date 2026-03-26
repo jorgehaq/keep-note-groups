@@ -58,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
     // ESTADO 2: RECIÉN PERDIÓ EL FOCO (Gris estructurado con ring)
     if (lastUsedApp === appId) {
-      return 'bg-white dark:bg-[#1A1A24] border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200 shadow-sm hover:border-indigo-400/60 dark:hover:border-[#3D3E89]/60 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 hover:scale-105 active:scale-95 transition-all';
+      return 'bg-white dark:bg-[#0D1F39] border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200 shadow-sm hover:border-indigo-400/60 dark:hover:border-[#3D3E89]/60 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 hover:scale-105 active:scale-95 transition-all';
     }
 
     // ESTADO 3: INACTIVO (Basado en el contrato de AccordionItem)
@@ -116,7 +116,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      <div className="w-[49px] md:w-[59px] bg-zinc-50 dark:bg-[#13131A] border-r border-zinc-200 dark:border-[#2D2D42] flex flex-col items-center py-3 gap-4 h-full shrink-0 z-50 overflow-visible transition-colors duration-300">
+      <div className="w-[49px] md:w-[59px] bg-zinc-50 dark:bg-[#112240] border-r border-zinc-200 dark:border-[#2D2D42] flex flex-col items-center py-3 gap-4 h-full shrink-0 z-50 overflow-visible transition-colors duration-300">
 
         {/* Reminders Button */}
         <button
@@ -221,10 +221,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* CONTENEDOR DE GRUPOS DOCKED */}
         <div className="relative flex-1 w-full flex flex-col group/sidebar min-h-0 min-w-0">
           
-          <div className={`absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-zinc-50 dark:from-[#13131A] to-transparent z-10 flex items-start justify-center pt-1 pointer-events-none transition-opacity duration-200 ${canScrollUp ? 'opacity-100' : 'opacity-0'}`}>
+          <div className={`absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-zinc-50 dark:from-[#112240] to-transparent z-10 flex items-start justify-center pt-1 pointer-events-none transition-opacity duration-200 ${canScrollUp ? 'opacity-100' : 'opacity-0'}`}>
             <button 
               onClick={() => scrollGroups('up')} 
-              className={`p-1 rounded-full bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] shadow-md text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all active:scale-95 ${canScrollUp ? 'pointer-events-auto' : 'pointer-events-none'}`}
+              className={`p-1 rounded-full bg-white dark:bg-[#0D1F39] border border-zinc-200 dark:border-[#2D2D42] shadow-md text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all active:scale-95 ${canScrollUp ? 'pointer-events-auto' : 'pointer-events-none'}`}
             >
               <ChevronUp size={14} />
             </button>
@@ -267,9 +267,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     ${isGroupActive && isNotesView && sidebarFocusMode === 'group'
                       ? 'h-32 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/40 shadow-sm scale-[1.02]'
                       : isGroupActive && (!isNotesView || sidebarFocusMode === 'note')
-                        ? 'h-32 bg-white dark:bg-[#1A1A24] border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200 shadow-sm hover:border-indigo-400/60 dark:hover:border-[#3D3E89]/60 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 hover:scale-[1.04]'
+                        ? 'h-32 bg-white dark:bg-[#0D1F39] border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200 shadow-sm hover:border-indigo-400/60 dark:hover:border-[#3D3E89]/60 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 hover:scale-[1.04]'
                         : isGroupLastUsed
-                          ? 'h-24 bg-white dark:bg-[#1A1A24] border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200 shadow-sm hover:border-indigo-400/60 dark:hover:border-[#3D3E89]/60 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 hover:scale-[1.04]'
+                          ? 'h-24 bg-white dark:bg-[#0D1F39] border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200 shadow-sm hover:border-indigo-400/60 dark:hover:border-[#3D3E89]/60 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 hover:scale-[1.04]'
                           : 'h-24 bg-zinc-100 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-indigo-400/60 dark:hover:border-[#3D3E89]/60 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-sm hover:scale-[1.04]'}
                   `}
                   title={group.title}
@@ -294,7 +294,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       const bubbleClass = isActiveFocus
                         ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/40 shadow-sm scale-[1.15]'
                         : isGroupActive || (isFocused && isNotesView && sidebarFocusMode === 'group')
-                          ? 'bg-white dark:bg-[#1A1A24] border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200 shadow-sm hover:border-indigo-400/60 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:border-[#3D3E89]/60 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400 hover:scale-110'
+                          ? 'bg-white dark:bg-[#0D1F39] border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200 shadow-sm hover:border-indigo-400/60 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:border-[#3D3E89]/60 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400 hover:scale-110'
                           : 'bg-zinc-100 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-indigo-400/60 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:border-[#3D3E89]/60 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400 hover:shadow-sm hover:scale-110';
 
                       const linkedTask = globalTasks?.find(t => t.id === note.id);
@@ -323,7 +323,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           </button>
                           
                           {dotColorClass && (
-                              <div className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border border-white dark:border-[#13131A] z-10 shadow-sm transition-transform hover:scale-110 ${(dotColorClass as any).bg}`} style={{ boxShadow: `0 0 6px ${(dotColorClass as any).hex}88` }} title={`Estado Kanban`} />
+                              <div className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border border-white dark:border-[#112240] z-10 shadow-sm transition-transform hover:scale-110 ${(dotColorClass as any).bg}`} style={{ boxShadow: `0 0 6px ${(dotColorClass as any).hex}88` }} title={`Estado Kanban`} />
                           )}
                         </div>
                       );
@@ -336,10 +336,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
           </div>
 
-          <div className={`absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-zinc-50 dark:from-[#13131A] to-transparent z-10 flex items-end justify-center pb-1 pointer-events-none transition-opacity duration-200 ${canScrollDown ? 'opacity-100' : 'opacity-0'}`}>
+          <div className={`absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-zinc-50 dark:from-[#112240] to-transparent z-10 flex items-end justify-center pb-1 pointer-events-none transition-opacity duration-200 ${canScrollDown ? 'opacity-100' : 'opacity-0'}`}>
             <button 
               onClick={() => scrollGroups('down')} 
-              className={`p-1 rounded-full bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] shadow-md text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all active:scale-95 ${canScrollDown ? 'pointer-events-auto' : 'pointer-events-none'}`}
+              className={`p-1 rounded-full bg-white dark:bg-[#0D1F39] border border-zinc-200 dark:border-[#2D2D42] shadow-md text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all active:scale-95 ${canScrollDown ? 'pointer-events-auto' : 'pointer-events-none'}`}
             >
               <ChevronDown size={14} />
             </button>

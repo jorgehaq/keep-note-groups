@@ -1554,7 +1554,7 @@ function App() {
           
           {/* 1. BANNER DE RECORDATORIOS VENCIDOS (BARRA PLANA BORDERLESS) */}
           {!isZenMode && realShowOverdueMarquee && overdueRemindersList.length > 0 && (
-            <div className="w-full bg-[#FAFAFA] dark:bg-[#13131A] overflow-hidden shrink-0 border-b border-zinc-200 dark:border-zinc-800">
+            <div className="w-full bg-[#FAFAFA] dark:bg-[#112240] overflow-hidden shrink-0 border-b border-zinc-200 dark:border-zinc-800">
               <div className="py-[5px] flex items-center">
                 <div className="flex-1 overflow-hidden relative h-6 flex items-center">
                   <div className="marquee-content uppercase flex items-center">
@@ -1681,7 +1681,7 @@ function App() {
           <>
             {!isZenMode && (
               <div className="flex flex-col shrink-0">
-                <div className={`sticky top-0 z-30 bg-white/80 dark:bg-[#13131A]/90 backdrop-blur-md shrink-0 border-b border-zinc-200 dark:border-zinc-800 shadow-sm transition-all`}>
+                <div className={`sticky top-0 z-30 bg-white/80 dark:bg-[#112240]/90 backdrop-blur-md shrink-0 border-b border-zinc-200 dark:border-zinc-800 shadow-sm transition-all`}>
                   <div className={`py-[10px] flex flex-col items-center justify-center`}>
                     <div className="max-w-6xl mx-auto w-full flex flex-row items-center justify-center md:justify-between px-6 gap-4">
 
@@ -1722,7 +1722,7 @@ function App() {
                                   e.currentTarget.blur();
                                 }
                               }}
-                              className="w-full bg-transparent text-xl md:text-2xl font-bold text-zinc-800 dark:text-[#CCCCCC] outline-none px-2 cursor-text truncate placeholder-zinc-400"
+                              className="w-full bg-transparent text-xl md:text-2xl font-bold text-zinc-800 dark:text-indigo-50 outline-none px-2 cursor-text truncate placeholder-zinc-400/50"
                               placeholder="Nombre del grupo de notas ..."
                               title="Haz clic para editar"
                             />
@@ -1734,7 +1734,7 @@ function App() {
                           
                           {/* Buscador (Posicionado como en TikTok) */}
                           <div className="relative flex items-center group">
-                            <Search size={15} className={`absolute left-3 pointer-events-none transition-colors ${currentSearchQuery.trim() ? 'text-amber-600 dark:text-amber-500' : 'text-zinc-500'}`} />
+                            <Search size={15} className={`absolute left-3 pointer-events-none transition-colors ${currentSearchQuery.trim() ? 'text-amber-600 dark:text-amber-500' : 'text-zinc-500 dark:text-indigo-400/70'}`} />
                             <input 
                               type="text" 
                               placeholder="Buscar..." 
@@ -1743,7 +1743,7 @@ function App() {
                                 if (activeGroupId) setSearchQuery(activeGroupId, e.target.value);
                                 setSearchExemptNoteIds(new Set());
                               }}
-                              className={`h-9 pl-9 pr-8 rounded-xl border transition-all outline-none text-xs w-32 md:w-32 lg:w-40 ${currentSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50' : 'bg-white dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:border-indigo-500/50 dark:focus:border-indigo-500/50'}`}
+                              className={`h-9 pl-9 pr-8 rounded-xl border transition-all outline-none text-xs w-32 md:w-32 lg:w-40 ${currentSearchQuery.trim() ? 'border-amber-500 ring-2 ring-amber-500/50 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold placeholder-amber-700/50 dark:placeholder-amber-400/50' : 'bg-white dark:bg-[#1A2E4E]/50 border-zinc-200 dark:border-indigo-500/30 text-zinc-900 dark:text-indigo-50 placeholder-zinc-400 dark:placeholder-indigo-300/40 focus:border-indigo-500/50 dark:focus:border-indigo-400/50'}`}
                             />
                             {currentSearchQuery.trim() && (
                               <button onClick={() => { if (activeGroupId) setSearchQuery(activeGroupId, ''); setSearchExemptNoteIds(new Set()); }} className="absolute right-2 p-1 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-full transition-colors" title="Limpiar búsqueda">
@@ -1758,12 +1758,12 @@ function App() {
                           <button
                             onClick={() => overdueRemindersCount > 0 && setShowOverdueMarquee(!showOverdueMarquee)}
                             disabled={overdueRemindersCount === 0}
-                            className={`flex h-9 px-3 rounded-xl transition-all active:scale-95 shrink-0 items-center justify-center border ${
+                            className={`flex h-[36px] px-3 rounded-xl transition-all active:scale-95 shrink-0 items-center justify-center border ${
                               showOverdueMarquee 
-                                ? 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/40 shadow-sm shadow-red-600/10' 
+                                ? 'bg-red-600 text-white border-red-500 shadow-md' 
                                 : overdueRemindersCount > 0
-                                  ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
-                                  : 'bg-zinc-100 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-700 text-zinc-400 opacity-60 cursor-not-allowed'
+                                  ? 'bg-zinc-100 dark:bg-[#1A2E4E]/40 text-zinc-500 dark:text-red-400 border-zinc-200 dark:border-red-500/30 hover:border-red-500/50 hover:text-red-500'
+                                  : 'bg-zinc-100 dark:bg-[#1A2E4E]/30 border-zinc-200 dark:border-indigo-500/10 text-zinc-400 dark:text-indigo-300/40 opacity-40 cursor-not-allowed'
                             }`}
                             title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                           >
@@ -1778,11 +1778,11 @@ function App() {
                                {activeGroup.notes.filter(n => n.status === 'history').length > 0 && (
                                  <div className="relative" ref={archiveMenuRef}>
                                    <button 
-                                      onClick={() => setIsArchiveMenuOpen(!isArchiveMenuOpen)}
+                                      onMouseDown={(e) => { e.stopPropagation(); setIsArchiveMenuOpen(!isArchiveMenuOpen); }}
                                       className={`flex items-center px-3 h-[36px] rounded-xl text-[13px] font-medium border transition-all active:scale-95 shrink-0 ${
                                         isArchiveMenuOpen 
                                           ? 'bg-amber-600 text-white border-amber-500 shadow-md' 
-                                          : 'bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-amber-500/50 hover:text-amber-500'
+                                          : 'bg-zinc-100 dark:bg-[#1A2E4E]/40 text-zinc-500 dark:text-indigo-300 border-zinc-200 dark:border-indigo-500/30 hover:border-amber-500/50 hover:text-amber-500 dark:hover:text-amber-400'
                                       }`}
                                       title="Notas Archivadas"
                                     >
@@ -1791,7 +1791,7 @@ function App() {
                                     </button>
                                     
                                     {isArchiveMenuOpen && (
-                                      <div className="absolute right-0 top-full mt-2 z-[100] w-[350px] max-w-[calc(100vw-80px)] bg-white dark:bg-[#1A1A24] rounded-2xl shadow-2xl border border-zinc-200 dark:border-[#2D2D42] p-3 flex flex-col gap-1.5 animate-fadeIn overflow-hidden">
+                                      <div className="absolute right-0 top-full mt-2 z-[100] w-[350px] max-w-[calc(100vw-80px)] bg-white dark:bg-[#0D1F39] rounded-2xl shadow-2xl border border-zinc-200 dark:border-[#2D2D42] p-3 flex flex-col gap-1.5 animate-fadeIn overflow-hidden">
                                         <div className="flex items-center gap-2 px-1 mb-1">
                                           <Archive size={14} className="text-amber-500" />
                                           <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">Notas Archivadas</span>
@@ -1842,12 +1842,12 @@ function App() {
 
                            {/* Botón Principal (Nueva Nota) */}
                            <div className="relative">
-                             <button 
-                                 onClick={(e) => { e.stopPropagation(); setIsGroupCreatorMenuOpen(!isGroupCreatorMenuOpen); }} 
+                            <button 
+                                 onMouseDown={(e) => { e.stopPropagation(); setIsGroupCreatorMenuOpen(!isGroupCreatorMenuOpen); }} 
                                  className={`flex items-center justify-center px-3 h-[36px] rounded-xl text-[13px] font-medium border transition-all active:scale-95 shrink-0 ${
                                    isGroupCreatorMenuOpen 
                                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-md' 
-                                     : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/40 hover:bg-indigo-100 dark:hover:bg-indigo-500/20'
+                                     : 'bg-indigo-50 dark:bg-[#1A2E4E]/50 text-indigo-700 dark:text-indigo-300 border border-indigo-500/40 dark:border-indigo-400/30 hover:bg-indigo-100 dark:hover:bg-indigo-500/20'
                                  }`}
                                  title="Crear o Navegar por Notas del Grupo"
                              >
@@ -1861,7 +1861,7 @@ function App() {
                              {isGroupCreatorMenuOpen && (
                                <div
                                 ref={groupCreatorMenuRef}
-                                className="absolute right-0 top-full mt-2 z-[100] w-[420px] max-w-[calc(100vw-80px)] bg-white dark:bg-[#1A1A24] rounded-2xl shadow-2xl border border-zinc-200 dark:border-[#2D2D42] p-3 flex flex-col gap-1.5 animate-fadeIn overflow-hidden"
+                                className="absolute right-0 top-full mt-2 z-[100] w-[420px] max-w-[calc(100vw-80px)] max-h-[80vh] bg-white dark:bg-[#0D1F39] rounded-2xl shadow-2xl border border-zinc-200 dark:border-indigo-500/30 p-3 flex flex-col gap-1.5 animate-fadeIn overflow-hidden"
                                >
                                  <div className="flex items-center justify-between px-1 mb-1">
                                    <div className="flex items-center gap-2">
@@ -1916,7 +1916,7 @@ function App() {
                                    </div>
                                  </div>
 
-                                 <div className="flex flex-col gap-1 overflow-y-auto max-h-[400px] pr-1 custom-scrollbar">
+                                 <div className="flex flex-col gap-1 overflow-y-auto flex-1 pr-1 custom-scrollbar min-h-0">
                                    {/* Crear al inicio */}
                                    <div className="flex items-center justify-end px-1 py-0.5">
                                       <button 
@@ -1980,9 +1980,9 @@ function App() {
                            </div>
 
                             {/* Controles de Grupo (Tres puntos) */}
-                            <div className="flex items-center gap-1.5 shrink-0 bg-white dark:bg-[#1A1A24] border border-zinc-200 dark:border-[#2D2D42] rounded-xl p-1 shadow-sm relative ml-1.5 sm:ml-0" ref={groupMenuRef}>
-                                 <button 
-                                     onClick={() => setIsGroupMenuOpen(!isGroupMenuOpen)} 
+                            <div className="flex items-center gap-1.5 shrink-0 bg-white dark:bg-[#0D1F39] border border-zinc-200 dark:border-indigo-400/30 rounded-xl p-1 shadow-sm relative ml-1.5 sm:ml-0" ref={groupMenuRef}>
+                                 <button
+                                     onMouseDown={(e) => { e.stopPropagation(); setIsGroupMenuOpen(!isGroupMenuOpen); }}
                                      className="p-1.5 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                                      title="Opciones de Grupo"
                                  >
@@ -1990,7 +1990,7 @@ function App() {
                                  </button>
 
                                  {isGroupMenuOpen && (
-                                   <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-[#1A1A24] shadow-xl rounded-xl border border-zinc-200 dark:border-zinc-700 py-1 flex flex-col z-50 animate-fadeIn font-bold">
+                                   <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-[#0D1F39] shadow-xl rounded-xl border border-zinc-200 dark:border-zinc-700 py-1 flex flex-col z-50 animate-fadeIn font-bold">
                                      <button 
                                          onClick={() => { downloadGroupAsMarkdown(); setIsGroupMenuOpen(false); }} 
                                          className="flex items-center gap-2.5 px-4 py-2 text-sm text-left text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors w-full"
@@ -2026,7 +2026,7 @@ function App() {
                                   ? 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/40 shadow-sm shadow-red-600/10' 
                                   : overdueRemindersCount > 0
                                     ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40'
-                                    : 'bg-white dark:bg-[#1A1A24] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
+                                    : 'bg-white dark:bg-[#0D1F39] border-zinc-200 dark:border-[#2D2D42] text-zinc-400 opacity-60 cursor-not-allowed'
                               }`}
                             title={overdueRemindersCount === 0 ? "No hay recordatorios vencidos" : showOverdueMarquee ? "Ocultar Recordatorios" : "Mostrar Recordatorios"}
                           >
