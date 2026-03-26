@@ -2,6 +2,7 @@ export interface Note {
   id: string;
   title: string;
   content: string;
+  subtitle?: string;
   isOpen?: boolean; // UI state (kept for compatibility)
   is_open?: boolean; // DB state
   // Schema has: id, user_id, group_id, title, content, position, created_at

@@ -1167,6 +1167,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
             }
         }
     }));
+    const [isMenuCollapsed, setIsMenuCollapsed] = useState(true);
     const [menuState, setMenuState] = useState<{top: number, left: number, from: number, to: number, text: string, isMobile?: boolean, isFromTable?: boolean} | null>(null);
     const [tooltipState, setTooltipState] = useState<{text: React.ReactNode, top: number, left: number} | null>(null);
     const [isTranslating, setIsTranslating] = useState(false);
@@ -1287,6 +1288,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         setShowTagOptions(false);
         setShowTrOptions(false);
         window.getSelection()?.removeAllRanges();
+        setIsMenuCollapsed(true);
     };
 
     const closeMenusOnly = () => {
@@ -1296,6 +1298,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         setShowHlOptions(false);
         setShowTagOptions(false);
         setShowTrOptions(false);
+        setIsMenuCollapsed(true);
         setWikiResult(null);
         setWikiTooltipVisible(false);
         setIsWikiLoading(false);
@@ -1532,6 +1535,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                             text: update.state.doc.sliceString(main.from, main.to),
                             isMobile 
                         });
+                        setIsMenuCollapsed(true);
                     };
 
                     // 🚀 FIX: Delay en móvil para no estorbar los tiradores de selección
@@ -1625,7 +1629,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
         }
     })), [noteId]);
 
-    const doFormat = (type: 'highlight' | 'link' | 'strikethrough' | 'heading' | 'bold' | MarkerType, color?: HlColorKey) => {
+    const doFormat = (type: 'highlight' | 'link' | 'strikethrough' | 'heading' | 'bold' | 'italic' | MarkerType, color?: HlColorKey) => {
         if (!menuState || !editorRef.current?.view) return;
 
         const targetColor = color || hlColor;
@@ -1672,6 +1676,7 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
             if (type === 'highlight') return `[[hl:${ts}|${content}|${targetColor}]]`;
             if (type === 'strikethrough') return `~~${content}~~`;
             if (type === 'bold') return `**${content}**`;
+            if (type === 'italic') return `*${content}*`;
             return `[[${type}:${ts}|${content}]]`;
         };
 
@@ -2530,11 +2535,11 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                 <div
                     className="floating-menu-container fixed z-[9990] flex flex-col items-center gap-1.5 animate-fadeIn origin-bottom pointer-events-auto"
                     style={{ 
-                        top: menuState.top - 6, // 🚀 Un pequeño offset extra para no chocar
+                        top: menuState.top - 6,
                         left: clampedLeft, 
                         transform: 'translate(-50%, -100%)' 
                     }}
-                    onClick={(e) => e.stopPropagation()} // Bloquear clics al editor
+                    onClick={(e) => e.stopPropagation()}
                     onMouseDown={(e) => {
                         const target = e.target as HTMLElement;
                         if (target.tagName !== 'INPUT' && !target.closest('.wiki-selectable')) {
@@ -2550,414 +2555,264 @@ export const SmartNotesEditorComponent = forwardRef<SmartNotesEditorRef, SmartNo
                         e.stopPropagation();
                     }}
                 >
-                    {/* Input de Link — aparece cuando se solicita */}
-                    {showLinkInput && (
-                        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-1.5 flex items-center gap-1.5 animate-fadeIn">
-                            <input
-                                ref={linkInputRef}
-                                type="text"
-                                value={linkUrl}
-                                onChange={(e) => setLinkUrl(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') confirmLink();
-                                    if (e.key === 'Escape') setShowLinkInput(false);
-                                }}
-                                onMouseDown={(e) => e.stopPropagation()}
-                                onPointerDown={(e) => e.stopPropagation()}
-                                onClick={(e) => e.stopPropagation()}
-                                placeholder="Pegar URL..."
-                                className="bg-zinc-100 dark:bg-zinc-800 border-none rounded-lg px-2.5 py-1.5 text-xs w-48 focus:ring-1 focus:ring-blue-500 outline-none dark:text-white"
-                            />
-                            <button 
-                                onClick={confirmLink}
-                                className="p-1.5 hover:bg-green-500/10 text-green-600 rounded-lg transition-colors"
-                                title="Confirmar"
-                            >
-                                <Check size={16} />
-                            </button>
-                            <button 
-                                onClick={() => setShowLinkInput(false)}
-                                className="p-1.5 hover:bg-red-500/10 text-red-500 rounded-lg transition-colors"
-                                title="Cancelar"
-                            >
-                                <X size={16} />
-                            </button>
+                    {/* Level 1: Collapsed trigger bubble (Three dots) */}
+                    {isMenuCollapsed && !showLinkInput ? (
+                        <div 
+                            onMouseEnter={() => setIsMenuCollapsed(false)}
+                            className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-sm border border-zinc-200/50 dark:border-zinc-700/50 w-[42px] h-[36px] rounded-lg shadow-lg flex items-center justify-center cursor-pointer transition-all hover:scale-110 hover:bg-white dark:hover:bg-zinc-900 group/trigger"
+                        >
+                            <MoreHorizontal size={18} className="text-zinc-500/60 group-hover/trigger:text-zinc-500 transition-colors" />
                         </div>
-                    )}
-
-                    {/* Menú Principal — aparece directamente al seleccionar */}
-                    {!showLinkInput ? (
-                        <div className="relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-1 flex items-center gap-0.5 animate-fadeIn pointer-events-auto">
-                            {isTranslating ? (
-                                <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-blue-500">
-                                    <Loader2 size={13} className="animate-spin" /> Traduciendo...
+                    ) : (
+                        <>
+                            {/* Level 2: Expanded Menu or Link Input */}
+                            {showLinkInput ? (
+                                <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-1.5 flex items-center gap-1.5 animate-fadeIn">
+                                    <input
+                                        ref={linkInputRef}
+                                        type="text"
+                                        value={linkUrl}
+                                        onChange={(e) => setLinkUrl(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') confirmLink();
+                                            if (e.key === 'Escape') setShowLinkInput(false);
+                                        }}
+                                        onMouseDown={(e) => e.stopPropagation()}
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        onClick={(e) => e.stopPropagation()}
+                                        placeholder="Pegar URL..."
+                                        className="bg-zinc-100 dark:bg-zinc-800 border-none rounded-lg px-2.5 py-1.5 text-xs w-48 focus:ring-1 focus:ring-blue-500 outline-none dark:text-white"
+                                    />
+                                    <button 
+                                        onClick={confirmLink}
+                                        className="p-1.5 hover:bg-green-500/10 text-green-600 rounded-lg transition-colors"
+                                        title="Confirmar"
+                                    >
+                                        <Check size={16} />
+                                    </button>
+                                    <button 
+                                        onClick={() => setShowLinkInput(false)}
+                                        className="p-1.5 hover:bg-red-500/10 text-red-500 rounded-lg transition-colors"
+                                        title="Cancelar"
+                                    >
+                                        <X size={16} />
+                                    </button>
                                 </div>
                             ) : (
-                                <>
-
-
-                                    {/* RESALTADOR DINÁMICO */}
-                                    {/* 🔍 WIKIPEDIA — primero en el menú, sin submenú */}
-                                    <div
-                                        ref={wikiButtonRef}
-                                        className="relative flex items-center"
-                                        onMouseEnter={() => {
-                                            if (wikiCloseTimerRef.current) clearTimeout(wikiCloseTimerRef.current);
-                                            setWikiTooltipVisible(true);
-                                        }}
-                                        onMouseLeave={() => {
-                                            if (isInteractingWithWikiRef.current) return;
-                                            wikiCloseTimerRef.current = setTimeout(() => {
-                                                const sel = window.getSelection();
-                                                const isSelectingInside = sel && sel.toString() && sel.anchorNode?.parentElement?.closest('.wiki-selectable');
-                                                if (isSelectingInside && !sel.isCollapsed) return;
-                                                setWikiTooltipVisible(false);
-                                            }, 200);
-                                        }}
-                                    >
-                                        <button
-                                            onClick={() => {
-                                                const termToSearch = cleanSearchTerm(menuState?.text || '');
-                                                if (termToSearch) fetchDefinition(termToSearch);
-                                            }}
-                                            className="h-[32px] min-w-[40px] px-2 flex items-center justify-center rounded-md transition-colors bg-amber-500/10 hover:bg-amber-500/20 text-amber-500"
-                                            title="Buscar en Wikipedia"
-                                        >
-                                            {isWikiLoading
-                                                ? <Loader2 size={13} className="animate-spin" />
-                                                : <Search size={16} />
-                                            }
-                                        </button>
-
-                                        {/* Tooltip Wikipedia — Renderizado vla Portal para aislamiento total */}
-                                        {wikiTooltipVisible && wikiResult && createPortal(
+                                <div className="relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl p-1 flex items-center gap-0.5 animate-fadeIn pointer-events-auto">
+                                    {isTranslating ? (
+                                        <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-blue-500">
+                                            <Loader2 size={13} className="animate-spin" /> Traduciendo...
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {/* Wikipedia Search */}
                                             <div
-                                                ref={wikiMenuRef}
-                                                className="fixed bg-white dark:bg-zinc-900 border border-amber-500/30 rounded-xl shadow-2xl p-3 animate-fadeIn z-[10000] pointer-events-auto select-text wiki-selectable"
-                                                style={{ 
-                                                    userSelect: 'text',
-                                                    WebkitUserSelect: 'text',
-                                                    // Calculamos posición basada en el botón de forma robusta
-                                                    top: (wikiButtonRef.current?.getBoundingClientRect().top || 0) - 12,
-                                                    left: (wikiButtonRef.current?.getBoundingClientRect().left || 0) + ((wikiButtonRef.current?.getBoundingClientRect().width || 0) / 2),
-                                                    transform: 'translate(-50%, -100%)',
-                                                    width: noteFontSize === 'large' ? '24rem' : '18rem'
-                                                }}
-                                                tabIndex={-1}
+                                                ref={wikiButtonRef}
+                                                className="relative flex items-center"
                                                 onMouseEnter={() => {
                                                     if (wikiCloseTimerRef.current) clearTimeout(wikiCloseTimerRef.current);
                                                     setWikiTooltipVisible(true);
                                                 }}
                                                 onMouseLeave={() => {
+                                                    if (isInteractingWithWikiRef.current) return;
                                                     wikiCloseTimerRef.current = setTimeout(() => {
                                                         const sel = window.getSelection();
-                                                        if (sel && sel.toString() && !sel.isCollapsed) return;
+                                                        if (sel && sel.toString() && sel.anchorNode?.parentElement?.closest('.wiki-selectable') && !sel.isCollapsed) return;
                                                         setWikiTooltipVisible(false);
                                                     }, 200);
                                                 }}
-                                                onMouseDown={(e) => {
-                                                    isInteractingWithWikiRef.current = true;
-                                                    e.currentTarget.focus();
-                                                    e.stopPropagation();
-                                                }}
-                                                onPointerDown={(e) => {
-                                                    isInteractingWithWikiRef.current = true;
-                                                    e.stopPropagation();
-                                                }}
-                                                onMouseUp={(e) => e.stopPropagation()}
-                                                onClick={(e) => e.stopPropagation()}
-                                                onContextMenu={(e) => e.stopPropagation()}
                                             >
-                                                {/* Puente invisible */}
-                                                <div className="absolute top-full left-0 right-0 h-4 wiki-selectable" 
-                                                     onMouseDown={(e) => e.stopPropagation()} 
-                                                />
-
-                                                {/* Botón de cierre manual */}
-                                                <button 
-                                                    onClick={() => setWikiTooltipVisible(false)}
-                                                    className="absolute top-2 right-2 p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-600 transition-colors"
+                                                <button
+                                                    onClick={() => {
+                                                        const termToSearch = cleanSearchTerm(menuState?.text || '');
+                                                        if (termToSearch) fetchDefinition(termToSearch);
+                                                    }}
+                                                    className="h-[32px] min-w-[40px] px-2 flex items-center justify-center rounded-md transition-colors bg-amber-500/10 hover:bg-amber-500/20 text-amber-500"
                                                 >
-                                                    <X size={12} />
+                                                    {isWikiLoading ? <Loader2 size={13} className="animate-spin" /> : <Search size={16} />}
                                                 </button>
 
-                                                <div className="flex items-start gap-2 pr-4">
-                                                    <Search size={12} className="text-amber-500 mt-1 shrink-0" />
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className={`${tooltipTitleSize} font-black text-amber-500 mb-1 truncate select-text`}>{wikiResult.title}</p>
-                                                        {wikiResult.description && (
-                                                            <p className={`${tooltipMetaSize} text-zinc-400 mb-1.5 italic select-text`}>{wikiResult.description}</p>
-                                                        )}
-                                                        <p className={`${tooltipTextSize} text-zinc-700 dark:text-zinc-300 leading-relaxed line-clamp-[10] select-text cursor-text`}>
-                                                            {wikiResult.extract}
-                                                        </p>
-                                                        
-                                                        {/* Badge de fuente */}
-                                                        <div className="flex items-center justify-between mt-2 select-text">
-                                                            <span className={`${tooltipSmallSize} font-black uppercase tracking-wider text-zinc-400 select-text`}>
-                                                                {wikiResult.source === 'npm' && '📦 npm Registry'}
-                                                                {wikiResult.source === 'pypi' && '🐍 PyPI'}
-                                                                {wikiResult.source === 'wikidata' && '🔷 Wikidata'}
-                                                                {wikiResult.source === 'google_kg' && '🔍 Google'}
-                                                                {wikiResult.source === 'dictionary' && '📝 Dictionary'}
-                                                                {wikiResult.source === 'ddg' && '⚡ DuckDuckGo'}
-                                                                {wikiResult.source === 'wiki_es' && '📖 Wikipedia ES'}
-                                                                {wikiResult.source === 'wiki_en' && '📖 Wikipedia EN'}
-                                                                {wikiResult.source === 'none' && '❓ Sin definición'}
-                                                            </span>
-                                                            
-                                                            {wikiResult.url && wikiResult.url !== '#' && (
-                                                                <a
-                                                                    href={wikiResult.url}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    onMouseDown={(e) => e.stopPropagation()}
-                                                                    className={`${tooltipMetaSize} text-amber-500 hover:text-amber-400 font-bold select-text`}
-                                                                >
-                                                                    Ver más →
-                                                                </a>
-                                                            )}
+                                                {wikiTooltipVisible && wikiResult && createPortal(
+                                                    <div
+                                                        ref={wikiMenuRef}
+                                                        className="fixed bg-white dark:bg-zinc-900 border border-amber-500/30 rounded-xl shadow-2xl p-3 animate-fadeIn z-[10000] pointer-events-auto select-text wiki-selectable"
+                                                        style={{ 
+                                                            top: (wikiButtonRef.current?.getBoundingClientRect().top || 0) - 12,
+                                                            left: (wikiButtonRef.current?.getBoundingClientRect().left || 0) + ((wikiButtonRef.current?.getBoundingClientRect().width || 0) / 2),
+                                                            transform: 'translate(-50%, -100%)',
+                                                            width: noteFontSize === 'large' ? '24rem' : '18rem'
+                                                        }}
+                                                        onMouseEnter={() => { if (wikiCloseTimerRef.current) clearTimeout(wikiCloseTimerRef.current); setWikiTooltipVisible(true); }}
+                                                        onMouseLeave={() => {
+                                                            wikiCloseTimerRef.current = setTimeout(() => {
+                                                                const sel = window.getSelection();
+                                                                if (sel && sel.toString() && !sel.isCollapsed) return;
+                                                                setWikiTooltipVisible(false);
+                                                            }, 200);
+                                                        }}
+                                                        onMouseDown={(e) => { isInteractingWithWikiRef.current = true; e.currentTarget.focus(); e.stopPropagation(); }}
+                                                        onPointerDown={(e) => { isInteractingWithWikiRef.current = true; e.stopPropagation(); }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <button onClick={() => setWikiTooltipVisible(false)} className="absolute top-2 right-2 p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400"><X size={12} /></button>
+                                                        <div className="flex items-start gap-2 pr-4">
+                                                            <Search size={12} className="text-amber-500 mt-1 shrink-0" />
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className={`${tooltipTitleSize} font-black text-amber-500 mb-1 truncate`}>{wikiResult.title}</p>
+                                                                {wikiResult.description && <p className={`${tooltipMetaSize} text-zinc-400 mb-1.5 italic`}>{wikiResult.description}</p>}
+                                                                <p className={`${tooltipTextSize} text-zinc-700 dark:text-zinc-300 leading-relaxed line-clamp-[10]`}>{wikiResult.extract}</p>
+                                                                <div className="flex items-center justify-between mt-2">
+                                                                    <span className={`${tooltipSmallSize} font-black uppercase tracking-wider text-zinc-400`}>{wikiResult.source}</span>
+                                                                    {wikiResult.url && <a href={wikiResult.url} target="_blank" rel="noopener noreferrer" className="text-amber-500 hover:text-amber-400 font-bold">Ver más →</a>}
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </div>
-                                            </div>,
-                                            document.body
-                                        )}
-
-                                        {/* Tooltip "cargando" */}
-                                        {wikiTooltipVisible && isWikiLoading && (
-                                            <div className="absolute bottom-full left-1/2 mb-2 bg-white dark:bg-zinc-900 border border-amber-500/30 rounded-xl shadow-xl px-3 py-2 animate-fadeIn z-[100]"
-                                                style={{ transform: 'translateX(-50%)' }}
-                                            >
-                                                {/* Puente invisible */}
-                                                <div className="absolute top-full left-0 right-0 h-4" />
-                                                
-                                                <span className="text-[11px] text-amber-500 flex items-center gap-1.5">
-                                                    <Loader2 size={10} className="animate-spin" /> Buscando...
-                                                </span>
+                                                    </div>,
+                                                    document.body
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
 
-                                    {/* Separador visual */}
-                                    <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5" />
+                                            {/* BOTÓN "MÁS" DINÁMICO */}
+                                            <div className="relative group/more flex items-center">
+                                                <button 
+                                                    onClick={() => {
+                                                        if (menuState?.isMobile) {
+                                                            setShowMoreOptions(!showMoreOptions);
+                                                            setShowHlOptions(false);
+                                                            setShowTagOptions(false);
+                                                        } else {
+                                                            if (lastMoreAction === 'es' || lastMoreAction === 'en') {
+                                                                doActionAndSave(lastMoreAction, () => doTranslate(lastMoreAction as 'es'|'en'));
+                                                            } else if (lastMoreAction === 'link') {
+                                                                setShowLinkInput(true);
+                                                                setLinkUrl('');
+                                                            } else {
+                                                                doActionAndSave(lastMoreAction, () => doFormat(lastMoreAction as any));
+                                                            }
+                                                        }
+                                                    }}
+                                                    onMouseEnter={() => !menuState?.isMobile && setShowMoreOptions(true)}
+                                                    onMouseLeave={() => !menuState?.isMobile && setShowMoreOptions(false)}
+                                                    className={`h-[32px] min-w-[40px] px-2 flex items-center justify-center rounded-md transition-colors bg-blue-500/10 hover:bg-blue-500/20 text-blue-500`}
+                                                >
+                                                    {lastMoreAction === 'es' || lastMoreAction === 'en' ? (
+                                                        <span className="text-[10px] font-black uppercase text-blue-500">{lastMoreAction}</span>
+                                                    ) : lastMoreAction === 'link' ? (
+                                                        <LinkIcon size={14} />
+                                                    ) : lastMoreAction === 'bold' ? (
+                                                        <Bold size={14} />
+                                                    ) : lastMoreAction === 'strikethrough' ? (
+                                                        <Strikethrough size={14} />
+                                                    ) : lastMoreAction === 'heading' ? (
+                                                        <Heading size={14} />
+                                                    ) : (
+                                                        <MoreHorizontal size={14} />
+                                                    )}
+                                                </button>
+                                            </div>
 
-                                    {/* BOTÓN "MÁS" DINÁMICO */}
-                                    <div className="relative group/more flex items-center">
-                                        <button 
-                                            onClick={() => {
-                                                if (menuState?.isMobile) {
-                                                    setShowMoreOptions(!showMoreOptions);
-                                                    setShowHlOptions(false);
-                                                    setShowTagOptions(false);
-                                                } else {
-                                                    // Ejecutar la última acción del menú "Más"
-                                                    if (lastMoreAction === 'es' || lastMoreAction === 'en') {
-                                                        doActionAndSave(lastMoreAction, () => doTranslate(lastMoreAction as 'es'|'en'));
-                                                    } else if (lastMoreAction === 'link') {
-                                                        setShowLinkInput(true);
-                                                        setLinkUrl('');
-                                                    } else {
-                                                        doActionAndSave(lastMoreAction, () => doFormat(lastMoreAction as any));
-                                                    }
-                                                }
-                                            }}
-                                            onMouseEnter={() => !menuState?.isMobile && setShowMoreOptions(true)}
-                                            onMouseLeave={() => !menuState?.isMobile && setShowMoreOptions(false)}
-                                            className={`h-[32px] min-w-[40px] px-2 flex items-center justify-center rounded-md transition-colors bg-blue-500/10 hover:bg-blue-500/20 text-blue-500`}
-                                            title="Más opciones"
-                                        >
-                                            {lastMoreAction === 'es' || lastMoreAction === 'en' ? (
-                                                <span className="text-[10px] font-black uppercase text-blue-500">{lastMoreAction}</span>
-                                            ) : lastMoreAction === 'link' ? (
-                                                <LinkIcon size={14} />
-                                            ) : lastMoreAction === 'bold' ? (
-                                                <Bold size={14} />
-                                            ) : lastMoreAction === 'strikethrough' ? (
-                                                <Strikethrough size={14} />
-                                            ) : lastMoreAction === 'heading' ? (
-                                                <Heading size={14} />
-                                            ) : (
-                                                <MoreHorizontal size={14} />
-                                            )}
-                                        </button>
-                                    </div>
+                                            {/* ETIQUETAS DINÁMICAS */}
+                                            <div onMouseEnter={() => !menuState?.isMobile && setShowTagOptions(true)} onMouseLeave={() => !menuState?.isMobile && setShowTagOptions(false)} className="relative flex items-center">
+                                                <button onClick={() => doActionAndSave(lastTag, () => doFormat(lastTag))} className="h-[32px] min-w-[40px] px-2 flex items-center justify-center rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-blue-500">
+                                                    <span>{MARKER_TYPES[lastTag].emoji}</span>
+                                                </button>
+                                            </div>
 
-                                    {/* ETIQUETAS DINÁMICAS */}
-                                    <div 
-                                      className="relative group/tags flex items-center"
-                                      onMouseEnter={() => !menuState?.isMobile && setShowTagOptions(true)}
-                                      onMouseLeave={() => !menuState?.isMobile && setShowTagOptions(false)}
-                                    >
-                                        <button 
-                                            onClick={() => {
-                                                if (menuState?.isMobile) {
-                                                    setShowTagOptions(!showTagOptions);
-                                                    setShowHlOptions(false);
-                                                    setShowMoreOptions(false);
-                                                } else {
-                                                    // Acción directa: usar lastTag
-                                                    doActionAndSave(lastTag, () => doFormat(lastTag));
-                                                }
-                                            }}
-                                            className={`h-[32px] min-w-[40px] px-2 flex items-center justify-center rounded-md transition-colors bg-blue-500/10 hover:bg-blue-500/20 text-blue-500`}
-                                            title={`Etiqueta: ${MARKER_TYPES[lastTag].label}`}
-                                        >
-                                            <span className="text-base">{MARKER_TYPES[lastTag].emoji}</span>
-                                        </button>
-                                    </div>
-
-                                    {/* RESALTADOR */}
-                                    <div 
-                                      className="relative group/hl flex items-center"
-                                      onMouseEnter={() => !menuState?.isMobile && setShowHlOptions(true)}
-                                      onMouseLeave={() => !menuState?.isMobile && setShowHlOptions(false)}
-                                    >
-                                        <button 
-                                            onClick={() => {
-                                                if (menuState?.isMobile) {
-                                                    setShowHlOptions(!showHlOptions);
-                                                    setShowTagOptions(false);
-                                                    setShowMoreOptions(false);
-                                                } else {
-                                                    // Acción directa: el color actual ya está en hlColor
-                                                    doActionAndSave('highlight', () => doFormat('highlight', hlColor));
-                                                }
-                                            }}
-                                            title={`Resaltar (${HL_COLORS[hlColor].label})`}
-                                            className={`h-[32px] min-w-[40px] px-2 flex items-center justify-center rounded-md transition-colors bg-blue-500/10 hover:bg-blue-500/20`}
-                                        >
-                                            <Highlighter size={16} style={{ color: HL_COLORS[hlColor].hex }} />
-                                        </button>
-                                    </div>
-                                </>
+                                            {/* RESALTADOR */}
+                                            <div onMouseEnter={() => !menuState?.isMobile && setShowHlOptions(true)} onMouseLeave={() => !menuState?.isMobile && setShowHlOptions(false)} className="relative flex items-center">
+                                                <button onClick={() => doActionAndSave('highlight', () => doFormat('highlight', hlColor))} className="h-[32px] min-w-[40px] px-2 flex items-center justify-center rounded-md bg-blue-500/10 hover:bg-blue-500/20">
+                                                    <Highlighter size={16} style={{ color: HL_COLORS[hlColor].hex }} />
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                             )}
-                        </div>
-                    ) : null}
-                    {/* SUB-MENUS — centrados respecto a la barra principal */}
-                    {showHlOptions && (
-                        <div 
-                          ref={hlMenuRef}
-                          className="absolute bottom-full left-1/2 mb-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 flex gap-1 items-center animate-fadeIn z-[100]"
-                          style={{ transform: `translate(calc(-50% + ${hlShift}px), 0)` }}
-                          onMouseEnter={() => !menuState?.isMobile && setShowHlOptions(true)}
-                          onMouseLeave={() => !menuState?.isMobile && setShowHlOptions(false)}
-                        >
-                            <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
-                            {(Object.keys(HL_COLORS) as HlColorKey[]).map(cKey => (
-                                <button
-                                  key={cKey}
-                                  onClick={() => {
-                                    setHlColor(cKey);
-                                    doActionAndSave('highlight', () => doFormat('highlight', cKey));
-                                    setShowHlOptions(false);
-                                  }}
-                                  className={`h-[32px] min-w-[40px] px-2 rounded-md flex items-center justify-center transition-all bg-blue-500/10 hover:bg-blue-500/20`}
-                                  title={HL_COLORS[cKey].label}
+
+                            {/* SUB-MENUS */}
+                            {showHlOptions && (
+                                <div 
+                                    ref={hlMenuRef}
+                                    className="absolute bottom-full left-1/2 mb-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 flex gap-1 items-center animate-fadeIn z-[100]"
+                                    style={{ transform: `translate(calc(-50% + ${hlShift}px), 0)` }}
+                                    onMouseEnter={() => !menuState?.isMobile && setShowHlOptions(true)}
+                                    onMouseLeave={() => !menuState?.isMobile && setShowHlOptions(false)}
                                 >
-                                    <Highlighter size={16} color={HL_COLORS[cKey].hex} />
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                    {showTagOptions && (
-                        <div 
-                          ref={tagMenuRef}
-                          className="absolute bottom-full left-1/2 mb-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 z-[100] animate-fadeIn"
-                          style={{ transform: `translate(calc(-50% + ${tagShift}px), 0)` }}
-                          onMouseEnter={() => !menuState?.isMobile && setShowTagOptions(true)}
-                          onMouseLeave={() => !menuState?.isMobile && setShowTagOptions(false)}
-                        >
-                            <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
-                            <div className="flex items-center gap-1">
-                                {(Object.keys(MARKER_TYPES) as MarkerType[]).map(key => {
-                                    const cfg = MARKER_TYPES[key];
-                                    return (
-                                        <button key={key}
-                                            onClick={() => {
-                                                doActionAndSave(key, () => doFormat(key));
-                                                setShowTagOptions(false);
-                                            }}
-                                            title={cfg.label}
-                                            className="h-[32px] min-w-[40px] px-2 rounded-md flex items-center justify-center text-base bg-blue-500/10 hover:bg-blue-500/20 transition-colors"
-                                        >{cfg.emoji}</button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-                    {showMoreOptions && (
-                        <div 
-                            ref={moreMenuRef}
-                            className="absolute bottom-full left-1/2 mb-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1 flex flex-row items-center gap-0.5 z-[100] animate-fadeIn"
-                            style={{ transform: `translate(calc(-50% + ${moreShift}px), 0)` }}
-                            onMouseEnter={() => !menuState?.isMobile && setShowMoreOptions(true)}
-                            onMouseLeave={() => !menuState?.isMobile && setShowMoreOptions(false)}
-                        >
-                            <div className="absolute top-full left-0 w-full h-[12px] bg-transparent" />
-                            
-                            {/* REVELAR */}
-                            <button 
-                                onClick={(e) => {
-                                    const view = editorRef.current?.view;
-                                    if (view && menuState) {
-                                        const line = view.state.doc.lineAt(menuState.from);
-                                        view.dispatch({ effects: [setRevealedLine.of(line.number), ForceRedrawEffect.of(null)] });
-                                    }
-                                    closeMenusOnly();
-                                }}
-                                className="h-[32px] min-w-[40px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
-                                title="Revelar Markdown"
-                            >
-                                <Maximize2 size={16} />
-                            </button>
-                            
-                            <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
+                                    {(Object.keys(HL_COLORS) as HlColorKey[]).map(cKey => (
+                                        <button key={cKey} onClick={() => { setHlColor(cKey); doFormat('highlight', cKey); closeMenus(); }} className="h-[32px] min-w-[40px] px-2 rounded-md bg-blue-500/10 hover:bg-blue-500/20"><Highlighter size={16} color={HL_COLORS[cKey].hex} /></button>
+                                    ))}
+                                </div>
+                            )}
+                            {showTagOptions && (
+                                <div 
+                                    ref={tagMenuRef}
+                                    className="absolute bottom-full left-1/2 mb-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1.5 flex gap-1 items-center animate-fadeIn z-[100]"
+                                    style={{ transform: `translate(calc(-50% + ${tagShift}px), 0)` }}
+                                    onMouseEnter={() => !menuState?.isMobile && setShowTagOptions(true)}
+                                    onMouseLeave={() => !menuState?.isMobile && setShowTagOptions(false)}
+                                >
+                                    {(Object.keys(MARKER_TYPES) as MarkerType[]).map(key => (
+                                        <button key={key} onClick={() => { doFormat(key); closeMenus(); }} className="h-[32px] min-w-[40px] px-2 rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-base">{MARKER_TYPES[key].emoji}</button>
+                                    ))}
+                                </div>
+                            )}
+                            {showMoreOptions && (
+                                <div 
+                                    ref={moreMenuRef}
+                                    className="absolute bottom-full left-1/2 mb-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-1 flex flex-row items-center gap-0.5 z-[100] animate-fadeIn"
+                                    style={{ transform: `translate(calc(-50% + ${moreShift}px), 0)` }}
+                                    onMouseEnter={() => !menuState?.isMobile && setShowMoreOptions(true)}
+                                    onMouseLeave={() => !menuState?.isMobile && setShowMoreOptions(false)}
+                                >
+                                    {/* REVELAR */}
+                                    <button 
+                                        onClick={(e) => {
+                                            const view = editorRef.current?.view;
+                                            if (view && menuState) {
+                                                const line = view.state.doc.lineAt(menuState.from);
+                                                view.dispatch({ effects: [setRevealedLine.of(line.number), ForceRedrawEffect.of(null)] });
+                                            }
+                                            closeMenusOnly();
+                                        }}
+                                        className="h-[32px] min-w-[40px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
+                                        title="Revelar Markdown"
+                                    >
+                                        <Maximize2 size={16} />
+                                    </button>
+                                    
+                                    <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
 
-                            {/* NEGRITA */}
-                            <button onClick={() => { doActionAndSave('bold', () => doFormat('bold')); setShowMoreOptions(false); }}
-                                className="h-[32px] min-w-[40px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
-                                title="Negrita"
-                            >
-                                <Bold size={16} />
-                            </button>
+                                    {/* NEGRITA */}
+                                    <button onClick={() => { doFormat('bold'); closeMenus(); }} className="h-[32px] min-w-[40px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors" title="Negrita">
+                                        <Bold size={16} />
+                                    </button>
 
-                            {/* LINK */}
-                            <button onClick={() => { setShowLinkInput(true); setShowMoreOptions(false); }}
-                                className="h-[32px] min-w-[40px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
-                                title="Enlace"
-                            >
-                                <LinkIcon size={16} />
-                            </button>
+                                    {/* LINK */}
+                                    <button onClick={() => { setShowLinkInput(true); setShowMoreOptions(false); }} className="h-[32px] min-w-[40px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors" title="Enlace">
+                                        <LinkIcon size={16} />
+                                    </button>
 
-                            {/* TACHADO */}
-                            <button onClick={() => { doActionAndSave('strikethrough', () => doFormat('strikethrough')); setShowMoreOptions(false); }}
-                                className="h-[32px] min-w-[40px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
-                                title="Tachado"
-                            >
-                                <Strikethrough size={16} />
-                            </button>
+                                    {/* TACHADO */}
+                                    <button onClick={() => { doFormat('strikethrough'); closeMenus(); }} className="h-[32px] min-w-[40px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors" title="Tachado">
+                                        <Strikethrough size={16} />
+                                    </button>
 
-                            {/* TÍTULO */}
-                            <button onClick={() => { doActionAndSave('heading', () => doFormat('heading')); setShowMoreOptions(false); }}
-                                className="h-[32px] min-w-[40px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors"
-                                title="Título"
-                            >
-                                <Heading size={16} />
-                            </button>
+                                    {/* TÍTULO */}
+                                    <button onClick={() => { doFormat('heading'); closeMenus(); }} className="h-[32px] min-w-[40px] px-2 flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-colors" title="Título">
+                                        <Heading size={16} />
+                                    </button>
 
-                            <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
+                                    <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-0.5" />
 
-                            {/* TRADUCCIÓN (Compacta) */}
-                            <div className="flex items-center gap-0.5 px-0.5">
-                                <button onClick={() => { doActionAndSave('es', () => doTranslate('es')); setShowMoreOptions(false); }}
-                                    className="h-[32px] px-2 bg-blue-500/10 text-blue-500 rounded-md text-[12px] font-black hover:bg-blue-500/20 transition-colors"
-                                >ES</button>
-                                <button onClick={() => { doActionAndSave('en', () => doTranslate('en')); setShowMoreOptions(false); }}
-                                    className="h-[32px] px-2 bg-blue-500/10 text-blue-500 rounded-md text-[12px] font-black hover:bg-blue-500/20 transition-colors"
-                                >EN</button>
-                            </div>
-                        </div>
+                                    {/* TRADUCCIÓN */}
+                                    <div className="flex items-center gap-0.5 px-0.5">
+                                        <button onClick={() => { doTranslate('es'); closeMenus(); }} className="h-[32px] px-2 bg-blue-500/10 text-blue-500 rounded-md text-[12px] font-black hover:bg-blue-500/20 transition-colors">ES</button>
+                                        <button onClick={() => { doTranslate('en'); closeMenus(); }} className="h-[32px] px-2 bg-blue-500/10 text-blue-500 rounded-md text-[12px] font-black hover:bg-blue-500/20 transition-colors">EN</button>
+                                    </div>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             )}

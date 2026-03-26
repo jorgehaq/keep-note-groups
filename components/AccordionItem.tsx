@@ -57,6 +57,63 @@ const formatCleanDate = (isoString?: string) => {
   );
 };
 
+const formatDateString = (isoString?: string) => {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear();
+  let hours = d.getHours();
+  const minutes = d.getMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? ' PM' : ' AM';
+  hours = hours % 12 || 12;
+  return `${day}/${month}/${year}, ${hours.toString().padStart(2, '0')}:${minutes}${ampm}`;
+};
+
+const NoteHeaderBar: React.FC<{
+  type: 'original' | 'sub' | 'summary';
+  id: string;
+  subtitle?: string;
+  created_at?: string;
+  updated_at?: string;
+  onUpdate: (updates: any) => void;
+  children?: React.ReactNode;
+}> = ({ type, id, subtitle, created_at, updated_at, onUpdate, children }) => {
+  const [localSub, setLocalSub] = useState(subtitle || (type === 'original' ? 'INICIO' : ''));
+
+  useEffect(() => {
+    setLocalSub(subtitle || (type === 'original' ? 'INICIO' : ''));
+  }, [subtitle, type]);
+
+  const handleBlur = () => {
+    onUpdate({ subtitle: localSub });
+  };
+
+  const datesInfo = `Creación: ${formatDateString(created_at)}\nEdición: ${formatDateString(updated_at)}`;
+
+  return (
+    <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-[#1A1A24] shrink-0">
+      <div className="flex items-center gap-1.5 cursor-help opacity-40 hover:opacity-100 transition-opacity" title={datesInfo}>
+        <History size={11} className="text-zinc-500" />
+      </div>
+      <div className="flex-1 flex justify-center px-4">
+        <input 
+          type="text"
+          value={localSub}
+          onChange={e => setLocalSub(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+          placeholder="Subtítulo..."
+          className="bg-transparent text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400 text-center outline-none focus:text-indigo-500 dark:focus:text-indigo-400 transition-colors w-full"
+        />
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {children}
+      </div>
+    </div>
+  );
+};
+
 const highlightText = (text: string, highlight?: string): React.ReactNode => {
   if (!highlight || !highlight.trim()) return text;
   const escaped = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -106,13 +163,14 @@ const SummaryTabContent: React.FC<{
   onPromote?: (content: string, title: string) => void;
   updateScratchpad: (id: string, text: string) => void;
   updateContent: (id: string, text: string) => void;
+  updateSummaryMetadata: (id: string, updates: any) => void;
   showScratch: boolean;
   setShowScratch: (val: boolean | ((v: boolean) => boolean)) => void;
   onDelete: (id: string) => void;
   triggerScrollToActive: () => void;
   splitRatio: number;
   onDividerMouseDown: (e: React.MouseEvent) => void;
-}> = ({ summary, noteFont, noteFontSize, noteLineHeight, showLineNumbers, searchQuery, onDelete, onPromote, updateScratchpad, updateContent, showScratch, setShowScratch, triggerScrollToActive, splitRatio, onDividerMouseDown }) => {
+}> = ({ summary, noteFont, noteFontSize, noteLineHeight, showLineNumbers, searchQuery, onDelete, onPromote, updateScratchpad, updateContent, updateSummaryMetadata, showScratch, setShowScratch, triggerScrollToActive, splitRatio, onDividerMouseDown }) => {
   const scratchRef = useRef<SmartNotesEditorRef>(null);
   const [localScratch, setLocalScratch] = useState(summary.scratchpad || '');
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -150,17 +208,22 @@ const SummaryTabContent: React.FC<{
       onClickCapture={triggerScrollToActive}
       className={`flex-1 flex min-h-0 ${layoutCol ? 'flex-col' : 'flex-row'} gap-3`}
     >
-      <div className={`flex-1 flex flex-col min-h-0 bg-violet-50 dark:bg-[#131314] rounded-2xl border focus-within:border-violet-400 dark:focus-within:border-violet-500/60 transition-colors ${searchQuery?.trim() && (summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || summary.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase())) ? 'border-amber-500' : 'border-violet-300 dark:border-violet-500/30'} overflow-hidden`}>
-        <div className="flex items-center justify-between px-4 py-2.5 bg-violet-100/60 dark:bg-violet-500/5 border-b border-violet-200 dark:border-violet-500/10">
-          <div className="flex items-center gap-2 min-w-0">
-            <Sparkles size={12} className="text-violet-400 shrink-0" />
-            <span className="text-[11px] font-bold text-violet-600 dark:text-violet-300 truncate">
-              {summary.target_objective || 'Análisis AI'}
-            </span>
-            <span className="text-[10px] text-zinc-500 dark:text-zinc-600 shrink-0">
-              {new Date(summary.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-            </span>
-          </div>
+      <div className={`flex-1 flex flex-col min-h-0 bg-violet-50 dark:bg-[#131314] rounded-2xl border focus-within:border-violet-400 dark:focus-within:border-violet-500/60 transition-colors ${searchQuery?.trim() && (summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || summary.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase())) ? 'border-amber-500' : 'border-violet-300 dark:border-violet-500/30'} overflow-hidden`}
+        style={showScratch
+          ? (layoutCol
+            ? { height: `${splitRatio * 100}%`, flex: 'none' }
+            : { width: `${splitRatio * 100}%`, flex: 'none' })
+          : { flex: '1' }
+        }
+      >
+        <NoteHeaderBar
+          type="summary"
+          id={summary.id}
+          subtitle={summary.target_objective}
+          created_at={summary.created_at}
+          updated_at={summary.created_at}
+          onUpdate={(updates) => updateSummaryMetadata(summary.id, { target_objective: updates.subtitle })}
+        >
           <div className="flex items-center gap-2 shrink-0">
             {/* Botón Pizarrón (Móvil) */}
             <button
@@ -209,33 +272,24 @@ const SummaryTabContent: React.FC<{
               )}
             </div>
           </div>
-        </div>
-        <div className={`flex-1 flex flex-col min-h-0 bg-violet-50 dark:bg-[#131314] rounded-2xl border focus-within:border-violet-400 dark:focus-within:border-violet-500/60 transition-colors ${searchQuery?.trim() && (summary.content?.toLowerCase().includes(searchQuery.trim().toLowerCase()) || summary.target_objective?.toLowerCase().includes(searchQuery.trim().toLowerCase())) ? 'border-amber-500' : 'border-violet-200 dark:border-violet-500/20'} overflow-hidden`}
-          style={showScratch
-            ? (layoutCol
-              ? { height: `${splitRatio * 100}%`, flex: 'none' }
-              : { width: `${splitRatio * 100}%`, flex: 'none' })
-            : { flex: '1' }
-          }
+        </NoteHeaderBar>
+
+        <div
+          onClick={(e) => {
+            if ((e.target as HTMLElement).closest('.cm-panel, .cm-search, .cm-search-marker-container')) return;
+          }}
+          className="flex-1 px-8 py-6 overflow-y-auto cursor-text note-editor-scroll"
         >
-          <div
-            onClick={(e) => {
-              if ((e.target as HTMLElement).closest('.cm-panel, .cm-search, .cm-search-marker-container')) return;
-              // No ref for summary editor in this component, but it has focusable areas
-            }}
-            className="flex-1 px-8 py-6 overflow-y-auto cursor-text note-editor-scroll"
-          >
-            <SmartNotesEditor
-              noteId={`summary_${summary.id}`}
-              initialContent={summary.content || ''}
-              onChange={(text) => updateContent(summary.id, text)}
-              noteFont={noteFont}
-              noteFontSize={noteFontSize}
-              noteLineHeight={noteLineHeight}
-              showLineNumbers={showLineNumbers}
-              searchQuery={searchQuery}
-            />
-          </div>
+          <SmartNotesEditor
+            noteId={`summary_${summary.id}`}
+            initialContent={summary.content || ''}
+            onChange={(text) => updateContent(summary.id, text)}
+            noteFont={noteFont}
+            noteFontSize={noteFontSize}
+            noteLineHeight={noteLineHeight}
+            showLineNumbers={showLineNumbers}
+            searchQuery={searchQuery}
+          />
         </div>
       </div>
 
@@ -361,16 +415,17 @@ const SummaryTitle: React.FC<{
 const SubnoteTitle: React.FC<{
   child: Note;
   isActive: boolean;
-  onRename: (id: string, title: string) => void;
+  onRename: (id: string, subtitle: string) => void;
   searchQuery?: string;
   isEditing: boolean;
   setIsEditing: (editing: boolean) => void;
 }> = ({ child, isActive, onRename, searchQuery, isEditing, setIsEditing }) => {
-  const isJustCreated = !child.title && (Date.now() - new Date(child.created_at || 0).getTime() < 3000);
-  const [val, setVal] = useState(child.title || '');
+  const isJustCreated = !child.title && !child.subtitle && (Date.now() - new Date(child.created_at || 0).getTime() < 3000);
+  const displayTitle = child.subtitle || child.title || '';
+  const [val, setVal] = useState(displayTitle);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { setVal(child.title || ''); }, [child.title]);
+  useEffect(() => { setVal(displayTitle); }, [displayTitle]);
 
   useEffect(() => {
     if (isJustCreated) setIsEditing(true);
@@ -379,10 +434,10 @@ const SubnoteTitle: React.FC<{
   const save = () => {
     setIsEditing(false);
     const trimmed = val.trim();
-    if (trimmed !== (child.title || '')) {
+    if (trimmed !== (displayTitle)) {
       onRename(child.id, trimmed);
     } else {
-      setVal(child.title || '');
+      setVal(displayTitle);
     }
   };
 
@@ -404,13 +459,13 @@ const SubnoteTitle: React.FC<{
         onBlur={save}
         onKeyDown={e => {
           if (e.key === 'Enter') save();
-          if (e.key === 'Escape') { setIsEditing(false); setVal(child.title || ''); }
+          if (e.key === 'Escape') { setIsEditing(false); setVal(displayTitle); }
           e.stopPropagation();
         }}
         onClick={e => e.stopPropagation()}
         onMouseDown={e => e.stopPropagation()}
         className="bg-zinc-800 text-white border-emerald-500 border rounded px-1.5 py-0.5 outline-none text-[14px] max-w-[280px] shadow-inner text-left"
-        placeholder="Título..."
+        placeholder="Subtítulo..."
       />
     );
   }
@@ -419,13 +474,13 @@ const SubnoteTitle: React.FC<{
     <span
       className="truncate max-w-[200px] cursor-pointer text-[13px]"
       onDoubleClick={e => { e.stopPropagation(); if (isActive) setIsEditing(true); }}
-      title={isActive ? 'Doble clic para renombrar' : child.title || ''}
+      title={isActive ? 'Doble clic para renombrar' : displayTitle}
     >
       {searchQuery?.trim()
-        ? highlightText(child.title || 'Sin título', searchQuery)
-        : (child.title || 'Sin título').length > 23
-          ? (child.title || 'Sin título').slice(0, 23) + '...'
-          : (child.title || 'Sin título')}
+        ? highlightText(displayTitle || 'Sin título', searchQuery)
+        : (displayTitle || 'Sin título').length > 23
+          ? (displayTitle || 'Sin título').slice(0, 23) + '...'
+          : (displayTitle || 'Sin título')}
     </span>
   );
 };
@@ -453,6 +508,7 @@ const SubnoteTabContent: React.FC<{
 }> = ({
   note,
   showScratch,
+  onUpdate,
   splitRatio,
   onDividerMouseDown,
   splitContainerRef,
@@ -497,19 +553,14 @@ const SubnoteTabContent: React.FC<{
           }
         >
           {/* Editor Metadata Header */}
-          <div className="flex items-center justify-center gap-6 px-4 py-2 border-b border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-[#1A1A24] shrink-0">
-            <div className="flex items-center gap-1.5 opacity-60">
-              <Clock size={11} className="text-zinc-500" />
-              <span className="text-[9px] font-bold uppercase tracking-tighter text-zinc-500">Creación:</span>
-              {formatCleanDate(note.created_at)}
-            </div>
-            <div className="w-px h-3 bg-zinc-300 dark:bg-zinc-800" />
-            <div className="flex items-center gap-1.5 opacity-60">
-              <History size={11} className="text-zinc-500" />
-              <span className="text-[9px] font-bold uppercase tracking-tighter text-zinc-500">Edición:</span>
-              {formatCleanDate(note.updated_at)}
-            </div>
-          </div>
+          <NoteHeaderBar
+            type={activeTab === 'original' ? 'original' : 'sub'}
+            id={note.id}
+            subtitle={note.subtitle}
+            created_at={note.created_at}
+            updated_at={note.updated_at}
+            onUpdate={(updates) => onUpdate(note.id, updates)}
+          />
 
           {note.is_checklist ? (
             <div className={`${showLineNumbers ? 'pt-8 pr-6 pb-[5px] pl-[7px]' : 'px-8 py-6'} h-full overflow-y-auto note-editor-scroll`}>
@@ -990,8 +1041,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
     if (newId) setActiveTab(`sub_${newId}`);
   };
 
-  const handleSaveChildTitle = async (childId: string, title: string) => {
-    onUpdate(childId, { title });
+  const handleSaveChildSubtitle = async (childId: string, subtitle: string) => {
+    onUpdate(childId, { subtitle });
   };
 
   const handleUpdateContent = (newMarkdown: string) => {
@@ -1331,6 +1382,9 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                         <div className="absolute -top-1.5 -right-1.5 z-10"><KanbanSemaphore sourceType="note" sourceId={displayNoteId} sourceTitle="Nota Original" /></div>
                       )}
                       <FileText size={12} className={activeTab === 'original' ? 'text-indigo-500 dark:text-indigo-300 shrink-0' : 'shrink-0'} />
+                      <span className="truncate max-w-[120px]">
+                        {note.subtitle || "INICIO"}
+                      </span>
                     </button>
                   );
                 })()}
@@ -1359,7 +1413,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                           <SubnoteTitle
                             child={child}
                             isActive={isActive}
-                            onRename={handleSaveChildTitle}
+                            onRename={handleSaveChildSubtitle}
                             searchQuery={searchQuery}
                             isEditing={editingTabId === child.id}
                             setIsEditing={(val) => setEditingTabId(val ? child.id : null)}

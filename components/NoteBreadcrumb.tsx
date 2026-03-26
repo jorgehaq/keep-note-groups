@@ -4,6 +4,7 @@ import { ChevronRight, FileText, Sparkles } from 'lucide-react';
 interface BreadcrumbNode {
   id: string;
   title: string;
+  subtitle?: string;
   focus_prompt: string | null;
   ai_generated: boolean;
   generation_status: string;
@@ -25,7 +26,7 @@ export const NoteBreadcrumb: React.FC<NoteBreadcrumbProps> = ({ path, activeNote
         const isLast = idx === path.length - 1;
         const label = node.ai_generated
           ? (node.focus_prompt?.slice(0, 30) || 'Resumen')
-          : (node.title?.slice(0, 30) || 'Original');
+          : (node.subtitle || node.title || 'INICIO');
 
         return (
           <React.Fragment key={node.id}>

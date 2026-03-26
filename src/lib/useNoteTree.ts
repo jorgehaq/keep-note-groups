@@ -5,6 +5,7 @@ interface NoteNode {
   id: string;
   title: string;
   content: string;
+  subtitle?: string;
   parent_note_id: string | null;
   generation_level: number;
   focus_prompt: string | null;
