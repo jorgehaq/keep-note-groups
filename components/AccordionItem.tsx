@@ -83,7 +83,7 @@ const NoteHeaderBar: React.FC<{
 
   useEffect(() => {
     setLocalSub(subtitle || (type === 'original' ? 'INICIO' : 'Sin título...'));
-  }, [subtitle, type]);
+  }, [subtitle, type, id]);
 
   const handleBlur = () => {
     onUpdate({ subtitle: localSub });
@@ -217,6 +217,7 @@ const SummaryTabContent: React.FC<{
         }
       >
         <NoteHeaderBar
+          key={summary.id}
           type="summary"
           id={summary.id}
           subtitle={summary.target_objective}
@@ -554,6 +555,7 @@ const SubnoteTabContent: React.FC<{
         >
           {/* Editor Metadata Header */}
           <NoteHeaderBar
+            key={note.id}
             type={activeTab === 'original' ? 'original' : 'sub'}
             id={note.id}
             subtitle={note.subtitle}
