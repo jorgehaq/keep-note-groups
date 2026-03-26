@@ -769,13 +769,14 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         "&.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important", borderLeftWidth: "2px !important" },
         ".dark &.cm-focused .cm-cursor": { borderLeftColor: "#CCCCCC !important" },
         "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": { 
-            backgroundColor: "rgba(73, 64, 217, 0.35) !important",
+            backgroundColor: "rgba(99, 102, 241, 0.3) !important",
             pointerEvents: "none !important" 
         },
         ".dark &.cm-focused .cm-selectionBackground, .dark & .cm-selectionBackground": {
-            backgroundColor: "rgba(139, 92, 246, 0.45) !important",
+            backgroundColor: "rgba(139, 92, 246, 0.4) !important",
             pointerEvents: "none !important"
         },
+
         // Forzar contraste del texto seleccionado nativamente dentro del editor
         "& ::selection": { color: "#000000 !important" },
         ".dark & ::selection": { color: "#ffffff !important" },
@@ -786,8 +787,20 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".cm-content *": { textDecoration: "none !important", boxShadow: "none !important" },
         ".cm-gutters": { backgroundColor: "transparent !important", border: "none !important", color: "#71717a" },
         ".dark & .cm-gutters": { color: "#52525b" },
-        ".cm-activeLine": { backgroundColor: "transparent !important" },
-        ".cm-activeLineGutter": { backgroundColor: "transparent !important" },
+        ".cm-activeLine, .cm-highlightActiveLine, .cm-line.cm-activeLine": { 
+            backgroundColor: "transparent !important", 
+            background: "none !important",
+            outline: "none !important",
+            boxShadow: "none !important"
+        },
+        ".cm-activeLineGutter": { 
+            backgroundColor: "transparent !important",
+            background: "none !important",
+            outline: "none !important",
+            boxShadow: "none !important"
+        },
+
+
         ".cm-lineNumbers .cm-gutterElement": { paddingRight: "10px !important", paddingLeft: "4px !important" },
         ".cm-line": { 
             color: "#a1a1aa !important",
@@ -798,7 +811,9 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
             textAlign: "justify !important",
         },
         ".cm-cursor-indicator-line": { 
-            borderLeftColor: "#6366f1 !important"
+            borderLeftColor: "#6366f1 !important",
+            backgroundColor: "transparent !important",
+            background: "none !important"
         },
         ".cm-hl-y, .cm-hl-r, .cm-hl-b, .cm-hl-g, .cm-custom-hl": { backgroundColor: "transparent !important", padding: "0 4px", borderRadius: "4px !important" },
         ".cm-hl-y, .cm-custom-hl": { color: "#EAB308 !important", border: "1px solid #CCCCCC !important" },
@@ -838,7 +853,12 @@ const createNotesTheme = (font: string, size: string, lineHeight: string = 'stan
         ".dark & .cm-custom-hr": { backgroundColor: "#3f3f3f" },
         ".cm-custom-hr-big": { display: "inline-block", verticalAlign: "middle", width: "calc(100% - 30px)", height: "3px", background: "linear-gradient(90deg, transparent, #8B5CF6, #6366f1, #8B5CF6, transparent)", margin: "12px 0", borderRadius: "4px" },
         ".cm-search-match": { backgroundColor: "rgba(245, 158, 11, 0.4) !important", borderBottom: "2px solid #f59e0b", color: "#000 !important" },
-        ".cm-selectionMatch": { backgroundColor: "#518141 !important", color: "#000 !important" },
+        ".cm-selectionMatch, .cm-selectionHighlight": { 
+            backgroundColor: "transparent !important", 
+            background: "none !important",
+            color: "inherit !important" 
+        },
+
 
         // --- MARKERS HOVER ---
         "[class*='cm-custom-mk-']": { position: "relative" },
