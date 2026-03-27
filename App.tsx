@@ -1851,11 +1851,14 @@ function App() {
                                  }`}
                                  title="Crear o Navegar por Notas del Grupo"
                              >
-                                 <ListPlus size={16} className={activeGroup.notes.filter(n => !n.parent_note_id && n.status !== 'history').length > 0 ? "mr-1" : "mr-1.5"} />
-                                 {activeGroup.notes.filter(n => !n.parent_note_id && n.status !== 'history').length > 0 && (
-                                   <span className="mr-1.5 text-[11px] font-bold">{activeGroup.notes.filter(n => !n.parent_note_id && n.status !== 'history').length}</span>
-                                 )}
-                                 <Plus size={16} /> 
+                                 <ListPlus size={16} className="mr-2" />
+                                 <span className="max-w-[120px] truncate mr-2 uppercase tracking-tight">
+                                   {(() => {
+                                     const activeNote = activeGroup.notes.find(n => n.id === activeNoteId);
+                                     return activeNote ? (activeNote.subtitle || activeNote.title || 'Sin título') : `${activeGroup.notes.filter(n => !n.parent_note_id && n.status !== 'history').length} Notas`;
+                                   })()}
+                                 </span>
+                                 <Plus size={14} className="opacity-60" /> 
                              </button>
 
                              {isGroupCreatorMenuOpen && (
@@ -1930,50 +1933,60 @@ function App() {
                                    {activeGroup.notes
                                       .filter(n => !n.parent_note_id && n.status !== 'history')
                                       .sort((a,b) => (a.order_index || 0) - (b.order_index || 0))
-                                      .map((note) => (
-                                        <div 
-                                          key={note.id} 
-                                          onClick={() => { 
-                                            const currentOpen = openNotesByGroup[activeGroup.id] || [];
-                                            if (!currentOpen.includes(note.id)) toggleNote(activeGroup.id, note.id);
-                                            setFocusedNoteId(note.id);
-                                            setIsGroupCreatorMenuOpen(false);
-                                            setTimeout(() => {
-                                              document.getElementById(`note-${note.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                            }, 100);
-                                          }}
-                                          className="flex items-center justify-between group p-2 rounded-xl bg-indigo-50/50 dark:bg-indigo-500/5 border border-indigo-500/20 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-500/10 transition-colors"
-                                        >
-                                           <div className="flex items-center gap-2 min-w-0">
-                                              <FileText size={12} className="text-indigo-500 shrink-0" />
-                                              <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 truncate uppercase">{note.subtitle || note.title || "Sin título..."}</span>
-                                           </div>
-                                           <div className="flex items-center gap-1">
-                                              {(() => {
-                                                const task = globalTasks?.find(gt => gt.id === note.id || gt.linked_note_id === note.id);
-                                                if (!task) return null;
-                                                const status = task.status as string;
-                                                const statusColors: Record<string, string> = {
-                                                  backlog: '#9E9E9E',
-                                                  todo: '#FFD60A',
-                                                  in_progress: '#38BDF8',
-                                                  done: '#4ADE80'
-                                                };
-                                                const color = statusColors[status] || '#9E9E9E';
-                                                return <div className="w-2.5 h-2.5 rounded-full mr-1.5 shadow-sm shrink-0" style={{ backgroundColor: color, boxShadow: `0 0 5px ${color}88` }} title={`Estado: ${status}`} />;
-                                              })()}
-                                              <div className="flex items-center gap-1">
-                                                <button 
-                                                  onClick={(e) => { e.stopPropagation(); addNote(note.id); setIsGroupCreatorMenuOpen(false); }} 
-                                                  title="Nueva nota después" 
-                                                  className="p-1.5 rounded-lg text-zinc-500 font-bold border border-zinc-200 dark:border-indigo-500/80 bg-zinc-100 dark:bg-zinc-800/40 hover:bg-emerald-600 hover:text-white hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/20 transition-all active:scale-95"
-                                                >
-                                                  <Plus size={12} strokeWidth={2.5} />
-                                                </button>
-                                              </div>
-                                           </div>
-                                        </div>
-                                      ))}
+                                      .map((note) => {
+                                        const isActive = note.id === activeNoteId;
+                                        return (
+                                          <div 
+                                            key={note.id} 
+                                            onClick={() => { 
+                                              const currentOpen = openNotesByGroup[activeGroup.id] || [];
+                                              if (!currentOpen.includes(note.id)) toggleNote(activeGroup.id, note.id);
+                                              setFocusedNoteId(note.id);
+                                              setIsGroupCreatorMenuOpen(false);
+                                              setTimeout(() => {
+                                                document.getElementById(`note-${note.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                              }, 100);
+                                            }}
+                                            className={`flex items-center justify-between group p-2.5 rounded-xl transition-all cursor-pointer border ${isActive 
+                                              ? 'bg-indigo-100 dark:bg-indigo-500/20 border-2 border-indigo-500 shadow-lg shadow-indigo-500/10' 
+                                              : 'bg-indigo-50/50 dark:bg-indigo-500/5 border border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/10'
+                                            }`}
+                                          >
+                                             <div className="flex items-center gap-2.5 min-w-0">
+                                                <FileText size={13} className={isActive ? "text-indigo-600 dark:text-indigo-400 shrink-0" : "text-indigo-500/50 shrink-0"} />
+                                                <span className={`text-xs font-bold truncate uppercase ${isActive ? "text-indigo-800 dark:text-indigo-200" : "text-indigo-700 dark:text-indigo-300"}`}>
+                                                  {note.subtitle || note.title || "Sin título..."}
+                                                </span>
+                                             </div>
+                                             <div className="flex items-center gap-1.5">
+                                                {(() => {
+                                                  const task = globalTasks?.find(gt => gt.id === note.id || gt.linked_note_id === note.id);
+                                                  if (!task) return null;
+                                                  const status = task.status as string;
+                                                  const statusColors: Record<string, string> = {
+                                                    backlog: '#9E9E9E',
+                                                    todo: '#FFD60A',
+                                                    in_progress: '#38BDF8',
+                                                    done: '#4ADE80'
+                                                  };
+                                                  const color = statusColors[status] || '#9E9E9E';
+                                                  return <div className="w-2.5 h-2.5 rounded-full mr-1.5 shadow-sm shrink-0" style={{ backgroundColor: color, boxShadow: `0 0 5px ${color}88` }} title={`Estado: ${status}`} />;
+                                                })()}
+                                                <div className="flex items-center gap-1">
+                                                  <button 
+                                                    onClick={(e) => { e.stopPropagation(); addNote(note.id); setIsGroupCreatorMenuOpen(false); }} 
+                                                    title="Nueva nota después" 
+                                                    className={`p-1.5 rounded-lg font-bold border transition-all active:scale-95 ${isActive 
+                                                      ? "bg-emerald-500 text-white border-emerald-400 shadow-sm" 
+                                                      : "bg-zinc-100 dark:bg-zinc-800/40 text-zinc-500 border-zinc-200 dark:border-indigo-500/80 hover:bg-emerald-600 hover:text-white hover:border-emerald-500 hover:shadow-lg"}`}
+                                                  >
+                                                    <Plus size={12} strokeWidth={2.5} />
+                                                  </button>
+                                                </div>
+                                             </div>
+                                          </div>
+                                        );
+                                      })}
                                  </div>
                                </div>
                              )}
