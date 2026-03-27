@@ -78,8 +78,9 @@ const NoteHeaderBar: React.FC<{
   updated_at?: string;
   onUpdate: (updates: any) => void;
   activeColor?: string;
+  idleColor?: string;
   children?: React.ReactNode;
-}> = ({ type, id, subtitle, created_at, updated_at, onUpdate, activeColor = 'indigo-500', children }) => {
+}> = ({ type, id, subtitle, created_at, updated_at, onUpdate, activeColor = 'indigo-500', idleColor = 'zinc-200 dark:border-zinc-800', children }) => {
   const defaultTitle = type === 'original' ? 'INICIO' : 'Subnota: Sin título';
   const [localSub, setLocalSub] = useState(subtitle || defaultTitle);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -112,8 +113,13 @@ const NoteHeaderBar: React.FC<{
       ? 'text-emerald-700 dark:text-emerald-400'
       : 'text-violet-700 dark:text-violet-400';
 
+  const getBorderColorClass = (colorStr: string) => {
+    if (colorStr.includes('[') || colorStr.includes(' ')) return colorStr;
+    return `border-${colorStr}`;
+  };
+
   return (
-    <div className={`flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-[#2F2F60] bg-white dark:bg-[#1A1A24] shrink-0 transition-all duration-300 group-focus-within/header:border-b-${activeColor}`}>
+    <div className={`flex items-center justify-between px-4 py-2 border-b-[0.5px] ${getBorderColorClass(idleColor)} bg-white dark:bg-[#1A1A24] shrink-0 transition-colors duration-75 group-focus-within/header:border-b-${activeColor}`}>
       <div className="flex-1 flex justify-center pl-8"> {/* Pl-8 para equilibrar con los iconos de la derecha */}
         <input 
           ref={inputRef}
@@ -332,7 +338,7 @@ const SummaryTabContent: React.FC<{
         className={`flex flex-col flex-1 min-h-0 rounded-xl border border-violet-200 dark:border-[#291B46] focus-within:border-violet-400 dark:focus-within:border-[#4E3884] bg-white dark:bg-[#22262B] animate-fadeIn overflow-hidden transition-colors group/header ${!showScratch ? 'hidden md:flex' : 'flex'}`}
         style={showScratch && !layoutCol ? { width: `${(1 - splitRatio) * 100}%`, flex: 'none' } : { flex: 1 }}
       >
-        <div className="relative flex items-center justify-center gap-2 px-3 py-3 border-b border-violet-200/20 dark:border-[#2F2F60] bg-white dark:bg-[#1A1A24] shrink-0 transition-all duration-300 group-focus-within/header:border-b-[#4E3884]">
+        <div className="relative flex items-center justify-center gap-2 px-4 py-2 border-b-[0.5px] border-violet-200/20 dark:border-[#2F2F60] bg-white dark:bg-[#1A1A24] shrink-0 transition-colors duration-75 group-focus-within/header:border-b-[#4E3884]">
           <div className="flex items-center gap-2">
             <PenLine size={11} className="text-violet-400" />
             <span className="text-xs font-bold text-violet-500 dark:text-[#A78BFA] uppercase tracking-widest">Pizarrón</span>
@@ -584,7 +590,8 @@ const SubnoteTabContent: React.FC<{
             subtitle={activeTab === 'original' ? note.subtitle : (note.subtitle || note.title)}
             created_at={note.created_at}
             updated_at={note.updated_at}
-            activeColor="[#17634F]"
+            activeColor={activeTab === 'original' ? '[#3F408C]' : '[#17634F]'}
+            idleColor={activeTab === 'original' ? 'border-[#2F2F60]' : 'border-zinc-200 dark:border-[#2F2F60]'}
             onUpdate={(updates) => onUpdate(note.id, activeTab === 'original' ? updates : { ...updates, title: updates.subtitle })}
           />
 
@@ -633,7 +640,7 @@ const SubnoteTabContent: React.FC<{
             className="min-h-0 overflow-hidden flex flex-col rounded-xl border border-violet-200 dark:border-[#2F2F60] focus-within:border-violet-400 dark:focus-within:border-[#4E3884] bg-white dark:bg-[#22262B] animate-fadeIn transition-colors group/header"
             style={{ flex: 1 }}
           >
-            <div className="relative flex items-center justify-center gap-2 px-4 py-3 border-b border-zinc-200 dark:border-[#2F2F60] bg-white dark:bg-[#1A1A24] shrink-0 transition-all duration-300 group-focus-within/header:border-b-[#4E3884]">
+            <div className="relative flex items-center justify-center gap-2 px-4 py-2 border-b-[0.5px] border-zinc-200 dark:border-[#2F2F60] bg-white dark:bg-[#1A1A24] shrink-0 transition-colors duration-75 group-focus-within/header:border-b-[#4E3884]">
               <div className="flex items-center gap-2">
                 <PenLine size={11} className="text-violet-400" />
                 <span className="text-xs font-bold text-violet-500 dark:text-[#A78BFA] uppercase tracking-widest">Pizarrón</span>
@@ -1174,7 +1181,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                           <div className="flex items-center gap-2 min-w-0">
                              <FileText size={12} className={activeTab === 'original' ? "text-indigo-600 dark:text-indigo-400 shrink-0" : "text-indigo-500 shrink-0"} />
                              <span className={`text-xs font-bold truncate uppercase ${activeTab === 'original' ? "text-indigo-800 dark:text-indigo-200" : "text-indigo-700 dark:text-indigo-300"}`}>
-                               {note.subtitle || "INICIO"}
+                               {note.title || "Inicio"}
                              </span>
                           </div>
                           <div className="flex items-center gap-1">
@@ -1217,7 +1224,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
                             : (isActive ? 'text-violet-800 dark:text-violet-200' : 'text-violet-700 dark:text-violet-400');
 
                           const label = isSub 
-                            ? (t.data as Note).subtitle || (t.data as Note).title || "Sin título..." 
+                            ? (t.data as Note).title || (t.data as Note).subtitle || "Sin título..." 
                             : (t.data as any).target_objective || "Sin título...";
                           
                           const icon = isSub ? (

@@ -1020,6 +1020,7 @@ function App() {
     const dbUpdates: any = {};
     if (updates.title !== undefined) dbUpdates.title = updates.title;
     if (updates.content !== undefined) dbUpdates.content = updates.content;
+    if (updates.subtitle !== undefined) dbUpdates.subtitle = updates.subtitle;
     if (updates.scratchpad !== undefined) dbUpdates.scratchpad = updates.scratchpad;
     if (updates.is_open !== undefined) dbUpdates.is_open = updates.is_open;
     if (updates.is_pinned !== undefined) dbUpdates.is_pinned = updates.is_pinned;
@@ -1855,7 +1856,7 @@ function App() {
                                  <span className="max-w-[120px] truncate mr-2 uppercase tracking-tight">
                                    {(() => {
                                      const activeNote = activeGroup.notes.find(n => n.id === activeNoteId);
-                                     return activeNote ? (activeNote.subtitle || activeNote.title || 'Sin título') : `${activeGroup.notes.filter(n => !n.parent_note_id && n.status !== 'history').length} Notas`;
+                                     return activeNote ? (activeNote.title || 'Sin título') : `${activeGroup.notes.filter(n => !n.parent_note_id && n.status !== 'history').length} Notas`;
                                    })()}
                                  </span>
                                  <Plus size={14} className="opacity-60" /> 
@@ -1955,7 +1956,7 @@ function App() {
                                              <div className="flex items-center gap-2.5 min-w-0">
                                                 <FileText size={13} className={isActive ? "text-indigo-600 dark:text-indigo-400 shrink-0" : "text-indigo-500/50 shrink-0"} />
                                                 <span className={`text-xs font-bold truncate uppercase ${isActive ? "text-indigo-800 dark:text-indigo-200" : "text-indigo-700 dark:text-indigo-300"}`}>
-                                                  {note.subtitle || note.title || "Sin título..."}
+                                                  {note.title || "Sin título..."}
                                                 </span>
                                              </div>
                                              <div className="flex items-center gap-1.5">
